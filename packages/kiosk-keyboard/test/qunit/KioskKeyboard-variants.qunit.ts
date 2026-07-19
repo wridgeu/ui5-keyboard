@@ -6,7 +6,6 @@ import { placeAndWait, getRequiredKeyElement, simulateTap, tapKey, waitForRender
 import { VARIANT_HOLD_MS } from "ui5/kiosk/internal/variant-popup-behavior";
 import { insertText } from "ui5/kiosk/internal/input-operations";
 import { getText } from "ui5/kiosk/internal/i18n-registry";
-import { LATIN_DIACRITIC_VARIANTS } from "ui5/kiosk/internal/latin-variants";
 import type { CompositionMiddleware, LayoutDefinition } from "ui5/kiosk/types";
 
 // Integration coverage for the long-press accent-variant popup: a hold on a key
@@ -872,14 +871,27 @@ QUnit.test("opening the variant popup keeps a docked auto-show keyboard open", a
 
 // #175: a variant gesture on a second key re-anchors the popup rather than being
 // swallowed. The reused Popover hosts one session at a time, so the new anchor
-// claims it only after the framework has fired afterClose for the previous one;
-// the settle window below is real time (this suite forbids sinon fake timers) and
-// covers that close plus the Popover's own CLOSING poll.
-const RETARGET_SETTLE_MS = 400;
+// claims it only after the framework has fired afterClose for the previous one.
 
-/** The default table's variants for the two keys the re-anchor cases gesture on. */
-const aVariants = LATIN_DIACRITIC_VARIANTS.a!;
-const oVariants = LATIN_DIACRITIC_VARIANTS.o!;
+/**
+ * Wait out a re-anchor on the Popover's own `afterClose`, which is what the
+ * parked key opens from, plus the render that follows. Event-driven rather than
+ * timed: this suite forbids sinon fake timers (they orphan UI5's focus
+ * restoration), and a fixed delay would only be a guess at the close animation.
+ * Only for gestures that actually close something; a no-op gesture never fires
+ * the event and needs `waitForRender` alone.
+ */
+async function settled(kb: KioskKeyboard): Promise<void> {
+  await new Promise<void>((resolve) => {
+    getPopover(kb)!.attachEventOnce("afterClose", () => resolve());
+  });
+  await waitForRender();
+}
+
+/** The default table's variants for the keys the re-anchor cases gesture on. */
+const aVariants = ["à", "á", "â", "ä", "æ", "ã", "å", "ā"];
+const oVariants = ["ô", "ö", "ò", "ó", "œ", "ø", "ō", "õ"];
+const eVariants = ["è", "é", "ê", "ë", "ē", "ė", "ę"];
 
 /**
  * Index of the option carrying the roving selection. `ButtonType.Emphasized`
@@ -906,7 +918,7 @@ QUnit.test("a right-click on a second variant key re-anchors the popup", async (
   assert.deepEqual(getOptions().map(glyphOf), [...aVariants], "popup opened on the first key");
 
   rightClick(kb, oKey);
-  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+  await settled(kb);
 
   assert.deepEqual(getOptions().map(glyphOf), [...oVariants], "the popup now offers the second key's variants");
   assert.strictEqual(
@@ -920,21 +932,70 @@ QUnit.test("a right-click on a second variant key re-anchors the popup", async (
   cleanup(kb, input);
 });
 
-QUnit.test("a re-targeted popup survives the previous session's afterClose", async (assert) => {
+QUnit.test("a session opened inside the close window survives the previous afterClose", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const aKey = getRequiredKeyElement(kb, "a");
   const oKey = getRequiredKeyElement(kb, "o");
+  const eKey = getRequiredKeyElement(kb, "e");
 
+  // The second gesture parks a re-anchor and starts the first session's close.
+  // The third supersedes that parked key, so the afterClose the first session
+  // still owes lands on a session it does not own and must not tear it down.
+  // Asserted on behavior state, not the Popover's DOM: that lingers through the
+  // asynchronous close and so survives a teardown either way.
   rightClick(kb, aKey);
   rightClick(kb, oKey);
-  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+  rightClick(kb, eKey);
+  await settled(kb);
 
-  // The afterClose belonging to the dismissed session must not tear down the
-  // session that replaced it on the reused Popover.
-  getPopover(kb)!.fireAfterClose();
+  assert.ok(variantPopup(kb).isOpen(), "the third session survived the first session's afterClose");
+  assert.ok(eKey.classList.contains(DOM.classes.keyVariantAnchor), "the third key is the anchor");
+  assert.deepEqual(getOptions().map(glyphOf), [...eVariants], "it offers the third key's variants");
 
-  assert.ok(getPopup(), "the popup is still open after the stale afterClose");
-  assert.deepEqual(getOptions().map(glyphOf), [...oVariants], "it still offers the second key's variants");
+  cleanup(kb, input);
+});
+
+QUnit.test("Escape during a re-anchor abandons it instead of surfacing the popup", async (assert) => {
+  // Docked and open: that is when the keyboard listens for Escape at all.
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ accentVariants: true, docked: true, controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  kb.show();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  const oKey = getRequiredKeyElement(kb, "o");
+
+  await holdOpen(kb, aKey);
+  release(kb, aKey); // sticky: the popup stays open, anchored to 'a'
+
+  // The hold parks a re-anchor and starts the previous session's close. Escape
+  // is the user asking to be rid of the popup, so the parked open must be
+  // abandoned rather than arriving a moment later.
+  await holdOpen(kb, oKey);
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+  await settled(kb);
+
+  assert.notOk(variantPopup(kb).isOpen(), "Escape left no popup behind");
+  assert.notOk(oKey.classList.contains(DOM.classes.keyVariantAnchor), "the parked key never anchored");
+
+  release(kb, oKey);
+  cleanup(kb, input);
+});
+
+QUnit.test("a release the control never saw does not swallow the next tap", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+
+  // The hold opens the popup and owes its press a swallowed lift-off. Lifting
+  // off the keyboard entirely never delivers a touchend to the control, so that
+  // debt is never spent; it must not be charged to the next press instead.
+  await holdOpen(kb, aKey);
+
+  simulateTap(kb, aKey);
+
+  assert.strictEqual(input.getValue(), "a", "the next tap types rather than being swallowed");
 
   cleanup(kb, input);
 });
@@ -949,7 +1010,7 @@ QUnit.test("a right-click on the key that already owns the popup keeps the rovin
   assert.strictEqual(activeOptionIndex(), 1, "arrow moved the selection to the second option");
 
   rightClick(kb, aKey);
-  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+  await waitForRender(); // nothing closes here, so there is no afterClose to wait on
 
   assert.strictEqual(activeOptionIndex(), 1, "re-gesturing the same key does not restart the session");
 
@@ -971,7 +1032,7 @@ QUnit.test("a hold on a second variant key keeps the first popup up until it ope
   assert.deepEqual(getOptions().map(glyphOf), [...aVariants], "the first key's options are still up mid-hold");
 
   await new Promise((resolve) => setTimeout(resolve, VARIANT_HOLD_MS + 40));
-  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+  await settled(kb);
 
   assert.deepEqual(getOptions().map(glyphOf), [...oVariants], "the hold re-anchored the popup to the second key");
   assert.ok(oKey.classList.contains(DOM.classes.keyVariantAnchor), "the second key is the anchor");
@@ -991,7 +1052,7 @@ QUnit.test("a short tap on a second variant key still dismisses the popup and ty
   // Too short to be a retarget: the tap dismisses the popup and types, as a tap
   // on any other key does.
   simulateTap(kb, oKey);
-  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+  await settled(kb);
 
   assert.strictEqual(input.getValue(), "o", "the dismissing tap also typed");
   assert.notOk(variantPopup(kb).isOpen(), "the popup closed");
@@ -1014,7 +1075,7 @@ QUnit.test("a drag-away release on a second variant key still dismisses the popu
   // on a different key than it started on.
   press(kb, oKey);
   release(kb, pKey);
-  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+  await settled(kb);
 
   assert.notOk(variantPopup(kb).isOpen(), "the drag-away release dismissed the popup");
   assert.notOk(aKey.classList.contains(DOM.classes.keyVariantAnchor), "the first key is no longer the anchor");
@@ -1036,7 +1097,7 @@ QUnit.test("a cancelled press mid-re-anchor does not open the parked popup", asy
   press(kb, oKey);
   await new Promise((resolve) => setTimeout(resolve, VARIANT_HOLD_MS + 40));
   (kb as unknown as { ontouchcancel(): void }).ontouchcancel();
-  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+  await settled(kb);
 
   assert.notOk(variantPopup(kb).isOpen(), "the cancelled gesture opened nothing");
   assert.notOk(oKey.classList.contains(DOM.classes.keyVariantAnchor), "the second key is not anchored");
@@ -1068,12 +1129,13 @@ QUnit.test("a held Backspace that declares variants re-anchors instead of strand
 
   await holdOpen(kb, backspaceKey);
   release(kb, backspaceKey);
-  await new Promise((resolve) => setTimeout(resolve, RETARGET_SETTLE_MS));
+  await settled(kb);
 
   assert.notOk(aKey.classList.contains(DOM.classes.keyVariantAnchor), "the popup did not stay stranded on 'a'");
   assert.ok(backspaceKey.classList.contains(DOM.classes.keyVariantAnchor), "it re-anchored to the held key");
   assert.deepEqual(getOptions().map(glyphOf), ["x", "y"], "showing the held key's own variants");
-  assert.notStrictEqual(input.getValue(), "abc", "the held Backspace still deleted");
+  assert.ok(input.getValue().length < 3, "the held Backspace still deleted");
+  assert.ok("abc".startsWith(input.getValue()), "deleting back from the caret, not rewriting the value");
 
   cleanup(kb, input);
 });

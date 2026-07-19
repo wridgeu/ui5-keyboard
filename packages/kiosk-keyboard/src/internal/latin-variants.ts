@@ -81,27 +81,20 @@ export function toShiftVariants(variants: readonly string[]): string[] {
   return out;
 }
 
-/**
- * Whether `glyph` carries case, i.e. has distinct lower and upper forms. Digits,
- * punctuation and caseless scripts (kana, jamo, Arabic) are uncased.
- */
-function isCased(glyph: string): boolean {
-  return glyph.toLowerCase() !== glyph.toUpperCase();
-}
+/** A lone cased character: the only shape CapsLock transforms. */
+const LONE_CASED = /^\p{Cased}$/u;
 
 /**
- * The Shift/Caps form of a single key's base `value`, given its optional explicit
- * `shiftValue`. Shift types the explicit shiftValue verbatim. CapsLock is a case
- * mode rather than a Shift alias: it uppercases the cased glyph the key
- * contributes and ignores an uncased shiftValue, so a digit row stays on its
- * digits and a caseless script is untouched. A lone cased character with no
- * shiftValue falls back to its uppercase, ß to the capital sharp S ẞ (U+1E9E).
- * Multi-character values with no shiftValue are returned unchanged.
+ * The Shift/Caps form of a key's base `value`, given its optional explicit
+ * `shiftValue`. Shift types the shiftValue verbatim. CapsLock is a case mode
+ * rather than a Shift alias: it uppercases the lone cased glyph the key
+ * contributes and leaves anything else alone, so a digit row keeps its digits
+ * and a caseless script is untouched. `ß` maps to the capital sharp S `ẞ`.
  */
 export function shiftedGlyph(value: string, shiftValue: string | undefined, caps: boolean): string {
   if (caps) {
-    if (shiftValue && isCased(shiftValue)) return toShiftVariant(shiftValue);
-    return value.length === 1 && value.trim() ? toShiftVariant(value) : value;
+    const glyph = shiftValue !== undefined && LONE_CASED.test(shiftValue) ? shiftValue : value;
+    return LONE_CASED.test(glyph) ? toShiftVariant(glyph) : glyph;
   }
   if (shiftValue) return shiftValue;
   return value.length === 1 && value.trim() ? value.toUpperCase() : value;

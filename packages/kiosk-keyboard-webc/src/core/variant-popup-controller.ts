@@ -103,7 +103,7 @@ export class VariantPopupController {
   /**
    * The key waiting to claim the popup while the previous session closes. The
    * popover only takes a new opener on the render after it is un-rendered, so a
-   * re-anchor parks the new key here and opens it from the shared teardown.
+   * re-anchor parks the new key here and opens it from the teardown.
    */
   private _pendingKeyEl: HTMLElement | null = null;
 
@@ -195,18 +195,20 @@ export class VariantPopupController {
   }
 
   /**
-   * Opens `keyEl` once any live popup has closed. The popover only takes a new
-   * `opener` on the render that follows it being un-rendered, so overwriting the
-   * state while it is open would swap the glyphs under the previous anchor.
-   * Returns whether the key will open.
+   * Opens `keyEl` once any live popup has closed, since overwriting the state
+   * while it is open would swap the glyphs under the previous anchor. Returns
+   * whether the key will open.
    */
   private _requestOpen(keyEl: HTMLElement): boolean {
     const state = this._host.getPopupState();
     if (!state) return this.openFor(keyEl);
     if (state.anchorKeyId === keyEl.id) return false;
     if (!this._host.resolveOpenState(keyEl)) return false;
-    this._pendingKeyEl = keyEl;
     this.close();
+    // Parked after `close()`, which abandons any earlier re-anchor. A close that
+    // tore down synchronously leaves no state, so the key can take it now.
+    if (this._host.getPopupState()) this._pendingKeyEl = keyEl;
+    else this.openFor(keyEl);
     return true;
   }
 
@@ -243,8 +245,13 @@ export class VariantPopupController {
       ?.focus();
   }
 
-  /** Closes the popover; its `close` event runs the shared teardown. */
+  /**
+   * Closes the popover; its `close` event runs the shared teardown. An explicit
+   * close abandons a parked re-anchor, so dismissing (Escape, a key press) never
+   * surfaces the popup the user just dismissed.
+   */
   close(): void {
+    this._pendingKeyEl = null;
     const popover = this._popoverEl();
     if (popover?.open) {
       popover.open = false;
@@ -386,8 +393,8 @@ export class VariantPopupController {
     if (hadFocus) this._host.focusKey(state.anchorKeyId);
 
     // Hand the popup to a key that asked for it while this one was closing. The
-    // state write above un-rendered the popover, so the next render builds one
-    // whose `open` is false and which therefore takes the new anchor as opener.
+    // state write above un-rendered the popover, so the next render takes the
+    // new anchor as opener.
     const pending = this._pendingKeyEl;
     this._pendingKeyEl = null;
     if (pending?.isConnected) this.openFor(pending);
@@ -406,17 +413,12 @@ export class VariantPopupController {
     if (e.button > 0) return; // primary press only (0 for touch/pen/left mouse)
     const keyEl = this._variantKey(e.target);
     if (!keyEl) return;
-    // A press that lands while a popup is open arms a re-anchor only when it is
-    // a fresh gesture on a different key: this press is an outside press, so the
-    // live popover dismisses itself well before the hold elapses, and the hold
-    // then opens on the new key. Two cases must not arm. The key that already
-    // owns the popup keeps it, so a repeat press does not restart the session
-    // under the user's focus. And a second finger landing while the opening
-    // press is still down is multi-touch, not a retarget: arming would disarm
-    // finger one's pending release-swallow. Either way the press still reaches
-    // `_onKeyClick`, which dismisses and types; only the suppression needs
-    // settling, since a tap after the opening press ended owes no
-    // release-swallow and must not have its click eaten by the previous one's.
+    // A press on a different key arms a re-anchor. Two cases must not: the key
+    // that already owns the popup keeps it rather than restarting the session
+    // under the user's focus, and a second finger landing while the opening
+    // press is still down is multi-touch, which would disarm finger one's
+    // pending release-swallow. Both still reach `_onKeyClick`, which dismisses
+    // and types; only the suppression needs settling.
     const openAnchorKeyId = this._host.getPopupState()?.anchorKeyId;
     if (openAnchorKeyId !== undefined && (openAnchorKeyId === keyEl.id || this._pointerId !== null)) {
       if (this._pointerId === null) this._clearSuppression();

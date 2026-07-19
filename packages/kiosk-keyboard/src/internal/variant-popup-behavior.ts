@@ -136,20 +136,30 @@ export default class VariantPopupBehavior {
   /**
    * The key waiting to claim the popup while the previous session closes. The
    * reused Popover hosts one session at a time, so a re-anchor parks the new key
-   * here and opens it from `afterClose`; opening synchronously would empty the
-   * still-visible overlay, whose content `_open` destroys and rebuilds.
+   * here and opens it from `afterClose`.
    */
   private _pendingAnchorKeyEl: HTMLElement | null = null;
+  /**
+   * How many closes this behavior started are still awaiting their `afterClose`.
+   * The event carries no session identity, so without this count a close
+   * belonging to an already torn-down session would tear down whichever session
+   * has since claimed the reused Popover.
+   */
+  private _selfClosesPending = 0;
 
   constructor(host: VariantPopupHost) {
     this._host = host;
     this._onKeydown = (event) => this._handleKeydown(event);
     this._onDocTouchMove = (event) => this._handleDocTouchMove(event);
     this._onDocTouchEnd = (event) => this._handleDocTouchEnd(event);
-    // The framework closed the overlay (outside press / Escape): tear down and
-    // announce, then hand the Popover to a key that asked for it meanwhile.
     this._onAfterClose = () => {
-      this._dismiss(true);
+      if (this._selfClosesPending > 0) {
+        // Our own `close()`, whose session `_dismiss` already tore down.
+        this._selfClosesPending--;
+      } else {
+        // The framework closed the overlay (outside press / Escape).
+        this._dismiss(true);
+      }
       this._drainPending();
     };
   }
@@ -163,23 +173,21 @@ export default class VariantPopupBehavior {
   onPress(keyEl: HTMLElement, enabled: boolean): void {
     if (!enabled) return;
     if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
-    if (this.isOpenFor(keyEl)) return;
+    // A new press means the previous one ended, wherever its release landed; its
+    // unspent lift-off swallow must not eat this press's release instead.
+    this._consumeRelease = false;
+    this._originKeyValue = null;
+    if (this._popover !== null && this._anchorKeyEl === keyEl) return;
     this._pressLive = true;
     this._armedKeyEl = keyEl;
     this._arm();
   }
 
-  /** Whether the open popup belongs to `keyEl`. */
-  isOpenFor(keyEl: HTMLElement): boolean {
-    return this._popover !== null && this._anchorKeyEl === keyEl;
-  }
-
   /**
    * Opens the popup immediately for a key that declares variants (the
    * right-click / context-menu path). A no-op for keys without variants and for
-   * the key that already owns the popup, so a repeat gesture does not restart
-   * the session. On another key the popup re-anchors: the current session closes
-   * and the new key opens once the framework has fired `afterClose`.
+   * the key that already owns the popup. On another key the popup re-anchors,
+   * opening once the framework has fired `afterClose`.
    */
   openFor(keyEl: HTMLElement): void {
     if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
@@ -200,10 +208,9 @@ export default class VariantPopupBehavior {
   }
 
   /**
-   * Abandon a re-anchor parked by a hold that the gesture never completed (the
-   * browser cancelled the touch, or the window lost focus mid-press). Distinct
-   * from `stop()`, which also runs on a normal release, where a parked
-   * re-anchor must survive until the framework reports the close.
+   * Abandon a parked re-anchor whose gesture never completed. Separate from
+   * `stop()`, which also runs on a normal release, where the re-anchor must
+   * survive until the framework reports the close.
    */
   cancelPending(): void {
     this._pendingAnchorKeyEl = null;
@@ -227,9 +234,22 @@ export default class VariantPopupBehavior {
     return true;
   }
 
-  /** Stays true across a re-anchor, while the popup is between two keys. */
   isOpen(): boolean {
-    return this._popover !== null || this._pendingAnchorKeyEl !== null;
+    return this._popover !== null;
+  }
+
+  /**
+   * Whether the variant gesture owns this Escape, so the keyboard leaves it
+   * alone. An open popup owns it and dismisses itself through the option grid's
+   * own key handling. A re-anchor parked between two keys owns it too and is
+   * abandoned here, so Escape never surfaces the popup it was pressed to be rid
+   * of. Returns false when there is nothing to own it.
+   */
+  consumeEscape(): boolean {
+    if (this._popover) return true;
+    if (!this._pendingAnchorKeyEl) return false;
+    this._pendingAnchorKeyEl = null;
+    return true;
   }
 
   /**
@@ -285,13 +305,15 @@ export default class VariantPopupBehavior {
     const keyEl = this._armedKeyEl;
     this._armedKeyEl = null;
     if (!keyEl) return;
-    // A live popup on another key re-anchors instead of opening a second one.
-    // The reused Popover hosts one session at a time and `_open` destroys its
-    // content, so the new key waits for the framework to report the close;
-    // opening synchronously would empty the still-visible overlay.
-    if (this._popover) {
+    const resolution = this._host.resolveVariants(keyEl);
+    if (!resolution || resolution.glyphs.length === 0) return;
+    // The reused Popover hosts one session at a time, so only one transition may
+    // be in flight: opening onto a still-visible overlay would empty it, and
+    // opening onto one that is still closing loses the session to the close that
+    // follows. Either way the key waits for `afterClose`. Resolved above, so a
+    // key with nothing to show never claims the release below.
+    if (this._popover || this._selfClosesPending > 0) {
       if (keyEl === this._anchorKeyEl) return;
-      this._clearHold();
       // The deferred open still owes this press its swallowed lift-off, which
       // may arrive before the close does.
       this._consumeRelease = this._pressLive;
@@ -300,8 +322,6 @@ export default class VariantPopupBehavior {
       this._dismiss(true);
       return;
     }
-    const resolution = this._host.resolveVariants(keyEl);
-    if (!resolution || resolution.glyphs.length === 0) return;
     this._open(keyEl, resolution);
   }
 
@@ -353,43 +373,29 @@ export default class VariantPopupBehavior {
     });
     grid.addStyleClass(KIOSK_KEYBOARD_DOM.classes.variantPopup);
 
-    // Publish the option footprint from the grid's own onAfterRendering, which
-    // Popup.open fires inline while rendering the content and before it positions
-    // the overlay. Sizing after openBy would leave the framework to dock, flip and
-    // point the arrow against theme-default button sizes, and re-dock only when
-    // the poll-based ResizeHandler catches up.
+    // Runs inline from Popup.open while it renders the content, before it
+    // positions the overlay, so the framework docks against the real option size
+    // rather than the theme default.
     const keyboardRoot = anchorKeyEl.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
     const heightToken = keyboardRoot
       ? getComputedStyle(keyboardRoot).getPropertyValue("--ui5KioskKeyboard-keyHeight").trim()
       : "";
-    grid.addEventDelegate(
-      {
-        onAfterRendering: () => {
-          const dom = grid.getDomRef();
-          if (!(dom instanceof HTMLElement)) return;
-          // Size each option to the anchor key's footprint. The static-area
-          // popover inherits none of the keyboard's key-size tokens, so both
-          // dimensions are set on the option grid: width as the resting px,
-          // height as the key-height token value read off the keyboard root.
-          // Glyph size tracks the popover's inherited key density.
-          dom.style.setProperty("--_ui5KioskKeyboard-variantOptionWidth", `${keyWidth}px`);
-          dom.style.setProperty("--_ui5KioskKeyboard-variantOptionHeight", heightToken || `${keyHeight}px`);
-          // Group the options for assistive technology, matching the sibling webc
-          // twin. `sap/m/FlexBox` exposes no role, and its renderer emits no
-          // accessibility state, so the role is set on the element here. The
-          // Popover's `aria-labelledby` already names the group, so the toolbar
-          // itself needs no name.
-          dom.setAttribute("role", "toolbar");
-          // Mirror the option order from the same direction the arrow polarity
-          // reads, so ArrowLeft always moves focus visually leftward. The popover
-          // renders in the static area and inherits no direction from the
-          // keyboard, and UI5's own arrow remap keys on the page-global RTL
-          // config, which cannot see a `dir` applied locally to the keyboard.
-          dom.style.direction = this._rtl ? "rtl" : "ltr";
-        },
+    grid.addEventDelegate({
+      onAfterRendering: () => {
+        const dom = grid.getDomRef();
+        if (!(dom instanceof HTMLElement)) return;
+        // The static-area popover inherits none of the keyboard's key-size
+        // tokens, so each option is sized to the anchor key's footprint here.
+        dom.style.setProperty("--_ui5KioskKeyboard-variantOptionWidth", `${keyWidth}px`);
+        dom.style.setProperty("--_ui5KioskKeyboard-variantOptionHeight", heightToken || `${keyHeight}px`);
+        // `sap/m/FlexBox` exposes no role and its renderer emits no accessibility
+        // state. The Popover's `aria-labelledby` names the group already.
+        dom.setAttribute("role", "toolbar");
+        // The popover inherits no direction from the keyboard, and UI5's arrow
+        // remap keys on the page-global RTL config, not a local `dir`.
+        dom.style.direction = this._rtl ? "rtl" : "ltr";
       },
-      this,
-    );
+    });
     popover.addContent(grid);
 
     // The localized "N variants for {base}" group name, built once and shared by
@@ -557,7 +563,10 @@ export default class VariantPopupBehavior {
     // The content (grid/buttons) and label stay on the closed Popover for the
     // close animation; they are torn down at the next `_open` (destroyContent /
     // removeAllAriaLabelledBy / label destroy) and with the control on `exit`.
-    if (popover.isOpen()) popover.close();
+    if (popover.isOpen()) {
+      this._selfClosesPending++;
+      popover.close();
+    }
 
     // Restore focus to the origin key when focus was inside the popup (Escape,
     // keyboard commit, click on an option). An outside press that moved focus
