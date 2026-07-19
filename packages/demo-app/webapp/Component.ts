@@ -3,7 +3,6 @@ import Log from "sap/base/Log";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
-import "demo/hotkeys/webc/register";
 
 /**
  * @name demo.hotkeys.Component
@@ -78,6 +77,12 @@ export default class Component extends UIComponent {
         stopPropagation: false,
       },
     );
+
+    // Keep the browser tab / accessibility-tree document title in sync with the
+    // active route, so history navigation announces a page change.
+    this.getRouter().attachTitleChanged((event) => {
+      document.title = event.getParameter("title") as string;
+    });
 
     // Initialize the router
     this.getRouter().initialize();

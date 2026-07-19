@@ -3,7 +3,7 @@
   "sap.app": {
     "id": "demo.hotkeys",
     "type": "application",
-    "title": "UI5 Keyboard Libraries Demo",
+    "title": "{{appTitle}}",
     "applicationVersion": {
       "version": "0.1.0"
     },
@@ -47,7 +47,7 @@
       "libs": {
         "sap.m": {},
         "sap.ui.core": {},
-        "sap.ui.layout": {},
+        "sap.ui.layout": { "lazy": true },
         "ui5.hotkeys": {},
         "ui5.kiosk": {}
       }
@@ -64,7 +64,10 @@
         "viewType": "XML",
         "path": "demo.hotkeys.view",
         "controlId": "appControl",
-        "controlAggregation": "pages"
+        "controlAggregation": "pages",
+        "bypassed": {
+          "target": "notFound"
+        }
       },
       "routes": [
         {
@@ -176,99 +179,117 @@
       "targets": {
         "main": {
           "id": "main",
-          "name": "Main"
+          "name": "Main",
+          "title": "UI5 Keyboard Libraries Demo"
         },
         "detail": {
           "id": "detail",
-          "name": "Detail"
+          "name": "Detail",
+          "title": "Scope + Recorder - Detail View"
         },
         "integration": {
           "id": "integration",
-          "name": "Integration"
+          "name": "Integration",
+          "title": "Integration Demo - ui5.hotkeys + ui5.kiosk"
         },
         "hotkeysHub": {
           "id": "hotkeysHub",
-          "name": "HotkeysHub"
+          "name": "HotkeysHub",
+          "title": "Hotkey Manager Demos"
         },
         "hotkeysSequences": {
           "id": "hotkeysSequences",
-          "name": "HotkeysSequences"
+          "name": "HotkeysSequences",
+          "title": "Hotkeys Demo - Sequences"
         },
         "hotkeysTargetBubble": {
           "id": "hotkeysTargetBubble",
-          "name": "HotkeysTargetBubble"
+          "name": "HotkeysTargetBubble",
+          "title": "Hotkeys Demo - Target Bubbling"
         },
         "hotkeysConflict": {
           "id": "hotkeysConflict",
-          "name": "HotkeysConflict"
+          "name": "HotkeysConflict",
+          "title": "Hotkeys Demo - Conflict Behavior"
         },
         "kioskHub": {
           "id": "kioskHub",
-          "name": "KioskHub"
+          "name": "KioskHub",
+          "title": "Kiosk Keyboard Demos"
         },
         "kioskDocked": {
           "id": "kioskDocked",
-          "name": "KioskDocked"
+          "name": "KioskDocked",
+          "title": "Docked Keyboard Demo"
         },
         "kioskPopover": {
           "id": "kioskPopover",
-          "name": "KioskPopover"
+          "name": "KioskPopover",
+          "title": "Popover Keyboard Demo"
         },
         "kioskInputIds": {
           "id": "kioskInputIds",
-          "name": "KioskInputIds"
+          "name": "KioskInputIds",
+          "title": "Input IDs Targeting Demo"
         },
         "kioskProgrammatic": {
           "id": "kioskProgrammatic",
-          "name": "KioskProgrammatic"
+          "name": "KioskProgrammatic",
+          "title": "Programmatic Control Demo"
         },
         "kioskComponent": {
           "id": "kioskComponent",
-          "name": "KioskComponent"
+          "name": "KioskComponent",
+          "title": "Component-Level Keyboard Demo"
         },
         "kioskFormWorkflow": {
           "id": "kioskFormWorkflow",
-          "name": "KioskFormWorkflow"
+          "name": "KioskFormWorkflow",
+          "title": "Form Workflow Demo"
         },
         "kioskMultiKeyboard": {
           "id": "kioskMultiKeyboard",
-          "name": "KioskMultiKeyboard"
+          "name": "KioskMultiKeyboard",
+          "title": "Multi-Keyboard Demo"
         },
         "kioskDialog": {
           "id": "kioskDialog",
-          "name": "KioskDialog"
+          "name": "KioskDialog",
+          "title": "Dialog Integration Demo"
         },
         "kioskCustomLayouts": {
           "id": "kioskCustomLayouts",
-          "name": "KioskCustomLayouts"
+          "name": "KioskCustomLayouts",
+          "title": "Custom Layouts Gallery"
         },
         "kioskFocusScenarios": {
           "id": "kioskFocusScenarios",
-          "name": "KioskFocusScenarios"
+          "name": "KioskFocusScenarios",
+          "title": "Focus Scenarios Demo"
         },
         "kioskI18nExtensibility": {
           "id": "kioskI18nExtensibility",
-          "name": "KioskI18nExtensibility"
+          "name": "KioskI18nExtensibility",
+          "title": "i18n Extensibility Demo"
         },
         "kioskWebComponentTooling": {
           "id": "kioskWebComponentTooling",
-          "name": "KioskWebComponentTooling"
+          "name": "KioskWebComponentTooling",
+          "title": "Kiosk Keyboard: Web Component"
         },
         "kioskScriptInput": {
           "id": "kioskScriptInput",
-          "name": "KioskScriptInput"
+          "name": "KioskScriptInput",
+          "title": "Script Input & Middleware"
+        },
+        "notFound": {
+          "id": "notFound",
+          "name": "NotFound",
+          "title": "Page Not Found"
         }
       }
     },
     "models": {
-      "i18n": {
-        "type": "sap.ui.model.resource.ResourceModel",
-        "settings": {
-          "bundleName": "demo.hotkeys.i18n.i18n",
-          "supportedLocales": [""],
-          "fallbackLocale": ""
-        }
-      },
       "state": {
         "type": "sap.ui.model.json.JSONModel",
         "uri": "model/fixtures/state.json"

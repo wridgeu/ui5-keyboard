@@ -1,4 +1,3 @@
-import Item from "sap/ui/core/Item";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
@@ -24,16 +23,10 @@ export default class KioskDocked extends BaseController {
         kioskFKeyMode: "Virtual",
         kioskLastKey: "None",
         kioskLayout: "qwerty",
+        layouts: KioskKeyboard.getRegisteredLayoutNames().map((name) => ({ key: name, text: name })),
       }),
       KioskDocked._MODEL_NAME,
     );
-
-    // Populate layout select with all registered layout names
-    const select = this.byId("layoutSelect") as Select;
-    for (const name of KioskKeyboard.getRegisteredLayoutNames()) {
-      select.addItem(new Item({ key: name, text: name }));
-    }
-    select.setSelectedKey("qwerty");
 
     this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }

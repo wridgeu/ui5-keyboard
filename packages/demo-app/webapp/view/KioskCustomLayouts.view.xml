@@ -4,6 +4,9 @@
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
     <Page titleAlignment="Center" title="Custom Layouts Gallery" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <HBox class="sapUiSmallMarginBottom" gap="1rem">
                 <Panel headerText="Layout Switcher">

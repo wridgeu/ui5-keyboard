@@ -4,6 +4,9 @@
     xmlns:core="sap.ui.core"
     xmlns="sap.m">
     <Page id="targetBubblePage" titleAlignment="Center" title="Hotkeys Demo - Target Bubbling" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <HBox fitContainer="true" renderType="Bare" wrap="Wrap" gap="1rem">
                 <VBox>
@@ -43,7 +46,7 @@
                     </layoutData>
                     <headerToolbar>
                         <OverflowToolbar>
-                            <Title text="Event Log" />
+                            <Title id="bubbleLogTitle" text="Event Log" />
                             <ToolbarSpacer />
                             <Button icon="sap-icon://delete" tooltip="Clear log" press=".onClearLog" type="Transparent" />
                         </OverflowToolbar>
@@ -51,6 +54,7 @@
                     <ScrollContainer height="60vh" vertical="true">
                         <List
                             id="bubbleLogList"
+                            ariaLabelledBy="bubbleLogTitle"
                             items="{bubbleLog>/entries}"
                             noDataText="Focus the inner input and press Escape.">
                             <StandardListItem

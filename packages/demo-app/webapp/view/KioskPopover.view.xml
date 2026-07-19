@@ -4,6 +4,9 @@
     xmlns:core="sap.ui.core"
     xmlns="sap.m">
     <Page titleAlignment="Center" title="Popover Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <Panel headerText="A) Generous height (19 rem)" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
@@ -13,6 +16,7 @@
                         <Input id="inputA" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
+                            tooltip="Open keyboard for Full Name (generous height)"
                             type="Transparent"
                             press=".onOpenKeyboardA"
                             ariaHasPopup="Dialog">
@@ -32,6 +36,7 @@
                         <Input id="inputB" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
+                            tooltip="Open keyboard for Full Name (compact height)"
                             type="Transparent"
                             press=".onOpenKeyboardB"
                             ariaHasPopup="Dialog">
@@ -51,6 +56,7 @@
                         <Input id="inputC" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
+                            tooltip="Open keyboard for Full Name (custom CSS variables)"
                             type="Transparent"
                             press=".onOpenKeyboardC"
                             ariaHasPopup="Dialog">
@@ -69,6 +75,7 @@
                         <Input id="inputD" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
+                            tooltip="Open keyboard for Full Name (borderless)"
                             type="Transparent"
                             press=".onOpenKeyboardD"
                             ariaHasPopup="Dialog">
@@ -88,6 +95,7 @@
                         <Input id="inputE" placeholder="Jane Doe" width="14rem" />
                         <Button
                             icon="sap-icon://keyboard-and-mouse"
+                            tooltip="Open keyboard for Full Name (popover contentHeight)"
                             type="Transparent"
                             press=".onOpenKeyboardE"
                             ariaHasPopup="Dialog">

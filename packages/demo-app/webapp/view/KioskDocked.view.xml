@@ -6,6 +6,9 @@
     xmlns:kiosk="ui5.kiosk"
     core:require="{ kioskLib: 'ui5/kiosk/library' }">
     <Page titleAlignment="Center" title="Docked Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <Panel class="sapUiSmallMarginBottom" headerText="Controls">
                 <VBox class="sapUiSmallMargin">
@@ -25,7 +28,10 @@
                     </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label text="Layout:" labelFor="layoutSelect" class="sapUiSmallMarginEnd" />
-                        <Select id="layoutSelect" change=".onLayoutChange" />
+                        <Select id="layoutSelect" change=".onLayoutChange" selectedKey="{docked>/kioskLayout}"
+                            items="{docked>/layouts}">
+                            <core:Item key="{docked>key}" text="{docked>text}" />
+                        </Select>
                     </HBox>
                     <HBox alignItems="Center" class="sapUiSmallMarginTop">
                         <Label id="fKeyModeLabel" text="F-Key Mode:" class="sapUiSmallMarginEnd" />

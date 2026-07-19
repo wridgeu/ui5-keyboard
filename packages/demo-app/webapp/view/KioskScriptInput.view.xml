@@ -4,6 +4,9 @@
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
     <Page titleAlignment="Center" title="Script Input &amp; Middleware" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <Panel class="sapUiSmallMarginBottom" headerText="Japanese Kana">
                 <VBox class="sapUiSmallMargin">
