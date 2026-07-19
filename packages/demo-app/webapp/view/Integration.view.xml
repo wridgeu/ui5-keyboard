@@ -6,6 +6,9 @@
     xmlns="sap.m">
     <Page titleAlignment="Center" title="Integration Demo - ui5.hotkeys + ui5.kiosk" showNavButton="true" navButtonPress=".onNavBack"
         class="sapUiContentPadding">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <Panel headerText="How this page combines both libraries" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">

@@ -4,8 +4,6 @@ import type { LayoutDefinition } from "ui5/kiosk/types";
 import { KeyboardType } from "ui5/kiosk/library";
 import MessageToast from "sap/m/MessageToast";
 import type { Select$ChangeEvent } from "sap/m/Select";
-import Select from "sap/m/Select";
-import Item from "sap/ui/core/Item";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
@@ -30,15 +28,10 @@ export default class KioskProgrammatic extends BaseController {
         kioskLayout: "qwerty",
         kioskLastKey: "None",
         kioskEnabled: true,
+        layouts: KioskKeyboard.getRegisteredLayoutNames().map((name) => ({ key: name, text: name })),
       }),
       KioskProgrammatic._MODEL_NAME,
     );
-
-    const select = this.byId("layoutSelect") as Select;
-    for (const name of KioskKeyboard.getRegisteredLayoutNames()) {
-      select.addItem(new Item({ key: name, text: name }));
-    }
-    select.setSelectedKey("qwerty");
 
     this.getRouter().attachRouteMatched(this._onRouteMatched, this);
   }
@@ -118,11 +111,7 @@ export default class KioskProgrammatic extends BaseController {
       }
       const qwertyNav: LayoutDefinition = [navRow, ...base];
       this._addInstanceLayout(kb, "qwerty-nav", qwertyNav);
-
-      const select = this.byId("layoutSelect") as Select;
-      if (!select.getItemByKey("qwerty-nav")) {
-        select.addItem(new Item({ key: "qwerty-nav", text: "qwerty-nav" }));
-      }
+      this._addLayoutOption("qwerty-nav");
     }
 
     kb.resetKeyboardType();
@@ -161,11 +150,7 @@ export default class KioskProgrammatic extends BaseController {
 
     const qwertyFkNav: LayoutDefinition = [fkeyRow, navRow, ...base];
     this._addInstanceLayout(this._getKeyboard(), "qwerty-fk-nav-demo", qwertyFkNav);
-
-    const select = this.byId("layoutSelect") as Select;
-    if (!select.getItemByKey("qwerty-fk-nav-demo")) {
-      select.addItem(new Item({ key: "qwerty-fk-nav-demo", text: "qwerty-fk-nav-demo" }));
-    }
+    this._addLayoutOption("qwerty-fk-nav-demo");
 
     MessageToast.show("qwerty-fk-nav-demo layout registered");
   }
@@ -178,6 +163,13 @@ export default class KioskProgrammatic extends BaseController {
   private _addInstanceLayout(kb: KioskKeyboard, name: string, def: LayoutDefinition): void {
     const current = (kb.getInstanceLayouts() as Record<string, LayoutDefinition> | null) ?? {};
     kb.setInstanceLayouts({ ...current, [name]: def });
+  }
+
+  private _addLayoutOption(name: string): void {
+    const viewModel = this._getViewModel();
+    const layouts = viewModel.getProperty("/layouts") as { key: string; text: string }[];
+    if (layouts.some((entry) => entry.key === name)) return;
+    viewModel.setProperty("/layouts", [...layouts, { key: name, text: name }]);
   }
 
   onUseQwertyFkNav(): void {
@@ -242,11 +234,6 @@ export default class KioskProgrammatic extends BaseController {
     viewModel.setProperty("/kioskIsOpen", kb.isOpen());
     viewModel.setProperty("/kioskKeyboardType", kb.getKeyboardType());
     viewModel.setProperty("/kioskLayout", kb.getLayout());
-
-    const select = this.byId("layoutSelect") as Select;
-    if (select.getSelectedKey() !== kb.getLayout()) {
-      select.setSelectedKey(kb.getLayout());
-    }
   }
 
   private _getViewModel(): JSONModel {

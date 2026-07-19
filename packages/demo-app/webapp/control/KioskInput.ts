@@ -1,4 +1,5 @@
 import WebComponent from "sap/ui/core/webc/WebComponent";
+import "demo/hotkeys/webc/DemoKioskInput";
 
 const KioskInput = WebComponent.extend("demo.hotkeys.control.KioskInput", {
   metadata: {
@@ -42,6 +43,10 @@ const KioskInput = WebComponent.extend("demo.hotkeys.control.KioskInput", {
     }
 
     return this;
+  },
+
+  getIdForLabel() {
+    return `${this.getId()}-inner`;
   },
 }) as typeof WebComponent;
 

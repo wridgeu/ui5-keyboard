@@ -3,6 +3,9 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
     <Page titleAlignment="Center" title="Component-Level Keyboard Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <Panel headerText="Persistent Keyboard" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">

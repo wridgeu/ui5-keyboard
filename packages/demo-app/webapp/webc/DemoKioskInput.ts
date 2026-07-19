@@ -78,6 +78,7 @@ class DemoKioskInput extends HTMLElement {
 
   private _ensureInput(): HTMLInputElement {
     if (this._input) {
+      this._input.id = this.id ? `${this.id}-inner` : "";
       if (!this.contains(this._input)) {
         this.append(this._input);
       }
@@ -86,6 +87,7 @@ class DemoKioskInput extends HTMLElement {
 
     const input = document.createElement("input");
     input.type = "text";
+    input.id = this.id ? `${this.id}-inner` : "";
     input.style.width = "100%";
     input.style.padding = "0.625rem";
     input.style.border = "1px solid #c8d0d8";

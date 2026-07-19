@@ -12,16 +12,15 @@ import BaseController from "./BaseController";
  * @namespace demo.hotkeys.controller
  */
 export default class KioskComponent extends BaseController {
-  /** Static: destroyed in onExit, lazily recreated in onInit. */
-  private static _keyboard: KioskKeyboard | null = null;
+  private _keyboard: KioskKeyboard | null = null;
   private _returnNavTimer: ReturnType<typeof setTimeout> | null = null;
 
   override onInit(): void {
     const stateModel = this.getStateModel();
 
     // Lazily create the keyboard once - it lives in sap-ui-static
-    if (!KioskComponent._keyboard) {
-      KioskComponent._keyboard = new KioskKeyboard({
+    if (!this._keyboard) {
+      this._keyboard = new KioskKeyboard({
         docked: true,
         ariaLabel: "Component Keyboard",
         keyPress: (event: KioskKeyboard$KeyPressEvent) => {
@@ -31,7 +30,7 @@ export default class KioskComponent extends BaseController {
         afterOpen: () => stateModel.setProperty("/kioskIsOpen", true),
         afterClose: () => stateModel.setProperty("/kioskIsOpen", false),
       });
-      KioskComponent._keyboard.placeAt("sap-ui-static");
+      this._keyboard.placeAt("sap-ui-static");
     }
 
     this.getRouter().attachRouteMatched(this._onRouteMatched, this);
@@ -45,14 +44,14 @@ export default class KioskComponent extends BaseController {
       this._returnNavTimer = null;
     }
 
-    if (KioskComponent._keyboard) {
-      KioskComponent._keyboard.destroy();
-      KioskComponent._keyboard = null;
+    if (this._keyboard) {
+      this._keyboard.destroy();
+      this._keyboard = null;
     }
   }
 
   onShowKeyboard(): void {
-    const kb = KioskComponent._keyboard;
+    const kb = this._keyboard;
     if (kb) {
       const input = this.byId("compInput") as Input;
       kb.setControls([input.getId()]);
@@ -62,7 +61,7 @@ export default class KioskComponent extends BaseController {
   }
 
   onCloseKeyboard(): void {
-    const kb = KioskComponent._keyboard;
+    const kb = this._keyboard;
     if (kb) {
       kb.close();
       this.getStateModel().setProperty("/kioskIsOpen", kb.isOpen());
@@ -88,7 +87,7 @@ export default class KioskComponent extends BaseController {
     }
 
     // Close keyboard when leaving this demo
-    KioskComponent._keyboard?.close();
+    this._keyboard?.close();
     this.getRouter().navTo(Scope.KioskHub);
   }
 
@@ -96,7 +95,7 @@ export default class KioskComponent extends BaseController {
     if (event.getParameter("name") !== Scope.KioskComponent) return;
 
     // Re-wire the keyboard to this view's input whenever we navigate back
-    const kb = KioskComponent._keyboard;
+    const kb = this._keyboard;
     if (kb) {
       const input = this.byId("compInput") as Input;
       if (input) {

@@ -1,4 +1,5 @@
 import WebComponent from "sap/ui/core/webc/WebComponent";
+import "demo/hotkeys/webc/CustomAlertButton";
 
 const AlertButton = WebComponent.extend("demo.hotkeys.control.AlertButton", {
   metadata: {

@@ -2,8 +2,12 @@
     controllerName="demo.hotkeys.controller.KioskProgrammatic"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
+    xmlns:core="sap.ui.core"
     xmlns:kiosk="ui5.kiosk">
     <Page titleAlignment="Center" title="Programmatic Control Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <MessageStrip
                 text="How to test: click Show, focus the target input, type with the keyboard, then switch type/layout and verify the Status values and Last Key update. Use Register Pinpad or Register Qwerty FK+Nav to add runtime layouts before selecting them."
@@ -41,7 +45,10 @@
                         </HBox>
                         <HBox alignItems="Center" class="sapUiSmallMarginTop">
                             <Label text="Layout:" labelFor="layoutSelect" class="sapUiSmallMarginEnd" />
-                            <Select id="layoutSelect" width="16rem" change=".onLayoutChange" />
+                            <Select id="layoutSelect" width="16rem" change=".onLayoutChange" forceSelection="false"
+                                selectedKey="{programmatic>/kioskLayout}" items="{programmatic>/layouts}">
+                                <core:Item key="{programmatic>key}" text="{programmatic>text}" />
+                            </Select>
                         </HBox>
                         <HBox alignItems="Center" class="sapUiSmallMarginTop">
                             <Label id="enabledLabel" text="Enabled:" class="sapUiSmallMarginEnd" />

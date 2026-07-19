@@ -6,6 +6,9 @@
     xmlns:webc="@ui5/webcomponents/dist"
     xmlns:kiosk="ui5.kiosk">
     <Page titleAlignment="Center" title="Input IDs Targeting Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
@@ -77,8 +80,8 @@
                                     <StepInput id="stepInputTarget" width="12rem" min="0" max="999" value="5" />
                                 </VBox>
                                 <HBox alignItems="Center">
-                                    <Label text="autoType:" class="sapUiSmallMarginEnd" />
-                                    <Switch state="{inputIds>/kioskAutoType}" />
+                                    <Label id="autoTypeLabel" text="autoType:" class="sapUiSmallMarginEnd" />
+                                    <Switch state="{inputIds>/kioskAutoType}" ariaLabelledBy="autoTypeLabel" />
                                 </HBox>
                             </HBox>
                         </VBox>
