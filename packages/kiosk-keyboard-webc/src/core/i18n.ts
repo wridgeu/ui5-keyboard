@@ -84,6 +84,7 @@ function _formatMessage(text: string, args: (string | number)[]): string {
 }
 
 function lookupI18nText(key: string): I18nText | undefined {
+  // oxlint-disable-next-line import/namespace -- key is a runtime lookup, guarded by Object.hasOwn
   return Object.hasOwn(I18N, key) ? I18N[key as I18nKey] : undefined;
 }
 
