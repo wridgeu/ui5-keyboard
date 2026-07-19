@@ -29,7 +29,6 @@
   ],
   "type": "module",
   "main": "dist/resources/ui5/kiosk/library.js",
-  "types": "dist/index.d.ts",
   "scripts": {
     "clean": "rimraf dist",
     "generate": "ts-interface-generator --jsdoc verbose",
