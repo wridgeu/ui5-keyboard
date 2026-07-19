@@ -9,10 +9,6 @@ import BaseController from "./BaseController";
 
 type AlertButtonDemoAlertEventParameters = {
   message?: string;
-  detail?: {
-    message?: string;
-  };
-  originalEvent?: CustomEvent<{ message?: string }>;
 };
 
 type AlertButton$DemoAlertEvent = UI5Event<AlertButtonDemoAlertEventParameters>;
@@ -39,10 +35,10 @@ export default class KioskInputIds extends BaseController {
 
     // Track target changes
     const kb = this.byId("inputIdsKeyboard") as KioskKeyboard;
-    kb.attachEvent("afterOpen", () => {
+    kb.attachAfterOpen(() => {
       this._updateTargetStatus();
     });
-    kb.attachEvent("activeControlChange", () => {
+    kb.attachActiveControlChange(() => {
       this._updateTargetStatus();
     });
 
@@ -60,11 +56,7 @@ export default class KioskInputIds extends BaseController {
   }
 
   onDemoAlert(event: AlertButton$DemoAlertEvent): void {
-    const message =
-      event.getParameter("message") ??
-      event.getParameter("detail")?.message ??
-      event.getParameter("originalEvent")?.detail?.message ??
-      "Custom element event";
+    const message = event.getParameter("message") ?? "Custom element event";
     MessageToast.show(message);
   }
 

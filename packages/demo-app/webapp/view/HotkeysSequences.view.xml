@@ -3,6 +3,9 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
     <Page titleAlignment="Center" title="Hotkeys Demo - Sequences" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <Panel headerText="Try Sequences" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">

@@ -18,6 +18,9 @@ playwright-report/
 report/
 .nyc_output/
 
+# @ui5/linter coverage report (written to cwd by `ui5lint --coverage`)
+ui5lint-report.html
+
 # IDE
 .idea/
 *.swp

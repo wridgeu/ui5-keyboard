@@ -384,7 +384,9 @@ class KioskKeyboard extends UI5Element {
 
   /**
    * Whether the keyboard is disabled. A disabled keyboard does not respond
-   * to key presses or auto-show triggers.
+   * to key presses or auto-show triggers. A disabled keyboard is also removed
+   * from the tab order: every key renders `tabindex="-1"`, matching
+   * `@ui5/webcomponents` Button and the `sap.m` convention.
    *
    * @default false
    * @public
@@ -696,6 +698,7 @@ class KioskKeyboard extends UI5Element {
     getResolvedLayout: () => this._getResolvedLayout(),
     getShadowRoot: () => this.shadowRoot,
     getComponentId: () => this._componentId,
+    isRtl: () => this.effectiveDir === "rtl",
   });
 
   // ── Pre-bound template handlers (avoids per-render allocation) ──
@@ -706,6 +709,10 @@ class KioskKeyboard extends UI5Element {
   readonly _boundOnKeyDown = (e: KeyboardEvent): void => {
     if (this._variantPopup) return;
     this._keyGridNav.onKeyDown(e);
+  };
+  readonly _boundOnKeyUp = (e: KeyboardEvent): void => {
+    if (this._variantPopup) return;
+    this._keyGridNav.onKeyUp(e);
   };
   readonly _boundOnVariantClick = (e: Event): void => this._variantGesture.onOptionClick(e);
   readonly _boundOnVariantKeyDown = (e: KeyboardEvent): void => this._variantGesture.onOptionKeydown(e);

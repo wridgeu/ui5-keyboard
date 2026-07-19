@@ -3,6 +3,9 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m">
     <Page title="UI5 Keyboard Libraries Demo" id="mainPage" titleAlignment="Center" class="sapUiContentPadding">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <Panel headerText="Welcome" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">

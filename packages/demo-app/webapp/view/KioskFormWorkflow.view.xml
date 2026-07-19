@@ -4,6 +4,9 @@
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
     <Page titleAlignment="Center" title="Form Workflow Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding demoDockedPage">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <Panel headerText="Status" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">

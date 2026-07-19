@@ -21,42 +21,7 @@
       Component-preload and the custom libraries (ui5.hotkeys / ui5.kiosk) are
       served from the same artifact via the resourceroots below.
     -->
-    <script type="text/javascript">
-      window["sap-ushell-config"] = {
-        defaultRenderer: "fiori2",
-        renderers: {
-          fiori2: {
-            componentData: {
-              config: {
-                search: "hidden",
-                enableSearch: false,
-              },
-            },
-          },
-        },
-        applications: {
-          // The UI5 demo application (loaded as a SAPUI5 component from this
-          // artifact root, next to flp.html).
-          "DemoApp-display": {
-            title: "UI5 Keyboard Libraries Demo",
-            description: "UI5 controls: hotkeys + kiosk keyboard",
-            additionalInformation: "SAPUI5.Component=demo.hotkeys",
-            applicationType: "SAPUI5",
-            url: "./",
-            navigationMode: "embedded",
-          },
-          // The "raw" web components demo: a framework-less standalone page
-          // (no UI5 runtime), opened inside the shell via a URL app.
-          "WebComponents-display": {
-            title: "Raw Web Components Demo",
-            description: "Framework-less kiosk-keyboard custom element",
-            applicationType: "URL",
-            url: "./webc-demo/index.html",
-            navigationMode: "embedded",
-          },
-        },
-      };
-    </script>
+    <script src="flp-config.js"></script>
 
     <!-- ushell sandbox bootstrap (self-hosted from this artifact). -->
     <script id="sap-ushell-bootstrap" src="test-resources/sap/ushell/bootstrap/sandbox.js"></script>
@@ -79,20 +44,7 @@
       data-sap-ui-resource-roots='{ "demo.hotkeys": "./", "ui5.hotkeys": "./resources/ui5/hotkeys", "ui5.kiosk": "./resources/ui5/kiosk" }'
     ></script>
 
-    <script type="text/javascript">
-      // Core.ready() (since 1.118) replaces the deprecated
-      // sap.ui.getCore().attachInit. The ushell sandbox creates the Container
-      // during core init, so it is available by the time core is ready.
-      sap.ui.require(["sap/ushell/Container", "sap/ui/core/Core"], function (Container, Core) {
-        Core.ready()
-          .then(function () {
-            return Container.createRenderer(undefined, true);
-          })
-          .then(function (renderer) {
-            renderer.placeAt("content");
-          });
-      });
-    </script>
+    <script src="flp-init.js"></script>
   </head>
   <body class="sapUiBody" id="content"></body>
 </html>

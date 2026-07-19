@@ -310,17 +310,6 @@
     white-space: nowrap;
     container-type: inline-size;
 
-    &:hover {
-      background: @sapUiButtonHoverBackground;
-      border-color: @sapUiButtonHoverBorderColor;
-      transform: translateY(-1px);
-      box-shadow: var(--_ui5KioskKeyboard-keyShadowHover);
-      transition:
-        background 0.1s ease,
-        box-shadow 0.1s ease,
-        transform 0.05s ease;
-    }
-
     &:active,
     &--pressed,
     &--highlight {
@@ -465,12 +454,6 @@
         font-size: 1em;
       }
 
-      &:hover {
-        background: @sapUiButtonLiteHoverBackground;
-        border-color: @sapUiButtonLiteHoverBorderColor;
-        box-shadow: var(--_ui5KioskKeyboard-modifierShadowHover);
-      }
-
       &:active,
       &.ui5KioskKey--pressed,
       &.ui5KioskKey--highlight {
@@ -490,11 +473,6 @@
 
       .ui5KioskKey__icon {
         font-size: 1em;
-      }
-
-      &:hover {
-        background: @sapUiButtonEmphasizedHoverBackground;
-        border-color: @sapUiButtonEmphasizedHoverBorderColor;
       }
 
       &:active,
@@ -522,11 +500,6 @@
       /* The shift toggle itself is instant because UI5 re-renders the
          keyboard (new DOM), so no CSS transition fires. Keep the base
          transition so physical-keyboard highlights animate smoothly. */
-
-      &:hover {
-        background: @sapUiButtonEmphasizedHoverBackground;
-        border-color: @sapUiButtonEmphasizedHoverBorderColor;
-      }
 
       &:active,
       &.ui5KioskKey--pressed,
@@ -702,10 +675,45 @@
     direction: rtl;
   }
 
+  /* Hover affordances apply only where a hovering primary pointer exists.
+     Gating the declarations keeps a tap on a touch device from leaving the
+     key painted in its hover colors. */
+
+  @media (hover: hover) {
+    .ui5KioskKey:hover {
+      background: @sapUiButtonHoverBackground;
+      border-color: @sapUiButtonHoverBorderColor;
+      transform: translateY(-1px);
+      box-shadow: var(--_ui5KioskKeyboard-keyShadowHover);
+      transition:
+        background 0.1s ease,
+        box-shadow 0.1s ease,
+        transform 0.05s ease;
+    }
+
+    .ui5KioskKey--modifier:hover {
+      background: @sapUiButtonLiteHoverBackground;
+      border-color: @sapUiButtonLiteHoverBorderColor;
+      box-shadow: var(--_ui5KioskKeyboard-modifierShadowHover);
+    }
+
+    .ui5KioskKey--action:hover {
+      background: @sapUiButtonEmphasizedHoverBackground;
+      border-color: @sapUiButtonEmphasizedHoverBorderColor;
+    }
+
+    .ui5KioskKey--modifier.ui5KioskKey--shiftActive:hover {
+      background: @sapUiButtonEmphasizedHoverBackground;
+      border-color: @sapUiButtonEmphasizedHoverBorderColor;
+    }
+  }
+
   /* Accessibility */
 
   @media (prefers-reduced-motion: reduce) {
     .ui5KioskKey,
+    .ui5KioskKey:hover,
+    .ui5KioskKey:active,
     .ui5KioskKeyboard--docked,
     .ui5KioskKeyboard--closed {
       transition: none;
@@ -746,27 +754,6 @@
       border-color: Highlight;
       outline: 2px solid Highlight;
       outline-offset: -1px;
-    }
-  }
-
-  @media (hover: none) {
-    .ui5KioskKey:hover {
-      background: @sapUiButtonBackground;
-      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonBorderColor ~")";
-      transform: none;
-      box-shadow: var(--_ui5KioskKeyboard-keyShadow);
-    }
-
-    .ui5KioskKey--modifier:hover {
-      background: @sapUiButtonLiteBackground;
-      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonLiteBorderColor ~")";
-      box-shadow: var(--_ui5KioskKeyboard-modifierShadow);
-    }
-
-    .ui5KioskKey--action:hover,
-    .ui5KioskKey--shiftActive:hover {
-      background: @sapUiButtonEmphasizedBackground;
-      border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
     }
   }
 

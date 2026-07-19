@@ -4,6 +4,9 @@
     xmlns="sap.m"
     xmlns:kiosk="ui5.kiosk">
     <Page titleAlignment="Center" title="i18n Extensibility Demo" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
+        <landmarkInfo>
+            <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
+        </landmarkInfo>
         <content>
             <MessageStrip
                 text="Switch the i18n mode below to see how ARIA labels change. Special keys use icons: their translated text appears as aria-labels (for screen readers) and as visible text on the Space key."

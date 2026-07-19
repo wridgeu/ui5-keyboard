@@ -11,16 +11,20 @@ export interface KeyGridNavigationHost {
   getResolvedLayout(): LayoutDefinition;
   getShadowRoot(): ShadowRoot | null;
   getComponentId(): string;
+  /** Whether the host renders right-to-left, mirroring the horizontal arrows. */
+  isRtl(): boolean;
 }
 
 /**
  * Keyboard grid navigation for the web component (mirrors the UI5 control's
  * `KeyGridNavigation`, which attaches via `addDelegate`). Follows the WAI-ARIA
  * APG layout-grid arrow model: Up/Down move within the column and clamp onto a
- * narrower row, stopping at the top/bottom edge; Left/Right move within the row
- * and continue onto the adjacent row at a row boundary, stopping at the first/
- * last key of the whole grid. Home/End move within the current row (Ctrl+Home/
- * End jump across the whole grid); Enter/Space activate. Focus never wraps
+ * narrower row, stopping at the top/bottom edge; the visually-forward arrow -
+ * ArrowRight in LTR, ArrowLeft in RTL - moves within the row and continues onto
+ * the adjacent row at a row boundary, and the visually-backward arrow does the
+ * reverse, both stopping at the first/last key of the whole grid. Home/End move
+ * within the current row (Ctrl+Home/End jump across the whole grid); Enter
+ * activates on press and Space on release, matching native `<button>`. Focus never wraps
  * around grid edges. Handled navigation keys are always prevented (so holding an
  * arrow at an edge does not scroll the page), even when focus does not move.
  *
@@ -38,6 +42,7 @@ export interface KeyGridNavigationHost {
  */
 export class KeyGridNavigation {
   private _lastFocusedKeyId: string | null = null;
+  private _spaceKeyDownTarget: HTMLElement | null = null;
 
   constructor(private readonly _host: KeyGridNavigationHost) {}
 
@@ -62,63 +67,75 @@ export class KeyGridNavigation {
     let row = fromRow;
     let col = fromCol;
 
-    switch (e.key) {
-      case "ArrowRight":
-        if (col + 1 < (layout[row]?.length ?? 0)) {
-          col += 1;
-        } else if (row + 1 < layout.length) {
-          // End of the row: continue onto the first key of the next row.
-          row += 1;
-          col = 0;
-        }
-        // Last key of the grid: stay put.
-        break;
-      case "ArrowLeft":
-        if (col - 1 >= 0) {
-          col -= 1;
-        } else if (row - 1 >= 0) {
-          // Start of the row: continue onto the last key of the previous row.
-          row -= 1;
-          col = (layout[row]?.length ?? 1) - 1;
-        }
-        // First key of the grid: stay put.
-        break;
-      case "ArrowDown":
-        // Clamp the column onto a narrower row; stop at the bottom edge.
-        if (row + 1 < layout.length) {
-          row += 1;
-          col = Math.min(col, (layout[row]?.length ?? 1) - 1);
-        }
-        break;
-      case "ArrowUp":
-        // Clamp the column onto a narrower row; stop at the top edge.
-        if (row - 1 >= 0) {
-          row -= 1;
-          col = Math.min(col, (layout[row]?.length ?? 1) - 1);
-        }
-        break;
-      case "Home":
-        // Ctrl+Home jumps to the first key of the whole grid; plain Home
-        // stays within the current row.
-        if (e.ctrlKey) row = 0;
+    // In RTL the row is mirrored (.kiosk-row is display:flex), so the arrow
+    // that moves focus visually forward is ArrowLeft. Mirrors the variant popup.
+    const forwardKey = this._host.isRtl() ? "ArrowLeft" : "ArrowRight";
+    const backwardKey = this._host.isRtl() ? "ArrowRight" : "ArrowLeft";
+
+    if (e.key === forwardKey) {
+      if (col + 1 < (layout[row]?.length ?? 0)) {
+        col += 1;
+      } else if (row + 1 < layout.length) {
+        // End of the row: continue onto the first key of the next row.
+        row += 1;
         col = 0;
-        break;
-      case "End":
-        // Ctrl+End jumps to the last key of the whole grid; plain End
-        // stays within the current row.
-        if (e.ctrlKey) row = layout.length - 1;
+      }
+      // Last key of the grid: stay put.
+    } else if (e.key === backwardKey) {
+      if (col - 1 >= 0) {
+        col -= 1;
+      } else if (row - 1 >= 0) {
+        // Start of the row: continue onto the last key of the previous row.
+        row -= 1;
         col = (layout[row]?.length ?? 1) - 1;
-        break;
-      case "Enter":
-      case " ":
-        // Activate only without modifiers: Ctrl+Enter, Alt+Space and similar
-        // combinations are browser/OS shortcuts, not key activations.
-        if (e.ctrlKey || e.altKey || e.metaKey) return;
-        keyEl.click();
-        e.preventDefault();
-        return;
-      default:
-        return;
+      }
+      // First key of the grid: stay put.
+    } else {
+      switch (e.key) {
+        case "ArrowDown":
+          // Clamp the column onto a narrower row; stop at the bottom edge.
+          if (row + 1 < layout.length) {
+            row += 1;
+            col = Math.min(col, (layout[row]?.length ?? 1) - 1);
+          }
+          break;
+        case "ArrowUp":
+          // Clamp the column onto a narrower row; stop at the top edge.
+          if (row - 1 >= 0) {
+            row -= 1;
+            col = Math.min(col, (layout[row]?.length ?? 1) - 1);
+          }
+          break;
+        case "Home":
+          // Ctrl+Home jumps to the first key of the whole grid; plain Home
+          // stays within the current row.
+          if (e.ctrlKey) row = 0;
+          col = 0;
+          break;
+        case "End":
+          // Ctrl+End jumps to the last key of the whole grid; plain End
+          // stays within the current row.
+          if (e.ctrlKey) row = layout.length - 1;
+          col = (layout[row]?.length ?? 1) - 1;
+          break;
+        case "Enter":
+          // Activate only without modifiers: Ctrl+Enter and similar
+          // combinations are browser/OS shortcuts, not key activations.
+          if (e.ctrlKey || e.altKey || e.metaKey) return;
+          keyEl.click();
+          e.preventDefault();
+          return;
+        case " ":
+          // Native `<button>` semantics: Space activates on release, not on
+          // press, and does not repeat while held. Suppress the page scroll
+          // here and remember the pressed key; onKeyUp performs the activation.
+          if (e.ctrlKey || e.altKey || e.metaKey) return;
+          this._spaceKeyDownTarget = keyEl;
+          e.preventDefault();
+          return;
+        default:
+          return;
+      }
     }
 
     // A handled navigation key: always prevent the default (e.g. page scroll),
@@ -134,5 +151,21 @@ export class KeyGridNavigation {
       nextEl.focus();
       this._lastFocusedKeyId = id;
     }
+  }
+
+  /**
+   * Completes a Space activation on release, mirroring native `<button>`:
+   * only the key that received the Space keydown activates, so a Space press
+   * begun outside the grid never types a character on release.
+   */
+  onKeyUp(e: KeyboardEvent): void {
+    if (e.key !== " ") return;
+    const pressed = this._spaceKeyDownTarget;
+    this._spaceKeyDownTarget = null;
+    if (!pressed) return;
+    const keyEl = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
+    if (keyEl !== pressed) return;
+    e.preventDefault();
+    keyEl.click();
   }
 }
