@@ -1,6 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { KeyboardType } from "ui5/kiosk/library";
-import ResizeHandler from "sap/ui/core/ResizeHandler";
 import { setMeasuredHeight, placeAndWait, waitForRender } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
@@ -25,20 +24,64 @@ QUnit.module("KioskKeyboard responsive sizing", {
 // Cleanup
 // ──────────────────────────────────────────────
 
-QUnit.test("Cleanup on exit() deregisters the ResizeHandler", async (assert) => {
-  const registerSpy = sandbox.spy(ResizeHandler, "register");
-  const deregisterSpy = sandbox.spy(ResizeHandler, "deregister");
+QUnit.test("Cleanup on exit() disconnects the ResizeObserver", async (assert) => {
+  const observeSpy = sandbox.spy(ResizeObserver.prototype, "observe");
+  const disconnectSpy = sandbox.spy(ResizeObserver.prototype, "disconnect");
 
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const registration = registerSpy.getCalls().find((call) => call.returnValue);
-  assert.ok(registration, "ResizeHandler.register was called during initial render");
-  const handlerId = registration!.returnValue as string;
+  const dom = kb.getDomRef()! as HTMLElement;
+  const observation = observeSpy.getCalls().find((call) => call.args[0] === dom);
+  assert.ok(observation, "the keyboard root was observed during initial render");
 
+  const disconnectsBefore = disconnectSpy.callCount;
   kb.destroy();
 
-  assert.ok(deregisterSpy.calledWith(handlerId), "ResizeHandler.deregister called with the registered id");
+  assert.ok(disconnectSpy.callCount > disconnectsBefore, "ResizeObserver.disconnect called on destroy");
+  assert.ok(
+    disconnectSpy.getCalls().some((call) => call.thisValue === observation!.thisValue),
+    "the observer that observed the root is the one disconnected",
+  );
+});
+
+QUnit.test("Observer recomputes on a width-only change but skips a repeat of the applied box", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  dom.style.height = "14rem";
+  dom.style.overflow = "hidden";
+  await setMeasuredHeight(kb, dom, 14 * remPx);
+
+  // The controller records the box it last measured; an observation reporting
+  // that same box is redundant, but a width change is not (container queries
+  // wrap rows, so the natural height depends on width).
+  const controller = (
+    kb as unknown as {
+      _responsiveSizing: {
+        _appliedBox: { blockSize: number; inlineSize: number };
+        _reportsAppliedBox(e: ResizeObserverEntry[]): boolean;
+      };
+    }
+  )._responsiveSizing;
+  const applied = controller._appliedBox;
+  const entry = (blockSize: number, inlineSize: number) =>
+    [{ borderBoxSize: [{ blockSize, inlineSize }] }] as unknown as ResizeObserverEntry[];
+
+  assert.ok(
+    controller._reportsAppliedBox(entry(applied.blockSize, applied.inlineSize)),
+    "the applied box is treated as redundant",
+  );
+  assert.notOk(
+    controller._reportsAppliedBox(entry(applied.blockSize, applied.inlineSize + 40)),
+    "a width-only change is not treated as redundant",
+  );
+
+  kb.destroy();
 });
 
 // ──────────────────────────────────────────────
@@ -177,8 +220,8 @@ QUnit.test("Toggling docked mode clears stale height classes after render cycle"
 
   kb.setDocked(true);
   await waitForRender();
-  // setDocked suppresses invalidation and relies on ResizeHandler for responsive sync;
-  // drive the recompute explicitly so the test does not depend on browser layout timing.
+  // setDocked suppresses invalidation and relies on the ResizeObserver for responsive
+  // sync; drive the recompute explicitly so the test does not depend on layout timing.
   kb.refreshResponsiveState();
   await new Promise((resolve) => requestAnimationFrame(resolve));
 
@@ -341,6 +384,35 @@ QUnit.test("Custom height threshold: cqTiny triggers at overridden tiny threshol
   await setMeasuredHeight(kb, dom, 13 * remPx);
   assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny present at 13rem with 14rem threshold");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent when cqTiny applies");
+
+  kb.destroy();
+});
+
+QUnit.test("Repeated recomputes converge on a stable class set", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  // Real layout, no measurement stubs: recomputing must be idempotent, so the
+  // class set at a fixed constraint stays put across repeated passes.
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  dom.style.height = `${15 * remPx}px`;
+  dom.style.overflow = "hidden";
+
+  const settle = async () => {
+    kb.refreshResponsiveState();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    return `${dom.classList.contains(DOM.classes.rootCqShort)}/${dom.classList.contains(DOM.classes.rootCqTiny)}`;
+  };
+
+  const first = await settle();
+  assert.strictEqual(first, "true/false", "cqShort applied on the first pass at 15rem");
+
+  for (let pass = 2; pass <= 4; pass++) {
+    assert.strictEqual(await settle(), first, `class set unchanged on pass ${pass}`);
+  }
 
   kb.destroy();
 });

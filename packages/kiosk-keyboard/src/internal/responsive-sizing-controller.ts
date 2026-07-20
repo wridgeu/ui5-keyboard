@@ -1,5 +1,4 @@
 import BaseObject from "sap/ui/base/Object";
-import ResizeHandler from "sap/ui/core/ResizeHandler";
 // sap/ui/dom/units/Rem is @ui5-restricted (sap.m); @openui5/types does not
 // expose it, so its type lives in restricted-modules.d.ts. toPx(rem) multiplies
 // the value by the live root font-size.
@@ -29,26 +28,41 @@ interface ResponsiveSizingHost {
 /**
  * Owns height-responsive class application for the keyboard root.
  *
- * Keeps a UI5 ResizeHandler attached to the current DOM element and, on
- * resize (coalesced via rAF), toggles `cqShort` / `cqTiny` classes when the
- * keyboard is externally height-constrained. Width breakpoints are handled
- * by CSS `@container` queries, so no JS width measurement is needed.
+ * Observes the current DOM element with a `ResizeObserver` and, on resize
+ * (coalesced via rAF), toggles `cqShort` / `cqTiny` classes when the keyboard
+ * is externally height-constrained. Width breakpoints are handled by CSS
+ * `@container` queries, so no JS width measurement is needed.
+ *
+ * The rAF is not just coalescing: the classes change the height of the very
+ * element being observed, so applying them straight from the callback re-enters
+ * observation in the same frame and trips the observer's depth limit
+ * ("ResizeObserver loop completed with undelivered notifications"). Deferring
+ * the write breaks that cycle. It also keeps the forced reflow out of the
+ * render frame for the callers that run while layout is dirty.
  */
 export default class ResponsiveSizingController extends BaseObject {
   private _host: ResponsiveSizingHost;
-  /** UI5 ResizeHandler registration ID for root size updates. */
-  private _resizeHandlerId: string | null = null;
-  /** Root DOM element currently observed by the resize handler. */
+  /** ResizeObserver driving root size updates. */
+  private _resizeObserver: ResizeObserver | null = null;
+  /** Root DOM element currently observed. */
   private _observedDom: HTMLElement | null = null;
   /** rAF handle used to coalesce responsive class updates from multiple observers. */
   private _syncFrameId: number | null = null;
+  /**
+   * Border box the last applied pass measured, or `null` when that pass returned
+   * before measuring (no DOM, docked, numpad). An observation reporting this box
+   * carries no new information and is dropped. Width is part of the key because
+   * the natural height depends on it (container queries wrap rows), so a
+   * width-only change must still recompute.
+   */
+  private _appliedBox: { blockSize: number; inlineSize: number } | null = null;
 
   constructor(host: ResponsiveSizingHost) {
     super();
     this._host = host;
   }
 
-  /** Ensures a ResizeHandler is attached to the current DOM element. */
+  /** Ensures a ResizeObserver is attached to the current DOM element. */
   syncObserver(dom: HTMLElement | null): void {
     if (!dom) {
       this._teardown();
@@ -58,10 +72,31 @@ export default class ResponsiveSizingController extends BaseObject {
     if (this._observedDom !== dom) {
       this._teardown();
       this._observedDom = dom;
-      this._resizeHandlerId = ResizeHandler.register(dom, () => {
+      this._resizeObserver = new ResizeObserver((entries) => {
+        if (this._reportsAppliedBox(entries)) return;
         this.scheduleClassUpdate();
       });
+      this._resizeObserver.observe(dom);
     }
+  }
+
+  /**
+   * Whether an observation carries the box the last applied pass already
+   * measured, in which case recomputing would produce the same classes.
+   *
+   * Filters two cases. `observe()` always delivers an initial observation of
+   * the current size, which the priming `scheduleClassUpdate()` that follows
+   * every `syncObserver()` call has already accounted for. And clearing a class
+   * resizes the observed element, so the pass that cleared it is reported back
+   * on the next frame. Reading `borderBoxSize` off the entry costs no layout.
+   */
+  private _reportsAppliedBox(entries: ResizeObserverEntry[]): boolean {
+    if (this._appliedBox === null) return false;
+
+    const box = entries[entries.length - 1]?.borderBoxSize?.[0];
+    if (!box) return false;
+
+    return box.blockSize === this._appliedBox.blockSize && box.inlineSize === this._appliedBox.inlineSize;
   }
 
   /** Coalesces responsive class updates triggered by root/content resize observers. */
@@ -93,11 +128,16 @@ export default class ResponsiveSizingController extends BaseObject {
     // Height classes: detect external height constraints by comparing the
     // keyboard's natural (unconstrained) content height against its rendered
     // height. Skip for docked keyboards (viewport-driven) and numpad.
+    //
+    // Both heights below must be read with these classes cleared: they change
+    // key sizing, so measuring while they are applied makes the outcome depend
+    // on the previous outcome, which oscillates.
     dom.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootCqShort, KIOSK_KEYBOARD_DOM.classes.rootCqTiny);
 
     const docked = this._host.getDocked();
     const isNumpad = this._host.getKeyboardType() === KeyboardType.Numpad;
     if (docked || isNumpad) {
+      this._appliedBox = null;
       return;
     }
 
@@ -105,7 +145,9 @@ export default class ResponsiveSizingController extends BaseObject {
     // If the element ever uses overflow: clip, scrollHeight may equal
     // clientHeight in some browsers, breaking constrained detection.
     const naturalHeight = dom.scrollHeight;
-    const renderedHeight = dom.getBoundingClientRect().height;
+    const rect = dom.getBoundingClientRect();
+    const renderedHeight = rect.height;
+    this._appliedBox = { blockSize: rect.height, inlineSize: rect.width };
 
     // Only apply when externally constrained (natural content > rendered).
     // The +1px tolerance avoids oscillation from sub-pixel rounding.
@@ -123,17 +165,20 @@ export default class ResponsiveSizingController extends BaseObject {
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqTiny, isTiny);
   }
 
-  /** Deregisters the UI5 ResizeHandler and clears the observed DOM reference. */
+  /** Disconnects the ResizeObserver and clears the observed DOM reference. */
   private _teardown(): void {
     if (this._syncFrameId !== null) {
       cancelAnimationFrame(this._syncFrameId);
       this._syncFrameId = null;
     }
-    if (this._resizeHandlerId) {
-      ResizeHandler.deregister(this._resizeHandlerId);
-      this._resizeHandlerId = null;
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
     }
     this._observedDom = null;
+    // A later element carries its own box; a stale one would suppress its first
+    // real observation.
+    this._appliedBox = null;
   }
 
   override destroy(): void {

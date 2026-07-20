@@ -142,7 +142,7 @@ export default class KioskKeyboard extends Control {
   private _instanceLocaleLayoutsMap!: InstanceLocaleLayouts | undefined;
   /** Per-instance middleware factory overrides, derived from the `instanceMiddleware` property. */
   private _instanceMiddlewareMap!: InstanceMiddleware | undefined;
-  /** Owns the ResizeHandler-driven height-responsive class application. */
+  /** Owns the ResizeObserver-driven height-responsive class application. */
   private _responsiveSizing!: ResponsiveSizingController;
   /** Owns `fKeyMode`-driven F-key dispatch (native keydown + caret navigation). */
   private _fKeyController!: FKeyController;
@@ -798,12 +798,11 @@ export default class KioskKeyboard extends Control {
 
     for (const ext of this._extensions) ext.onAfterRendering?.();
 
-    // Sync the ResizeHandler registration with the current DOM element,
-    // then defer responsive class reapplication to the next animation frame.
-    // Re-renders wipe root classes, but deferring avoids forced reflow
-    // (getComputedStyle + scrollHeight) in the render frame. The 1-frame
-    // delay for responsive sizing is imperceptible; the ResizeHandler
-    // already uses rAF for resize-triggered updates.
+    // Point the ResizeObserver at the current DOM element, then defer responsive
+    // class reapplication to the next animation frame. Re-renders wipe root
+    // classes, but deferring avoids forced reflow (getComputedStyle +
+    // scrollHeight) in the render frame. The 1-frame delay for responsive
+    // sizing is imperceptible.
     const dom = this.getDomRef() as HTMLElement | null;
     if (dom) {
       this._responsiveSizing.syncObserver(dom);
@@ -1363,7 +1362,7 @@ export default class KioskKeyboard extends Control {
    * Recomputes responsive height classes from the current live DOM.
    *
    * Call this after runtime CSS changes that affect intrinsic keyboard height
-   * without triggering a ResizeHandler callback, such as fixed-height styling
+   * without changing the observed border-box size, such as fixed-height styling
    * combined with updated `--ui5KioskKeyboard-*` sizing variables.
    *
    * The class update is deferred to the next animation frame to avoid

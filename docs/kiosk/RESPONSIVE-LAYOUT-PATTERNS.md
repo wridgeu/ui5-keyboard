@@ -27,7 +27,7 @@ This pattern (CSS `order` + `flex-wrap` inside `@container`) is reusable for cus
 
 ### Height-Responsive Classes
 
-These are applied programmatically by a `ResizeHandler` when the keyboard's rendered height is externally constrained:
+These are applied programmatically by a `ResizeObserver` when the keyboard's rendered height is externally constrained:
 
 | Class                       | Threshold         | Changes                                              |
 | --------------------------- | ----------------- | ---------------------------------------------------- |

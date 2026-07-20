@@ -50,6 +50,12 @@ export class ResponsiveSizingController {
       this.scheduleClassUpdate();
     });
     this._resizeObserver.observe(this._host);
+
+    // `connectedCallback` renders (ending in `onAfterRendering`) before it calls
+    // `onEnterDOM`, so a root is already recorded by the time this runs.
+    if (this._observedRoot) {
+      this._resizeObserver.observe(this._observedRoot);
+    }
   }
 
   /** Disconnects and releases the ResizeObserver. */
@@ -67,14 +73,17 @@ export class ResponsiveSizingController {
 
   /** Keeps the root element observed so style-only intrinsic size changes trigger a re-sync. */
   syncObserverTargets(root: HTMLElement | null): void {
-    if (!this._resizeObserver || root === this._observedRoot) return;
+    if (root === this._observedRoot) return;
 
-    if (this._observedRoot) {
-      this._resizeObserver.unobserve(this._observedRoot);
-    }
-
-    if (root) {
-      this._resizeObserver.observe(root);
+    // Recorded even before `setup()` has run, so the first render's root is not
+    // lost; `setup()` observes whatever is recorded here.
+    if (this._resizeObserver) {
+      if (this._observedRoot) {
+        this._resizeObserver.unobserve(this._observedRoot);
+      }
+      if (root) {
+        this._resizeObserver.observe(root);
+      }
     }
 
     this._observedRoot = root;
@@ -115,10 +124,13 @@ export class ResponsiveSizingController {
     const root = this._host.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
     if (!root) return;
 
-    const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const cs = getComputedStyle(root);
 
     // ── Height ── (classes live on host so consumer overrides always win)
+    //
+    // Both heights below must be read with these classes cleared: they change
+    // key sizing, so measuring while they are applied makes the outcome depend
+    // on the previous outcome, which oscillates.
     this._host.classList.remove(KIOSK_KEYBOARD_DOM.classes.hostCqShort, KIOSK_KEYBOARD_DOM.classes.hostCqTiny);
 
     // Skip for docked keyboards (viewport-driven, not container-constrained)
@@ -143,6 +155,8 @@ export class ResponsiveSizingController {
       return;
     }
 
+    // px per rem, read here so the unconstrained paths above never pay for it.
+    const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const shortThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-short-threshold", 16, remPx);
     const tinyThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-tiny-threshold", 12, remPx);
     const isTiny = hostHeight <= tinyThresh;
