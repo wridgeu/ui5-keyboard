@@ -2276,6 +2276,32 @@ describe("kiosk-keyboard", () => {
       expect(root.style.minHeight).to.equal("", "no minHeight after layout switch");
     });
 
+    it("reacts to a style-only intrinsic height change inside a fixed host", async () => {
+      // The host box never changes here, so only the shadow root's own
+      // observation can notice: the root is auto-height and overflows the host.
+      const el = await fixture<KioskKeyboard>(html`
+        <kiosk-keyboard
+          layout="qwerty"
+          style="height: 15rem; overflow: hidden; --kiosk-keyboard-key-height: 1.25rem"
+        ></kiosk-keyboard>
+      `);
+      await nextRender();
+      await waitForResponsiveSync();
+
+      const hostHeightBefore = el.getBoundingClientRect().height;
+      expect(el.classList.contains(DOM.classes.hostCqShort), "not constrained with 1.25rem keys").to.be.false;
+
+      el.style.setProperty("--kiosk-keyboard-key-height", "3rem");
+
+      // Observation and the rAF that applies it span an indeterminate number of
+      // frames, so wait on the outcome rather than a fixed count.
+      await waitUntil(() => el.classList.contains(DOM.classes.hostCqShort), "cq-short applied after content grew", {
+        timeout: 2000,
+      });
+
+      expect(el.getBoundingClientRect().height, "host box unchanged").to.equal(hostHeightBefore);
+    });
+
     it("auto-detects height constraint from flex parent without CSS on keyboard", async () => {
       const wrapper = document.createElement("div");
       wrapper.style.cssText = "display: flex; flex-direction: column; height: 250px;";

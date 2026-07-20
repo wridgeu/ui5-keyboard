@@ -491,7 +491,7 @@ Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted)
 
 No JavaScript is involved in width responsiveness.
 
-**Height responsiveness** uses JS (`sap/ui/core/ResizeHandler`, UI5's centralized resize handling) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds the rendered `getBoundingClientRect().height`). The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
+**Height responsiveness** uses JS (a native `ResizeObserver`) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds the rendered `getBoundingClientRect().height`). The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
 
 - `ui5KioskKeyboard--cqShort` (height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
 - `ui5KioskKeyboard--cqTiny` (height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
