@@ -38,10 +38,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyHighlight: "kiosk-key--highlight",
     keyLabel: "kiosk-key__label",
     keyLabelGlyph: "kiosk-key__label--glyph",
-    keyLabelGlyphCjk: "kiosk-key__label--glyph-cjk",
-    keyLabelGlyphHangul: "kiosk-key__label--glyph-hangul",
-    keyLabelGlyphIndic: "kiosk-key__label--glyph-indic",
-    keyLabelGlyphArabic: "kiosk-key__label--glyph-arabic",
     keyLabelMulti: "kiosk-key__label--multi",
     keyIcon: "kiosk-key__icon",
     keyDual: "kiosk-key--dual",
@@ -57,6 +53,8 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyType: "data-key-type",
     /** Presence attribute on function keys (`{fkey:*}`); orthogonal to `keyType`. */
     fkey: "data-fkey",
+    /** Script family of a single-glyph label (`cjk` | `hangul` | `indic` | `arabic`). */
+    glyphScript: "data-glyph-script",
     /** Marks a key whose effective `variants` list is non-empty (the long-press gate). */
     hasVariants: "data-has-variants",
     /**
