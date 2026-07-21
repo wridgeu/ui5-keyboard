@@ -34,15 +34,14 @@ Every decision here respects three constraints that are treated as settled:
 
 The decision is split by the kind of value. Do not apply one rule uniformly.
 
-### 4.1 `data-key-type` (category enum)
+### 4.1 `data-key-type` (category enum) and `data-fkey` (orthogonal boolean)
 
-Replace the mutually-exclusive class family `keyModifier` / `keyAction` / `keyFkey` with a single attribute:
+`modifier`, `action`, and `fkey` are NOT one mutually-exclusive family. `keyModifier` / `keyAction` come from `key.type` via an else-if (mutually exclusive), but `keyFkey` comes from `parseKeyAction(key.value).kind === "fkey"` on a separate `if`, and the F-keys (`{fkey:F1}`..`{fkey:F12}`) carry `type: "modifier"`, so an F-key emits BOTH `keyModifier` and `keyFkey` today (webc `part="key modifier fkey"`). Collapsing all three into one attribute value would drop the modifier styling from F-keys. So the category and the fkey flag are modeled separately, which is exactly the Radix split (single-valued enum as one attribute, orthogonal booleans as presence attributes):
 
-- `data-key-type="modifier"` | `"action"` | `"fkey"`.
-- A key with none of these carries no `data-key-type` (a plain character key), matching today's "no modifier class" state.
-- Styling moves to single attribute selectors: `[data-key-type="modifier"]`, `[data-key-type="action"]`, `[data-key-type="fkey"]`.
+- `data-key-type="modifier"` | `"action"`: the mutually-exclusive category from `key.type`. A key that is neither (a plain character key, or a `space` key) carries no `data-key-type`, matching today's "no modifier/action class" state. Styling: single attribute selectors `[data-key-type="modifier"]`, `[data-key-type="action"]`.
+- `data-fkey` (presence attribute, empty value, read via `hasAttribute`): replaces `keyFkey`, orthogonal to `data-key-type`, so an F-key carries both `data-key-type="modifier"` and `data-fkey`. This uses the repo's own presence-attribute idiom (`rm.attr(name, "")` on kiosk; `data-fkey={isFkey ? "" : undefined}` on webc). Styling: `[data-fkey]`.
 
-This mirrors Radix's `data-state` / `data-orientation` pattern for single-valued enums. The old code could set two of the three classes at once (an unenforceable invariant); one attribute makes that structurally impossible and reads as one labeled field in DevTools and tests.
+The old class family could set two members at once as an unenforceable invariant; the split makes the category single-valued (illegal to set both modifier and action) while keeping fkey as the honest independent boolean it actually is.
 
 ### 4.2 `data-glyph-script` (script enum)
 
@@ -93,7 +92,7 @@ All new selectors stay **single attribute selectors**: `[data-key-type="modifier
 
 ### 4.5 Contract changes and blast radius
 
-`attributes` gains three shared entries on **both** packages (key and value identical): `keyType: "data-key-type"`, `glyphScript: "data-glyph-script"`, `keySpan: "data-key-span"`.
+`attributes` gains four shared entries on **both** packages (key and value identical): `keyType: "data-key-type"`, `fkey: "data-fkey"`, `glyphScript: "data-glyph-script"`, `keySpan: "data-key-span"`.
 
 `classes` loses on both packages: `keyModifier`, `keyAction`, `keyFkey`, `keyLabelGlyphCjk`, `keyLabelGlyphHangul`, `keyLabelGlyphIndic`, `keyLabelGlyphArabic`, plus kiosk's `keySpace` and the `keyWidthClass()` helper (both copies).
 
@@ -121,7 +120,7 @@ What it checks:
    - **CORE** keys must exist on both sides.
    - Each side's remaining keys must be in that side's **PLATFORM_ONLY** allowlist.
    - Any unclassified key fails with an actionable message forcing the author to decide "shared (add the twin, promote to CORE)" or "platform-only (add to the allowlist with a reason)". This converts a forgotten twin from silent drift into a CI failure.
-2. **`attributes`: assert key AND value identical** across both packages. Data attributes are the real cross-DOM wire and test contract and must stay byte-identical (including the three new A entries).
+2. **`attributes`: assert key AND value identical** across both packages. Data attributes are the real cross-DOM wire and test contract and must stay byte-identical (including the four new A entries: `data-key-type`, `data-fkey`, `data-glyph-script`, `data-key-span`).
 3. **Width injectivity.** Assert the width-to-DOM mapping is injective over the full `KeyWidth` vocabulary (no two distinct tokens collide). After A this reduces to asserting `data-key-span` carries each token verbatim; the assertion stays as a permanent lock so a future lossy helper cannot reappear.
 
 Initial classification (starting point, adjusted as A lands):
