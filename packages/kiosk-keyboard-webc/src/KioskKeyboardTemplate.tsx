@@ -73,7 +73,15 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
               const isCJK = isSingleGlyphLabel && !isHangul && isCJKGlyph(label);
               const isIndic = isSingleGlyphLabel && isIndicGlyph(label);
               const isArabic = isSingleGlyphLabel && isArabicGlyph(label);
-              const glyphScript = isHangul ? "hangul" : isCJK ? "cjk" : isIndic ? "indic" : isArabic ? "arabic" : undefined;
+              const glyphScript = isHangul
+                ? "hangul"
+                : isCJK
+                  ? "cjk"
+                  : isIndic
+                    ? "indic"
+                    : isArabic
+                      ? "arabic"
+                      : undefined;
 
               return (
                 <div

@@ -8,6 +8,13 @@
  * All CSS class names, data attributes, and selector helpers live here.
  * The renderer, source code, and tests all import from this single source
  * of truth.
+ *
+ * Class-name convention: camelCase-BEM (camelCase segments, BEM `__`/`--`
+ * separators), matching UI5 core's camelCase house style in the light DOM.
+ * The kiosk-keyboard-webc twin uses kebab-BEM; the two intentionally share the
+ * same KEY names (guarded by `tools/check-dom-contract-drift.mjs`) but differ
+ * in string casing per framework. `attributes` values, by contrast, are
+ * identical across both twins.
  */
 
 export const KIOSK_KEYBOARD_DOM = Object.freeze({

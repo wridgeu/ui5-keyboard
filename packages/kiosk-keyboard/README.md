@@ -1178,7 +1178,7 @@ When both `icon` and a non-empty `label` resolve, the key renders in **dual mode
 
 #### Navigation key overrides
 
-Navigation and function keys (`{fkey:*}`) default to column layout with scaled icons. These properties override the dual defaults for nav keys only. In the UI5 package, nav keys are identified by the `.ui5KioskKey--fkey` class (added automatically for keys with `{fkey:*}` values).
+Navigation and function keys (`{fkey:*}`) default to column layout with scaled icons. These properties override the dual defaults for nav keys only. In the UI5 package, nav keys are identified by the `[data-fkey]` attribute (added automatically for keys with `{fkey:*}` values).
 
 | Property                           | Default                                     | Description                                                |
 | ---------------------------------- | ------------------------------------------- | ---------------------------------------------------------- |

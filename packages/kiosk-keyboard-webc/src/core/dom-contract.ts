@@ -8,6 +8,13 @@
  * All CSS class names, data attributes, selector helpers, and part names
  * live here. The template, source code, and tests all import from this
  * single source of truth.
+ *
+ * Class-name convention: kebab-BEM (lowercase, BEM `__`/`--` separators),
+ * matching the component's kebab `::part` names and shadow-DOM library
+ * convention. The kiosk-keyboard twin uses camelCase-BEM; the two intentionally
+ * share the same KEY names (guarded by `tools/check-dom-contract-drift.mjs`)
+ * but differ in string casing per framework. `attributes` values, by contrast,
+ * are identical across both twins.
  */
 
 const _parts = Object.freeze([
