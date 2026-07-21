@@ -17,8 +17,7 @@
  * that side's PLATFORM_ONLY allowlist (light-DOM vs shadow-DOM / ::part
  * realities legitimately differ). An unclassified key fails and forces an
  * explicit "shared vs platform-only" decision. `attributes` is the real
- * cross-DOM wire and test contract, so it is compared by key AND value. The
- * width helper is checked for injectivity so a lossy encoding cannot return.
+ * cross-DOM wire and test contract, so it is compared by key AND value.
  *
  * Zero new dependencies: both contract modules are erasable-syntax-only
  * TypeScript, so Node (>=24, native type stripping) imports them directly. Keep
@@ -78,7 +77,6 @@ const KEY_PARITY = {
       "rootClosed",
       "rootCqShort",
       "rootCqTiny",
-      "keySpace",
       "keyPressed",
       "keyVariantAnchor",
       "variantPopover",
@@ -155,33 +153,9 @@ function checkAttributesIdentical() {
   }
 }
 
-/**
- * The full `KeyWidth` vocabulary from `types.ts`. The width-to-DOM mapping must
- * be injective (no two distinct tokens collide), so a lossy encoding cannot
- * strand two widths on one class. Skipped once `keyWidthClass` is gone (a
- * verbatim `data-key-span` attribute cannot be lossy).
- */
-const KEY_WIDTHS = ["1.25", "1.5", "1.75", "2", "2.25", "2.75", "space"];
-
-function checkWidthInjective() {
-  for (const [name, dom] of [
-    ["kiosk", kiosk],
-    ["webc", webc],
-  ]) {
-    if (typeof dom.keyWidthClass !== "function") continue;
-    const outputs = KEY_WIDTHS.map((w) => dom.keyWidthClass(w));
-    if (new Set(outputs).size !== KEY_WIDTHS.length) {
-      errors.push(
-        `${name}: keyWidthClass is not injective over KeyWidth [${KEY_WIDTHS.join(", ")}] -> [${outputs.join(", ")}]`,
-      );
-    }
-  }
-}
-
 checkKeyParity("classes", KEY_PARITY.classes);
 checkKeyParity("selectors", KEY_PARITY.selectors);
 checkAttributesIdentical();
-checkWidthInjective();
 
 if (errors.length > 0) {
   console.error(`DOM-contract drift check failed (${errors.length}):`);
@@ -189,4 +163,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log("DOM-contract twins in parity (classes/selectors key sets, attributes key+value, width injectivity).");
+console.log("DOM-contract twins in parity (classes/selectors key sets, attributes key+value).");

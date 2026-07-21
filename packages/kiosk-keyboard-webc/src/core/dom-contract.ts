@@ -55,6 +55,8 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     fkey: "data-fkey",
     /** Script family of a single-glyph label (`cjk` | `hangul` | `indic` | `arabic`). */
     glyphScript: "data-glyph-script",
+    /** Proportional key-width token, carried verbatim (`1.5`, `2`, `space`, ...). */
+    keySpan: "data-key-span",
     /** Marks a key whose effective `variants` list is non-empty (the long-press gate). */
     hasVariants: "data-has-variants",
     /**
@@ -108,10 +110,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
    * ```
    */
   exportParts: _parts.join(", "),
-
-  keyWidthClass(width: string): string {
-    return `kiosk-key--w${width.replace(".", "-")}`;
-  },
 });
 
 export type KioskKeyboardDomContract = typeof KIOSK_KEYBOARD_DOM;

@@ -6,7 +6,6 @@ import {
   getKeyElement,
   getKeyElements,
   getRequiredKeyElement,
-  hasKeyClass,
   getKeyAttr,
   placeAndWait,
   tapKey,
@@ -116,13 +115,13 @@ QUnit.test("Action keys have action CSS class", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Space key has space CSS class", async (assert) => {
+QUnit.test("Space key has the space width span", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
   const spaceKey = getKeyElement(kb, " ");
   assert.ok(spaceKey, "Space key found");
-  assert.ok(hasKeyClass(kb, " ", DOM.classes.keySpace), "Space has space width class");
+  assert.strictEqual(getKeyAttr(kb, " ", DOM.attributes.keySpan), "space", "Space has the space width span");
 
   kb.destroy();
 });

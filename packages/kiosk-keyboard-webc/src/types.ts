@@ -6,7 +6,7 @@
  * - `"space"` gives the spacebar extra-wide flex (6x).
  * - `undefined` (default) gives a standard 1x flex-grow.
  *
- * Each numeric value maps to a CSS class (e.g. `"1.5"` → `.kiosk-key--w1-5`).
+ * Each value is emitted verbatim as the `data-key-span` attribute (e.g. `"1.5"` → `[data-key-span="1.5"]`).
  *
  * @public
  * @since 0.1.0
