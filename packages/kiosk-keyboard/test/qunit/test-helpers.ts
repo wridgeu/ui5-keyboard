@@ -98,6 +98,10 @@ export function hasKeyClass(keyboard: KioskKeyboard, keyValue: string, className
   return getRequiredKeyElement(keyboard, keyValue).classList.contains(className);
 }
 
+export function getKeyAttr(keyboard: KioskKeyboard, keyValue: string, attr: string): string | null {
+  return getRequiredKeyElement(keyboard, keyValue).getAttribute(attr);
+}
+
 /** Create a fake key-like element for unrendered/internal event tests. */
 export function createFakeKeyElement(keyValue: string, id = "fake-key"): HTMLElement {
   const fakeKeyEl = document.createElement("div");

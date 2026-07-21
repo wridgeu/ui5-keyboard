@@ -1094,9 +1094,9 @@ QUnit.test("ja-kana: backspace, enter, shift, space have correct types", async (
   const shift = allKeys.find((el) => el.dataset.key === "{shift}");
   const space = allKeys.find((el) => el.dataset.key === " ");
 
-  assert.ok(backspace?.classList.contains(DOM.classes.keyAction), "Backspace has action type");
-  assert.ok(enter?.classList.contains(DOM.classes.keyAction), "Enter has action type");
-  assert.ok(shift?.classList.contains(DOM.classes.keyModifier), "Shift has modifier type");
+  assert.strictEqual(backspace?.getAttribute(DOM.attributes.keyType), "action", "Backspace has action type");
+  assert.strictEqual(enter?.getAttribute(DOM.attributes.keyType), "action", "Enter has action type");
+  assert.strictEqual(shift?.getAttribute(DOM.attributes.keyType), "modifier", "Shift has modifier type");
   assert.ok(space?.classList.contains(DOM.classes.keySpace), "Space has space type");
 
   kb.destroy();
@@ -1292,13 +1292,19 @@ QUnit.test("ko-hangul: backspace, enter, shift, space have correct types", async
   const kb = new KioskKeyboard({ layout: "ko-hangul" });
   await placeAndWait(kb);
   const root = kb.getDomRef()!;
-  assert.ok(
-    root.querySelector('[data-key="{backspace}"]')!.classList.contains(DOM.classes.keyAction),
+  assert.strictEqual(
+    root.querySelector('[data-key="{backspace}"]')!.getAttribute(DOM.attributes.keyType),
+    "action",
     "Backspace is action",
   );
-  assert.ok(root.querySelector('[data-key="{enter}"]')!.classList.contains(DOM.classes.keyAction), "Enter is action");
-  assert.ok(
-    root.querySelector('[data-key="{shift}"]')!.classList.contains(DOM.classes.keyModifier),
+  assert.strictEqual(
+    root.querySelector('[data-key="{enter}"]')!.getAttribute(DOM.attributes.keyType),
+    "action",
+    "Enter is action",
+  );
+  assert.strictEqual(
+    root.querySelector('[data-key="{shift}"]')!.getAttribute(DOM.attributes.keyType),
+    "modifier",
     "Shift is modifier",
   );
   assert.ok(root.querySelector('[data-key=" "]')!.classList.contains(DOM.classes.keySpace), "Space is space");
@@ -1345,13 +1351,19 @@ QUnit.test("qwerty-es: backspace, enter, shift, space have correct types", async
   const kb = new KioskKeyboard({ layout: "qwerty-es" });
   await placeAndWait(kb);
   const root = kb.getDomRef()!;
-  assert.ok(
-    root.querySelector('[data-key="{backspace}"]')!.classList.contains(DOM.classes.keyAction),
+  assert.strictEqual(
+    root.querySelector('[data-key="{backspace}"]')!.getAttribute(DOM.attributes.keyType),
+    "action",
     "Backspace is action",
   );
-  assert.ok(root.querySelector('[data-key="{enter}"]')!.classList.contains(DOM.classes.keyAction), "Enter is action");
-  assert.ok(
-    root.querySelector('[data-key="{shift}"]')!.classList.contains(DOM.classes.keyModifier),
+  assert.strictEqual(
+    root.querySelector('[data-key="{enter}"]')!.getAttribute(DOM.attributes.keyType),
+    "action",
+    "Enter is action",
+  );
+  assert.strictEqual(
+    root.querySelector('[data-key="{shift}"]')!.getAttribute(DOM.attributes.keyType),
+    "modifier",
     "Shift is modifier",
   );
   assert.ok(root.querySelector('[data-key=" "]')!.classList.contains(DOM.classes.keySpace), "Space is space");

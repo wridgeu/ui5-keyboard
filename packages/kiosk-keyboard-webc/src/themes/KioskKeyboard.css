@@ -207,8 +207,8 @@
   /* Numpad modifier and action keys are primary interaction targets,
      not subordinate labels. They bypass the min() font-size cap so their
      icons scale with the larger numpad key font. */
-  & .kiosk-key--modifier,
-  & .kiosk-key--action {
+  & [data-key-type="modifier"],
+  & [data-key-type="action"] {
     font-size: var(--kiosk-keyboard-key-font-size);
   }
 }
@@ -362,7 +362,7 @@
    This keeps modifier labels visually subordinate at every viewport
    width while still honouring a consumer-provided override.
    At desktop sizes the cap is a no-op (0.875rem < key-font * 0.8). */
-.kiosk-key--modifier {
+[data-key-type="modifier"] {
   background: var(--sapButton_Lite_Background, transparent);
   color: var(--sapButton_Lite_TextColor, #32363a);
   border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Lite_BorderColor, transparent));
@@ -387,7 +387,7 @@
 }
 
 /* Variant: Action keys (Enter, Backspace) */
-.kiosk-key--action {
+[data-key-type="action"] {
   background: var(--sapButton_Emphasized_Background, #0070f2);
   color: var(--sapButton_Emphasized_TextColor, #fff);
   border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Emphasized_BorderColor, #0070f2));
@@ -510,13 +510,13 @@
     box-shadow: var(--_kiosk-keyboard-key-shadow);
   }
 
-  .kiosk-key--modifier:hover {
+  [data-key-type="modifier"]:hover {
     background: var(--sapButton_Lite_Background, transparent);
     border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Lite_BorderColor, transparent));
     box-shadow: var(--_kiosk-keyboard-modifier-shadow);
   }
 
-  .kiosk-key--action:hover,
+  [data-key-type="action"]:hover,
   .kiosk-key--shift-active:hover {
     background: var(--sapButton_Emphasized_Background, #0070f2);
     border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Emphasized_BorderColor, #0070f2));
@@ -793,8 +793,8 @@
    width using container query units (cqi).  This prevents the "icon
    looks lost" appearance on wide nav-only layouts where each key spans
    ~33% of the keyboard.
-   Scoped to .kiosk-key--fkey to avoid affecting Shift/Enter/Backspace
-   which are also dual keys but should keep row layout.  The class is
+   Scoped to [data-fkey] to avoid affecting Shift/Enter/Backspace
+   which are also dual keys but should keep row layout.  The attribute is
    set by the template for keys whose value starts with `{fkey:`.
    NOTE: We cannot use a @container query to conditionally apply
    flex-direction on the container element itself: container queries
@@ -802,16 +802,16 @@
    container-type: inline-size, a @container rule targeting .kiosk-key
    would resolve against the nearest *ancestor* container (the keyboard
    wrapper), not the individual key width. */
-.kiosk-key--fkey.kiosk-key--dual {
+[data-fkey].kiosk-key--dual {
   flex-direction: var(--kiosk-keyboard-fkey-direction);
   gap: var(--kiosk-keyboard-fkey-gap);
 }
 
-.kiosk-key--fkey.kiosk-key--dual .kiosk-key__label {
+[data-fkey].kiosk-key--dual .kiosk-key__label {
   font-size: var(--kiosk-keyboard-fkey-label-size);
 }
 
-.kiosk-key--fkey .kiosk-key__icon {
+[data-fkey] .kiosk-key__icon {
   font-size: var(--kiosk-keyboard-fkey-icon-size);
 }
 

@@ -7,6 +7,7 @@ import {
   getKeyElements,
   getRequiredKeyElement,
   hasKeyClass,
+  getKeyAttr,
   placeAndWait,
   tapKey,
   waitForRender,
@@ -87,11 +88,15 @@ QUnit.test("Modifier keys have modifier CSS class", async (assert) => {
 
   const shiftKey = getKeyElement(kb, "{shift}");
   assert.ok(shiftKey, "Shift key found");
-  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyModifier), "Shift has modifier class");
+  assert.strictEqual(getKeyAttr(kb, "{shift}", DOM.attributes.keyType), "modifier", "Shift has modifier type");
 
   const layoutKey = getKeyElement(kb, "{layout:numeric}");
   assert.ok(layoutKey, "Layout switch key found");
-  assert.ok(hasKeyClass(kb, "{layout:numeric}", DOM.classes.keyModifier), "Layout switch has modifier class");
+  assert.strictEqual(
+    getKeyAttr(kb, "{layout:numeric}", DOM.attributes.keyType),
+    "modifier",
+    "Layout switch has modifier type",
+  );
 
   kb.destroy();
 });
@@ -102,11 +107,11 @@ QUnit.test("Action keys have action CSS class", async (assert) => {
 
   const enterKey = getKeyElement(kb, "{enter}");
   assert.ok(enterKey, "Enter key found");
-  assert.ok(hasKeyClass(kb, "{enter}", DOM.classes.keyAction), "Enter has action class");
+  assert.strictEqual(getKeyAttr(kb, "{enter}", DOM.attributes.keyType), "action", "Enter has action type");
 
   const backspaceKey = getKeyElement(kb, "{backspace}");
   assert.ok(backspaceKey, "Backspace key found");
-  assert.ok(hasKeyClass(kb, "{backspace}", DOM.classes.keyAction), "Backspace has action class");
+  assert.strictEqual(getKeyAttr(kb, "{backspace}", DOM.attributes.keyType), "action", "Backspace has action type");
 
   kb.destroy();
 });

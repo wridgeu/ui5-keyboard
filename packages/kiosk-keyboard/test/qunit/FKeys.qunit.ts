@@ -98,6 +98,24 @@ QUnit.test("Standalone fkeys layout contains F1-F12 + ABC + Enter", async (asser
   kb.destroy();
 });
 
+QUnit.test("F-keys carry data-fkey and keep the modifier category; non-fkey modifiers do not", async (assert) => {
+  const DOM = KioskKeyboard.DOM;
+  const kb = new KioskKeyboard({ layout: "fkeys" });
+  await placeAndWait(kb);
+
+  // An F-key is type "modifier" AND a function key: the two are orthogonal.
+  const f1 = getRequiredKeyElement(kb, "{fkey:F1}");
+  assert.ok(f1.hasAttribute(DOM.attributes.fkey), "F1 has the data-fkey presence attribute");
+  assert.strictEqual(f1.getAttribute(DOM.attributes.keyType), "modifier", "F1 keeps the modifier category");
+
+  // The ABC layout switch is a modifier but not a function key.
+  const abc = getRequiredKeyElement(kb, "{layout:base}");
+  assert.notOk(abc.hasAttribute(DOM.attributes.fkey), "ABC layout switch is not a function key");
+  assert.strictEqual(abc.getAttribute(DOM.attributes.keyType), "modifier", "ABC is still a modifier");
+
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // F-key press events
 // ──────────────────────────────────────────────
