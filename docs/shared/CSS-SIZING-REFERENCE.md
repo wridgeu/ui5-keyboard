@@ -221,7 +221,7 @@ The hover effect lifts the key 1px. The active effect presses it down (1px lower
 ## Space Bar Width
 
 ```css
-.kiosk-key--wspace {
+[data-key-span="space"] {
   flex: 6 1 0;
 }
 ```
@@ -279,7 +279,7 @@ Navigation and function keys (`{fkey:*}`) override the dual-key defaults with a 
 | Label size | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)` | Scales responsively; floor 8px, ceiling 0.7em of parent        |
 | Gap        | `0.05em`                                    | Tight spacing since icon and label have distinct visual weight |
 
-The `15cqi` ideal value prevents the "icon looks lost" appearance on wide nav-only layouts where each key spans ~33% of the keyboard. These variables are scoped to `.kiosk-key--fkey` (a class set by the renderer when a key's value starts with `{fkey:`) to avoid affecting Shift/Enter/Backspace.
+The `15cqi` ideal value prevents the "icon looks lost" appearance on wide nav-only layouts where each key spans ~33% of the keyboard. These variables are scoped to `[data-fkey]` (a presence attribute set by the renderer when a key's value starts with `{fkey:`) to avoid affecting Shift/Enter/Backspace.
 
 ### F-Key Row Wrap
 
@@ -320,16 +320,16 @@ These thresholds are read by the ResizeObserver in JavaScript to set the `cq-tie
 
 The SAP 72 font has no CJK, Hangul, Indic, or Arabic glyphs. When rendering these scripts, the browser falls through the font stack to OS defaults. However, the line-box metrics (used by `text-box-trim` and `line-height`) still come from the primary font (72), causing vertical offset. Putting script-specific system fonts first for labeled keys ensures the browser uses matched glyph and line-box metrics.
 
-Each script class has a dedicated CSS custom property for consumer overrides:
+Each script value has a dedicated CSS custom property for consumer overrides:
 
-| Script family | CSS class                         | Override variable                     | Default stack (abbreviated)                                |
-| ------------- | --------------------------------- | ------------------------------------- | ---------------------------------------------------------- |
-| CJK           | `.kiosk-key__label--glyph-cjk`    | `--kiosk-keyboard-cjk-font-family`    | Hiragino Sans, Yu Gothic UI, Meiryo, Noto Sans CJK JP, ... |
-| Hangul        | `.kiosk-key__label--glyph-hangul` | `--kiosk-keyboard-hangul-font-family` | Apple SD Gothic Neo, Malgun Gothic, Noto Sans CJK KR, ...  |
-| Indic         | `.kiosk-key__label--glyph-indic`  | `--kiosk-keyboard-indic-font-family`  | Nirmala UI, Noto Sans Devanagari, Noto Sans Bengali, ...   |
-| Arabic        | `.kiosk-key__label--glyph-arabic` | `--kiosk-keyboard-arabic-font-family` | Segoe UI, Geeza Pro, Noto Sans Arabic, Tahoma, ...         |
+| Script family | Selector                       | Override variable                     | Default stack (abbreviated)                                |
+| ------------- | ------------------------------ | ------------------------------------- | ---------------------------------------------------------- |
+| CJK           | `[data-glyph-script="cjk"]`    | `--kiosk-keyboard-cjk-font-family`    | Hiragino Sans, Yu Gothic UI, Meiryo, Noto Sans CJK JP, ... |
+| Hangul        | `[data-glyph-script="hangul"]` | `--kiosk-keyboard-hangul-font-family` | Apple SD Gothic Neo, Malgun Gothic, Noto Sans CJK KR, ...  |
+| Indic         | `[data-glyph-script="indic"]`  | `--kiosk-keyboard-indic-font-family`  | Nirmala UI, Noto Sans Devanagari, Noto Sans Bengali, ...   |
+| Arabic        | `[data-glyph-script="arabic"]` | `--kiosk-keyboard-arabic-font-family` | Segoe UI, Geeza Pro, Noto Sans Arabic, Tahoma, ...         |
 
-Hangul gets a separate class from CJK so Korean system fonts are prioritized over Japanese/Chinese fonts for correct glyph metrics. Arabic gets its own class because its vertical metrics (extended ascenders, descenders, diacritical marks) differ from Latin `cap alphabetic` trimming. See [CJK Glyph Centering](../proposals/CJK-GLYPH-CENTERING.md) for background on the text-box-edge approach.
+Hangul gets a separate value from CJK so Korean system fonts are prioritized over Japanese/Chinese fonts for correct glyph metrics. Arabic gets its own value because its vertical metrics (extended ascenders, descenders, diacritical marks) differ from Latin `cap alphabetic` trimming. See [CJK Glyph Centering](../proposals/CJK-GLYPH-CENTERING.md) for background on the text-box-edge approach.
 
 ## Text-box-trim Progressive Enhancement
 
@@ -343,10 +343,10 @@ Hangul gets a separate class from CJK so Korean system fonts are prioritized ove
   .kiosk-key__label--glyph {
     text-box-edge: cap alphabetic;
   }
-  .kiosk-key__label--glyph-cjk,
-  .kiosk-key__label--glyph-hangul,
-  .kiosk-key__label--glyph-indic,
-  .kiosk-key__label--glyph-arabic {
+  [data-glyph-script="cjk"],
+  [data-glyph-script="hangul"],
+  [data-glyph-script="indic"],
+  [data-glyph-script="arabic"] {
     text-box-edge: text;
   }
 }

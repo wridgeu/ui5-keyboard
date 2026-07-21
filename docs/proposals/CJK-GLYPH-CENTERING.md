@@ -9,9 +9,9 @@ CJK glyphs (hiragana, katakana, Hangul, kanji) can appear visually offset within
 ## Implementation
 
 - **Script glyph detection** (`isCJKGlyph()`, `isHangulGlyph()`, `isIndicGlyph()`, `isArabicGlyph()`) identifying script-specific characters via Unicode `\p{Script_Extensions=...}` properties (Hangul uses strict `\p{Script=Hangul}` to avoid claiming shared CJK punctuation)
-- **`.kiosk-key__label--glyph-cjk`** class with `text-box-edge: text` override (progressive enhancement under `@supports (text-box-trim: trim-both)`)
+- **`[data-glyph-script="cjk"]`** attribute selector with `text-box-edge: text` override (progressive enhancement under `@supports (text-box-trim: trim-both)`)
 - **Script font-family overrides**: script-specific system fonts placed first in the stack, ensuring matched glyph and line-box metrics. Exposed via `--kiosk-keyboard-cjk-font-family`, `--kiosk-keyboard-hangul-font-family`, `--kiosk-keyboard-indic-font-family`, and `--kiosk-keyboard-arabic-font-family` consumer overrides
-- **Separate Hangul, Indic, and Arabic classes** with dedicated font stacks for correct per-script metrics
+- **Separate Hangul, Indic, and Arabic `data-glyph-script` values** with dedicated font stacks for correct per-script metrics
 
 ## What Remains
 
