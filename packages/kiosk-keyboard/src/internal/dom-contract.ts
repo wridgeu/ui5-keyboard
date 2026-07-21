@@ -13,8 +13,17 @@
  * separators), matching UI5 core's camelCase house style in the light DOM.
  * The kiosk-keyboard-webc twin uses kebab-BEM; the two intentionally share the
  * same KEY names (guarded by `tools/check-dom-contract-drift.mjs`) but differ
- * in string casing per framework. `attributes` values, by contrast, are
- * identical across both twins.
+ * in string casing per framework. Shared `attributes` values are identical
+ * across both twins.
+ *
+ * The mutually-exclusive key category is a class here (`keyModifier`/`keyAction`)
+ * rather than the webc twin's `data-key-type` attribute: styles layer interactive
+ * state (`:active`, `keyCapsLock`, `keyShiftActive`) on top of the category, and
+ * in the light DOM only a namespaced class is simultaneously scoped and
+ * specificity `(0,1,0)`. A scoped attribute selector would be `(0,2,0)` and would
+ * bury the state-indicator rules (the caps-lock ring); the webc shadow DOM has no
+ * such conflict. Width (`keySpan`) and the fkey flag carry no layered state, so
+ * they stay attributes on both twins.
  */
 
 export const KIOSK_KEYBOARD_DOM = Object.freeze({
@@ -27,6 +36,8 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     rootCqTiny: "ui5KioskKeyboard--cqTiny",
     row: "ui5KioskRow",
     key: "ui5KioskKey",
+    keyModifier: "ui5KioskKey--modifier",
+    keyAction: "ui5KioskKey--action",
     keyShiftActive: "ui5KioskKey--shiftActive",
     keyCapsLock: "ui5KioskKey--capsLock",
     keyPressed: "ui5KioskKey--pressed",
@@ -45,9 +56,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     key: "data-key",
     shiftValue: "data-shift-value",
     rowKind: "data-row-kind",
-    /** Mutually-exclusive key category (`modifier` | `action`); absent on plain and space keys. */
-    keyType: "data-key-type",
-    /** Presence attribute on function keys (`{fkey:*}`); orthogonal to `keyType`. */
+    /** Presence attribute on function keys (`{fkey:*}`); orthogonal to the modifier/action category. */
     fkey: "data-fkey",
     /** Script family of a single-glyph label (`cjk` | `hangul` | `indic` | `arabic`). */
     glyphScript: "data-glyph-script",

@@ -186,6 +186,15 @@ const KioskKeyboardRenderer = {
     const { _isShiftActive, _isCapsLock } = oControl._getRendererApi();
     rm.class(KIOSK_KEYBOARD_DOM.classes.key);
 
+    // Key category (modifier subdued, action prominent). A namespaced class, not
+    // a data attribute, so interactive-state rules layered on top keep their
+    // cascade weight in the light DOM; see internal/dom-contract.ts.
+    if (key.type === "modifier") {
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyModifier);
+    } else if (key.type === "action") {
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyAction);
+    }
+
     // Active shift / caps lock indicator
     if (key.value === "{shift}" && _isShiftActive()) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyShiftActive);
@@ -233,11 +242,7 @@ const KioskKeyboardRenderer = {
 
     rm.attr(KIOSK_KEYBOARD_DOM.attributes.key, key.value);
 
-    // Category (modifier subdued, action prominent) and the orthogonal
-    // function-key flag as styling + test hooks.
-    if (key.type === "modifier" || key.type === "action") {
-      rm.attr(KIOSK_KEYBOARD_DOM.attributes.keyType, key.type);
-    }
+    // Function-key flag (`{fkey:*}`), orthogonal to the key category.
     if (parseKeyAction(key.value).kind === "fkey") {
       rm.attr(KIOSK_KEYBOARD_DOM.attributes.fkey, "");
     }

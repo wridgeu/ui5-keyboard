@@ -1,7 +1,8 @@
 # DOM-contract modernization (issue #173)
 
 - Date: 2026-07-21
-- Status: design, approved for planning
+- Status: design, implemented then partially revised for the kiosk twin
+- Superseded in part: sections 4.1 and 4.4 assumed `data-key-type` could be a specificity-neutral attribute on both twins. That holds for webc (shadow DOM) but not for the kiosk light DOM, where a scoped attribute selector is `(0,2,0)` and buries the state-indicator rules. `data-key-type` was reverted to the `keyModifier`/`keyAction` classes on kiosk; see `2026-07-21-dom-contract-kiosk-lightdom-specificity.md` for the analysis and the family-by-family split that shipped.
 - Scope: `dom-contract.ts` in both `kiosk-keyboard` (light DOM) and `kiosk-keyboard-webc` (shadow DOM)
 - Relationship to PR #188: deliberately separate. PR #188 (ResizeObserver swap) only reads the `cqShort`/`cqTiny` classes from the contract; it neither renames nor restructures anything. This work lands as its own PR so the perf change stays reviewable and revertible on its own.
 
