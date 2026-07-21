@@ -17,7 +17,9 @@
  * that side's PLATFORM_ONLY allowlist (light-DOM vs shadow-DOM / ::part
  * realities legitimately differ). An unclassified key fails and forces an
  * explicit "shared vs platform-only" decision. `attributes` is the real
- * cross-DOM wire and test contract, so it is compared by key AND value.
+ * cross-DOM wire and test contract: CORE attributes are compared by key AND
+ * value, and the few genuinely platform-specific ones (e.g. webc's `keyType`,
+ * carried as a class on kiosk) sit in a per-side allowlist like the classes.
  *
  * Zero new dependencies: both contract modules are erasable-syntax-only
  * TypeScript, so Node (>=24, native type stripping) imports them directly. Keep
@@ -72,11 +74,16 @@ const KEY_PARITY = {
       "variantPopup",
     ],
     // Light-DOM only: no shadow host, a static-area popover, an explicit closed
-    // state and the JS-driven height-responsive classes.
+    // state, the JS-driven height-responsive classes, and the key-category
+    // classes (webc carries the category as the `keyType` attribute; the light
+    // DOM needs a namespaced class to keep the state cascade at specificity
+    // (0,1,0) -- see the header of internal/dom-contract.ts).
     kioskOnly: [
       "rootClosed",
       "rootCqShort",
       "rootCqTiny",
+      "keyModifier",
+      "keyAction",
       "keyPressed",
       "keyVariantAnchor",
       "variantPopover",
@@ -141,21 +148,50 @@ function checkKeyParity(group, spec) {
   }
 }
 
-/** `attributes` is the cross-DOM wire contract: compare keys AND values. */
-function checkAttributesIdentical() {
-  const keys = new Set([...Object.keys(kiosk.attributes), ...Object.keys(webc.attributes)]);
-  for (const k of keys) {
+/**
+ * `attributes` is the cross-DOM wire contract. CORE attributes must exist on
+ * BOTH twins with identical values. A platform-only attribute must be declared
+ * in that side's allowlist: `keyType` is webc-only because the kiosk twin carries
+ * the key category as the `keyModifier`/`keyAction` classes instead (light-DOM
+ * specificity, see internal/dom-contract.ts).
+ *
+ * @type {{ core: string[]; kioskOnly: string[]; webcOnly: string[] }}
+ */
+const ATTR_PARITY = {
+  core: ["key", "shiftValue", "rowKind", "fkey", "glyphScript", "keySpan", "hasVariants"],
+  kioskOnly: [],
+  webcOnly: ["keyType"],
+};
+
+/** CORE attributes compared by key AND value; platform-only ones need an allowlist entry. */
+function checkAttributeParity(spec) {
+  const kioskAllowed = new Set([...spec.core, ...spec.kioskOnly]);
+  const webcAllowed = new Set([...spec.core, ...spec.webcOnly]);
+
+  for (const k of spec.core) {
     const kv = kiosk.attributes[k];
     const wv = webc.attributes[k];
-    if (kv === undefined) errors.push(`attributes: "${k}" present in webc but missing from kiosk`);
-    else if (wv === undefined) errors.push(`attributes: "${k}" present in kiosk but missing from webc`);
-    else if (kv !== wv) errors.push(`attributes: "${k}" differs (kiosk "${kv}" vs webc "${wv}")`);
+    if (kv === undefined) errors.push(`attributes: CORE "${k}" missing from kiosk`);
+    else if (wv === undefined) errors.push(`attributes: CORE "${k}" missing from webc`);
+    else if (kv !== wv) errors.push(`attributes: CORE "${k}" differs (kiosk "${kv}" vs webc "${wv}")`);
+  }
+  for (const k of Object.keys(kiosk.attributes)) {
+    if (!kioskAllowed.has(k))
+      errors.push(
+        `attributes: kiosk "${k}" is unclassified. Add it to CORE (identical on both twins) or to kiosk PLATFORM_ONLY with a reason in tools/check-dom-contract-drift.mjs.`,
+      );
+  }
+  for (const k of Object.keys(webc.attributes)) {
+    if (!webcAllowed.has(k))
+      errors.push(
+        `attributes: webc "${k}" is unclassified. Add it to CORE (identical on both twins) or to webc PLATFORM_ONLY with a reason in tools/check-dom-contract-drift.mjs.`,
+      );
   }
 }
 
 checkKeyParity("classes", KEY_PARITY.classes);
 checkKeyParity("selectors", KEY_PARITY.selectors);
-checkAttributesIdentical();
+checkAttributeParity(ATTR_PARITY);
 
 if (errors.length > 0) {
   console.error(`DOM-contract drift check failed (${errors.length}):`);

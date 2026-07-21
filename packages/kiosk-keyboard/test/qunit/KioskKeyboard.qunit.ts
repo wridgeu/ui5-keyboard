@@ -1014,6 +1014,36 @@ QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Caps Lock ring is visible over the modifier key (light-DOM specificity)", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  // Theme-loaded guard: `.ui5KioskKey` unconditionally sets `cursor: pointer`.
+  // If the compiled theme CSS is absent from this harness, every box-shadow
+  // reads "none" and the ring assertion below would be vacuously green.
+  const plainKey = getRequiredKeyElement(kb, "a");
+  assert.strictEqual(window.getComputedStyle(plainKey).cursor, "pointer", "theme CSS is loaded");
+
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isCapsLock(kb), "Caps lock is on");
+
+  // The ring animates in over a 0.1s box-shadow transition; cancel it so
+  // getComputedStyle reads the settled cascade winner, not a mid-transition frame.
+  const shiftKey = getRequiredKeyElement(kb, "{shift}");
+  shiftKey.style.transition = "none";
+  void shiftKey.offsetHeight;
+
+  // The caps-lock indicator is a `0 0 0 2px` ring (zero offset/blur, 2px spread).
+  // The modifier key's own drop-shadow has offset/blur, so a 2px-spread shadow
+  // proves the ring wins the cascade against the modifier styling.
+  const shadow = window.getComputedStyle(shiftKey).boxShadow;
+  assert.ok(/\b0px 0px 0px 2px\b/.test(shadow), `caps-lock ring is visible (got: ${shadow})`);
+
+  kb.destroy();
+});
+
 QUnit.test("Shift toggle works via keyboard (Enter key)", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
