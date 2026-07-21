@@ -193,13 +193,6 @@ const KioskKeyboardRenderer = {
       rm.class(KIOSK_KEYBOARD_DOM.keyWidthClass(key.width));
     }
 
-    // Key type styling - separate modifier (subdued) from action (prominent)
-    if (key.type === "modifier") {
-      rm.class(KIOSK_KEYBOARD_DOM.classes.keyModifier);
-    } else if (key.type === "action") {
-      rm.class(KIOSK_KEYBOARD_DOM.classes.keyAction);
-    }
-
     // Active shift / caps lock indicator
     if (key.value === "{shift}" && _isShiftActive()) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyShiftActive);
@@ -211,11 +204,6 @@ const KioskKeyboardRenderer = {
     // Dual icon + label class
     if (icon && label) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyDual);
-    }
-
-    // Function/navigation key class for targeted styling
-    if (parseKeyAction(key.value).kind === "fkey") {
-      rm.class(KIOSK_KEYBOARD_DOM.classes.keyFkey);
     }
   },
 
@@ -251,6 +239,15 @@ const KioskKeyboardRenderer = {
     }
 
     rm.attr(KIOSK_KEYBOARD_DOM.attributes.key, key.value);
+
+    // Category (modifier subdued, action prominent) and the orthogonal
+    // function-key flag as styling + test hooks.
+    if (key.type === "modifier" || key.type === "action") {
+      rm.attr(KIOSK_KEYBOARD_DOM.attributes.keyType, key.type);
+    }
+    if (parseKeyAction(key.value).kind === "fkey") {
+      rm.attr(KIOSK_KEYBOARD_DOM.attributes.fkey, "");
+    }
 
     // Store shift value for efficient lookup in tap handler
     if (key.shiftValue) {

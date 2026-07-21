@@ -122,7 +122,7 @@ test.describe("nav layout and arrow keys", () => {
     await waitForKeys(page, "kb-nav");
     const keys = await page.evaluate(() => {
       const root = document.getElementById("kb-nav")?.shadowRoot;
-      return Array.from(root?.querySelectorAll(".kiosk-key--fkey") ?? []).map((k) => {
+      return Array.from(root?.querySelectorAll("[data-fkey]") ?? []).map((k) => {
         const kr = k.getBoundingClientRect();
         const icon = k.querySelector(".kiosk-key__icon")!.getBoundingClientRect();
         const label = k.querySelector(".kiosk-key__label")!.getBoundingClientRect();

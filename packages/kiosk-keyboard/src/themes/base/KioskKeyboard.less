@@ -190,8 +190,8 @@
         min-width: var(--_ui5KioskKeyboard-numpadKeyMinWidth);
       }
 
-      .ui5KioskKey--modifier,
-      .ui5KioskKey--action {
+      .ui5KioskKey[data-key-type="modifier"],
+      .ui5KioskKey[data-key-type="action"] {
         font-size: var(--ui5KioskKeyboard-keyFontSize);
       }
     }
@@ -432,22 +432,22 @@
        container queries below. */
 
     /* Navigation / function keys: column layout with scaled icon.
-       Scoped to --fkey to avoid affecting Shift/Enter/Backspace. */
-    &--fkey&--dual {
+       Scoped to [data-fkey] to avoid affecting Shift/Enter/Backspace. */
+    &[data-fkey]&--dual {
       flex-direction: ~"var(--ui5KioskKeyboard-fkeyDirection)";
       gap: ~"var(--ui5KioskKeyboard-fkeyGap)";
     }
 
-    &--fkey&--dual &__label {
+    &[data-fkey]&--dual &__label {
       font-size: ~"var(--ui5KioskKeyboard-fkeyLabelSize)";
     }
 
-    &--fkey &__icon {
+    &[data-fkey] &__icon {
       font-size: ~"var(--ui5KioskKeyboard-fkeyIconSize)";
     }
 
     /* Variant: Modifier keys (Shift, layout switches) */
-    &--modifier {
+    &[data-key-type="modifier"] {
       background: @sapUiButtonLiteBackground;
       color: @sapUiButtonLiteTextColor;
       border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonLiteBorderColor ~")";
@@ -468,7 +468,7 @@
     }
 
     /* Variant: Action keys (Enter, Backspace) */
-    &--action {
+    &[data-key-type="action"] {
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
       border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
@@ -493,11 +493,11 @@
     }
 
     /* Variant: Active Shift indicator
-       Scoped as --modifier&--shiftActive (specificity 0,2,0) to always
-       beat --modifier:active (0,1,1) regardless of source order.
-       This ensures the toggled-on shift key keeps its emphasized
+       Scoped as [data-key-type="modifier"]&--shiftActive to always beat
+       [data-key-type="modifier"]:active on the class-column, regardless of
+       source order. This ensures the toggled-on shift key keeps its emphasized
        look through all interactive states (hover, press, focus). */
-    &--modifier&--shiftActive {
+    &[data-key-type="modifier"]&--shiftActive {
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
       border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
@@ -699,18 +699,18 @@
         transform 0.05s ease;
     }
 
-    .ui5KioskKey--modifier:hover {
+    .ui5KioskKey[data-key-type="modifier"]:hover {
       background: @sapUiButtonLiteHoverBackground;
       border-color: @sapUiButtonLiteHoverBorderColor;
       box-shadow: var(--_ui5KioskKeyboard-modifierShadowHover);
     }
 
-    .ui5KioskKey--action:hover {
+    .ui5KioskKey[data-key-type="action"]:hover {
       background: @sapUiButtonEmphasizedHoverBackground;
       border-color: @sapUiButtonEmphasizedHoverBorderColor;
     }
 
-    .ui5KioskKey--modifier.ui5KioskKey--shiftActive:hover {
+    .ui5KioskKey[data-key-type="modifier"].ui5KioskKey--shiftActive:hover {
       background: @sapUiButtonEmphasizedHoverBackground;
       border-color: @sapUiButtonEmphasizedHoverBorderColor;
     }

@@ -8,11 +8,6 @@
  * All CSS class names, data attributes, and selector helpers live here.
  * The renderer, source code, and tests all import from this single source
  * of truth.
- *
- * Keep this module erasable-syntax-only TypeScript (type annotations, `as
- * const`, `Object.freeze`; no enums, decorators or namespaces): the twin-parity
- * guard `tools/check-dom-contract-drift.mjs` imports it directly under Node's
- * native type stripping.
  */
 
 export const KIOSK_KEYBOARD_DOM = Object.freeze({
@@ -26,8 +21,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     row: "ui5KioskRow",
     key: "ui5KioskKey",
     keySpace: "ui5KioskKey--wspace",
-    keyModifier: "ui5KioskKey--modifier",
-    keyAction: "ui5KioskKey--action",
     keyShiftActive: "ui5KioskKey--shiftActive",
     keyCapsLock: "ui5KioskKey--capsLock",
     keyPressed: "ui5KioskKey--pressed",
@@ -42,7 +35,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyLabelMulti: "ui5KioskKey__label--multi",
     keyIcon: "ui5KioskKey__icon",
     keyDual: "ui5KioskKey--dual",
-    keyFkey: "ui5KioskKey--fkey",
     variantPopover: "ui5KioskVariantPopover",
     variantPopup: "ui5KioskVariantPopup",
     variantOption: "ui5KioskVariantPopup__option",
@@ -51,6 +43,10 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     key: "data-key",
     shiftValue: "data-shift-value",
     rowKind: "data-row-kind",
+    /** Mutually-exclusive key category (`modifier` | `action`); absent on plain and space keys. */
+    keyType: "data-key-type",
+    /** Presence attribute on function keys (`{fkey:*}`); orthogonal to `keyType`. */
+    fkey: "data-fkey",
     /** Marks a key whose effective `variants` list is non-empty (the long-press gate). */
     hasVariants: "data-has-variants",
   }),
