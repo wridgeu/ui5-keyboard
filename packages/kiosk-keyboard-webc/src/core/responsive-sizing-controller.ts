@@ -155,7 +155,7 @@ export class ResponsiveSizingController {
       return;
     }
 
-    // px per rem, read here so the unconstrained paths above never pay for it.
+    // px per rem, read once here from the root font-size.
     const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const shortThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-short-threshold", 16, remPx);
     const tinyThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-tiny-threshold", 12, remPx);

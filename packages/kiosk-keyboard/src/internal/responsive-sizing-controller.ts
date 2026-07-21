@@ -125,10 +125,6 @@ export default class ResponsiveSizingController extends BaseObject {
   private _applyClasses(dom: HTMLElement): void {
     const cs = getComputedStyle(dom);
 
-    // Height classes: detect external height constraints by comparing the
-    // keyboard's natural (unconstrained) content height against its rendered
-    // height. Skip for docked keyboards (viewport-driven) and numpad.
-    //
     // Both heights below must be read with these classes cleared: they change
     // key sizing, so measuring while they are applied makes the outcome depend
     // on the previous outcome, which oscillates.
