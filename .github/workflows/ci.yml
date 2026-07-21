@@ -74,6 +74,12 @@ jobs:
       - name: Twin-drift check
         run: npm run test:twin-drift
 
+      # Asserts the two hand-maintained dom-contract.ts twins keep parallel
+      # semantic key sets (values legitimately differ by naming convention) and
+      # identical data attributes; see tools/check-dom-contract-drift.mjs.
+      - name: DOM-contract drift check
+        run: npm run test:dom-contract
+
   # Unit + component suites: QUnit (puppeteer chromium) for the two UI5 libs,
   # vitest (jsdom) and web-test-runner (playwright chromium) for the web component.
   unit:

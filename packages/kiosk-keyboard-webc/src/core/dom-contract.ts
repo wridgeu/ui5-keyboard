@@ -8,6 +8,11 @@
  * All CSS class names, data attributes, selector helpers, and part names
  * live here. The template, source code, and tests all import from this
  * single source of truth.
+ *
+ * Keep this module erasable-syntax-only TypeScript (type annotations, `as
+ * const`, `Object.freeze`; no enums, decorators or namespaces): the twin-parity
+ * guard `tools/check-dom-contract-drift.mjs` imports it directly under Node's
+ * native type stripping.
  */
 
 const _parts = Object.freeze([
