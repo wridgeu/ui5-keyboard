@@ -121,7 +121,8 @@ What it checks:
    - Each side's remaining keys must be in that side's **PLATFORM_ONLY** allowlist.
    - Any unclassified key fails with an actionable message forcing the author to decide "shared (add the twin, promote to CORE)" or "platform-only (add to the allowlist with a reason)". This converts a forgotten twin from silent drift into a CI failure.
 2. **`attributes`: assert key AND value identical** across both packages. Data attributes are the real cross-DOM wire and test contract and must stay byte-identical (including the four new A entries: `data-key-type`, `data-fkey`, `data-glyph-script`, `data-key-span`).
-3. **Width injectivity.** Assert the width-to-DOM mapping is injective over the full `KeyWidth` vocabulary (no two distinct tokens collide). After A this reduces to asserting `data-key-span` carries each token verbatim; the assertion stays as a permanent lock so a future lossy helper cannot reappear.
+
+After A, width injectivity needs no guard branch: `data-key-span` carries each `KeyWidth` token verbatim, so the mapping is injective by construction and the lossy `keyWidthClass` helper that could collide is deleted from both packages. There is no helper left to assert against.
 
 Initial classification (starting point, adjusted as A lands):
 
@@ -155,7 +156,7 @@ Net: B is low value and would cost test-hook churn and twin divergence. The stat
 ## 8. Testing strategy
 
 - **Proposal A (behavior parity, per CLAUDE.md section 3).** The renderer black-box suites assert the emitted DOM. Update them to assert `data-key-type` / `data-glyph-script` / `data-key-span` presence and value where they previously asserted classes, and add an assertion that each layout width token reaches the DOM verbatim (the regression lock for the removed lossy helper). Integration selectors that resolve keys by type or width switch to the new attributes.
-- **Proposal C (the guard itself, per CLAUDE.md section 7).** A green guard can lie. Before trusting it, prove it goes red on each real breakage and then revert: (1) add a CORE key to one contract only (must fail with the shared-vs-platform message); (2) change a `data-*` value on one side only (must fail the attributes equality check); (3) reintroduce a lossy width mapping (must fail injectivity); (4) point the importer at a bogus path (must fail, not pass empty). Record these hypotheses in a dated `docs/specs/2026-07-21-dom-contract-drift-adversarial-hypotheses.md` and clear each only after seeing red.
+- **Proposal C (the guard itself, per CLAUDE.md section 7).** A green guard can lie. Before trusting it, prove it goes red on each real breakage and then revert: (1) add a CORE key to one contract only (must fail with the shared-vs-platform message); (2) change a `data-*` value on one side only (must fail the attributes equality check); (3) point the importer at a bogus path (must fail, not pass empty). Record these hypotheses in a dated `docs/specs/2026-07-21-dom-contract-drift-adversarial-hypotheses.md` and clear each only after seeing red.
 - **Full suite before commit.** Lint, fmt, typecheck, twin-drift, the new dom-contract guard, all QUnit and webc suites, and package smoke, per the existing `check:base`.
 
 ## 9. Implementation order

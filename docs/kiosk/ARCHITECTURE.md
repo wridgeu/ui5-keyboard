@@ -479,7 +479,7 @@ Keys use SAP button parameters for visual consistency with the rest of the UI:
 
 ### Responsive Sizing
 
-Keys use `flex: <grow> 1 0` for proportional sizing within rows. Width classes (`--w15`, `--w2`, `--wspace`) set the flex-grow factor. This makes the keyboard naturally responsive, and keys scale proportionally to the container width.
+Keys use `flex: <grow> 1 0` for proportional sizing within rows. The `data-key-span` attribute (`[data-key-span="1.5"]`, `[data-key-span="2"]`, `[data-key-span="space"]`) sets the flex-grow factor. This makes the keyboard naturally responsive, and keys scale proportionally to the container width.
 
 Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted).
 
