@@ -186,13 +186,6 @@ const KioskKeyboardRenderer = {
     const { _isShiftActive, _isCapsLock } = oControl._getRendererApi();
     rm.class(KIOSK_KEYBOARD_DOM.classes.key);
 
-    // Width class
-    if (key.width === "space") {
-      rm.class(KIOSK_KEYBOARD_DOM.classes.keySpace);
-    } else if (key.width) {
-      rm.class(KIOSK_KEYBOARD_DOM.keyWidthClass(key.width));
-    }
-
     // Active shift / caps lock indicator
     if (key.value === "{shift}" && _isShiftActive()) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyShiftActive);
@@ -247,6 +240,11 @@ const KioskKeyboardRenderer = {
     }
     if (parseKeyAction(key.value).kind === "fkey") {
       rm.attr(KIOSK_KEYBOARD_DOM.attributes.fkey, "");
+    }
+
+    // Proportional width token, carried verbatim (styled by [data-key-span]).
+    if (key.width) {
+      rm.attr(KIOSK_KEYBOARD_DOM.attributes.keySpan, key.width);
     }
 
     // Store shift value for efficient lookup in tap handler

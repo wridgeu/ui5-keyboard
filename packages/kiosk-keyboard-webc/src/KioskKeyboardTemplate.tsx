@@ -81,7 +81,6 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   id={id}
                   class={{
                     [KIOSK_KEYBOARD_DOM.classes.key]: true,
-                    [KIOSK_KEYBOARD_DOM.keyWidthClass(key.width ?? "")]: !!key.width,
                     [KIOSK_KEYBOARD_DOM.classes.keyShiftActive]: isShift && this._shifted,
                     [KIOSK_KEYBOARD_DOM.classes.keyCapsLock]: isShift && this._capsLock,
                     [KIOSK_KEYBOARD_DOM.classes.keyHighlight]: this._highlightedKey === key.value.toLowerCase(),
@@ -93,6 +92,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   data-key={key.value}
                   data-key-type={key.type === "modifier" || key.type === "action" ? key.type : undefined}
                   data-fkey={isFkey ? "" : undefined}
+                  data-key-span={key.width || undefined}
                   data-shift-value={key.shiftValue || undefined}
                   data-has-variants={key.variants && key.variants.length > 0 ? "" : undefined}
                   aria-pressed={isShift ? this._shifted : undefined}

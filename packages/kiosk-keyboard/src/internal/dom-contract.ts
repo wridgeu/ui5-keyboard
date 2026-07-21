@@ -20,7 +20,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     rootCqTiny: "ui5KioskKeyboard--cqTiny",
     row: "ui5KioskRow",
     key: "ui5KioskKey",
-    keySpace: "ui5KioskKey--wspace",
     keyShiftActive: "ui5KioskKey--shiftActive",
     keyCapsLock: "ui5KioskKey--capsLock",
     keyPressed: "ui5KioskKey--pressed",
@@ -45,6 +44,8 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     fkey: "data-fkey",
     /** Script family of a single-glyph label (`cjk` | `hangul` | `indic` | `arabic`). */
     glyphScript: "data-glyph-script",
+    /** Proportional key-width token, carried verbatim (`1.5`, `2`, `space`, ...). */
+    keySpan: "data-key-span",
     /** Marks a key whose effective `variants` list is non-empty (the long-press gate). */
     hasVariants: "data-has-variants",
   }),
@@ -61,9 +62,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
   }),
   keyboardTypeClass(type: string): string {
     return `ui5KioskKeyboard--${type.toLowerCase()}`;
-  },
-  keyWidthClass(width: string): string {
-    return width === "space" ? "ui5KioskKey--wspace" : `ui5KioskKey--w${width.replace(".", "")}`;
   },
 } as const);
 

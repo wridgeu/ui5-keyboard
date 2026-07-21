@@ -334,26 +334,26 @@
   }
 }
 
-/* Width classes: proportional flex grow */
-.kiosk-key--w1-25 {
+/* Key width span: proportional flex grow */
+[data-key-span="1.25"] {
   flex: 1.25 1 0;
 }
-.kiosk-key--w1-5 {
+[data-key-span="1.5"] {
   flex: 1.5 1 0;
 }
-.kiosk-key--w1-75 {
+[data-key-span="1.75"] {
   flex: 1.75 1 0;
 }
-.kiosk-key--w2 {
+[data-key-span="2"] {
   flex: 2 1 0;
 }
-.kiosk-key--w2-25 {
+[data-key-span="2.25"] {
   flex: 2.25 1 0;
 }
-.kiosk-key--w2-75 {
+[data-key-span="2.75"] {
   flex: 2.75 1 0;
 }
-.kiosk-key--wspace {
+[data-key-span="space"] {
   flex: 6 1 0;
 }
 

@@ -1097,7 +1097,12 @@ QUnit.test("ja-kana: backspace, enter, shift, space have correct types", async (
   assert.strictEqual(backspace?.getAttribute(DOM.attributes.keyType), "action", "Backspace has action type");
   assert.strictEqual(enter?.getAttribute(DOM.attributes.keyType), "action", "Enter has action type");
   assert.strictEqual(shift?.getAttribute(DOM.attributes.keyType), "modifier", "Shift has modifier type");
-  assert.ok(space?.classList.contains(DOM.classes.keySpace), "Space has space type");
+  assert.strictEqual(space?.getAttribute(DOM.attributes.keySpan), "space", "Space has the space width span");
+  assert.strictEqual(
+    backspace?.getAttribute(DOM.attributes.keySpan),
+    "1.5",
+    "Backspace width span is carried verbatim",
+  );
 
   kb.destroy();
 });
@@ -1307,7 +1312,11 @@ QUnit.test("ko-hangul: backspace, enter, shift, space have correct types", async
     "modifier",
     "Shift is modifier",
   );
-  assert.ok(root.querySelector('[data-key=" "]')!.classList.contains(DOM.classes.keySpace), "Space is space");
+  assert.strictEqual(
+    root.querySelector('[data-key=" "]')!.getAttribute(DOM.attributes.keySpan),
+    "space",
+    "Space is space",
+  );
   kb.destroy();
 });
 
@@ -1366,7 +1375,11 @@ QUnit.test("qwerty-es: backspace, enter, shift, space have correct types", async
     "modifier",
     "Shift is modifier",
   );
-  assert.ok(root.querySelector('[data-key=" "]')!.classList.contains(DOM.classes.keySpace), "Space is space");
+  assert.strictEqual(
+    root.querySelector('[data-key=" "]')!.getAttribute(DOM.attributes.keySpan),
+    "space",
+    "Space is space",
+  );
   kb.destroy();
 });
 
