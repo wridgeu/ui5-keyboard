@@ -322,14 +322,18 @@ const KioskKeyboardRenderer = {
       // (、。・) falls through to isCJKGlyph(). The else-if chain prevents
       // double-classification. Indic and Arabic are disjoint by Unicode
       // definition, so no guards are needed for them.
+      let glyphScript: string | undefined;
       if (isHangulGlyph(label)) {
-        rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphHangul);
+        glyphScript = "hangul";
       } else if (isCJKGlyph(label)) {
-        rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphCjk);
+        glyphScript = "cjk";
       } else if (isIndicGlyph(label)) {
-        rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphIndic);
+        glyphScript = "indic";
       } else if (isArabicGlyph(label)) {
-        rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphArabic);
+        glyphScript = "arabic";
+      }
+      if (glyphScript) {
+        rm.attr(KIOSK_KEYBOARD_DOM.attributes.glyphScript, glyphScript);
       }
     } else if (key.type !== "modifier" && key.type !== "action") {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelMulti);

@@ -73,12 +73,12 @@
      When set, overrides the CJK system font stack used for keys whose label
      is a CJK glyph (hiragana, katakana, kanji, Bopomofo). The
      default fallback is a cross-platform CJK font list defined inline
-     on .kiosk-key__label--glyph-cjk. */
+     on [data-glyph-script="cjk"]. */
 
   /* --kiosk-keyboard-hangul-font-family: unset by default.
      When set, overrides the Korean system font stack used for keys whose
      label is a Hangul glyph (jamo, syllables). The default fallback is a
-     Korean-first font list defined inline on .kiosk-key__label--glyph-hangul.
+     Korean-first font list defined inline on [data-glyph-script="hangul"].
      Hangul gets a separate class from CJK so Korean system fonts are
      prioritized over Japanese/Chinese fonts for correct glyph metrics. */
 
@@ -87,12 +87,12 @@
      is an Indic glyph (Devanagari, Bengali, Tamil, Telugu, Kannada, Malayalam,
      Gujarati, Gurmukhi, Oriya, Sinhala). The default fallback is a
      cross-platform Indic font list defined inline
-     on .kiosk-key__label--glyph-indic. */
+     on [data-glyph-script="indic"]. */
 
   /* --kiosk-keyboard-arabic-font-family: unset by default.
      When set, overrides the Arabic system font stack used for keys whose label
      is an Arabic glyph. The default fallback is a cross-platform Arabic font
-     list defined inline on .kiosk-key__label--glyph-arabic. */
+     list defined inline on [data-glyph-script="arabic"]. */
 }
 
 /* Keyboard container */
@@ -597,14 +597,14 @@
      Current browser support: text-box-edge `text` is supported; the more
      precise `ideographic-ink` value is not yet shipped (csswg-drafts #10928,
      Chromium #365423076). */
-  .kiosk-key__label--glyph-cjk {
+  [data-glyph-script="cjk"] {
     text-box-edge: text;
   }
 
   /* Hangul jamo share the CJK vertical em-box characteristics but need a
      separate class for their Korean-first font stack (see below). The
      text-box-edge treatment is identical to CJK. */
-  .kiosk-key__label--glyph-hangul {
+  [data-glyph-script="hangul"] {
     text-box-edge: text;
   }
 
@@ -613,14 +613,14 @@
      that differ from both Latin cap-height and CJK ideographic metrics.
      Use `text` (text-top to text-bottom) to preserve both the headline
      space above and the matra/descender space below. */
-  .kiosk-key__label--glyph-indic {
+  [data-glyph-script="indic"] {
     text-box-edge: text;
   }
 
   /* Arabic glyphs have extended ascenders, descenders, and diacritical marks
      that differ from Latin cap-height metrics. Use `text` to preserve the
      full vertical extent needed for vowel points and tanwin marks. */
-  .kiosk-key__label--glyph-arabic {
+  [data-glyph-script="arabic"] {
     text-box-edge: text;
   }
 }
@@ -636,7 +636,7 @@
    Putting CJK system fonts first for CJK labels ensures the browser uses the
    CJK font's own metrics for both the glyph and the line box.
    Consumers can override the entire stack via --kiosk-keyboard-cjk-font-family. */
-.kiosk-key__label--glyph-cjk {
+[data-glyph-script="cjk"] {
   font-family: var(
     --kiosk-keyboard-cjk-font-family,
     "Hiragino Sans",
@@ -662,7 +662,7 @@
    which produce incorrect metrics when rendering Hangul jamo. Putting Korean
    system fonts first ensures the browser uses Korean font metrics.
    Consumers can override the entire stack via --kiosk-keyboard-hangul-font-family. */
-.kiosk-key__label--glyph-hangul {
+[data-glyph-script="hangul"] {
   font-family: var(
     --kiosk-keyboard-hangul-font-family,
     "Apple SD Gothic Neo",
@@ -680,7 +680,7 @@
    metrics for the line box.  Putting Indic system fonts first ensures
    consistent metrics.
    Consumers can override the entire stack via --kiosk-keyboard-indic-font-family. */
-.kiosk-key__label--glyph-indic {
+[data-glyph-script="indic"] {
   font-family: var(
     --kiosk-keyboard-indic-font-family,
     "Nirmala UI",
@@ -716,7 +716,7 @@
    metrics for the line box.  Putting Arabic system fonts first ensures
    consistent metrics.
    Consumers can override the entire stack via --kiosk-keyboard-arabic-font-family. */
-.kiosk-key__label--glyph-arabic {
+[data-glyph-script="arabic"] {
   font-family: var(
     --kiosk-keyboard-arabic-font-family,
     "Segoe UI",

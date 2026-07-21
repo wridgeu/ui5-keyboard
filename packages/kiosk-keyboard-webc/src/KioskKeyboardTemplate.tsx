@@ -73,6 +73,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
               const isCJK = isSingleGlyphLabel && !isHangul && isCJKGlyph(label);
               const isIndic = isSingleGlyphLabel && isIndicGlyph(label);
               const isArabic = isSingleGlyphLabel && isArabicGlyph(label);
+              const glyphScript = isHangul ? "hangul" : isCJK ? "cjk" : isIndic ? "indic" : isArabic ? "arabic" : undefined;
 
               return (
                 <div
@@ -116,13 +117,10 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                       class={{
                         [KIOSK_KEYBOARD_DOM.classes.keyLabel]: true,
                         [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph]: isSingleGlyphLabel,
-                        [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphCjk]: isCJK,
-                        [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphHangul]: isHangul,
-                        [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphIndic]: isIndic,
-                        [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyphArabic]: isArabic,
                         [KIOSK_KEYBOARD_DOM.classes.keyLabelMulti]:
                           !isSingleGlyphLabel && key.type !== "modifier" && key.type !== "action",
                       }}
+                      data-glyph-script={glyphScript}
                       part="key-label"
                     >
                       {label}
