@@ -141,6 +141,27 @@ Status: CLEARED. With the border term zeroed, `KioskKeyboard-responsive` went 19
 boundary tests stayed green, proving the helper change preserved their semantics. Restoring
 the term is verified green in the full `check:base` run.
 
+## H8 — (addendum) The webc cq-tier attribute is not actually resilient / the contract refactor is untested
+
+Hypothesis (#192): the webc twin moves its height tier from self-applied host classes
+(`kiosk-keyboard--cq-short` / `--cq-tiny`) to a reflected `cq-tier` attribute, whose whole
+rationale is that a `class` is consumer-owned and can be wiped by framework `className`
+reconciliation while an attribute the component owns is not. A green suite could lie two
+ways: (a) the ~12 converted assertions could pass while the attribute is never actually set
+(e.g. a vacuous `hasCqTier` helper); (b) the resilience claim could be false, the attribute
+wiped as easily as the class was.
+
+Refutation plan: (a) is covered because every converted assertion reads
+`el.getAttribute("cq-tier")`, so the whole responsive suite goes red if the controller stops
+setting it (equivalent to H3's `_applyClasses` neutering, already observed). (b) add a
+dedicated test that reassigns `el.className` after the tier is applied and asserts the tier
+survives; under the old class approach that reassignment wiped the class, so the assertion
+is only satisfiable by the attribute.
+
+Status: CLEARED for (a) by the suite's dependence on the attribute; the `className`-survival
+test passes on the attribute and is inexpressible (would fail) against the prior class
+approach, which is the capability #192 adds.
+
 ## Known bounded risk, recorded rather than tested
 
 The guard compares border boxes with a 0.1px tolerance because the pass reads the box from

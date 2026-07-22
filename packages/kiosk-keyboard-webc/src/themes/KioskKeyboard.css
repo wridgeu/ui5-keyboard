@@ -154,26 +154,27 @@
   }
 }
 
-/* Height-responsive classes (JS-driven via ResizeObserver)
-   Height classes (.kiosk-keyboard--cq-short / .kiosk-keyboard--cq-tiny) live
-   on the HOST element. Block-prefixed so they remain BEM-conformant (every
-   class belongs to a block) even though the host *is* the block.
+/* Height-responsive tier (JS-driven via ResizeObserver)
+   The controller reflects a `cq-tier` attribute (short / tiny, absent when
+   unconstrained) on the HOST. An attribute rather than a class so framework
+   `className` reconciliation cannot clobber it (a consumer-owned `class` can be
+   overwritten by React/Vue; an attribute the component owns is left alone).
    Consumer CSS in the outer document always beats these :host() rules
    regardless of specificity (CSS Scoping L1 §3.3.1 / CSS Cascade L5 §6.1:
    "Context" sits above "Specificity" in the cascade sorting order).
 
    No numpad guard here (the kiosk twin carries :not(--numpad)): the controller
-   never applies a cq class to a numpad in either twin (_applyClasses returns
-   early for it), so this only fires for a consumer force-adding the class. It
-   also could not mirror kiosk symmetrically anyway, since the cq class is on
-   the host while --numpad lives on the internal root, out of :host() reach. */
-:host(.kiosk-keyboard--cq-short) {
+   never reflects a tier for a numpad in either twin (_applyClasses returns
+   early for it), so this only fires for a consumer force-setting the attribute.
+   It also could not mirror kiosk symmetrically anyway, since the tier is on the
+   host while --numpad lives on the internal root, out of :host() reach. */
+:host([cq-tier="short"]) {
   --kiosk-keyboard-key-height: 2.25rem;
   --kiosk-keyboard-key-gap: 0.25rem;
   --kiosk-keyboard-padding: 0.5rem;
 }
 
-:host(.kiosk-keyboard--cq-tiny) {
+:host([cq-tier="tiny"]) {
   --kiosk-keyboard-key-height: 1.75rem;
   --kiosk-keyboard-key-gap: 0.125rem;
   --kiosk-keyboard-padding: 0.25rem;

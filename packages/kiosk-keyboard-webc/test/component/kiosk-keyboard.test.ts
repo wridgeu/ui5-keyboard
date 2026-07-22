@@ -21,6 +21,11 @@ function queryRows(el: KioskKeyboard): NodeListOf<HTMLElement> {
   return el.shadowRoot!.querySelectorAll(DOM.selectors.row);
 }
 
+/** Whether the host reflects the given responsive tier (`short` / `tiny`). */
+function hasCqTier(el: KioskKeyboard, tier: string): boolean {
+  return el.getAttribute(DOM.attributes.cqTier) === tier;
+}
+
 async function waitForResponsiveSync(): Promise<void> {
   await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -2244,11 +2249,9 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       await waitForResponsiveSync();
 
-      expect(
-        el.classList.contains(DOM.classes.hostCqShort),
-        "content-box height triggers cq-short despite host padding",
-      ).to.be.true;
-      expect(el.classList.contains(DOM.classes.hostCqTiny), "padding case stays above tiny breakpoint").to.be.false;
+      expect(hasCqTier(el, DOM.cqTierValues.short), "content-box height triggers cq-short despite host padding").to.be
+        .true;
+      expect(hasCqTier(el, DOM.cqTierValues.tiny), "padding case stays above tiny breakpoint").to.be.false;
     });
 
     it("adapts responsively in a fixed-height host", async () => {
@@ -2261,8 +2264,8 @@ describe("kiosk-keyboard", () => {
       const root = rootDiv(el);
 
       // 15rem host triggers cq-short (threshold: 16rem)
-      expect(el.classList.contains(DOM.classes.hostCqShort), "cq-short applied at 15rem").to.be.true;
-      expect(el.classList.contains(DOM.classes.hostCqTiny), "not tiny at 15rem").to.be.false;
+      expect(hasCqTier(el, DOM.cqTierValues.short), "cq-short applied at 15rem").to.be.true;
+      expect(hasCqTier(el, DOM.cqTierValues.tiny), "not tiny at 15rem").to.be.false;
 
       // No minHeight is set on the root
       expect(root.style.minHeight).to.equal("");
@@ -2289,13 +2292,13 @@ describe("kiosk-keyboard", () => {
       await waitForResponsiveSync();
 
       const hostHeightBefore = el.getBoundingClientRect().height;
-      expect(el.classList.contains(DOM.classes.hostCqShort), "not constrained with 1.25rem keys").to.be.false;
+      expect(hasCqTier(el, DOM.cqTierValues.short), "not constrained with 1.25rem keys").to.be.false;
 
       el.style.setProperty("--kiosk-keyboard-key-height", "3rem");
 
       // Observation and the rAF that applies it span an indeterminate number of
       // frames, so wait on the outcome rather than a fixed count.
-      await waitUntil(() => el.classList.contains(DOM.classes.hostCqShort), "cq-short applied after content grew", {
+      await waitUntil(() => hasCqTier(el, DOM.cqTierValues.short), "cq-short applied after content grew", {
         timeout: 2000,
       });
 
@@ -2321,8 +2324,26 @@ describe("kiosk-keyboard", () => {
       // 15rem of layout height renders visually at 7.5rem. CSS sizing responds
       // to layout pixels, so cq-short (<= 16rem) is correct and cq-tiny
       // (<= 12rem, the visual height) would be a misread.
-      expect(el.classList.contains(DOM.classes.hostCqShort), "cq-short from the 15rem layout height").to.be.true;
-      expect(el.classList.contains(DOM.classes.hostCqTiny), "no cq-tiny from the 7.5rem visual height").to.be.false;
+      expect(hasCqTier(el, DOM.cqTierValues.short), "cq-short from the 15rem layout height").to.be.true;
+      expect(hasCqTier(el, DOM.cqTierValues.tiny), "no cq-tiny from the 7.5rem visual height").to.be.false;
+    });
+
+    it("keeps the responsive tier when the host className is reassigned", async () => {
+      const el = await fixture<KioskKeyboard>(html`
+        <kiosk-keyboard
+          layout="qwerty"
+          style="height: 15rem; overflow: hidden; --kiosk-keyboard-key-height: 3rem"
+        ></kiosk-keyboard>
+      `);
+      await nextRender();
+      await waitForResponsiveSync();
+      expect(hasCqTier(el, DOM.cqTierValues.short), "constrained to short before reconciliation").to.be.true;
+
+      // A framework rewriting the host `class` attribute (React/Vue className
+      // reconciliation) would have wiped the old cq-* classes. The tier is an
+      // attribute the component owns, so it survives.
+      el.className = "consumer-added-class";
+      expect(hasCqTier(el, DOM.cqTierValues.short), "tier survives a className reassignment").to.be.true;
     });
 
     it("applies cq-short when the keyboard is clipped by no more than its own border", async () => {
@@ -2344,13 +2365,9 @@ describe("kiosk-keyboard", () => {
       el.style.height = `${natural - 2}px`;
       el.style.overflow = "hidden";
 
-      await waitUntil(
-        () => el.classList.contains(DOM.classes.hostCqShort),
-        "cq-short applied for a border-sized clip",
-        {
-          timeout: 2000,
-        },
-      );
+      await waitUntil(() => hasCqTier(el, DOM.cqTierValues.short), "cq-short applied for a border-sized clip", {
+        timeout: 2000,
+      });
     });
 
     it("border-width overrides do not widen the undetected clipping range", async () => {
@@ -2373,7 +2390,7 @@ describe("kiosk-keyboard", () => {
       el.style.height = `${natural - 6}px`;
       el.style.overflow = "hidden";
 
-      await waitUntil(() => el.classList.contains(DOM.classes.hostCqShort), "cq-short applied for a sub-border clip", {
+      await waitUntil(() => hasCqTier(el, DOM.cqTierValues.short), "cq-short applied for a sub-border clip", {
         timeout: 2000,
       });
     });
@@ -2392,7 +2409,7 @@ describe("kiosk-keyboard", () => {
       expect(el.clientHeight).to.be.at.most(250, "host respects flex parent height");
 
       // Responsive class applied and key height actually reduced (cq-short = 2.25rem)
-      expect(el.classList.contains(DOM.classes.hostCqShort), "cq-short class applied").to.be.true;
+      expect(hasCqTier(el, DOM.cqTierValues.short), "cq-short class applied").to.be.true;
       const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
       const keyHeight = parseFloat(getComputedStyle(key!).height);
       const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
@@ -2412,7 +2429,7 @@ describe("kiosk-keyboard", () => {
 
       expect(el.clientHeight).to.be.at.most(250, "host respects grid parent height");
 
-      expect(el.classList.contains(DOM.classes.hostCqShort), "cq-short class applied").to.be.true;
+      expect(hasCqTier(el, DOM.cqTierValues.short), "cq-short class applied").to.be.true;
       const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
       const keyHeight = parseFloat(getComputedStyle(key!).height);
       const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
@@ -2429,8 +2446,8 @@ describe("kiosk-keyboard", () => {
       const root = rootDiv(el);
       expect(root.scrollHeight).to.be.at.most(el.clientHeight + 1, "no overflow in unconstrained host");
 
-      expect(el.classList.contains(DOM.classes.hostCqShort), "no cq-short").to.be.false;
-      expect(el.classList.contains(DOM.classes.hostCqTiny), "no cq-tiny").to.be.false;
+      expect(hasCqTier(el, DOM.cqTierValues.short), "no cq-short").to.be.false;
+      expect(hasCqTier(el, DOM.cqTierValues.tiny), "no cq-tiny").to.be.false;
 
       // Key height at full default (3rem)
       const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
@@ -2661,7 +2678,7 @@ describe("kiosk-keyboard", () => {
       el.refreshResponsiveState();
       await waitForResponsiveSync();
 
-      expect(el.classList.contains(DOM.classes.hostCqShort)).to.be.true;
+      expect(hasCqTier(el, DOM.cqTierValues.short)).to.be.true;
     });
   });
 });

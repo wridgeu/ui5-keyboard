@@ -39,7 +39,7 @@ core/
   auto-show-controller.ts AutoShowController: focusin/focusout-driven auto open/close with multi-instance isolation
   native-inputmode-suppression.ts  NativeInputModeSuppression: ref-counted inputmode="none" on the target, shared across instances
   physical-key-highlight-controller.ts  PhysicalKeyHighlightController: lights up the matching virtual key on physical keydown and mirrors Shift/CapsLock
-  responsive-sizing-controller.ts  ResponsiveSizingController: ResizeObserver-driven height-responsive host classes (cq-short/cq-tiny)
+  responsive-sizing-controller.ts  ResponsiveSizingController: ResizeObserver-driven height-responsive host cq-tier attribute (short/tiny)
   latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping (merged onto layouts when accent-variants is enabled)
   variant-popup-controller.ts  VariantPopupController: long-press/right-click accent-variant popup orchestration (open, option sizing, commit through the composition path)
 middleware/
@@ -477,14 +477,16 @@ Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted)
 
 No JavaScript is involved in width responsiveness. The `min()` capping pattern ensures that a consumer who sets a small font-size keeps it, while large values are reduced at narrow widths.
 
-**Height responsiveness** uses JS (`ResizeObserver`) to detect when the host element is externally height-constrained (i.e., `scrollHeight` exceeds the host content-box height; both are untransformed layout pixels, so an ancestor `transform: scale()` does not shift the breakpoints). The host sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained (`max-height: 100%` of a `height: auto` parent resolves to no constraint). Consumers can override all three from outside the shadow DOM. When constrained, the component applies classes on the **host** element:
+**Height responsiveness** uses JS (`ResizeObserver`) to detect when the host element is externally height-constrained (i.e., `scrollHeight` exceeds the host content-box height; both are untransformed layout pixels, so an ancestor `transform: scale()` does not shift the breakpoints). The host sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained (`max-height: 100%` of a `height: auto` parent resolves to no constraint). Consumers can override all three from outside the shadow DOM. When constrained, the component reflects a `cq-tier` attribute on the **host** element (absent when unconstrained):
 
-- `.kiosk-keyboard--cq-short` (host height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
-- `.kiosk-keyboard--cq-tiny` (host height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
+- `[cq-tier="short"]` (host height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
+- `[cq-tier="tiny"]` (host height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.
 
-Outer-document (consumer) styles always win over the shadow tree's `:host()` defaults regardless of specificity, because the cascade's "Context" step sits above "Specificity" (per [CSS Scoping Module Level 1 §3.3.1](https://www.w3.org/TR/css-scoping-1/#cascading)). Height classes therefore live on the host element so that CSS rules use `:host(.kiosk-keyboard--cq-short)` without any specificity-lowering wrapper, and consumer overrides land even without a matching class.
+It is an attribute rather than a class because the `class` attribute is consumer-owned: framework `className` reconciliation (React, Vue) can overwrite it and wipe a component-applied class, whereas an attribute the component owns is left alone. The light-DOM kiosk twin keeps root classes, idiomatic for UI5 1.x.
 
-A combined rule applies when both narrow width and constrained height are active: `@container keyboard (max-width: 20rem)` combined with `:host(.kiosk-keyboard--cq-short, .kiosk-keyboard--cq-tiny)` applies the most aggressive font-size cap of `0.75rem`.
+Outer-document (consumer) styles always win over the shadow tree's `:host()` defaults regardless of specificity, because the cascade's "Context" step sits above "Specificity" (per [CSS Scoping Module Level 1 §3.3.1](https://www.w3.org/TR/css-scoping-1/#cascading)). The tier therefore lives on the host element so that CSS rules use `:host([cq-tier="short"])` without any specificity-lowering wrapper, and consumer overrides land even without a matching attribute.
+
+A combined rule applies when both narrow width and constrained height are active: `@container keyboard (max-width: 20rem)` combined with `:host([cq-tier="short"], [cq-tier="tiny"])` applies the most aggressive font-size cap of `0.75rem`.
 
 Height thresholds are configurable via CSS custom properties: `--kiosk-keyboard-cq-short-threshold` (default `16rem`) and `--kiosk-keyboard-cq-tiny-threshold` (default `12rem`).
 
