@@ -100,7 +100,8 @@ The key-height reduction ratios are 75% for short and 58% for tiny, relative to 
 
 ```css
 @container keyboard (max-width: 20rem) {
-  :host(.kiosk-keyboard--cq-short, .kiosk-keyboard--cq-tiny) ... .kiosk-key {
+  :host([cq-tier="short"]) .kiosk-key,
+  :host([cq-tier="tiny"]) .kiosk-key {
     --kiosk-keyboard-key-font-size: min(base, 0.75rem);
   }
 }
@@ -311,7 +312,7 @@ At narrow widths (<=35rem / 560px), a `@container` query targets `[data-row-kind
 --kiosk-keyboard-cq-tiny-threshold: 12rem;
 ```
 
-These thresholds are read by the ResizeObserver in JavaScript to toggle `.kiosk-keyboard--cq-short` and `.kiosk-keyboard--cq-tiny` classes on the host element. Exposing them as CSS custom properties allows consumers to adjust when the height breakpoints trigger without modifying JavaScript. See [Height-Responsive Breakpoints](#height-responsive-breakpoints) for the sizing values at each tier.
+These thresholds are read by the ResizeObserver in JavaScript to set the `cq-tier` attribute (`short` / `tiny`) on the host element. Exposing them as CSS custom properties allows consumers to adjust when the height breakpoints trigger without modifying JavaScript. See [Height-Responsive Breakpoints](#height-responsive-breakpoints) for the sizing values at each tier.
 
 ## Script-Specific Font Stacks
 

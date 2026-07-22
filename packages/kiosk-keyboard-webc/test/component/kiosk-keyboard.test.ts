@@ -2216,6 +2216,29 @@ describe("kiosk-keyboard", () => {
       expect(fontSize).to.be.at.most(0.875 * remPx + 0.5, "Font size should be capped at ≤ 0.875rem");
     });
 
+    it("caps the key font at 0.75rem when narrow and height-constrained (matches the kiosk twin)", async () => {
+      const el = await fixture<KioskKeyboard>(html`
+        <kiosk-keyboard
+          layout="qwerty"
+          style="height: 15rem; overflow: hidden; --kiosk-keyboard-max-width: 18rem"
+        ></kiosk-keyboard>
+      `);
+      await nextRender();
+      await waitForResponsiveSync();
+
+      expect(hasCqTier(el, DOM.cqTierValues.short), "short tier from the 15rem constraint").to.be.true;
+
+      const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key)!;
+      const fontSize = parseFloat(getComputedStyle(key).fontSize);
+      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
+      // Short tier reduces key-height to 2.25rem, so the font base is 0.84375rem.
+      // The narrow width-only cap (0.875rem) leaves that untouched; the combined
+      // cap clamps it to 0.75rem, matching the kiosk twin's short tier.
+      expect(fontSize).to.be.at.most(0.75 * remPx + 0.5, "narrow + short caps the key font at 0.75rem");
+      expect(fontSize).to.be.lessThan(0.84 * remPx, "the combined cap bit below the short-tier base");
+    });
+
     it("preserves consumer font-size below the responsive cap", async () => {
       // Consumer sets a small custom font-size; the responsive breakpoint should
       // NOT override it to a larger value.
@@ -2346,95 +2369,93 @@ describe("kiosk-keyboard", () => {
       expect(hasCqTier(el, DOM.cqTierValues.short), "tier survives a className reassignment").to.be.true;
     });
 
-    it("applies cq-short when the keyboard is clipped by no more than its own border", async () => {
-      const el = await fixture<KioskKeyboard>(html`
-        <kiosk-keyboard layout="qwerty" style="--kiosk-keyboard-key-height: 2rem"></kiosk-keyboard>
-      `);
-      await nextRender();
-      await waitForResponsiveSync();
-
-      // Unconstrained natural border-box height of the root; the host content
-      // box must fit this, border included.
-      const root = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.root)!;
-      const natural = root.getBoundingClientRect().height;
+    it("guards a numpad against a force-set cq-tier (twin parity with :not(--numpad))", async () => {
       const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      expect(natural, "precondition: natural height under the short threshold").to.be.lessThan(16 * remPx);
+      const rowGapRem = (el: KioskKeyboard) =>
+        parseFloat(getComputedStyle(el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.root)!).rowGap) / remPx;
 
-      // Clip by exactly the root's default vertical border (2px): the border
-      // box no longer fits, so the keyboard is visibly clipped.
-      el.style.height = `${natural - 2}px`;
-      el.style.overflow = "hidden";
+      // Control: a non-numpad host takes the short tier's compact gap. Measured
+      // synchronously right after the attribute is set, before the controller's
+      // next sync re-derives the tier (it never lands on a numpad anyway).
+      const plain = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+      await nextRender();
+      plain.setAttribute(DOM.attributes.cqTier, DOM.cqTierValues.short);
+      expect(rowGapRem(plain)).to.be.closeTo(0.25, 0.02, "non-numpad compacts to the short-tier gap");
 
-      await waitUntil(() => hasCqTier(el, DOM.cqTierValues.short), "cq-short applied for a border-sized clip", {
-        timeout: 2000,
-      });
+      // The guard: :not([keyboard-type="Numpad"]) excludes a numpad even when a
+      // consumer force-sets cq-tier, so it keeps its base gap. The numpad root
+      // re-declares key-height/font but not gap, so gap is the observable leak
+      // the guard closes; this mirrors the kiosk twin's :not(--numpad).
+      const numpad = await fixture<KioskKeyboard>(html`<kiosk-keyboard keyboard-type="Numpad"></kiosk-keyboard>`);
+      await nextRender();
+      numpad.setAttribute(DOM.attributes.cqTier, DOM.cqTierValues.short);
+      expect(rowGapRem(numpad)).to.be.closeTo(0.375, 0.02, "numpad keeps its base gap; the tier is guarded out");
     });
 
-    it("border-width overrides do not widen the undetected clipping range", async () => {
-      const el = await fixture<KioskKeyboard>(html`
-        <kiosk-keyboard
-          layout="qwerty"
-          style="--kiosk-keyboard-key-height: 2rem; --kiosk-keyboard-border: 4px solid black"
-        ></kiosk-keyboard>
-      `);
-      await nextRender();
-      await waitForResponsiveSync();
-
-      const root = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.root)!;
-      const natural = root.getBoundingClientRect().height;
+    it("applies cq-short when clipped by no more than the root's own border", async () => {
       const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      expect(natural, "precondition: natural height under the short threshold").to.be.lessThan(16 * remPx);
+      // The natural height adds the root's border, so a clip within the vertical
+      // border is still detected. Default 1px border (2px total, 2px clip) and a
+      // 4px override (8px total, 6px clip inside it) must both trigger cq-short.
+      const cases = [
+        { border: "", clip: 2, note: "default 1px border" },
+        { border: "; --kiosk-keyboard-border: 4px solid black", clip: 6, note: "4px border override" },
+      ];
 
-      // A 6px clip sits inside the 8px vertical border, i.e. inside the range
-      // a border-blind natural height cannot see.
-      el.style.height = `${natural - 6}px`;
-      el.style.overflow = "hidden";
+      for (const { border, clip, note } of cases) {
+        const el = await fixture<KioskKeyboard>(
+          html`<kiosk-keyboard layout="qwerty" style="--kiosk-keyboard-key-height: 2rem${border}"></kiosk-keyboard>`,
+        );
+        await nextRender();
+        await waitForResponsiveSync();
 
-      await waitUntil(() => hasCqTier(el, DOM.cqTierValues.short), "cq-short applied for a sub-border clip", {
-        timeout: 2000,
-      });
+        // Unconstrained natural border-box height of the root; the host content
+        // box must fit this, border included.
+        const root = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.root)!;
+        const natural = root.getBoundingClientRect().height;
+        expect(natural, `precondition: natural height under the short threshold (${note})`).to.be.lessThan(16 * remPx);
+
+        // Clip within the vertical border: the border box no longer fits.
+        el.style.height = `${natural - clip}px`;
+        el.style.overflow = "hidden";
+
+        await waitUntil(
+          () => hasCqTier(el, DOM.cqTierValues.short),
+          `cq-short applied for a within-border clip (${note})`,
+          {
+            timeout: 2000,
+          },
+        );
+      }
     });
 
-    it("auto-detects height constraint from flex parent without CSS on keyboard", async () => {
-      const wrapper = document.createElement("div");
-      wrapper.style.cssText = "display: flex; flex-direction: column; height: 250px;";
-
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `, {
-        parentNode: wrapper,
-      });
-      await nextRender();
-      await waitForResponsiveSync();
-
-      // Host constrained by flex parent
-      expect(el.clientHeight).to.be.at.most(250, "host respects flex parent height");
-
-      // Responsive class applied and key height actually reduced (cq-short = 2.25rem)
-      expect(hasCqTier(el, DOM.cqTierValues.short), "cq-short class applied").to.be.true;
-      const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
-      const keyHeight = parseFloat(getComputedStyle(key!).height);
+    it("auto-detects height constraint from a resolved-height parent (flex and grid)", async () => {
+      // The controller reads only host.clientHeight and root.scrollHeight, so it
+      // never branches on the parent's layout mode; both a flex column and a grid
+      // row with a resolved height must constrain the host identically.
       const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      expect(keyHeight).to.be.at.most(2.25 * remPx + 1, "key height reduced to cq-short level");
-      expect(keyHeight).to.be.lessThan(3 * remPx, "key height smaller than default 3rem");
-    });
+      const parents = [
+        { css: "display: flex; flex-direction: column; height: 250px;", note: "flex" },
+        { css: "display: grid; grid-template-rows: 1fr; height: 250px;", note: "grid" },
+      ];
 
-    it("auto-detects height constraint from grid parent without CSS on keyboard", async () => {
-      const wrapper = document.createElement("div");
-      wrapper.style.cssText = "display: grid; grid-template-rows: 1fr; height: 250px;";
+      for (const { css, note } of parents) {
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = css;
 
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `, {
-        parentNode: wrapper,
-      });
-      await nextRender();
-      await waitForResponsiveSync();
+        const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `, {
+          parentNode: wrapper,
+        });
+        await nextRender();
+        await waitForResponsiveSync();
 
-      expect(el.clientHeight).to.be.at.most(250, "host respects grid parent height");
-
-      expect(hasCqTier(el, DOM.cqTierValues.short), "cq-short class applied").to.be.true;
-      const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
-      const keyHeight = parseFloat(getComputedStyle(key!).height);
-      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      expect(keyHeight).to.be.at.most(2.25 * remPx + 1, "key height reduced to cq-short level");
-      expect(keyHeight).to.be.lessThan(3 * remPx, "key height smaller than default 3rem");
+        expect(el.clientHeight, `host respects ${note} parent height`).to.be.at.most(250);
+        expect(hasCqTier(el, DOM.cqTierValues.short), `cq-short applied under ${note} parent`).to.be.true;
+        const key = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.key);
+        const keyHeight = parseFloat(getComputedStyle(key!).height);
+        expect(keyHeight, `${note}: key height reduced to cq-short level`).to.be.at.most(2.25 * remPx + 1);
+        expect(keyHeight, `${note}: key height smaller than default 3rem`).to.be.lessThan(3 * remPx);
+      }
     });
 
     it("does not trigger height classes when parent is unconstrained", async () => {

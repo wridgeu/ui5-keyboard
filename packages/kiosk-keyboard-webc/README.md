@@ -970,8 +970,8 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-modifier-shadow-hover`   | _(subtle)_                                                | Box shadow for modifier keys on hover                       |
 | `--kiosk-keyboard-numpad-max-width`        | `20rem`                                                   | Max width for numpad layout                                 |
 | `--kiosk-keyboard-numpad-key-min-width`    | `4rem`                                                    | Minimum key width in numpad layout                          |
-| `--kiosk-keyboard-cq-short-threshold`      | `16rem`                                                   | Height threshold for `kiosk-keyboard--cq-short` class       |
-| `--kiosk-keyboard-cq-tiny-threshold`       | `12rem`                                                   | Height threshold for `kiosk-keyboard--cq-tiny` class        |
+| `--kiosk-keyboard-cq-short-threshold`      | `16rem`                                                   | Height threshold for the `cq-tier="short"` host attribute   |
+| `--kiosk-keyboard-cq-tiny-threshold`       | `12rem`                                                   | Height threshold for the `cq-tier="tiny"` host attribute    |
 | `--kiosk-keyboard-dual-direction`          | `row`                                                     | Flex direction for dual icon+label keys (`row` or `column`) |
 | `--kiosk-keyboard-dual-icon-size`          | `1em`                                                     | Icon font size in dual mode                                 |
 | `--kiosk-keyboard-dual-label-size`         | `1em`                                                     | Label font size in dual mode (inherits modifier cap)        |
@@ -1003,6 +1003,8 @@ Docked keyboards default to `1024px` max-width and center automatically via `mar
 ### Responsive Sizing
 
 The keyboard adapts to its container automatically. Width-responsive font scaling uses CSS `@container` queries (capped at narrow widths, though a smaller consumer override is preserved), and height-responsive scaling reduces key height, gaps, and modifier font-size when the host's layout box is smaller than the keyboard's natural content height. Override any `--kiosk-keyboard-*` property on the host or a parent (including the `--kiosk-keyboard-cq-*-threshold` height breakpoints) to tune this behavior. See the [CSS Sizing Reference](../../docs/shared/CSS-SIZING-REFERENCE.md) for default values, breakpoint thresholds, scaling factors, constrained-container patterns, and complex-script tuning.
+
+When height-constrained, the component reflects a `cq-tier` attribute (`short` / `tiny`, absent when unconstrained) on the host. Style off it from the outer document with `kiosk-keyboard[cq-tier="short"]` / `[cq-tier="tiny"]`. It is an attribute rather than a class so framework `className` reconciliation cannot wipe it. See [CONSUMPTION.md](../../docs/kiosk-webc/CONSUMPTION.md#height-responsiveness) for the full contract.
 
 If you change `--kiosk-keyboard-*` sizing variables at runtime within a fixed-height host, the rendered outer size may not change, so `ResizeObserver` will not fire; call `refreshResponsiveState()` after the style update to force a fresh responsive measurement.
 
