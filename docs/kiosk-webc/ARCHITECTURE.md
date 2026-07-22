@@ -498,14 +498,14 @@ All default values are declared on `:host` with standard specificity. Consumer s
 
 ### Key Visual Variants
 
-| Selector                     | SAP Token Prefix           | Visual Style                     |
-| ---------------------------- | -------------------------- | -------------------------------- |
-| `.kiosk-key`                 | `--sapButton_*`            | Standard button                  |
-| `[data-key-type="modifier"]` | `--sapButton_Lite_*`       | Subdued (Shift, layout switches) |
-| `[data-key-type="action"]`   | `--sapButton_Emphasized_*` | Prominent (Enter, Backspace)     |
-| `.kiosk-key--shift-active`   | `--sapButton_Emphasized_*` | Active shift indicator           |
-| `.kiosk-key--caps-lock`      | box-shadow ring            | Caps lock indicator              |
-| `.kiosk-key--highlight`      | `--sapButton_Active_*`     | Physical key highlight           |
+| Selector                   | SAP Token Prefix           | Visual Style                     |
+| -------------------------- | -------------------------- | -------------------------------- |
+| `.kiosk-key`               | `--sapButton_*`            | Standard button                  |
+| `.kiosk-key--modifier`     | `--sapButton_Lite_*`       | Subdued (Shift, layout switches) |
+| `.kiosk-key--action`       | `--sapButton_Emphasized_*` | Prominent (Enter, Backspace)     |
+| `.kiosk-key--shift-active` | `--sapButton_Emphasized_*` | Active shift indicator           |
+| `.kiosk-key--caps-lock`    | box-shadow ring            | Caps lock indicator              |
+| `.kiosk-key--highlight`    | `--sapButton_Active_*`     | Physical key highlight           |
 
 ### Accessibility CSS
 

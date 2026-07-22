@@ -1,7 +1,7 @@
 # DOM-contract: kiosk light-DOM specificity reconsideration (issue #173 follow-up)
 
 - Date: 2026-07-21
-- Status: **Option B implemented** (principled partial revert). See section 6.
+- Status: **Option B implemented** (principled partial revert), then revised 2026-07-22 so webc mirrors the kiosk class/attribute split for symmetry. Sections 1-5 record the original 07-21 analysis (which concluded "webc keeps the attributes"); that conclusion is superseded by the follow-up in section 6. See section 6 for what actually shipped.
 - Trigger: an adversarial review of the Proposal A refactor (class families to data attributes) found that the migration regressed the **kiosk** (light-DOM) twin. The **webc** (shadow-DOM) twin is unaffected.
 - Companion: `2026-07-21-dom-contract-modernization-design.md` (the refactor this revisits)
 
@@ -68,11 +68,13 @@ Accept `(0,2,0)` and out-specify each broken relationship: raise `--capsLock` an
 
 ## 6. Recommendation
 
-**Option B.** It is the only option that both eliminates every regression and keeps the wins that survived the adversarial review, and it turns the failure into a documented rule: in the kiosk light DOM, inert per-key data is an attribute; anything the cascade layers state onto stays a namespaced class. webc, immune by construction, keeps the fully-converged attribute contract.
+**Option B.** It is the only option that both eliminates every regression and keeps the wins that survived the adversarial review, and it turns the failure into a documented rule: inert per-key data is an attribute; anything the cascade layers state onto stays a namespaced class. webc is immune by construction (a bare shadow-scoped attribute stays `(0,1,0)`), so it _could_ keep the category as an attribute, but it mirrors the kiosk class/attribute split so the contract is symmetric (see the 2026-07-22 follow-up below).
 
 If the wins are judged not worth the mixed model, fall back to Option A (full revert), which is strictly simpler. Avoid Option C.
 
-**What shipped.** On kiosk, `data-key-type` reverted to the `keyModifier` / `keyAction` classes (renderer emits `rm.class`, the `.less` uses `&--modifier` / `&--action`), and the glyph rules gained a `.ui5KioskKey__label` scope prefix (`data-glyph-script` stays an attribute). `data-key-span` and `data-fkey` stayed attributes on both twins. webc is untouched. The drift guard now allows `keyType` as a webc-only attribute and lists `keyModifier` / `keyAction` as kiosk `PLATFORM_ONLY` classes. Regressions #1 and #3 are fixed with tests (a computed-`box-shadow` QUnit assertion for the caps-lock ring, verified failing on the pre-fix code first); #2 rides the same cascade fix and is covered by the visual e2e.
+**What shipped.** On kiosk, `data-key-type` reverted to the `keyModifier` / `keyAction` classes (renderer emits `rm.class`, the `.less` uses `&--modifier` / `&--action`), and the glyph rules gained a `.ui5KioskKey__label` scope prefix (`data-glyph-script` stays an attribute). `data-key-span` and `data-fkey` stayed attributes on both twins. Regressions #1 and #3 are fixed with tests (a computed-`box-shadow` QUnit assertion for the caps-lock ring, verified failing on the pre-fix code first); #2 rides the same cascade fix and is covered by the visual e2e.
+
+**2026-07-22 follow-up (symmetry).** A review found the webc category attribute was a behavioral no-op in the shadow DOM (a bare `[data-key-type]` is `(0,1,0)`, exactly the class it replaced, with no consumer hook: consumers style webc via `::part(modifier|action)`). Keeping it only made the contract asymmetric (kiosk class vs webc attribute) and grew the drift guard's allowlist. webc was therefore reverted to the `keyModifier` / `keyAction` classes too. `keyType` is gone from both twins; `keyModifier` / `keyAction` are now CORE classes; there are no platform-only attributes. The glyph 4-class→1-attribute collapse, `data-key-span`, and `data-fkey` (the actual wins) are unchanged.
 
 ## 7. Test plan (failing-first, per CLAUDE.md sections 3 and 7)
 

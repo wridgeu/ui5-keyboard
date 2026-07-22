@@ -207,8 +207,8 @@
   /* Numpad modifier and action keys are primary interaction targets,
      not subordinate labels. They bypass the min() font-size cap so their
      icons scale with the larger numpad key font. */
-  & [data-key-type="modifier"],
-  & [data-key-type="action"] {
+  & .kiosk-key--modifier,
+  & .kiosk-key--action {
     font-size: var(--kiosk-keyboard-key-font-size);
   }
 }
@@ -362,7 +362,7 @@
    This keeps modifier labels visually subordinate at every viewport
    width while still honouring a consumer-provided override.
    At desktop sizes the cap is a no-op (0.875rem < key-font * 0.8). */
-[data-key-type="modifier"] {
+.kiosk-key--modifier {
   background: var(--sapButton_Lite_Background, transparent);
   color: var(--sapButton_Lite_TextColor, #32363a);
   border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Lite_BorderColor, transparent));
@@ -387,7 +387,7 @@
 }
 
 /* Variant: Action keys (Enter, Backspace) */
-[data-key-type="action"] {
+.kiosk-key--action {
   background: var(--sapButton_Emphasized_Background, #0070f2);
   color: var(--sapButton_Emphasized_TextColor, #fff);
   border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Emphasized_BorderColor, #0070f2));
@@ -510,13 +510,13 @@
     box-shadow: var(--_kiosk-keyboard-key-shadow);
   }
 
-  [data-key-type="modifier"]:hover {
+  .kiosk-key--modifier:hover {
     background: var(--sapButton_Lite_Background, transparent);
     border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Lite_BorderColor, transparent));
     box-shadow: var(--_kiosk-keyboard-modifier-shadow);
   }
 
-  [data-key-type="action"]:hover,
+  .kiosk-key--action:hover,
   .kiosk-key--shift-active:hover {
     background: var(--sapButton_Emphasized_Background, #0070f2);
     border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Emphasized_BorderColor, #0070f2));

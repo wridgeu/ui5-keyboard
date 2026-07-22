@@ -16,12 +16,11 @@
  * but differ in string casing per framework. Shared `attributes` values are
  * identical across both twins.
  *
- * The key category is the `data-key-type` attribute here. The kiosk twin carries
- * it as `keyModifier`/`keyAction` classes instead: it renders into the light DOM,
- * where a scoped attribute selector is specificity `(0,2,0)` and would bury the
- * state-indicator rules, so only a namespaced class stays both scoped and
- * `(0,1,0)`. The shadow DOM scopes for free, so the attribute is safe here. This
- * is why `keyType` is a webc-only attribute in the drift guard.
+ * The mutually-exclusive key category is a class (`keyModifier`/`keyAction`) on
+ * both twins: styles layer interactive state (`:active`, `keyCapsLock`,
+ * `keyShiftActive`) on top of the category, and a class keeps that cascade at
+ * specificity `(0,1,0)` on either DOM. Width (`keySpan`), the fkey flag and the
+ * glyph script carry no layered state, so they stay attributes on both twins.
  */
 
 const _parts = Object.freeze([
@@ -47,6 +46,8 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     rootNumeric: "kiosk-keyboard--numeric",
     row: "kiosk-row",
     key: "kiosk-key",
+    keyModifier: "kiosk-key--modifier",
+    keyAction: "kiosk-key--action",
     keyShiftActive: "kiosk-key--shift-active",
     keyCapsLock: "kiosk-key--caps-lock",
     keyHighlight: "kiosk-key--highlight",
@@ -63,9 +64,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     key: "data-key",
     shiftValue: "data-shift-value",
     rowKind: "data-row-kind",
-    /** Mutually-exclusive key category (`modifier` | `action`); absent on plain and space keys. */
-    keyType: "data-key-type",
-    /** Presence attribute on function keys (`{fkey:*}`); orthogonal to `keyType`. */
+    /** Presence attribute on function keys (`{fkey:*}`); orthogonal to the key category. */
     fkey: "data-fkey",
     /** Script family of a single-glyph label (`cjk` | `hangul` | `indic` | `arabic`). */
     glyphScript: "data-glyph-script",
