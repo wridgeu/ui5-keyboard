@@ -98,6 +98,26 @@ the harness usage rather than trusted: piping the runner output through `tail` s
 the exit code (a crashed zero-test run initially reported success), so all subsequent runs
 captured the exit code explicitly before any filtering.
 
+## H6 — (addendum) The webc border dead zone is invisible to the existing suite
+
+Hypothesis: webc's `naturalHeight` (`root.scrollHeight`) excludes the root's own border,
+while the granted host content box must fit the root's border box, so a clip of up to
+borderY pixels (2px at the default 1px border, scaling with the public
+`--kiosk-keyboard-border` override) goes undetected and the keyboard renders visibly
+clipped with no compaction class. Every existing test clips by far more than borderY, so
+the suite is expected to stay green with the defect present. The kiosk twin has no such
+zone: it compares `scrollHeight` against `clientHeight` on the same element, so its border
+cancels.
+
+Refutation plan: coverage gap, not a passing test to break. Write two dead-zone tests
+(default border, host height = natural border-box height minus 2px; a 4px border override,
+clip 6px), confirm both fail against the uncorrected controller, then fix by adding the
+root's computed vertical border to `naturalHeight` and confirm green.
+
+Status: CLEARED. Against the uncorrected controller both tests failed (cq-short never
+applied, 2 failed of 248, non-zero exit); with the border term added the component suite
+went 248 passing, 0 failed.
+
 ## Known bounded risk, recorded rather than tested
 
 The guard compares border boxes with a 0.1px tolerance because the pass reads the box from

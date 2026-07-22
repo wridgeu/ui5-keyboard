@@ -35,9 +35,9 @@ interface ResponsiveSizingHost {
  *
  * Sizes are compared in untransformed layout pixels (`scrollHeight` vs
  * `clientHeight`), so ancestor transforms do not shift breakpoints and the
- * root border is excluded. The webc twin measures the same space from its
- * host's content box, because its root is auto-height and only the host
- * reflects the constraint.
+ * root border cancels out of the comparison. The webc twin detects the same
+ * clipping from its host's content box, because its root is auto-height and
+ * only the host reflects the constraint.
  *
  * The rAF is not just coalescing: the classes change the height of the very
  * element being observed, so applying them straight from the callback re-enters
@@ -155,8 +155,7 @@ export default class ResponsiveSizingController extends BaseObject {
     // clientHeight in some browsers, breaking constrained detection.
     const naturalHeight = dom.scrollHeight;
     // clientHeight is the same untransformed layout-pixel space scrollHeight
-    // reports and excludes the root border; the webc twin measures the
-    // equivalent space from its host's content box.
+    // reports, so the root border cancels out of the comparison.
     const renderedHeight = dom.clientHeight;
     this._appliedBox = { blockSize: Number.parseFloat(cs.height), inlineSize: Number.parseFloat(cs.width) };
 

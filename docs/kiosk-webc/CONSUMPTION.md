@@ -221,6 +221,19 @@ unrecognized `{token}` fires `key-press` and is otherwise a no-op (never typed
 literally); `preventDefault()` is how you take it over. There is no action
 registry: behavior lives in your event handler, the layout stays plain data.
 
+## Height Responsiveness
+
+The component compacts itself when its container grants it less height than it naturally needs. The contract is shared with the UI5 control twin: the keyboard applies `kiosk-keyboard--cq-short` / `kiosk-keyboard--cq-tiny` on the host when the height the container actually grants the keyboard's rendered box, measured in untransformed layout pixels (the host's content-box height), is smaller than the keyboard's natural content height, with the tier chosen against the 16rem/12rem thresholds (overridable via `--kiosk-keyboard-cq-short-threshold` / `--kiosk-keyboard-cq-tiny-threshold`). Ancestor `transform: scale()` never shifts breakpoints.
+
+Practical notes:
+
+- **Host padding is accounted for.** Breakpoints compare against the host's content box, so padding you put on `kiosk-keyboard` shrinks the space the keyboard sees and shifts compaction accordingly.
+- **The keyboard's own border is accounted for.** The natural height includes the root's border (`--kiosk-keyboard-border`), so a thick border does not create a range of undetected clipping.
+- **Keep `overflow: hidden` on the host** (the default). `overflow: clip` can collapse `scrollHeight` to `clientHeight` in some browsers and break constrained detection.
+- **Docked and Numpad keyboards are exempt**: docked sizing is viewport-driven, and the numpad is already compact.
+
+No CSS is required from the consumer for this to work: a flex or grid parent with a resolved height constrains the host automatically (`:host` ships `max-height: 100%; min-height: 0; overflow: hidden`).
+
 ## Limitations and Workarounds
 
 ### Windows Backslashes in CEM Type References

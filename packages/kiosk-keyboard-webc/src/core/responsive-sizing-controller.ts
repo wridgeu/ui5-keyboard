@@ -142,7 +142,12 @@ export class ResponsiveSizingController {
     // scrollHeight reports full content height even under overflow: hidden.
     // If root ever uses overflow: clip instead, scrollHeight may equal
     // clientHeight in some browsers, breaking constrained detection.
-    const naturalHeight = root.scrollHeight;
+    //
+    // scrollHeight never includes the root's own border, but the border box is
+    // what must fit into the host content box, so the border is added back;
+    // without it, clips of up to the border width go undetected.
+    const rootBorderY = (Number.parseFloat(cs.borderTopWidth) || 0) + (Number.parseFloat(cs.borderBottomWidth) || 0);
+    const naturalHeight = root.scrollHeight + rootBorderY;
 
     // Compare against the host content box, not the host border box. This
     // keeps height breakpoints accurate when consumers add host padding/borders,
