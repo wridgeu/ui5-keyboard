@@ -13,8 +13,15 @@
  * matching the component's kebab `::part` names and shadow-DOM library
  * convention. The kiosk-keyboard twin uses camelCase-BEM; the two intentionally
  * share the same KEY names (guarded by `tools/check-dom-contract-drift.mjs`)
- * but differ in string casing per framework. `attributes` values, by contrast,
- * are identical across both twins.
+ * but differ in string casing per framework. Shared `attributes` values are
+ * identical across both twins.
+ *
+ * The key category is the `data-key-type` attribute here. The kiosk twin carries
+ * it as `keyModifier`/`keyAction` classes instead: it renders into the light DOM,
+ * where a scoped attribute selector is specificity `(0,2,0)` and would bury the
+ * state-indicator rules, so only a namespaced class stays both scoped and
+ * `(0,1,0)`. The shadow DOM scopes for free, so the attribute is safe here. This
+ * is why `keyType` is a webc-only attribute in the drift guard.
  */
 
 const _parts = Object.freeze([
