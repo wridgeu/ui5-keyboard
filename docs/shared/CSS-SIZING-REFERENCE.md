@@ -111,6 +111,8 @@ When the keyboard is both narrow (at or below 320px) and height-constrained, thi
 
 This cap primarily affects keyboards at the Short tier. At Short, the font-size from the height ratio is `2.25rem * 0.375 = 0.84375rem` (13.5px), which gets capped to 0.75rem (12px). At Tiny, the font-size is already `1.75rem * 0.375 = 0.65625rem` (10.5px), which is below the 0.75rem cap, so the rule has no additional effect.
 
+Like the height-tier rules, the real selectors also exclude numpad keyboards, `:not([keyboard-type="Numpad"])` on the webc host and `:not(--numpad)` on the kiosk root, so a force-set tier never compacts a numpad (the controller already skips numpad; the guard is defense-in-depth).
+
 ## Modifier and Action Key Font-Scale (0.8)
 
 ```css

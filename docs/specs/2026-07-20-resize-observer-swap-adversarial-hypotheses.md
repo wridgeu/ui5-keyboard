@@ -150,7 +150,7 @@ Outcome: the invariant is documented in a comment at the `classList.remove` call
 otherwise unguarded. The convergence test is retained because it is not vacuous in general
 (it goes red when class application is disabled, see H3) and it pins stability at a
 realistic constraint, but it must not be read as covering this invariant. Closing the gap
-properly is follow-up work, noted in the PR.
+properly is follow-up work, tracked as #189.
 
 ## H6 — The suites run zero tests / the runner masks failures
 
