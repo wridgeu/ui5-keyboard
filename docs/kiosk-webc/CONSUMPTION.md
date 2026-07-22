@@ -223,7 +223,9 @@ registry: behavior lives in your event handler, the layout stays plain data.
 
 ## Height Responsiveness
 
-The component compacts itself when its container grants it less height than it naturally needs. The contract is shared with the UI5 control twin: the keyboard applies `kiosk-keyboard--cq-short` / `kiosk-keyboard--cq-tiny` on the host when the height the container actually grants the keyboard's rendered box, measured in untransformed layout pixels (the host's content-box height), is smaller than the keyboard's natural content height, with the tier chosen against the 16rem/12rem thresholds (overridable via `--kiosk-keyboard-cq-short-threshold` / `--kiosk-keyboard-cq-tiny-threshold`). Ancestor `transform: scale()` never shifts breakpoints.
+The component compacts itself when its container grants it less height than it naturally needs. The contract is shared with the UI5 control twin: the keyboard reflects a `cq-tier` attribute (`short` / `tiny`, absent when unconstrained) on the host when the height the container actually grants the keyboard's rendered box, measured in untransformed layout pixels (the host's content-box height), is smaller than the keyboard's natural content height, with the tier chosen against the 16rem/12rem thresholds (overridable via `--kiosk-keyboard-cq-short-threshold` / `--kiosk-keyboard-cq-tiny-threshold`). Ancestor `transform: scale()` never shifts breakpoints.
+
+To style off the tier, target `kiosk-keyboard[cq-tier="short"]` / `[cq-tier="tiny"]` from the outer document. It is an attribute rather than a class so framework `className` reconciliation cannot wipe it. (The light-DOM UI5 control twin uses root classes instead, `.ui5KioskKeyboard--cqShort` / `--cqTiny`, idiomatic for UI5 1.x.)
 
 Practical notes:
 

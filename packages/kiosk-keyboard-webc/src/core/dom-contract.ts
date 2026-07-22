@@ -31,11 +31,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     rootHidden: "kiosk-keyboard--hidden",
     rootNumpad: "kiosk-keyboard--numpad",
     rootNumeric: "kiosk-keyboard--numeric",
-    /** Height-responsive classes live on the host element (not the inner root)
-     *  so that consumer overrides of public CSS custom properties on the host
-     *  always win via the CSS cascade (outer context beats shadow at same specificity). */
-    hostCqShort: "kiosk-keyboard--cq-short",
-    hostCqTiny: "kiosk-keyboard--cq-tiny",
     row: "kiosk-row",
     key: "kiosk-key",
     keyModifier: "kiosk-key--modifier",
@@ -63,7 +58,19 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     rowKind: "data-row-kind",
     /** Marks a key whose effective `variants` list is non-empty (the long-press gate). */
     hasVariants: "data-has-variants",
+    /**
+     * Height-responsive tier reflected on the HOST (absent when unconstrained,
+     * value from `cqTierValues`). An attribute rather than a class: the `class`
+     * attribute is consumer-owned and can be clobbered by framework `className`
+     * reconciliation, whereas an attribute the component owns is left alone. It
+     * lives on the host so consumer overrides of the public CSS custom
+     * properties always win (outer context beats shadow at equal specificity).
+     * The light-DOM kiosk twin keeps root classes, idiomatic for UI5 1.x.
+     */
+    cqTier: "cq-tier",
   }),
+  /** Values for the `cq-tier` host attribute; absent means unconstrained. */
+  cqTierValues: Object.freeze({ short: "short", tiny: "tiny" }),
   selectors: Object.freeze({
     root: ".kiosk-keyboard",
     row: ".kiosk-row",

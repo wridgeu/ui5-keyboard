@@ -25,14 +25,15 @@ export type ResponsiveSizingHost = HTMLElement & {
 };
 
 /**
- * Owns height-responsive class application for the web component.
+ * Owns height-responsive tier application for the web component.
  *
  * Observes the host element (and the rendered shadow root) with a
- * ResizeObserver and, on resize (coalesced via rAF), toggles `hostCqShort` /
- * `hostCqTiny` classes on the host when it is externally height-constrained.
- * The classes live on the host (not in shadow DOM) so consumer overrides win
- * and they survive template re-renders. Width breakpoints are handled by CSS
- * `@container` queries, so no JS width measurement is needed.
+ * ResizeObserver and, on resize (coalesced via rAF), reflects a `cq-tier`
+ * attribute (`short` / `tiny`, absent when unconstrained) on the host when it
+ * is externally height-constrained. The tier lives on the host (not in shadow
+ * DOM) so consumer overrides win; an attribute rather than a class so framework
+ * `className` reconciliation cannot clobber it. Width breakpoints are handled
+ * by CSS `@container` queries, so no JS width measurement is needed.
  */
 export class ResponsiveSizingController {
   /** ResizeObserver for height-responsive class updates. */
@@ -108,7 +109,7 @@ export class ResponsiveSizingController {
   }
 
   /**
-   * Applies height responsive classes to the host element.
+   * Reflects the height-responsive `cq-tier` attribute on the host.
    *
    * Width responsiveness is handled purely by CSS @container queries.
    *
@@ -117,8 +118,7 @@ export class ResponsiveSizingController {
    *
    * Called from scheduleClassUpdate() (coalesced from ResizeObserver via rAF)
    * and from the host's refreshResponsiveState() (invoked by onAfterRendering
-   * and public callers) to survive template re-renders that reconcile the
-   * class attribute.
+   * and public callers) to recompute after intrinsic size changes.
    */
   private _applyClasses(): void {
     const root = this._host.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);
@@ -126,12 +126,12 @@ export class ResponsiveSizingController {
 
     const cs = getComputedStyle(root);
 
-    // ── Height ── (classes live on host so consumer overrides always win)
+    // ── Height ── (the tier lives on the host so consumer overrides always win)
     //
-    // Both heights below must be read with these classes cleared: they change
-    // key sizing, so measuring while they are applied makes the outcome depend
-    // on the previous outcome, which oscillates.
-    this._host.classList.remove(KIOSK_KEYBOARD_DOM.classes.hostCqShort, KIOSK_KEYBOARD_DOM.classes.hostCqTiny);
+    // Both heights below must be read with the tier cleared: it changes key
+    // sizing, so measuring while it is applied makes the outcome depend on the
+    // previous outcome, which oscillates.
+    this._host.removeAttribute(KIOSK_KEYBOARD_DOM.attributes.cqTier);
 
     // Skip for docked keyboards (viewport-driven, not container-constrained)
     // and numpad (already compact, shouldn't shrink further).
@@ -167,7 +167,7 @@ export class ResponsiveSizingController {
     const tinyThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-tiny-threshold", 12, remPx);
     const isTiny = hostHeight <= tinyThresh;
     const isShort = hostHeight <= shortThresh;
-    this._host.classList.toggle(KIOSK_KEYBOARD_DOM.classes.hostCqShort, isShort && !isTiny);
-    this._host.classList.toggle(KIOSK_KEYBOARD_DOM.classes.hostCqTiny, isTiny);
+    const tier = isTiny ? KIOSK_KEYBOARD_DOM.cqTierValues.tiny : isShort ? KIOSK_KEYBOARD_DOM.cqTierValues.short : null;
+    if (tier) this._host.setAttribute(KIOSK_KEYBOARD_DOM.attributes.cqTier, tier);
   }
 }
