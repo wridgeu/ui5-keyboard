@@ -2302,6 +2302,29 @@ describe("kiosk-keyboard", () => {
       expect(el.getBoundingClientRect().height, "host box unchanged").to.equal(hostHeightBefore);
     });
 
+    it("measures layout pixels: ancestor transform scale does not shift breakpoints", async () => {
+      const wrapper = document.createElement("div");
+      wrapper.style.cssText = "transform: scale(0.5); transform-origin: top left;";
+
+      const el = await fixture<KioskKeyboard>(
+        html`
+          <kiosk-keyboard
+            layout="qwerty"
+            style="height: 15rem; overflow: hidden; --kiosk-keyboard-key-height: 3rem"
+          ></kiosk-keyboard>
+        `,
+        { parentNode: wrapper },
+      );
+      await nextRender();
+      await waitForResponsiveSync();
+
+      // 15rem of layout height renders visually at 7.5rem. CSS sizing responds
+      // to layout pixels, so cq-short (<= 16rem) is correct and cq-tiny
+      // (<= 12rem, the visual height) would be a misread.
+      expect(el.classList.contains(DOM.classes.hostCqShort), "cq-short from the 15rem layout height").to.be.true;
+      expect(el.classList.contains(DOM.classes.hostCqTiny), "no cq-tiny from the 7.5rem visual height").to.be.false;
+    });
+
     it("auto-detects height constraint from flex parent without CSS on keyboard", async () => {
       const wrapper = document.createElement("div");
       wrapper.style.cssText = "display: flex; flex-direction: column; height: 250px;";

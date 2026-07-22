@@ -33,6 +33,12 @@ interface ResponsiveSizingHost {
  * is externally height-constrained. Width breakpoints are handled by CSS
  * `@container` queries, so no JS width measurement is needed.
  *
+ * Sizes are compared in untransformed layout pixels (`scrollHeight` vs
+ * `clientHeight`), so ancestor transforms do not shift breakpoints and the
+ * root border is excluded. The webc twin measures the same space from its
+ * host's content box, because its root is auto-height and only the host
+ * reflects the constraint.
+ *
  * The rAF is not just coalescing: the classes change the height of the very
  * element being observed, so applying them straight from the callback re-enters
  * observation in the same frame and trips the observer's depth limit
@@ -49,11 +55,11 @@ export default class ResponsiveSizingController extends BaseObject {
   /** rAF handle used to coalesce responsive class updates from multiple observers. */
   private _syncFrameId: number | null = null;
   /**
-   * Border box the last applied pass measured, or `null` when that pass returned
-   * before measuring (no DOM, docked, numpad). An observation reporting this box
-   * carries no new information and is dropped. Width is part of the key because
-   * the natural height depends on it (container queries wrap rows), so a
-   * width-only change must still recompute.
+   * Border box (untransformed layout px) the last applied pass measured, or
+   * `null` when that pass returned before measuring (no DOM, docked, numpad).
+   * An observation reporting this box carries no new information and is
+   * dropped. Width is part of the key because the natural height depends on it
+   * (container queries wrap rows), so a width-only change must still recompute.
    */
   private _appliedBox: { blockSize: number; inlineSize: number } | null = null;
 
@@ -89,6 +95,12 @@ export default class ResponsiveSizingController extends BaseObject {
    * every `syncObserver()` call has already accounted for. And clearing a class
    * resizes the observed element, so the pass that cleared it is reported back
    * on the next frame. Reading `borderBoxSize` off the entry costs no layout.
+   *
+   * Border boxes are compared because the root is `box-sizing: border-box`,
+   * which makes the `getComputedStyle` used height/width the pass records the
+   * same untransformed border box the entries carry. The 0.1px tolerance
+   * absorbs their differing float serialisations; a drop below it cannot flip
+   * a verdict that carries its own +1px tolerance.
    */
   private _reportsAppliedBox(entries: ResizeObserverEntry[]): boolean {
     if (this._appliedBox === null) return false;
@@ -96,7 +108,8 @@ export default class ResponsiveSizingController extends BaseObject {
     const box = entries[entries.length - 1]?.borderBoxSize?.[0];
     if (!box) return false;
 
-    return box.blockSize === this._appliedBox.blockSize && box.inlineSize === this._appliedBox.inlineSize;
+    const same = (a: number, b: number) => Math.abs(a - b) < 0.1;
+    return same(box.blockSize, this._appliedBox.blockSize) && same(box.inlineSize, this._appliedBox.inlineSize);
   }
 
   /** Coalesces responsive class updates triggered by root/content resize observers. */
@@ -141,9 +154,11 @@ export default class ResponsiveSizingController extends BaseObject {
     // If the element ever uses overflow: clip, scrollHeight may equal
     // clientHeight in some browsers, breaking constrained detection.
     const naturalHeight = dom.scrollHeight;
-    const rect = dom.getBoundingClientRect();
-    const renderedHeight = rect.height;
-    this._appliedBox = { blockSize: rect.height, inlineSize: rect.width };
+    // clientHeight is the same untransformed layout-pixel space scrollHeight
+    // reports and excludes the root border; the webc twin measures the
+    // equivalent space from its host's content box.
+    const renderedHeight = dom.clientHeight;
+    this._appliedBox = { blockSize: Number.parseFloat(cs.height), inlineSize: Number.parseFloat(cs.width) };
 
     // Only apply when externally constrained (natural content > rendered).
     // The +1px tolerance avoids oscillation from sub-pixel rounding.
