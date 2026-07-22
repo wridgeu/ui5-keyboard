@@ -27,7 +27,7 @@ This pattern (CSS `order` + `flex-wrap` inside `@container`) is reusable for cus
 
 ### Height-Responsive Classes
 
-These are applied programmatically by a `ResizeObserver` when the keyboard's rendered height is externally constrained:
+These are applied programmatically by a `ResizeObserver`. The contract is shared with the web-component twin: the keyboard applies `cqShort`/`cqTiny` when the height its container actually grants the keyboard's rendered box, measured in untransformed layout pixels (light DOM: the root's client height; shadow DOM: the host's content-box height), is smaller than the keyboard's natural content height, with the tier chosen against the 16rem/12rem thresholds (overridable via the `--ui5KioskKeyboard-cqShortThreshold` / `--ui5KioskKeyboard-cqTinyThreshold` CSS custom properties). Ancestor `transform: scale()` therefore never shifts breakpoints. The measured box must keep `overflow: hidden` (never `overflow: clip`, which can collapse `scrollHeight` to `clientHeight` in some browsers and break detection).
 
 | Class                       | Threshold         | Changes                                              |
 | --------------------------- | ----------------- | ---------------------------------------------------- |

@@ -2325,6 +2325,59 @@ describe("kiosk-keyboard", () => {
       expect(el.classList.contains(DOM.classes.hostCqTiny), "no cq-tiny from the 7.5rem visual height").to.be.false;
     });
 
+    it("applies cq-short when the keyboard is clipped by no more than its own border", async () => {
+      const el = await fixture<KioskKeyboard>(html`
+        <kiosk-keyboard layout="qwerty" style="--kiosk-keyboard-key-height: 2rem"></kiosk-keyboard>
+      `);
+      await nextRender();
+      await waitForResponsiveSync();
+
+      // Unconstrained natural border-box height of the root; the host content
+      // box must fit this, border included.
+      const root = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.root)!;
+      const natural = root.getBoundingClientRect().height;
+      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      expect(natural, "precondition: natural height under the short threshold").to.be.lessThan(16 * remPx);
+
+      // Clip by exactly the root's default vertical border (2px): the border
+      // box no longer fits, so the keyboard is visibly clipped.
+      el.style.height = `${natural - 2}px`;
+      el.style.overflow = "hidden";
+
+      await waitUntil(
+        () => el.classList.contains(DOM.classes.hostCqShort),
+        "cq-short applied for a border-sized clip",
+        {
+          timeout: 2000,
+        },
+      );
+    });
+
+    it("border-width overrides do not widen the undetected clipping range", async () => {
+      const el = await fixture<KioskKeyboard>(html`
+        <kiosk-keyboard
+          layout="qwerty"
+          style="--kiosk-keyboard-key-height: 2rem; --kiosk-keyboard-border: 4px solid black"
+        ></kiosk-keyboard>
+      `);
+      await nextRender();
+      await waitForResponsiveSync();
+
+      const root = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.root)!;
+      const natural = root.getBoundingClientRect().height;
+      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      expect(natural, "precondition: natural height under the short threshold").to.be.lessThan(16 * remPx);
+
+      // A 6px clip sits inside the 8px vertical border, i.e. inside the range
+      // a border-blind natural height cannot see.
+      el.style.height = `${natural - 6}px`;
+      el.style.overflow = "hidden";
+
+      await waitUntil(() => el.classList.contains(DOM.classes.hostCqShort), "cq-short applied for a sub-border clip", {
+        timeout: 2000,
+      });
+    });
+
     it("auto-detects height constraint from flex parent without CSS on keyboard", async () => {
       const wrapper = document.createElement("div");
       wrapper.style.cssText = "display: flex; flex-direction: column; height: 250px;";
