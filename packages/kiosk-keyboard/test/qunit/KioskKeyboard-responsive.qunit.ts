@@ -88,6 +88,31 @@ QUnit.test("Observer recomputes on a width-only change but skips a repeat of the
 // Height-responsive breakpoint classes
 // ──────────────────────────────────────────────
 
+QUnit.test("Threshold tiers on the granted border box, so the root border counts", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  const remPx = rootRemPx();
+
+  // A thick, self-contained border so the granted border box exceeds the
+  // padding box by a margin the tier comparison must not ignore (independent
+  // of the theme's default 1px border).
+  dom.style.border = "8px solid";
+  dom.style.overflow = "hidden";
+
+  // Granted border box exactly at the 16rem short threshold => cqShort.
+  await setMeasuredHeight(kb, dom, 16 * remPx, 40 * remPx);
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "granted box at 16rem applies cqShort");
+
+  // Push the granted box just past the threshold: a border-blind comparison
+  // (padding box only) would still see "short"; the granted box does not.
+  await setMeasuredHeight(kb, dom, 16 * remPx + 4, 40 * remPx);
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "granted box over 16rem drops cqShort");
+
+  kb.destroy();
+});
+
 QUnit.test("Boundary: exactly 16rem applies cqShort", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
