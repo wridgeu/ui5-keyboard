@@ -113,101 +113,39 @@ QUnit.test("Threshold tiers on the granted border box, so the root border counts
   kb.destroy();
 });
 
-QUnit.test("Boundary: exactly 16rem applies cqShort", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
+QUnit.test("Height tier by granted height (boundaries, interiors, unconstrained)", async (assert) => {
+  // Table over the tier decision. Each row stubs the granted height (and, for
+  // the unconstrained row, a natural height below it). Both boundary-equality
+  // rows (exactly 16rem, exactly 12rem) are kept so a `<=`-vs-`<` regression at
+  // either threshold still goes red.
+  const cases: { h: number; natural?: number; expect: "short" | "tiny" | "none"; note: string }[] = [
+    { h: 16, expect: "short", note: "granted exactly 16rem" },
+    { h: 14, expect: "short", note: "granted interior 12rem < h <= 16rem" },
+    { h: 12, expect: "tiny", note: "granted exactly 12rem" },
+    { h: 10, expect: "tiny", note: "granted interior h <= 12rem" },
+    { h: 16, natural: 8, expect: "none", note: "natural 8rem fits granted 16rem (unconstrained)" },
+  ];
 
-  const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = rootRemPx();
+  for (const { h, natural, expect, note } of cases) {
+    const kb = new KioskKeyboard();
+    await placeAndWait(kb);
 
-  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  dom.style.height = "16rem";
-  dom.style.overflow = "hidden";
+    const dom = kb.getDomRef()! as HTMLElement;
+    const remPx = rootRemPx();
 
-  await setMeasuredHeight(kb, dom, 16 * remPx);
+    dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+    dom.style.height = `${h}rem`;
+    dom.style.overflow = "hidden";
 
-  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort at exactly 16rem");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent at exactly 16rem");
+    await setMeasuredHeight(kb, dom, h * remPx, natural === undefined ? undefined : natural * remPx);
 
-  kb.destroy();
-});
+    const short = dom.classList.contains(DOM.classes.rootCqShort);
+    const tiny = dom.classList.contains(DOM.classes.rootCqTiny);
+    assert.strictEqual(short, expect === "short", `cqShort ${expect === "short" ? "present" : "absent"}: ${note}`);
+    assert.strictEqual(tiny, expect === "tiny", `cqTiny ${expect === "tiny" ? "present" : "absent"}: ${note}`);
 
-QUnit.test("Boundary: exactly 12rem applies cqTiny", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = rootRemPx();
-
-  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  dom.style.height = "12rem";
-  dom.style.overflow = "hidden";
-
-  await setMeasuredHeight(kb, dom, 12 * remPx);
-
-  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny at exactly 12rem");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent at exactly 12rem");
-
-  kb.destroy();
-});
-
-QUnit.test("Applies cqShort class when externally constrained (height between 12rem and 16rem)", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = rootRemPx();
-
-  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  dom.style.height = "14rem";
-  dom.style.overflow = "hidden";
-
-  // Constrained to 14rem: within cqShort range (12rem < 14rem <= 16rem)
-  await setMeasuredHeight(kb, dom, 14 * remPx);
-
-  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort applied at 14rem height");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent at 14rem height");
-
-  kb.destroy();
-});
-
-QUnit.test("Applies cqTiny class when severely constrained (interior of <= 12rem range)", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = rootRemPx();
-
-  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  dom.style.height = "10rem";
-  dom.style.overflow = "hidden";
-
-  // Constrained to 10rem: interior of the cqTiny range (well below the 12rem boundary).
-  await setMeasuredHeight(kb, dom, 10 * remPx);
-
-  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny applied at 10rem height");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent when cqTiny");
-
-  kb.destroy();
-});
-
-QUnit.test("No height classes when keyboard is not externally constrained", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = rootRemPx();
-  dom.style.overflow = "hidden";
-
-  // Natural content (8rem) fits within the 16rem rendered height -> unconstrained.
-  // Both heights are stubbed so the result does not depend on platform font
-  // metrics (real key-label height differs between local and CI rendering).
-  await setMeasuredHeight(kb, dom, 16 * remPx, 8 * remPx);
-
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort absent when unconstrained");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent when unconstrained");
-
-  kb.destroy();
+    kb.destroy();
+  }
 });
 
 QUnit.test("No height classes for docked keyboards", async (assert) => {

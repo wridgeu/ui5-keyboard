@@ -504,6 +504,8 @@ Height thresholds are configurable via CSS custom properties: `--ui5KioskKeyboar
 
 Docked keyboards and numpad mode skip height class application (docked keyboards are viewport-driven; numpads are already compact).
 
+Height tiering stays in JavaScript because it is a numeric decision: the two thresholds (`cqShort` at 16rem, `cqTiny` at 12rem) require the measured constrained height, and a CSS container query cannot read a length. A `scroll-state(scrollable)` container query reports only whether the root overflows its granted height, the single boolean the detection already derives, not which tier that overflow falls into, so it cannot carry the tiering even where it is supported.
+
 The public sizing variables deliberately separate normal and extra-narrow spacing. `--ui5KioskKeyboard-keyPaddingInline` keeps the default inline inset for regular widths, while `--ui5KioskKeyboard-keyPaddingInlineXs` is applied at the 20rem `@container` breakpoint for non-numpad keys. Its default (`min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)`) trims the stock padding from `0.25rem` to `0.125rem` so wide glyphs like `@`, `%`, and `&` get more horizontal breathing room on phone-sized rows without reducing key height or touch-target size. The `min(...)` form preserves any consumer override that is already smaller.
 
 **Consumer overrides:**

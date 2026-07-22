@@ -154,6 +154,19 @@
   }
 }
 
+/* Narrowest width + height-constrained: the tightest font cap (0.75rem),
+   mirroring the kiosk twin. The cap bites the short tier (base 0.84375rem >
+   0.75rem); the tiny tier's base is already 0.65625rem, so the cap is inert
+   there. The tier lives on :host; the container query resolves against the
+   .kiosk-key ancestor container (the root). The :not([keyboard-type="Numpad"])
+   guard matches the tier rules below and the kiosk cap's :not(--numpad). */
+@container keyboard (max-width: 20rem) {
+  :host([cq-tier="short"]:not([keyboard-type="Numpad"])) .kiosk-key,
+  :host([cq-tier="tiny"]:not([keyboard-type="Numpad"])) .kiosk-key {
+    --kiosk-keyboard-key-font-size: min(var(--_kiosk-keyboard-key-font-base), 0.75rem);
+  }
+}
+
 /* Height-responsive tier (JS-driven via ResizeObserver)
    The controller reflects a `cq-tier` attribute (short / tiny, absent when
    unconstrained) on the HOST. An attribute rather than a class so framework
@@ -163,18 +176,19 @@
    regardless of specificity (CSS Scoping L1 §3.3.1 / CSS Cascade L5 §6.1:
    "Context" sits above "Specificity" in the cascade sorting order).
 
-   No numpad guard here (the kiosk twin carries :not(--numpad)): the controller
-   never reflects a tier for a numpad in either twin (_applyClasses returns
-   early for it), so this only fires for a consumer force-setting the attribute.
-   It also could not mirror kiosk symmetrically anyway, since the tier is on the
-   host while --numpad lives on the internal root, out of :host() reach. */
-:host([cq-tier="short"]) {
+   The :not([keyboard-type="Numpad"]) guard mirrors the kiosk twin's
+   :not(--numpad). Both read a host-level marker: webc reflects `keyboardType`
+   as the `keyboard-type` host attribute (in :host() reach), kiosk carries the
+   class on its light-DOM root. The controller already skips numpad when
+   computing the tier, so the guard is defense-in-depth against a consumer
+   force-setting `cq-tier` on a numpad. */
+:host([cq-tier="short"]:not([keyboard-type="Numpad"])) {
   --kiosk-keyboard-key-height: 2.25rem;
   --kiosk-keyboard-key-gap: 0.25rem;
   --kiosk-keyboard-padding: 0.5rem;
 }
 
-:host([cq-tier="tiny"]) {
+:host([cq-tier="tiny"]:not([keyboard-type="Numpad"])) {
   --kiosk-keyboard-key-height: 1.75rem;
   --kiosk-keyboard-key-gap: 0.125rem;
   --kiosk-keyboard-padding: 0.25rem;
@@ -581,8 +595,8 @@
      upward.  Use font-defined text metrics instead. These align with the
      ideographic ascent/descent and center CJK characters correctly.
      Current browser support: text-box-edge `text` is supported; the more
-     precise `ideographic-ink` value is not yet shipped (tracked in #52,
-     csswg-drafts #10928, Chromium #365423076). */
+     precise `ideographic-ink` value is not yet shipped (csswg-drafts #10928,
+     Chromium #365423076). */
   .kiosk-key__label--glyph-cjk {
     text-box-edge: text;
   }

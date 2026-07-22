@@ -235,7 +235,8 @@
 
   // The :not(--numpad) guard is defense-in-depth: the controller already
   // returns early for numpad, so a cq class only lands here if a consumer
-  // force-adds it. The webc twin omits the equivalent guard (see its CSS).
+  // force-adds it. The webc twin mirrors this on the host via
+  // :not([keyboard-type="Numpad"]) (see its CSS).
   .ui5KioskKeyboard--cqShort:not(.ui5KioskKeyboard--numpad) {
     --ui5KioskKeyboard-keyHeight: 2.25rem;
     --ui5KioskKeyboard-keyGap: 0.25rem;
@@ -565,6 +566,10 @@
     }
   }
 
+  // Narrowest width + short/tiny: tightest font cap. The :not(--numpad) is
+  // defense-in-depth, matching the cqShort/cqTiny tier rules above. The webc
+  // twin mirrors this cap and its guard on the host via
+  // :not([keyboard-type="Numpad"]); see its CSS.
   @container keyboard (max-width: 20rem) {
     .ui5KioskKeyboard--cqShort:not(.ui5KioskKeyboard--numpad) .ui5KioskKey,
     .ui5KioskKeyboard--cqTiny:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {

@@ -486,7 +486,7 @@ It is an attribute rather than a class because the `class` attribute is consumer
 
 Outer-document (consumer) styles always win over the shadow tree's `:host()` defaults regardless of specificity, because the cascade's "Context" step sits above "Specificity" (per [CSS Scoping Module Level 1 §3.3.1](https://www.w3.org/TR/css-scoping-1/#cascading)). The tier therefore lives on the host element so that CSS rules use `:host([cq-tier="short"])` without any specificity-lowering wrapper, and consumer overrides land even without a matching attribute.
 
-A combined rule applies when both narrow width and constrained height are active: `@container keyboard (max-width: 20rem)` combined with `:host([cq-tier="short"], [cq-tier="tiny"])` applies the most aggressive font-size cap of `0.75rem`.
+A combined rule applies when both narrow width and constrained height are active: `@container keyboard (max-width: 20rem)` combined with `:host([cq-tier="short"]) .kiosk-key, :host([cq-tier="tiny"]) .kiosk-key` applies the most aggressive font-size cap of `0.75rem` (`:host()` takes a single compound selector, so the two tiers are separate selectors, not a list).
 
 Height thresholds are configurable via CSS custom properties: `--kiosk-keyboard-cq-short-threshold` (default `16rem`) and `--kiosk-keyboard-cq-tiny-threshold` (default `12rem`).
 
