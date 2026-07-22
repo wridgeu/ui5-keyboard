@@ -16,14 +16,15 @@
  * in string casing per framework. Shared `attributes` values are identical
  * across both twins.
  *
- * The mutually-exclusive key category is a class here (`keyModifier`/`keyAction`)
- * rather than the webc twin's `data-key-type` attribute: styles layer interactive
- * state (`:active`, `keyCapsLock`, `keyShiftActive`) on top of the category, and
- * in the light DOM only a namespaced class is simultaneously scoped and
- * specificity `(0,1,0)`. A scoped attribute selector would be `(0,2,0)` and would
- * bury the state-indicator rules (the caps-lock ring); the webc shadow DOM has no
- * such conflict. Width (`keySpan`) and the fkey flag carry no layered state, so
- * they stay attributes on both twins.
+ * The mutually-exclusive key category is a class (`keyModifier`/`keyAction`), not
+ * a data attribute: styles layer interactive state (`:active`, `keyCapsLock`,
+ * `keyShiftActive`) on top of the category, and in the light DOM only a
+ * namespaced class is simultaneously scoped and specificity `(0,1,0)`. A scoped
+ * attribute selector would be `(0,2,0)` and would bury the state-indicator rules
+ * (the caps-lock ring). Width (`keySpan`), the fkey flag and the glyph script
+ * carry no layered state, so they stay attributes. The webc twin keeps the same
+ * class/attribute split (its shadow DOM would tolerate an attribute for the
+ * category too, but matching keeps the contract symmetric).
  */
 
 export const KIOSK_KEYBOARD_DOM = Object.freeze({

@@ -18,8 +18,8 @@
  * realities legitimately differ). An unclassified key fails and forces an
  * explicit "shared vs platform-only" decision. `attributes` is the real
  * cross-DOM wire and test contract: CORE attributes are compared by key AND
- * value, and the few genuinely platform-specific ones (e.g. webc's `keyType`,
- * carried as a class on kiosk) sit in a per-side allowlist like the classes.
+ * value, and any genuinely platform-specific one would sit in a per-side
+ * allowlist like the classes (there are none today).
  *
  * Zero new dependencies: both contract modules are erasable-syntax-only
  * TypeScript, so Node (>=24, native type stripping) imports them directly. Keep
@@ -63,6 +63,8 @@ const KEY_PARITY = {
       "rootDisabled",
       "row",
       "key",
+      "keyModifier",
+      "keyAction",
       "keyShiftActive",
       "keyCapsLock",
       "keyHighlight",
@@ -74,16 +76,12 @@ const KEY_PARITY = {
       "variantPopup",
     ],
     // Light-DOM only: no shadow host, a static-area popover, an explicit closed
-    // state, the JS-driven height-responsive classes, and the key-category
-    // classes (webc carries the category as the `keyType` attribute; the light
-    // DOM needs a namespaced class to keep the state cascade at specificity
-    // (0,1,0) -- see the header of internal/dom-contract.ts).
+    // state, the JS-driven height-responsive classes, and the pressed/anchor
+    // state classes.
     kioskOnly: [
       "rootClosed",
       "rootCqShort",
       "rootCqTiny",
-      "keyModifier",
-      "keyAction",
       "keyPressed",
       "keyVariantAnchor",
       "variantPopover",
@@ -150,17 +148,16 @@ function checkKeyParity(group, spec) {
 
 /**
  * `attributes` is the cross-DOM wire contract. CORE attributes must exist on
- * BOTH twins with identical values. A platform-only attribute must be declared
- * in that side's allowlist: `keyType` is webc-only because the kiosk twin carries
- * the key category as the `keyModifier`/`keyAction` classes instead (light-DOM
- * specificity, see internal/dom-contract.ts).
+ * BOTH twins with identical values. Both twins carry only inert per-key data as
+ * attributes (the stateful key category is a class on each), so today there are
+ * no platform-only attributes; the allowlists stay for the next asymmetric one.
  *
  * @type {{ core: string[]; kioskOnly: string[]; webcOnly: string[] }}
  */
 const ATTR_PARITY = {
   core: ["key", "shiftValue", "rowKind", "fkey", "glyphScript", "keySpan", "hasVariants"],
   kioskOnly: [],
-  webcOnly: ["keyType"],
+  webcOnly: [],
 };
 
 /** CORE attributes compared by key AND value; platform-only ones need an allowlist entry. */
