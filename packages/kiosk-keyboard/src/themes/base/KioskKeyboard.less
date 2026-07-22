@@ -233,6 +233,9 @@
     }
   }
 
+  // The :not(--numpad) guard is defense-in-depth: the controller already
+  // returns early for numpad, so a cq class only lands here if a consumer
+  // force-adds it. The webc twin omits the equivalent guard (see its CSS).
   .ui5KioskKeyboard--cqShort:not(.ui5KioskKeyboard--numpad) {
     --ui5KioskKeyboard-keyHeight: 2.25rem;
     --ui5KioskKeyboard-keyGap: 0.25rem;

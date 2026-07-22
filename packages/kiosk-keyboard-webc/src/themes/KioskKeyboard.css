@@ -160,7 +160,13 @@
    class belongs to a block) even though the host *is* the block.
    Consumer CSS in the outer document always beats these :host() rules
    regardless of specificity (CSS Scoping L1 §3.3.1 / CSS Cascade L5 §6.1:
-   "Context" sits above "Specificity" in the cascade sorting order). */
+   "Context" sits above "Specificity" in the cascade sorting order).
+
+   No numpad guard here (the kiosk twin carries :not(--numpad)): the controller
+   never applies a cq class to a numpad in either twin (_applyClasses returns
+   early for it), so this only fires for a consumer force-adding the class. It
+   also could not mirror kiosk symmetrically anyway, since the cq class is on
+   the host while --numpad lives on the internal root, out of :host() reach. */
 :host(.kiosk-keyboard--cq-short) {
   --kiosk-keyboard-key-height: 2.25rem;
   --kiosk-keyboard-key-gap: 0.25rem;

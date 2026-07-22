@@ -155,8 +155,9 @@ export default class ResponsiveSizingController extends BaseObject {
     // clientHeight in some browsers, breaking constrained detection.
     const naturalHeight = dom.scrollHeight;
     // clientHeight is the same untransformed layout-pixel space scrollHeight
-    // reports, so the root border cancels out of the comparison.
+    // reports, so the root border cancels out of the constrained comparison.
     const renderedHeight = dom.clientHeight;
+    const rootBorderY = (Number.parseFloat(cs.borderTopWidth) || 0) + (Number.parseFloat(cs.borderBottomWidth) || 0);
     this._appliedBox = { blockSize: Number.parseFloat(cs.height), inlineSize: Number.parseFloat(cs.width) };
 
     // Only apply when externally constrained (natural content > rendered).
@@ -165,12 +166,17 @@ export default class ResponsiveSizingController extends BaseObject {
       return;
     }
 
+    // Tier by the granted border box (client height + border), the space the
+    // container actually gives the root; this matches the webc twin, which
+    // tiers on its host content box. The border cancels in the detection above
+    // but not here, so a thick border shifts the tier boundary honestly.
+    const grantedHeight = renderedHeight + rootBorderY;
     // px per rem, read once here (Rem.toPx(1) === the live root font-size).
     const remPx = Rem.toPx(1);
     const shortThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqShortThreshold", 16, remPx);
     const tinyThresh = resolveRemThreshold(cs, "--ui5KioskKeyboard-cqTinyThreshold", 12, remPx);
-    const isShort = renderedHeight <= shortThresh;
-    const isTiny = renderedHeight <= tinyThresh;
+    const isShort = grantedHeight <= shortThresh;
+    const isTiny = grantedHeight <= tinyThresh;
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqShort, isShort && !isTiny);
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootCqTiny, isTiny);
   }

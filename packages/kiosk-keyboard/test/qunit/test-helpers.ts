@@ -148,6 +148,7 @@ export function getRenderedLayoutKeys(keyboard: KioskKeyboard): string[][] {
  *  Stubs DOM measurement APIs, drives the public `refreshResponsiveState()`
  *  through its rAF coalescer, then restores the stubs.
  *  Width breakpoints are handled purely by CSS @container queries.
+ *  @param height - the granted outer (border-box) height the container gives the root.
  *  @param naturalHeight - the keyboard's unconstrained content height (scrollHeight).
  *         When larger than `height`, the keyboard is considered externally constrained. */
 export async function setMeasuredHeight(
@@ -165,7 +166,12 @@ export async function setMeasuredHeight(
     Object.defineProperty(htmlDom, "scrollHeight", { value: naturalHeight, configurable: true });
   }
 
-  Object.defineProperty(htmlDom, "clientHeight", { value: height, configurable: true });
+  // `height` is the granted outer (border-box) height the container gives the
+  // root. The controller tiers on clientHeight + border, so stub clientHeight
+  // below it by the live border; with no border the two coincide.
+  const cs = getComputedStyle(htmlDom);
+  const rootBorderY = (Number.parseFloat(cs.borderTopWidth) || 0) + (Number.parseFloat(cs.borderBottomWidth) || 0);
+  Object.defineProperty(htmlDom, "clientHeight", { value: height - rootBorderY, configurable: true });
 
   try {
     keyboard.refreshResponsiveState();

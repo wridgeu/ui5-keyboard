@@ -118,6 +118,29 @@ Status: CLEARED. Against the uncorrected controller both tests failed (cq-short 
 applied, 2 failed of 248, non-zero exit); with the border term added the component suite
 went 248 passing, 0 failed.
 
+## H7 — (addendum) The kiosk threshold border term is untested / breaks the stub harness silently
+
+Hypothesis (#193): the kiosk tier comparison used `clientHeight` (padding box) while the
+webc twin compares its host content box, i.e. the granted box the root's border box must
+fit. The two twins therefore chose different tiers for container heights within the root's
+vertical border of a threshold (2px at the default border, scaling with
+`--ui5KioskKeyboard-border`). The fix tiers on `clientHeight + border`. Two ways a green run
+could lie: (a) the stub helper `setMeasuredHeight` stubs `clientHeight`, so the border term
+could be silently a no-op under it (the fixture may carry no theme border, making
+`rootBorderY === 0`); (b) shifting the tier input by the border could break the existing
+boundary tests without any new test noticing.
+
+Refutation plan: the new test sets its own `border: 8px solid` (independent of the theme),
+tiers the granted box exactly at 16rem (expect cqShort) and 4px over it (expect no cqShort).
+Perturb the border term to zero (`0 * rootBorderY`) and confirm ONLY the over-threshold
+assertion goes red; confirm the boundary tests stay green because the helper now stubs
+`clientHeight = height - border` so `height` keeps meaning the granted box.
+
+Status: CLEARED. With the border term zeroed, `KioskKeyboard-responsive` went 19/20 on the
+"granted box over 16rem drops cqShort" assertion; the granted-box-at-16rem assertion and all
+boundary tests stayed green, proving the helper change preserved their semantics. Restoring
+the term is verified green in the full `check:base` run.
+
 ## Known bounded risk, recorded rather than tested
 
 The guard compares border boxes with a 0.1px tolerance because the pass reads the box from
