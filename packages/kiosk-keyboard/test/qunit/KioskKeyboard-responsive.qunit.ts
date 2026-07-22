@@ -417,6 +417,36 @@ QUnit.test("Repeated recomputes converge on a stable class set", async (assert) 
   kb.destroy();
 });
 
+QUnit.test("Breakpoints measure layout pixels: ancestor transform scale does not shift them", async (assert) => {
+  const wrapper = document.createElement("div");
+  wrapper.style.transform = "scale(0.5)";
+  wrapper.style.transformOrigin = "top left";
+  document.getElementById("qunit-fixture")!.appendChild(wrapper);
+
+  const kb = new KioskKeyboard();
+  kb.placeAt(wrapper);
+  await waitForRender();
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+
+  // 15rem of layout height inside a scale(0.5) wrapper renders visually at
+  // 7.5rem. CSS sizing responds to layout pixels, so cqShort (<= 16rem) is
+  // correct and cqTiny (<= 12rem, the visual height) would be a misread.
+  dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
+  dom.style.height = `${15 * remPx}px`;
+  dom.style.overflow = "hidden";
+
+  kb.refreshResponsiveState();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort applied from the 15rem layout height");
+  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "the 7.5rem visual height does not trigger cqTiny");
+
+  kb.destroy();
+  wrapper.remove();
+});
+
 QUnit.test("Height breakpoints adapt when container constrains the keyboard", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);

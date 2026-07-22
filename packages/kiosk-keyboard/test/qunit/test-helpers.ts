@@ -160,11 +160,7 @@ export async function setMeasuredHeight(
     Object.defineProperty(htmlDom, "scrollHeight", { value: naturalHeight, configurable: true });
   }
 
-  const origGetBCR = htmlDom.getBoundingClientRect;
-  htmlDom.getBoundingClientRect = function () {
-    const rect = origGetBCR.call(this);
-    return { ...rect.toJSON(), height } as DOMRect;
-  };
+  Object.defineProperty(htmlDom, "clientHeight", { value: height, configurable: true });
 
   try {
     keyboard.refreshResponsiveState();
@@ -173,6 +169,6 @@ export async function setMeasuredHeight(
     if (naturalHeight !== undefined && origScrollHeight) {
       Object.defineProperty(htmlDom, "scrollHeight", origScrollHeight);
     }
-    htmlDom.getBoundingClientRect = origGetBCR;
+    Reflect.deleteProperty(htmlDom, "clientHeight");
   }
 }

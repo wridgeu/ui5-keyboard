@@ -145,7 +145,8 @@ export class ResponsiveSizingController {
     const naturalHeight = root.scrollHeight;
 
     // Compare against the host content box, not the host border box. This
-    // keeps height breakpoints accurate when consumers add host padding/borders.
+    // keeps height breakpoints accurate when consumers add host padding/borders,
+    // and measures untransformed layout pixels, matching the kiosk twin.
     const hostHeight = this._getHostContentHeight();
 
     // Only apply when externally constrained (host height < natural content height).
