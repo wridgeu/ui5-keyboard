@@ -1,6 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { KeyboardType } from "ui5/kiosk/library";
-import { setMeasuredHeight, placeAndWait, waitForRender } from "./test-helpers";
+import { setMeasuredHeight, placeAndWait, waitForRender, rootRemPx } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
 const sandbox = sinon.createSandbox();
@@ -50,7 +50,7 @@ QUnit.test("Observer recomputes on a width-only change but skips a repeat of the
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   dom.style.height = "14rem";
@@ -93,7 +93,7 @@ QUnit.test("Boundary: exactly 16rem applies cqShort", async (assert) => {
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   dom.style.height = "16rem";
@@ -112,7 +112,7 @@ QUnit.test("Boundary: exactly 12rem applies cqTiny", async (assert) => {
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   dom.style.height = "12rem";
@@ -131,7 +131,7 @@ QUnit.test("Applies cqShort class when externally constrained (height between 12
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   dom.style.height = "14rem";
@@ -151,7 +151,7 @@ QUnit.test("Applies cqTiny class when severely constrained (interior of <= 12rem
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   dom.style.height = "10rem";
@@ -171,7 +171,7 @@ QUnit.test("No height classes when keyboard is not externally constrained", asyn
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
   dom.style.overflow = "hidden";
 
   // Natural content (8rem) fits within the 16rem rendered height -> unconstrained.
@@ -190,7 +190,7 @@ QUnit.test("No height classes for docked keyboards", async (assert) => {
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   dom.style.height = "12rem";
@@ -209,7 +209,7 @@ QUnit.test("Toggling docked mode clears stale height classes after render cycle"
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   dom.style.height = `${10 * remPx}px`;
   dom.style.overflow = "hidden";
@@ -236,7 +236,7 @@ QUnit.test("Switching to Numpad clears height classes after re-render", async (a
   await placeAndWait(kb);
 
   let dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   dom.style.height = `${10 * remPx}px`;
   dom.style.overflow = "hidden";
@@ -271,7 +271,7 @@ QUnit.test("Intrinsic content height growth updates height classes on refresh", 
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
   dom.style.overflow = "hidden";
 
   // Heights are stubbed (rendered fixed at 15rem) so the natural-vs-rendered
@@ -295,7 +295,7 @@ QUnit.test("Intrinsic content height shrink clears height classes on refresh", a
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
   dom.style.overflow = "hidden";
 
   // Intrinsic content (24rem) taller than the 16rem rendered height -> constrained.
@@ -316,7 +316,7 @@ QUnit.test("Height classes update when constraint changes", async (assert) => {
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()!;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   (dom as HTMLElement).style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   (dom as HTMLElement).style.overflow = "hidden";
@@ -347,7 +347,7 @@ QUnit.test("Custom height threshold: cqShort triggers at overridden short thresh
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   dom.style.overflow = "hidden";
@@ -369,7 +369,7 @@ QUnit.test("Custom height threshold: cqTiny triggers at overridden tiny threshol
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
   dom.style.overflow = "hidden";
@@ -393,7 +393,7 @@ QUnit.test("Repeated recomputes converge on a stable class set", async (assert) 
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   // Real layout, no measurement stubs: recomputing must be idempotent, so the
   // class set at a fixed constraint stays put across repeated passes.
@@ -428,7 +428,7 @@ QUnit.test("Breakpoints measure layout pixels: ancestor transform scale does not
   await waitForRender();
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   // 15rem of layout height inside a scale(0.5) wrapper renders visually at
   // 7.5rem. CSS sizing responds to layout pixels, so cqShort (<= 16rem) is
@@ -452,7 +452,7 @@ QUnit.test("Height breakpoints adapt when container constrains the keyboard", as
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   // Force key height to make the keyboard naturally taller than 16rem
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
@@ -496,7 +496,7 @@ QUnit.test("Height breakpoints still fire when root has extra consumer padding",
   await placeAndWait(kb);
 
   const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+  const remPx = rootRemPx();
 
   // Force tall keys so the keyboard is naturally taller than 16rem
   dom.style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");

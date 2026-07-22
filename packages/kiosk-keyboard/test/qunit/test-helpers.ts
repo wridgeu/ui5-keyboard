@@ -3,6 +3,11 @@ import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 
 const DOM = KioskKeyboard.DOM;
 
+/** Root font-size in px: the rem factor the responsive thresholds resolve against. */
+export function rootRemPx(): number {
+  return Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+}
+
 /** Place a control into qunit-fixture and wait for initial render. */
 export async function placeAndWait(control: KioskKeyboard): Promise<void> {
   control.placeAt("qunit-fixture");

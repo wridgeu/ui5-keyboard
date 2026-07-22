@@ -105,7 +105,7 @@ export default class ResponsiveSizingController extends BaseObject {
   private _reportsAppliedBox(entries: ResizeObserverEntry[]): boolean {
     if (this._appliedBox === null) return false;
 
-    const box = entries[entries.length - 1]?.borderBoxSize?.[0];
+    const box = entries[0]?.borderBoxSize?.[0];
     if (!box) return false;
 
     const same = (a: number, b: number) => Math.abs(a - b) < 0.1;
