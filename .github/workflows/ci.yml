@@ -76,7 +76,8 @@ jobs:
 
       # Asserts the two hand-maintained dom-contract.ts twins keep parallel
       # semantic key sets (values legitimately differ by naming convention) and
-      # identical data attributes; see tools/check-dom-contract-drift.mjs.
+      # identical CORE data attributes (platform-only ones allowlisted); see
+      # tools/check-dom-contract-drift.mjs.
       - name: DOM-contract drift check
         run: npm run test:dom-contract
 

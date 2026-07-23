@@ -12,7 +12,7 @@ All rem-to-pixel conversions in this document assume the browser default of 16px
 
 The key font-size is 37.5% (3/8) of the key height. At the default 3rem (48px) key height, this resolves to 1.125rem (18px).
 
-This ratio keeps text visually proportional inside the key at any height. A 48px key with 18px text leaves 30px for vertical centering, borders, and breathing room. Because the font-size references the key-height variable directly, changing key-height (whether by consumer override or responsive breakpoint) automatically recalculates the font-size. The height-responsive classes only need to override `--kiosk-keyboard-key-height` and the font scales along with it.
+This ratio keeps text visually proportional inside the key at any height. A 48px key with 18px text leaves 30px for vertical centering, borders, and breathing room. Because the font-size references the key-height variable directly, changing key-height (whether by consumer override or responsive breakpoint) automatically recalculates the font-size. The height-responsive tiers only need to override `--kiosk-keyboard-key-height` and the font scales along with it.
 
 ## Width-Responsive Font Caps
 
@@ -52,7 +52,7 @@ At 20rem and below, horizontal key padding drops from 0.25rem (4px) to 0.125rem 
 
 ## Height-Responsive Breakpoints
 
-Height breakpoints are driven by JavaScript (ResizeObserver + CSS class toggling) rather than CSS `container-type: size`, because block-size containment would collapse auto-height hosts.
+Height breakpoints are driven by JavaScript (ResizeObserver + JS-driven tier toggling: a reflected `cq-tier` attribute on webc, root classes on kiosk) rather than CSS `container-type: size`, because block-size containment would collapse auto-height hosts.
 
 ### Why 16rem and 12rem?
 
