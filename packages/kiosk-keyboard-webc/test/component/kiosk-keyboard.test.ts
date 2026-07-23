@@ -2485,12 +2485,10 @@ describe("kiosk-keyboard", () => {
       const root = rootDiv(el);
       const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 
-      // Model real key shrinkage a constant stub cannot express: the root
-      // overflows the 15rem host with no tier (=> constrained), but the host's
-      // cq-tier attribute shrinks it below the host. The controller MUST clear
-      // the tier before reading root.scrollHeight; measuring with it applied
-      // would read the shrunk height, conclude "unconstrained", and leave a
-      // stale/wrong tier - the oscillation removeAttribute-before-measure prevents.
+      // root.scrollHeight here depends on the host's cq-tier, which a constant
+      // stub cannot express: 20rem with no tier (constrained at the 15rem host)
+      // but 10rem once tiered (unconstrained). The measurement must clear the
+      // tier first, or a stale tier flips the constrained verdict.
       Object.defineProperty(el, "clientHeight", { value: 15 * remPx, configurable: true });
       Object.defineProperty(root, "scrollHeight", {
         get() {
@@ -2500,9 +2498,8 @@ describe("kiosk-keyboard", () => {
       });
 
       try {
-        // Seed a stale, wrong tier. A pass that clears before measuring reads the
-        // full 20rem height, stays constrained, and corrects the tier to short
-        // for the 15rem host; a pass that measured first would read 10rem and bail.
+        // Seed a stale wrong tier: clearing before measuring re-derives short at
+        // 15rem; measuring first reads 10rem and bails, leaving the stale tier.
         el.setAttribute(DOM.attributes.cqTier, DOM.cqTierValues.tiny);
 
         el.refreshResponsiveState();

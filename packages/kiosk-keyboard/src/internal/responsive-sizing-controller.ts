@@ -96,16 +96,14 @@ export default class ResponsiveSizingController extends BaseObject {
    * resizes the observed element, so the pass that cleared it is reported back
    * on the next frame. Reading `borderBoxSize` off the entry costs no layout.
    *
-   * Border boxes are compared, not content boxes. For this `box-sizing:
-   * border-box` root the `getComputedStyle` used height/width the pass records
-   * resolve to the border box in-runtime, so the entry's `borderBoxSize` is the
-   * matching box; its `contentBoxSize` is smaller by the padding and border and
-   * would never match, silently turning the filter into a no-op. That is not a
-   * theoretical concern: the `KioskKeyboard-renderer-blackbox` "No forced layout
-   * reads (getComputedStyle) during shift toggle" test is the perf pin that goes
-   * red the moment this de-dup stops firing. The 0.1px tolerance absorbs the
-   * differing float serialisations; a drop below it cannot flip a verdict that
-   * carries its own +1px tolerance.
+   * Border boxes are compared, not content boxes: for this `box-sizing:
+   * border-box` root the `getComputedStyle` height/width the pass records
+   * resolve to the border box in-runtime, so `borderBoxSize` matches while
+   * `contentBoxSize` (smaller by padding and border) would not, no-oping the
+   * filter. The `KioskKeyboard-renderer-blackbox` "No forced layout reads during
+   * shift toggle" test is the perf pin that catches that. The 0.1px tolerance
+   * absorbs the float-serialisation gap; a drop below it cannot flip a verdict
+   * that carries its own +1px tolerance.
    */
   private _reportsAppliedBox(entries: ResizeObserverEntry[]): boolean {
     if (this._appliedBox === null) return false;
