@@ -87,17 +87,9 @@ const KEY_PARITY = {
       "variantPopover",
       "variantOption",
     ],
-    // Shadow-DOM only: host-level classes, the aria-hidden host, numpad/numeric
-    // host variants, the live region and the in-shadow variant popup host.
-    webcOnly: [
-      "rootHidden",
-      "rootNumpad",
-      "rootNumeric",
-      "hostCqShort",
-      "hostCqTiny",
-      "liveRegion",
-      "variantPopupHost",
-    ],
+    // Shadow-DOM only: the aria-hidden host, numpad/numeric host variants, the
+    // live region and the in-shadow variant popup host.
+    webcOnly: ["rootHidden", "rootNumpad", "rootNumeric", "liveRegion", "variantPopupHost"],
   },
   selectors: {
     core: [
@@ -148,16 +140,19 @@ function checkKeyParity(group, spec) {
 
 /**
  * `attributes` is the cross-DOM wire contract. CORE attributes must exist on
- * BOTH twins with identical values. Both twins carry only inert per-key data as
- * attributes (the stateful key category is a class on each), so no attribute is
- * platform-only today; both allowlists are empty.
+ * BOTH twins with identical values (the inert per-key data; the stateful key
+ * category is a class on each). The height-responsive tier is the one
+ * platform-split attribute: webc reflects it as the `cqTier` host attribute so
+ * consumer overrides win the cascade, while the light-DOM kiosk twin keeps it as
+ * the `rootCqShort`/`rootCqTiny` root classes (idiomatic for UI5 1.x), so
+ * `cqTier` is webc-only and has no kiosk attribute twin.
  *
  * @type {{ core: string[]; kioskOnly: string[]; webcOnly: string[] }}
  */
 const ATTR_PARITY = {
   core: ["key", "shiftValue", "rowKind", "fkey", "glyphScript", "keySpan", "hasVariants"],
   kioskOnly: [],
-  webcOnly: [],
+  webcOnly: ["cqTier"],
 };
 
 /** CORE attributes compared by key AND value; platform-only ones need an allowlist entry. */
