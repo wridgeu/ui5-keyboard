@@ -83,7 +83,7 @@ QUnit.test("Observer recomputes on a width-only change but skips a repeat of the
 
   // The 0.1px tolerance absorbs the float-serialisation gap between the recorded
   // getComputedStyle box and the entry's internal double, but no more: a delta
-  // past it must still recompute. Pins the tolerance constant against drift.
+  // past it must still recompute.
   assert.ok(
     controller._reportsAppliedBox(entry(applied.blockSize + 0.05, applied.inlineSize)),
     "a sub-0.1px delta is absorbed as redundant",
@@ -400,12 +400,10 @@ QUnit.test("Natural height is measured with the tier classes cleared, so the tie
   const remPx = rootRemPx();
   dom.style.overflow = "hidden";
 
-  // Model real key shrinkage that a constant stub cannot express: the keyboard
-  // is taller than the 15rem grant with no tier (=> constrained), but any tier
-  // class shrinks it below the grant. The controller MUST clear the tier before
-  // reading scrollHeight; if it measured with a tier still applied it would read
-  // the shrunk height, conclude "unconstrained", and leave a stale/wrong tier -
-  // the oscillation `classList.remove`-before-measure exists to prevent.
+  // scrollHeight here depends on the applied tier, which a constant stub cannot
+  // express: 20rem with no tier (constrained at the 15rem grant) but 10rem once
+  // tiered (unconstrained). The measurement must clear the tier first, or a
+  // stale tier flips the constrained verdict.
   Object.defineProperty(dom, "clientHeight", { value: 15 * remPx, configurable: true });
   Object.defineProperty(dom, "scrollHeight", {
     get() {
@@ -416,9 +414,8 @@ QUnit.test("Natural height is measured with the tier classes cleared, so the tie
   });
 
   try {
-    // Seed a stale, wrong tier. A pass that clears before measuring reads the
-    // full 20rem height, stays constrained, and corrects the tier to cqShort for
-    // the 15rem grant; a pass that measured first would read 10rem and bail.
+    // Seed a stale wrong tier: clearing before measuring re-derives cqShort at
+    // 15rem; measuring first reads 10rem and bails, leaving the stale tier.
     dom.classList.add(DOM.classes.rootCqTiny);
 
     kb.refreshResponsiveState();
