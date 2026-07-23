@@ -108,7 +108,6 @@ QUnit.test("F-keys carry data-fkey and keep the modifier category; non-fkey modi
   assert.ok(f1.hasAttribute(DOM.attributes.fkey), "F1 has the data-fkey presence attribute");
   assert.ok(f1.classList.contains(DOM.classes.keyModifier), "F1 keeps the modifier category");
 
-  // The ABC layout switch is a modifier but not a function key.
   const abc = getRequiredKeyElement(kb, "{layout:base}");
   assert.notOk(abc.hasAttribute(DOM.attributes.fkey), "ABC layout switch is not a function key");
   assert.ok(abc.classList.contains(DOM.classes.keyModifier), "ABC is still a modifier");

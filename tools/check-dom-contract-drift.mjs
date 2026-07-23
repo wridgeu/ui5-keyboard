@@ -10,7 +10,7 @@
  * camelCase-BEM convention, webc uses kebab-BEM), which is why the byte-level
  * `check-twin-drift.mjs` lists `dom-contract` as unchecked. What still must not
  * drift is the SET OF SEMANTIC KEYS: a key added to one twin and forgotten in
- * the other is the class of bug that caused #98/#108.
+ * the other is exactly the drift this guard exists to catch.
  *
  * This guard compares keys, not values, for `classes` and `selectors`: every
  * CORE key must exist on both sides, and every remaining key must be declared in
@@ -149,8 +149,8 @@ function checkKeyParity(group, spec) {
 /**
  * `attributes` is the cross-DOM wire contract. CORE attributes must exist on
  * BOTH twins with identical values. Both twins carry only inert per-key data as
- * attributes (the stateful key category is a class on each), so today there are
- * no platform-only attributes; the allowlists stay for the next asymmetric one.
+ * attributes (the stateful key category is a class on each), so no attribute is
+ * platform-only today; both allowlists are empty.
  *
  * @type {{ core: string[]; kioskOnly: string[]; webcOnly: string[] }}
  */
