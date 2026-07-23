@@ -152,6 +152,15 @@ otherwise unguarded. The convergence test is retained because it is not vacuous 
 realistic constraint, but it must not be read as covering this invariant. Closing the gap
 properly is follow-up work, tracked as #189.
 
+Update: CLEARED. The gap is now closed by `Natural height is measured with the tier classes
+cleared, so the tier cannot oscillate`. It uses the missing tool: a class-dependent
+`scrollHeight` getter that returns a shorter height while a tier class is present (which
+neither the constant `setMeasuredHeight` stub nor the real-layout convergence test could
+express), plus a seeded stale wrong tier. Reading before the clear then measures the shrunk
+height, bails as unconstrained, and leaves the stale tier; reading after the clear corrects
+it. Verified red under the read-before-clear perturbation (responsive `16/17`) and green on
+the correct order.
+
 ## H6 — The suites run zero tests / the runner masks failures
 
 Hypothesis: the QUnit runner reports success while executing zero tests, or a filtered
