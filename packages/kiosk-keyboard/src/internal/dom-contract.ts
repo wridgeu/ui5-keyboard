@@ -23,8 +23,7 @@
  * attribute selector would be `(0,2,0)` and would bury the state-indicator rules
  * (the caps-lock ring). Width (`keySpan`), the fkey flag and the glyph script
  * carry no layered state, so they stay attributes. The webc twin keeps the same
- * class/attribute split (its shadow DOM would tolerate an attribute for the
- * category too, but matching keeps the contract symmetric).
+ * class/attribute split.
  */
 
 export const KIOSK_KEYBOARD_DOM = Object.freeze({

@@ -1044,6 +1044,46 @@ QUnit.test("Caps Lock ring is visible over the modifier key (light-DOM specifici
   kb.destroy();
 });
 
+QUnit.test("Glyph font-override is scoped to key labels and does not leak in the light DOM", async (assert) => {
+  const DOM = KioskKeyboard.DOM;
+  // Rendering the control loads the compiled theme stylesheet into the page.
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const addSpan = (apply: (el: HTMLElement) => void): HTMLElement => {
+    const el = document.createElement("span");
+    el.textContent = "あ"; // Hiragana あ, a CJK glyph
+    apply(el);
+    document.body.appendChild(el);
+    return el;
+  };
+
+  const plain = addSpan(() => {});
+  const scoped = addSpan((el) => {
+    el.className = DOM.classes.keyLabel;
+    el.setAttribute(DOM.attributes.glyphScript, "cjk");
+  });
+  const bare = addSpan((el) => el.setAttribute(DOM.attributes.glyphScript, "cjk"));
+
+  const plainFont = window.getComputedStyle(plain).fontFamily;
+  const scopedFont = window.getComputedStyle(scoped).fontFamily;
+  const bareFont = window.getComputedStyle(bare).fontFamily;
+
+  // Guard against a vacuous pass: the label-scoped rule must actually swap in the
+  // CJK stack, proving the theme CSS is loaded and the selector matches. Without
+  // this the leak assertion below would be meaningless on a stylesheet-less harness.
+  assert.notStrictEqual(scopedFont, plainFont, ".ui5KioskKey__label[data-glyph-script] applies the CJK font stack");
+
+  // The rule is namespaced to the label class, so a bare [data-glyph-script]
+  // element elsewhere in the light DOM must be untouched.
+  assert.strictEqual(bareFont, plainFont, "a bare [data-glyph-script] element is unaffected by the keyboard styles");
+
+  plain.remove();
+  scoped.remove();
+  bare.remove();
+  kb.destroy();
+});
+
 QUnit.test("Shift toggle works via keyboard (Enter key)", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
