@@ -490,7 +490,7 @@ A combined rule applies when both narrow width and constrained height are active
 
 Height thresholds are configurable via CSS custom properties: `--kiosk-keyboard-cq-short-threshold` (default `16rem`) and `--kiosk-keyboard-cq-tiny-threshold` (default `12rem`).
 
-Docked keyboards and numpad mode skip height class application (docked keyboards are viewport-driven; numpads are already compact).
+Docked keyboards and numpad mode skip the `cq-tier` attribute (docked keyboards are viewport-driven; numpads are already compact).
 
 **Consumer overrides:**
 
