@@ -81,6 +81,18 @@ QUnit.test("Observer recomputes on a width-only change but skips a repeat of the
     "a width-only change is not treated as redundant",
   );
 
+  // The 0.1px tolerance absorbs the float-serialisation gap between the recorded
+  // getComputedStyle box and the entry's internal double, but no more: a delta
+  // past it must still recompute. Pins the tolerance constant against drift.
+  assert.ok(
+    controller._reportsAppliedBox(entry(applied.blockSize + 0.05, applied.inlineSize)),
+    "a sub-0.1px delta is absorbed as redundant",
+  );
+  assert.notOk(
+    controller._reportsAppliedBox(entry(applied.blockSize + 0.2, applied.inlineSize)),
+    "a delta past the 0.1px tolerance is not treated as redundant",
+  );
+
   kb.destroy();
 });
 
@@ -375,6 +387,48 @@ QUnit.test("Repeated recomputes converge on a stable class set", async (assert) 
 
   for (let pass = 2; pass <= 4; pass++) {
     assert.strictEqual(await settle(), first, `class set unchanged on pass ${pass}`);
+  }
+
+  kb.destroy();
+});
+
+QUnit.test("Natural height is measured with the tier classes cleared, so the tier cannot oscillate", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const dom = kb.getDomRef()! as HTMLElement;
+  const remPx = rootRemPx();
+  dom.style.overflow = "hidden";
+
+  // Model real key shrinkage that a constant stub cannot express: the keyboard
+  // is taller than the 15rem grant with no tier (=> constrained), but any tier
+  // class shrinks it below the grant. The controller MUST clear the tier before
+  // reading scrollHeight; if it measured with a tier still applied it would read
+  // the shrunk height, conclude "unconstrained", and leave a stale/wrong tier -
+  // the oscillation `classList.remove`-before-measure exists to prevent.
+  Object.defineProperty(dom, "clientHeight", { value: 15 * remPx, configurable: true });
+  Object.defineProperty(dom, "scrollHeight", {
+    get() {
+      const tiered = dom.classList.contains(DOM.classes.rootCqShort) || dom.classList.contains(DOM.classes.rootCqTiny);
+      return (tiered ? 10 : 20) * remPx;
+    },
+    configurable: true,
+  });
+
+  try {
+    // Seed a stale, wrong tier. A pass that clears before measuring reads the
+    // full 20rem height, stays constrained, and corrects the tier to cqShort for
+    // the 15rem grant; a pass that measured first would read 10rem and bail.
+    dom.classList.add(DOM.classes.rootCqTiny);
+
+    kb.refreshResponsiveState();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "corrected to cqShort: measured with the tier cleared");
+    assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "stale cqTiny not read into the measurement");
+  } finally {
+    Reflect.deleteProperty(dom, "scrollHeight");
+    Reflect.deleteProperty(dom, "clientHeight");
   }
 
   kb.destroy();

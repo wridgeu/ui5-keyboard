@@ -169,5 +169,7 @@ The guard compares border boxes with a 0.1px tolerance because the pass reads th
 two serialise differently in the last decimals (`240.688px` vs `240.6875` above). The tolerance can in principle drop a real
 sub-0.1px observation. This is bounded: the constrained verdict carries its own +1px
 tolerance, breakpoint inputs are integer `clientHeight`, and any dropped sub-pixel drift is
-corrected by the next real observation. The width-filter test pins that a 40px delta is
-never treated as redundant.
+corrected by the next real observation. The de-dup test pins both directions: a 40px delta
+is never treated as redundant, and the tolerance boundary itself is pinned (a sub-0.1px
+delta is absorbed as redundant while a delta past 0.1px is not), so the constant cannot
+silently drift.

@@ -2476,6 +2476,46 @@ describe("kiosk-keyboard", () => {
       const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
       expect(keyHeight).to.be.closeTo(3 * remPx, 1, "key height at full 3rem default");
     });
+
+    it("measures natural height with the tier cleared, so the tier cannot oscillate", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      await waitForResponsiveSync();
+
+      const root = rootDiv(el);
+      const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+
+      // Model real key shrinkage a constant stub cannot express: the root
+      // overflows the 15rem host with no tier (=> constrained), but the host's
+      // cq-tier attribute shrinks it below the host. The controller MUST clear
+      // the tier before reading root.scrollHeight; measuring with it applied
+      // would read the shrunk height, conclude "unconstrained", and leave a
+      // stale/wrong tier - the oscillation removeAttribute-before-measure prevents.
+      Object.defineProperty(el, "clientHeight", { value: 15 * remPx, configurable: true });
+      Object.defineProperty(root, "scrollHeight", {
+        get() {
+          return (el.hasAttribute(DOM.attributes.cqTier) ? 10 : 20) * remPx;
+        },
+        configurable: true,
+      });
+
+      try {
+        // Seed a stale, wrong tier. A pass that clears before measuring reads the
+        // full 20rem height, stays constrained, and corrects the tier to short
+        // for the 15rem host; a pass that measured first would read 10rem and bail.
+        el.setAttribute(DOM.attributes.cqTier, DOM.cqTierValues.tiny);
+
+        el.refreshResponsiveState();
+        await waitForResponsiveSync();
+
+        expect(hasCqTier(el, DOM.cqTierValues.short), "corrected to cq-short: measured with the tier cleared").to.be
+          .true;
+        expect(hasCqTier(el, DOM.cqTierValues.tiny), "stale cq-tiny not read into the measurement").to.be.false;
+      } finally {
+        Reflect.deleteProperty(el, "clientHeight");
+        Reflect.deleteProperty(root, "scrollHeight");
+      }
+    });
   });
 
   // ── Shadow-DOM inputmode suppression ──
