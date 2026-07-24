@@ -340,6 +340,22 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(input.value).to.equal("b");
   });
 
+  it("reset() dismisses an open variant popup and leaves the origin key usable", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "a"));
+    pointerUp(); // sticky: popup stays open
+    expect(popupEl(kb), "popup is open before reset").to.exist;
+
+    kb.reset();
+    await waitForPopoverGone(kb);
+    expect(popupEl(kb), "reset dismissed the variant popover").to.not.exist;
+
+    // The dismissal settles the popup's one-shot click suppression, so a fresh
+    // tap on the origin key types its base glyph instead of being swallowed.
+    requireKey(kb, "a").click();
+    expect(input.value, "the origin key types normally after reset").to.equal("a");
+  });
+
   it("a key press on a different key dismisses the popup and still types", async () => {
     const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
     await holdOpen(requireKey(kb, "a"));

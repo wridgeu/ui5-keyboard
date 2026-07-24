@@ -1065,7 +1065,7 @@ class KioskKeyboard extends UI5Element {
    * @public
    * @since 0.1.0
    */
-  reset(): this {
+  reset(): void {
     // Abort (not commit) any in-progress composition: reset discards the
     // interaction rather than flushing a half-formed syllable to the target.
     if (this._middleware) {
@@ -1078,7 +1078,6 @@ class KioskKeyboard extends UI5Element {
     this._variantPopup = null;
     this._shiftState.reset();
     this._resetToBaseLayout();
-    return this;
   }
 
   /**
