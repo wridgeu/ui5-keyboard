@@ -8,8 +8,11 @@
             <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
         </landmarkInfo>
         <content>
-            <HBox class="sapUiSmallMarginBottom" gap="1rem">
+            <HBox class="sapUiSmallMarginBottom" gap="1rem" wrap="Wrap">
                 <Panel headerText="Page Input (Docked Keyboard)">
+                    <layoutData>
+                        <FlexItemData growFactor="1" baseSize="18rem" />
+                    </layoutData>
                     <VBox class="sapUiSmallMargin">
                         <Text text="Tap the input below to open the docked keyboard. When a dialog opens, the docked keyboard closes because focus leaves the page input." />
                         <Label text="Page Input" labelFor="pageInput" class="sapUiSmallMarginTop" />
@@ -20,6 +23,9 @@
                     </VBox>
                 </Panel>
                 <Panel headerText="Status">
+                    <layoutData>
+                        <FlexItemData growFactor="1" baseSize="18rem" />
+                    </layoutData>
                     <VBox class="sapUiSmallMargin">
                         <HBox>
                             <Label text="Docked Keyboard Open:" class="sapUiSmallMarginEnd" />
