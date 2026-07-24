@@ -136,6 +136,9 @@ sap.ui.define([], () => {
       "KioskKeyboard-capslock-shiftvalue": {
         title: "QUnit tests for ui5.kiosk - CapsLock is uppercase-mode, not a Shift alias",
       },
+      "KioskKeyboard-reset": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard reset() restores a fresh input context",
+      },
     },
   };
 });
