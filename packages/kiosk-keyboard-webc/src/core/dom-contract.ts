@@ -108,7 +108,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
    *
    * ```html
    * <!-- Inside my-wrapper's shadow DOM template -->
-   * <kiosk-keyboard exportparts="keyboard, row, key, modifier, action, fkey, key-label, key-icon">
+   * <kiosk-keyboard exportparts="keyboard, row, key, modifier, action, fkey, key-label, key-icon, variant-popup, variant-option">
    * </kiosk-keyboard>
    * ```
    *
