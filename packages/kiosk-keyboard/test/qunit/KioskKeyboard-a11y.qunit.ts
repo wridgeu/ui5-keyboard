@@ -3,6 +3,7 @@ import Input from "sap/m/Input";
 import InvisibleText from "sap/ui/core/InvisibleText";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
+  freezeDoubleClickWindow,
   getKeyElement,
   getKeyElements,
   getRequiredKeyElement,
@@ -136,26 +137,31 @@ QUnit.test("Live region announces Shift state", async (assert) => {
   assert.ok(liveRegion, "Live region element exists");
   assert.strictEqual(liveRegion!.textContent, "", "Empty when shift is off");
 
-  // Activate shift
-  tapKey(kb, "{shift}");
-  await waitForRender();
+  const clock = freezeDoubleClickWindow();
+  try {
+    // Activate shift
+    tapKey(kb, "{shift}");
+    await waitForRender();
 
-  liveRegion = document.getElementById(`${sId}-liveState`);
-  assert.strictEqual(liveRegion!.textContent, "Shift on", "Announces Shift on");
+    liveRegion = document.getElementById(`${sId}-liveState`);
+    assert.strictEqual(liveRegion!.textContent, "Shift on", "Announces Shift on");
 
-  // Activate caps lock
-  tapKey(kb, "{shift}");
-  await waitForRender();
+    // Activate caps lock
+    tapKey(kb, "{shift}");
+    await waitForRender();
 
-  liveRegion = document.getElementById(`${sId}-liveState`);
-  assert.strictEqual(liveRegion!.textContent, "Caps Lock on", "Announces Caps Lock on");
+    liveRegion = document.getElementById(`${sId}-liveState`);
+    assert.strictEqual(liveRegion!.textContent, "Caps Lock on", "Announces Caps Lock on");
 
-  // Deactivate
-  tapKey(kb, "{shift}");
-  await waitForRender();
+    // Deactivate
+    tapKey(kb, "{shift}");
+    await waitForRender();
 
-  liveRegion = document.getElementById(`${sId}-liveState`);
-  assert.strictEqual(liveRegion!.textContent, "", "Empty after shift off");
+    liveRegion = document.getElementById(`${sId}-liveState`);
+    assert.strictEqual(liveRegion!.textContent, "", "Empty after shift off");
+  } finally {
+    clock.restore();
+  }
 
   kb.destroy();
 });

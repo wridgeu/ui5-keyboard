@@ -9,6 +9,7 @@ import VBox from "sap/m/VBox";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
   createFakeKeyElement,
+  freezeDoubleClickWindow,
   getFirstKeyElement,
   getFocusableKeys,
   getKeyElement,
@@ -195,20 +196,25 @@ QUnit.test("Shift toggles: off -> shift -> caps -> off", async (assert) => {
   assert.notOk(isShiftActive(kb), "Initially not shifted");
   assert.notOk(isCapsLock(kb), "Initially no caps lock");
 
-  tapKey(kb, "{shift}");
-  await waitForRender();
-  assert.ok(isShiftActive(kb), "After first tap: shift active");
-  assert.notOk(isCapsLock(kb), "After first tap: not caps lock");
+  const clock = freezeDoubleClickWindow();
+  try {
+    tapKey(kb, "{shift}");
+    await waitForRender();
+    assert.ok(isShiftActive(kb), "After first tap: shift active");
+    assert.notOk(isCapsLock(kb), "After first tap: not caps lock");
 
-  tapKey(kb, "{shift}");
-  await waitForRender();
-  assert.ok(isShiftActive(kb), "After second tap: still active (caps)");
-  assert.ok(isCapsLock(kb), "After second tap: caps lock on");
+    tapKey(kb, "{shift}");
+    await waitForRender();
+    assert.ok(isShiftActive(kb), "After second tap: still active (caps)");
+    assert.ok(isCapsLock(kb), "After second tap: caps lock on");
 
-  tapKey(kb, "{shift}");
-  await waitForRender();
-  assert.notOk(isShiftActive(kb), "After third tap: shift off");
-  assert.notOk(isCapsLock(kb), "After third tap: caps lock off");
+    tapKey(kb, "{shift}");
+    await waitForRender();
+    assert.notOk(isShiftActive(kb), "After third tap: shift off");
+    assert.notOk(isCapsLock(kb), "After third tap: caps lock off");
+  } finally {
+    clock.restore();
+  }
 
   kb.destroy();
 });

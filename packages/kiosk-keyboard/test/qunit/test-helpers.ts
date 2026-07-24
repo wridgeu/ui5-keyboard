@@ -35,6 +35,17 @@ export function simulateTap(kb: KioskKeyboard, el: HTMLElement): void {
   kb.ontouchend(end);
 }
 
+/**
+ * Freeze `performance.now()` so the ShiftState double-click window
+ * (`DOUBLE_CLICK_MS`) cannot drift past its threshold across the `waitForRender`
+ * awaits a test inserts between two `{shift}` taps. Without it, the
+ * double-tap → caps-lock transition flakes whenever a loaded CI runner stalls a
+ * render beyond 400ms. Returns the stub; restore it in a `finally`.
+ */
+export function freezeDoubleClickWindow(): sinon.SinonStub {
+  return sinon.stub(performance, "now").returns(0);
+}
+
 /** Get the rendered keyboard root element. */
 export function getKeyboardDom(keyboard: KioskKeyboard): HTMLElement {
   const dom = keyboard.getDomRef();
