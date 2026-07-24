@@ -190,7 +190,7 @@ Compact density also adjusts numpad sizing:
 
 ## Shadow Opacities
 
-Shadows derive from `--sapContent_ShadowColor` via `color-mix()`, with static `rgba()` fallbacks for browsers that do not support `color-mix()`.
+Shadows derive from `--sapContent_ShadowColor` via `color-mix()` (`color-mix()` is Baseline Widely Available; no fallback).
 
 | Element           | Opacity | Rationale                                                                                                                                                  |
 | ----------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |

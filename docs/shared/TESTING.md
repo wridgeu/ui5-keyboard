@@ -178,15 +178,15 @@ The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2
 
 Each package keeps its own minimal `test/e2e/helpers.ts`. There is no shared cross-package helper module, and native Playwright APIs cover most needs (web-first assertions, `emulateMedia`, `addStyleTag`, projects for the device matrix). The helpers that remain are thin:
 
-| Helper                                                                      | Package | Purpose                                                                                                                 |
-| --------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `openPage(page, path?)`                                                     | both    | Navigate to a test page and wait for the keyboard root to attach                                                        |
-| `keyboardRoot(page, id)`                                                    | both    | `Locator` for the keyboard root (light DOM for kiosk; the host for webc)                                                |
-| `key(page, id, dataKey)`                                                    | both    | `Locator` for a specific key                                                                                            |
-| `setDocumentDirection(page, dir)`                                           | both    | Set `dir`/`lang` for RTL snapshots                                                                                      |
-| `waitForKeys` / `waitForDocked*`                                            | webc    | Await shadow-DOM render / docked open/closed/shown states                                                               |
-| `injectShadowStyleOverride` / `remove…`                                     | webc    | Inject a `<style>` into the shadow root to force enhancement-fallback paths                                             |
-| `CLOSED_CLASS`, `VISUAL_PAGE`, `DISABLE_TEXT_BOX_TRIM`, `DISABLE_COLOR_MIX` | varies  | Shared constants (the kiosk closed-state class, the visual page URL, CSS opt-outs for progressive-enhancement features) |
+| Helper                                                 | Package | Purpose                                                                                                                  |
+| ------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `openPage(page, path?)`                                | both    | Navigate to a test page and wait for the keyboard root to attach                                                         |
+| `keyboardRoot(page, id)`                               | both    | `Locator` for the keyboard root (light DOM for kiosk; the host for webc)                                                 |
+| `key(page, id, dataKey)`                               | both    | `Locator` for a specific key                                                                                             |
+| `setDocumentDirection(page, dir)`                      | both    | Set `dir`/`lang` for RTL snapshots                                                                                       |
+| `waitForKeys` / `waitForDocked*`                       | webc    | Await shadow-DOM render / docked open/closed/shown states                                                                |
+| `injectShadowStyleOverride` / `remove…`                | webc    | Inject a `<style>` into the shadow root to force enhancement-fallback paths                                              |
+| `CLOSED_CLASS`, `VISUAL_PAGE`, `DISABLE_TEXT_BOX_TRIM` | varies  | Shared constants (the kiosk closed-state class, the visual page URL, a CSS opt-out for progressive-enhancement features) |
 
 Media features are emulated with Playwright's native `page.emulateMedia({ forcedColors, reducedMotion })` rather than a custom CDP helper.
 
