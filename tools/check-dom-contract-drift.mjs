@@ -149,8 +149,9 @@ function checkAttributeParity(spec) {
     const kv = kiosk.attributes[k];
     const wv = webc.attributes[k];
     if (kv === undefined) errors.push(`attributes: CORE "${k}" missing from kiosk`);
-    else if (wv === undefined) errors.push(`attributes: CORE "${k}" missing from webc`);
-    else if (kv !== wv) errors.push(`attributes: CORE "${k}" differs (kiosk "${kv}" vs webc "${wv}")`);
+    if (wv === undefined) errors.push(`attributes: CORE "${k}" missing from webc`);
+    else if (kv !== undefined && kv !== wv)
+      errors.push(`attributes: CORE "${k}" differs (kiosk "${kv}" vs webc "${wv}")`);
   }
   for (const k of Object.keys(kiosk.attributes)) {
     if (!kioskAllowed.has(k))
