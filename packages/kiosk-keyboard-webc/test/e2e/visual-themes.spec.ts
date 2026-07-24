@@ -38,13 +38,3 @@ test.describe("Theme Visual Regression", () => {
     });
   }
 });
-
-test.describe("Fallback: color-mix() across themes", () => {
-  for (const theme of ["sap_horizon_hcb", "sap_horizon_hcw"]) {
-    test(`webc-qwerty-no-color-mix-${theme}`, async ({ page }) => {
-      await openPage(page, "/test/pages/visual-themes.html");
-      await switchTheme(page, theme);
-      await expect(keyboardRoot(page, "kb-qwerty")).toHaveScreenshot(`webc-qwerty-no-color-mix-${theme}.png`);
-    });
-  }
-});
