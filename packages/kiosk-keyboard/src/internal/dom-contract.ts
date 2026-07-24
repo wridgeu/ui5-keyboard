@@ -9,12 +9,9 @@
  * The renderer, source code, and tests all import from this single source
  * of truth.
  *
- * Class-name convention: camelCase-BEM (camelCase segments, BEM `__`/`--`
- * separators), matching UI5 core's camelCase house style in the light DOM.
- * The kiosk-keyboard-webc twin uses kebab-BEM; the two intentionally share the
- * same KEY names (guarded by `tools/check-dom-contract-drift.mjs`) but differ
- * in string casing per framework. Shared `attributes` values are identical
- * across both twins.
+ * Convention: camelCase-BEM matching UI5 core (the webc twin uses kebab-BEM).
+ * KEY names are shared across twins; string casing diverges by framework.
+ * Guarded by `tools/check-dom-contract-drift.mjs`; shared `attributes` are identical.
  *
  * The mutually-exclusive key category is a class (`keyModifier`/`keyAction`), not
  * a data attribute: styles layer interactive state (`:active`, `keyCapsLock`,
