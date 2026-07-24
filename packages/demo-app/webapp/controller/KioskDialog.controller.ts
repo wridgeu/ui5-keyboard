@@ -1,10 +1,7 @@
-import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import type Dialog from "sap/m/Dialog";
+import type Input from "sap/m/Input";
+import type { Button$PressEvent } from "sap/m/Button";
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
-import Dialog from "sap/m/Dialog";
-import Button from "sap/m/Button";
-import Input from "sap/m/Input";
-import VBox from "sap/m/VBox";
-import Label from "sap/m/Label";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
@@ -13,11 +10,15 @@ import BaseController from "./BaseController";
  * A) Dialog without keyboard (docked auto-closes), and
  * B) Dialog with embedded inline keyboard.
  *
+ * Both dialogs are XML fragments loaded once and reused across opens; cleanup
+ * and re-focus hang off the dialog's afterClose so ESC and router-driven closes
+ * behave identically.
+ *
  * @namespace demo.hotkeys.controller
  */
 export default class KioskDialog extends BaseController {
-  private _dialogA: Dialog | null = null;
-  private _dialogB: Dialog | null = null;
+  private _dialogA?: Promise<Dialog>;
+  private _dialogB?: Promise<Dialog>;
 
   override onInit(): void {
     const stateModel = this.getStateModel();
@@ -38,124 +39,30 @@ export default class KioskDialog extends BaseController {
   }
 
   onOpenDialogA(): void {
-    if (this._dialogA?.isOpen()) return;
-
-    if (this._dialogA) {
-      this._dialogA.destroy();
-      this._dialogA = null;
-    }
-
-    const dialogInput = new Input({
-      placeholder: "Type in dialog...",
-      width: "100%",
-    });
-
-    const dialog = new Dialog({
-      title: "Approach A: No Keyboard",
-      content: [
-        new VBox({
-          items: [new Label({ text: "Dialog Input" }), dialogInput],
-        }).addStyleClass("sapUiSmallMargin"),
-      ],
-      beginButton: new Button({
-        text: "Close",
-        press: () => {
-          dialog.close();
-        },
-      }),
-      afterClose: () => {
-        const isCurrentDialog = this._dialogA === dialog;
-        dialog.destroy();
-        if (isCurrentDialog) {
-          this._dialogA = null;
-        }
-        // Re-focus page input so docked keyboard resumes
-        const pageInput = this.byId("pageInput") as Input | undefined;
-        pageInput?.focus();
-      },
-    });
-
-    this._dialogA = dialog;
-    this.getView()!.addDependent(dialog);
-    dialog.open();
+    this._dialogA ??= this.loadFragment({
+      name: "demo.hotkeys.view.fragments.DialogNoKeyboard",
+    }) as Promise<Dialog>;
+    void this._dialogA.then((dialog) => dialog.open());
   }
 
   onOpenDialogB(): void {
-    if (this._dialogB?.isOpen()) return;
+    this._dialogB ??= this.loadFragment({
+      name: "demo.hotkeys.view.fragments.DialogEmbeddedKeyboard",
+    }) as Promise<Dialog>;
+    void this._dialogB.then((dialog) => dialog.open());
+  }
 
-    if (this._dialogB) {
-      this._dialogB.destroy();
-      this._dialogB = null;
-    }
+  onCloseDialog(event: Button$PressEvent): void {
+    (event.getSource().getParent() as Dialog).close();
+  }
 
-    const dialogInputId = this.getView()!.createId("dialogBInput");
-    const dialogInput = new Input(dialogInputId, {
-      placeholder: "Type in dialog...",
-      width: "100%",
-    });
-
-    const dialogKeyboard = new KioskKeyboard({
-      controls: [dialogInputId],
-      ariaLabel: "Dialog Keyboard",
-    });
-
-    const dialog = new Dialog({
-      title: "Approach B: Embedded Keyboard",
-      contentWidth: "30rem",
-      content: [
-        new VBox({
-          items: [new Label({ text: "Dialog Input" }), dialogInput, dialogKeyboard],
-        }).addStyleClass("sapUiSmallMargin"),
-      ],
-      beginButton: new Button({
-        text: "Close",
-        press: () => {
-          dialog.close();
-        },
-      }),
-      afterClose: () => {
-        const isCurrentDialog = this._dialogB === dialog;
-        dialog.destroy();
-        if (isCurrentDialog) {
-          this._dialogB = null;
-        }
-        const pageInput = this.byId("pageInput") as Input | undefined;
-        pageInput?.focus();
-      },
-    });
-
-    this._dialogB = dialog;
-    this.getView()!.addDependent(dialog);
-    dialog.open();
+  onDialogAfterClose(): void {
+    // Re-focus page input so the docked keyboard resumes.
+    (this.byId("pageInput") as Input | undefined)?.focus();
   }
 
   onNavBack(): void {
-    this._closeDialogs();
+    // Router navigation closes any open dialog automatically (closeOnNavigation).
     this.getRouter().navTo(Scope.KioskHub);
-  }
-
-  override onExit(): void {
-    this._closeDialogs();
-  }
-
-  private _closeDialogs(): void {
-    if (this._dialogA) {
-      const dialog = this._dialogA;
-      this._dialogA = null;
-      if (dialog.isOpen()) {
-        dialog.close(); // inline afterClose handler will destroy
-      } else {
-        dialog.destroy();
-      }
-    }
-    if (this._dialogB) {
-      const dialog = this._dialogB;
-      this._dialogB = null;
-      if (dialog.isOpen()) {
-        dialog.close(); // inline afterClose handler will destroy
-      } else {
-        dialog.destroy();
-      }
-    }
   }
 }
