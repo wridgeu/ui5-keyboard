@@ -68,7 +68,7 @@
   "devDependencies": {
     "@openui5/types": "1.136.18",
     "@playwright/test": "~1.59.1",
-    "@ui5/cli": "~4.0.55",
+    "@ui5/cli": "~4.0.57",
     "@ui5/linter": "~1.23.1",
     "@ui5/ts-interface-generator": "~0.11.1",
     "rimraf": "~6.1.3",
