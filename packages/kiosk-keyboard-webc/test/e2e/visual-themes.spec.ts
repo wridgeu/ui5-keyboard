@@ -1,11 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import {
-  openPage,
-  keyboardRoot,
-  injectShadowStyleOverride,
-  removeShadowStyleOverride,
-  DISABLE_COLOR_MIX,
-} from "./helpers.js";
+import { openPage, keyboardRoot } from "./helpers.js";
 
 // Per-theme visual regression on the dedicated theme page (qwerty + numpad).
 
@@ -50,9 +44,7 @@ test.describe("Fallback: color-mix() across themes", () => {
     test(`webc-qwerty-no-color-mix-${theme}`, async ({ page }) => {
       await openPage(page, "/test/pages/visual-themes.html");
       await switchTheme(page, theme);
-      await injectShadowStyleOverride(page, DISABLE_COLOR_MIX, "disable-color-mix");
       await expect(keyboardRoot(page, "kb-qwerty")).toHaveScreenshot(`webc-qwerty-no-color-mix-${theme}.png`);
-      await removeShadowStyleOverride(page, "disable-color-mix");
     });
   }
 });

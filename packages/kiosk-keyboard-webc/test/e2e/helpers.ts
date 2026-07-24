@@ -184,18 +184,3 @@ export const DISABLE_TEXT_BOX_TRIM = `
   .${DOM.classes.keyLabel} { line-height: 1.2 !important; }
   .${DOM.classes.keyLabelGlyph} { line-height: 1 !important; }
 `;
-
-/**
- * CSS override re-applying the static shadow fallbacks used when color-mix() is
- * unavailable. SYNC SOURCE: keep the rgba() values in step with the static
- * fallback shadow declarations in src/themes/KioskKeyboard.css.
- */
-export const DISABLE_COLOR_MIX = `
-  :host {
-    --kiosk-keyboard-key-shadow: 0 1px 2px rgba(34, 53, 72, 0.1) !important;
-    --kiosk-keyboard-key-shadow-hover: 0 2px 4px rgba(34, 53, 72, 0.15) !important;
-    --kiosk-keyboard-docked-shadow: 0 -4px 20px rgba(34, 53, 72, 0.2) !important;
-    --kiosk-keyboard-modifier-shadow: 0 1px 2px rgba(34, 53, 72, 0.14) !important;
-    --kiosk-keyboard-modifier-shadow-hover: 0 2px 4px rgba(34, 53, 72, 0.18) !important;
-  }
-`;
