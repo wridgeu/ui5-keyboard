@@ -9,12 +9,9 @@
  * live here. The template, source code, and tests all import from this
  * single source of truth.
  *
- * Class-name convention: kebab-BEM (lowercase, BEM `__`/`--` separators),
- * matching the component's kebab `::part` names and shadow-DOM library
- * convention. The kiosk-keyboard twin uses camelCase-BEM; the two intentionally
- * share the same KEY names (guarded by `tools/check-dom-contract-drift.mjs`)
- * but differ in string casing per framework. Shared `attributes` values are
- * identical across both twins.
+ * Convention: kebab-BEM matching the component's `::part` names (the kiosk twin
+ * uses camelCase-BEM). KEY names are shared across twins; string casing diverges
+ * by framework. Guarded by `tools/check-dom-contract-drift.mjs`; shared `attributes` are identical.
  *
  * The mutually-exclusive key category is a class (`keyModifier`/`keyAction`) on
  * both twins: styles layer interactive state (`:active`, `keyCapsLock`,

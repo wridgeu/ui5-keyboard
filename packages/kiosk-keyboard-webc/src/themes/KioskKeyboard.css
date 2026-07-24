@@ -79,7 +79,7 @@
      When set, overrides the Korean system font stack used for keys whose
      label is a Hangul glyph (jamo, syllables). The default fallback is a
      Korean-first font list defined inline on [data-glyph-script="hangul"].
-     Hangul gets a separate class from CJK so Korean system fonts are
+     Hangul gets a separate selector from CJK so Korean system fonts are
      prioritized over Japanese/Chinese fonts for correct glyph metrics. */
 
   /* --kiosk-keyboard-indic-font-family: unset by default.
@@ -602,7 +602,7 @@
   }
 
   /* Hangul jamo share the CJK vertical em-box characteristics but need a
-     separate class for their Korean-first font stack (see below). The
+     separate value for their Korean-first font stack (see below). The
      text-box-edge treatment is identical to CJK. */
   [data-glyph-script="hangul"] {
     text-box-edge: text;

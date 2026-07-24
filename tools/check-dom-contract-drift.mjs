@@ -32,10 +32,6 @@ import { pathToFileURL } from "node:url";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 
-/**
- * @param {string} rel repo-relative path to a dom-contract module
- * @returns {Promise<any>} the frozen KIOSK_KEYBOARD_DOM object
- */
 async function loadContract(rel) {
   const mod = await import(pathToFileURL(path.join(repoRoot, rel)).href);
   return mod.KIOSK_KEYBOARD_DOM;
@@ -44,14 +40,9 @@ async function loadContract(rel) {
 const kiosk = await loadContract("packages/kiosk-keyboard/src/internal/dom-contract.ts");
 const webc = await loadContract("packages/kiosk-keyboard-webc/src/core/dom-contract.ts");
 
-/** @type {string[]} */
 const errors = [];
 
 /**
- * Keys that MUST exist on both twins (CORE), plus the keys each side is allowed
- * to carry alone (PLATFORM_ONLY). Any key present on a side but absent from both
- * its CORE and PLATFORM_ONLY lists fails the check.
- *
  * @typedef {{ core: string[]; kioskOnly: string[]; webcOnly: string[] }} Parity
  * @type {{ classes: Parity; selectors: Parity }}
  */
@@ -139,13 +130,8 @@ function checkKeyParity(group, spec) {
 }
 
 /**
- * `attributes` is the cross-DOM wire contract. CORE attributes must exist on
- * BOTH twins with identical values (the inert per-key data; the stateful key
- * category is a class on each). The height-responsive tier is the one
- * platform-split attribute: webc reflects it as the `cqTier` host attribute
- * while the light-DOM kiosk twin keeps it as the `rootCqShort`/`rootCqTiny` root
- * classes, so `cqTier` is webc-only with no kiosk attribute twin.
- *
+ * `cqTier` is webc-only: webc reflects the height tier as a host attribute;
+ * kiosk keeps it as `rootCqShort`/`rootCqTiny` root classes with no attr twin.
  * @type {{ core: string[]; kioskOnly: string[]; webcOnly: string[] }}
  */
 const ATTR_PARITY = {
