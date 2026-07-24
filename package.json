@@ -95,7 +95,7 @@
     "@types/node": "~24.13.2",
     "@types/qunit": "~2.19.14",
     "@types/sinon": "~21.0.1",
-    "@ui5/linter": "~1.21.1",
+    "@ui5/linter": "~1.23.1",
     "@ui5/ts-interface-generator": "~0.11.1",
     "@ui5/webcomponents-tools": "2.22.0",
     "concurrently": "~10.0.0",
