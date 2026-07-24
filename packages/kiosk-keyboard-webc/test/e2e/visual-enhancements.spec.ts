@@ -8,7 +8,7 @@ import {
 } from "./helpers.js";
 
 // Progressive-enhancement fallback visual regression: how keys render when
-// text-box-trim or color-mix() is forced off.
+// text-box-trim is forced off.
 
 test.describe("Fallback: without text-box-trim", () => {
   test.beforeEach(async ({ page }) => {
