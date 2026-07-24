@@ -190,7 +190,7 @@ Compact density also adjusts numpad sizing:
 
 ## Shadow Opacities
 
-Shadows derive from `--sapContent_ShadowColor` via `color-mix()` (`color-mix()` is Baseline Widely Available; no fallback).
+Shadows derive from `--sapContent_ShadowColor` via `color-mix()`, which is Baseline Widely Available, so no fallback is shipped.
 
 | Element           | Opacity | Rationale                                                                                                                                                  |
 | ----------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
