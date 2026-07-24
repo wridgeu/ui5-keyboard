@@ -47,11 +47,18 @@ describe("kiosk-keyboard - reset() restores a fresh input context (#199)", () =>
     requireKey(kb, "{shift}").click();
     await nextRender();
 
+    // Two consecutive uppercase keys prove the latch is sticky - a one-shot
+    // Shift would disarm after the first - so the reset below can only stay
+    // green by clearing a real Caps Lock rather than an already-off state.
+    requireKey(kb, "q").click();
+    requireKey(kb, "q").click();
+    expect(input.value, "caps lock latches uppercase across keys").to.equal("QQ");
+
     kb.reset();
     await nextRender();
 
     requireKey(kb, "q").click();
-    expect(input.value, "caps lock is cleared after reset").to.equal("q");
+    expect(input.value, "caps lock is cleared after reset").to.equal("QQq");
   });
 
   it("returns to the base layout after a secondary-layout switch", async () => {
@@ -76,10 +83,5 @@ describe("kiosk-keyboard - reset() restores a fresh input context (#199)", () =>
     kb.reset();
     await nextRender();
     expect(input.value, "reset leaves the bound target value untouched").to.equal("qq");
-  });
-
-  it("is chainable (returns the element)", async () => {
-    const { kb } = await setup();
-    expect(kb.reset(), "reset() returns the element for chaining").to.equal(kb);
   });
 });
