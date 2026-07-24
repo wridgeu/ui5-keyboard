@@ -1,6 +1,7 @@
 import type Dialog from "sap/m/Dialog";
 import type Input from "sap/m/Input";
 import type { Button$PressEvent } from "sap/m/Button";
+import type KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
@@ -54,6 +55,12 @@ export default class KioskDialog extends BaseController {
 
   onCloseDialog(event: Button$PressEvent): void {
     (event.getSource().getParent() as Dialog).close();
+  }
+
+  onDialogBBeforeOpen(): void {
+    // The dialog is reused across opens, so clear any latch state (armed
+    // Shift, etc.) the embedded keyboard carried from the previous session.
+    (this.byId("dialogBKeyboard") as KioskKeyboard).reset();
   }
 
   onDialogAfterClose(): void {

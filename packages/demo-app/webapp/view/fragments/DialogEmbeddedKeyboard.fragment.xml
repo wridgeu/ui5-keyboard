@@ -5,12 +5,13 @@
     <Dialog
         title="Approach B: Embedded Keyboard"
         contentWidth="30rem"
+        beforeOpen=".onDialogBBeforeOpen"
         afterClose=".onDialogAfterClose">
         <content>
             <VBox class="sapUiSmallMargin">
                 <Label text="Dialog Input" />
                 <Input id="dialogBInput" placeholder="Type in dialog..." width="100%" />
-                <kiosk:KioskKeyboard controls="dialogBInput" ariaLabel="Dialog Keyboard" />
+                <kiosk:KioskKeyboard id="dialogBKeyboard" controls="dialogBInput" ariaLabel="Dialog Keyboard" />
             </VBox>
         </content>
         <beginButton>

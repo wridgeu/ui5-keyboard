@@ -1054,6 +1054,45 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
+   * Resets the keyboard to a fresh input context: clears the shift/caps
+   * latch, aborts any in-progress composition, cancels backspace auto-repeat,
+   * dismisses the accent-variant popover, and returns to the base layout.
+   *
+   * Deliberately leaves the bound target value, the active target, docked
+   * visibility, and all developer configuration untouched, so a reused
+   * instance can start clean without being recreated.
+   *
+   * @public
+   * @since 0.1.0
+   */
+  reset(): this {
+    // Abort (not commit) any in-progress composition: reset discards the
+    // interaction rather than flushing a half-formed syllable to the target.
+    if (this._middleware) {
+      this._middleware.reset();
+      this._middleware = null;
+    }
+    this._backspaceRepeat.stop();
+    if (this._variantPopup) this._variantGesture.close();
+    this._variantGesture.stop();
+    this._variantPopup = null;
+    this._shiftState.reset();
+    this._resetToBaseLayout();
+    return this;
+  }
+
+  /**
+   * Returns the active surface to the base (alphabetic) layout, mirroring the
+   * kiosk twin's `resetLayout()`. Fires `layout-change` only on a real change.
+   */
+  private _resetToBaseLayout(): void {
+    const base = this._baseLayout || this.layout || this._localeLayout();
+    if (this._applyLayout(base, "external")) {
+      this.fireDecoratorEvent("layout-change", { layout: this._currentLayout });
+    }
+  }
+
+  /**
    * Recomputes responsive height classes from the current live DOM.
    *
    * Call this after runtime styling changes that alter intrinsic keyboard height

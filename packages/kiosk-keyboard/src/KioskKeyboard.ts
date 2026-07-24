@@ -1124,6 +1124,36 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Resets the keyboard to a fresh input context: clears the shift/caps
+   * latch, aborts any in-progress composition, cancels backspace auto-repeat,
+   * dismisses the accent-variant popover, and returns to the base layout.
+   *
+   * Deliberately leaves the bound target value, the active target, docked
+   * visibility, and all developer configuration untouched, so a reused
+   * instance can start clean without being recreated - call it, for example,
+   * from a dialog's `beforeOpen` so a reopened keyboard never carries a stale
+   * armed Shift.
+   *
+   * @public
+   * @since 0.1.0
+   */
+  reset(): this {
+    // Abort (not commit) any in-progress composition: reset discards the
+    // interaction rather than flushing a half-formed syllable to the target.
+    if (this._middleware) {
+      this._middleware.reset();
+      this._middleware = null;
+    }
+    this._backspaceRepeat.stop();
+    this._variantPopup.stop();
+    this._variantPopup.dismissOpen();
+    this._shiftState.reset();
+    // Returns to the base layout and re-renders; fires layoutChange only on a
+    // real change.
+    return this.resetLayout();
+  }
+
+  /**
    * Sets the active target association without triggering a re-render,
    * since the association does not affect the keyboard's visual output.
    * Also moves the physical keyboard highlight delegation to the new target.
