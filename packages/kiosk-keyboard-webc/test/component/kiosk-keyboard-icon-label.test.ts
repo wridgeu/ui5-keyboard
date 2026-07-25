@@ -1,6 +1,8 @@
 import { fixture, html, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
+import navRow from "../../src/layouts/nav-row.js";
+import qwerty from "../../src/layouts/qwerty.js";
 import type { KeyDefinition, LayoutDefinition } from "../../src/types.js";
 import { requireKey as queryKey } from "../helpers/fixtures.js";
 import { captureConsole } from "../helpers/console.js";
@@ -351,6 +353,53 @@ describe("icon + label rendering", () => {
 
     const glyph = queryKeyLabel(queryKey(el, "y"))!;
     expect(glyph.classList.contains(DOM.classes.keyLabelMulti), "single-glyph label keeps its own sizing").to.be.false;
+  });
+
+  it("bumps dual icons above their own key font once the label goes sr-only", async () => {
+    // NOTE: fixture({ parentNode }) appends the wrapper to body and registers it
+    // for cleanup, so do NOT also call document.body.appendChild() or wrapper.remove().
+    const wrapper = document.createElement("div");
+    wrapper.style.width = "320px";
+
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="test-icon-bump"></kiosk-keyboard> `, {
+      parentNode: wrapper,
+    });
+    el.instanceLayouts = { "test-icon-bump": [navRow, ...qwerty] };
+    await nextRender();
+
+    const shift = queryKey(el, "{shift}");
+    const shiftLabel = queryKeyLabel(shift)!;
+    expect(getComputedStyle(shiftLabel).clipPath, "keys are narrow enough that dual labels are sr-only").to.equal(
+      "inset(50%)",
+    );
+
+    // Every icon is anchored against its own key's font size: modifier keys carry
+    // a reduced font, so an icon still sitting at 1em of it has not been bumped.
+    const fontSizeOf = (elm: Element) => parseFloat(getComputedStyle(elm).fontSize);
+    const shiftIconFs = fontSizeOf(queryKeyIcon(shift)!);
+    const shiftKeyFs = fontSizeOf(shift);
+    expect(
+      shiftIconFs,
+      `Shift icon is bumped above its own key font (${shiftIconFs.toFixed(1)} vs ${shiftKeyFs.toFixed(1)}px)`,
+    ).to.be.greaterThan(shiftKeyFs + 0.5);
+
+    const navKeys = [...el.shadowRoot!.querySelectorAll<HTMLElement>(DOM.selectors.key)].filter((k) =>
+      k.hasAttribute("data-fkey"),
+    );
+    expect(navKeys.length, "eight nav fkey keys rendered").to.equal(8);
+
+    // The nav arm of the bump rule is separate from the plain dual arm: collapsing
+    // the two into one loses these keys to the later [data-fkey] icon rule.
+    for (const navKey of navKeys) {
+      const iconFs = fontSizeOf(queryKeyIcon(navKey)!);
+      const keyFs = fontSizeOf(navKey);
+      const name = navKey.getAttribute("data-key");
+      expect(
+        iconFs,
+        `"${name}" icon is bumped above its own key font (${iconFs.toFixed(1)} vs ${keyFs.toFixed(1)}px)`,
+      ).to.be.greaterThan(keyFs + 0.5);
+      expect(iconFs, `"${name}" icon matches the Shift icon`).to.be.closeTo(shiftIconFs, 0.5);
+    }
   });
 
   it("icon: '' + capsLockIcon shows icon only during caps lock", async () => {

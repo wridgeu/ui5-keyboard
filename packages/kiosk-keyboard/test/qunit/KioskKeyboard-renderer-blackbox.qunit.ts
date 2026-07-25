@@ -634,6 +634,7 @@ QUnit.test("layout-switch labels stay legible at the narrowest supported width",
   await placeAndWait(kb);
 
   const dom = getKeyboardDom(kb);
+  const wideKeyWidth = getKeyElements(kb)[0].getBoundingClientRect().width;
   dom.style.width = "320px";
   await waitForRender();
 
@@ -642,12 +643,25 @@ QUnit.test("layout-switch labels stay legible at the narrowest supported width",
   );
   assert.strictEqual(switchKeys.length, 3, "ja-kana renders its three layout-switch keys");
 
+  // Non-vacuous: if the root stops sizing the rows the keys keep their full
+  // width and every comparison below passes without testing the narrow case.
+  const narrowKeyWidth = getKeyElements(kb)[0].getBoundingClientRect().width;
+  assert.ok(
+    narrowKeyWidth < wideKeyWidth,
+    `the 320px root narrows the keys (${wideKeyWidth.toFixed(1)}px → ${narrowKeyWidth.toFixed(1)}px)`,
+  );
+
   for (const keyEl of switchKeys) {
     const label = keyEl.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!;
+    const name = `"${keyEl.getAttribute("data-key")}" label "${label.textContent}"`;
+
+    // Theme-loaded canary: both widths are 0 on an unstyled inline span, so the
+    // ellipsis check below would false-pass.
+    assert.ok(label.clientWidth > 0, `${name} has a laid-out box`);
+
     assert.ok(
       label.scrollWidth <= label.clientWidth,
-      `"${keyEl.getAttribute("data-key")}" label "${label.textContent}" is not ellipsized ` +
-        `(needs ${label.scrollWidth}px, has ${label.clientWidth}px)`,
+      `${name} is not ellipsized (needs ${label.scrollWidth}px, has ${label.clientWidth}px)`,
     );
   }
 

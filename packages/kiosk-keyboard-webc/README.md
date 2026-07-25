@@ -719,7 +719,9 @@ kiosk-keyboard {
 
 ### Responsive behavior
 
-At narrow key widths (at or below `7rem` per key), dual keys automatically hide the text label using the sr-only pattern. The icon remains visible, and the label stays in the accessibility tree as the key's accessible name. This prevents text truncation ("H...", "P...") while keeping keys distinguishable by their icons.
+At narrow key widths (at or below `7rem` per key), dual keys automatically hide the text label using the sr-only pattern (`clip-path: inset(50%)`). The icon remains visible and is scaled up to `--kiosk-keyboard-key-font-size` so the key does not look empty, and the label stays in the accessibility tree as the key's accessible name. This prevents text truncation ("H...", "P...") while keeping keys distinguishable by their icons.
+
+Below this threshold `--kiosk-keyboard-dual-icon-size` and `--kiosk-keyboard-fkey-icon-size` no longer apply, since both scale an icon against a visible label and there is none.
 
 This behavior is driven by a CSS `@container` query on individual keys (`container-type: inline-size`). It applies only to dual keys (those with both icon and label).
 
