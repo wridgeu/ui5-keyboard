@@ -107,6 +107,44 @@ QUnit.test("Nav/fkey icon scales up yet its label stays within the key on wide k
   kb.destroy();
 });
 
+QUnit.test("Nav/fkey icon takes the icon-only bump like every other dual key", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwerty-nav", instanceLayouts: { "qwerty-nav": qwertyNav } });
+  await placeAndWait(kb);
+
+  // Narrow the keyboard until every dual key is under the 7rem threshold where the
+  // label goes sr-only and the icon is scaled up to fill the otherwise empty key.
+  const dom = getKeyboardDom(kb);
+  dom.style.width = "320px";
+  await nextUIUpdate();
+
+  const shift = getRequiredKeyElement(kb, "{shift}");
+  const shiftLabel = shift.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!;
+  assert.strictEqual(
+    window.getComputedStyle(shiftLabel).clipPath,
+    "inset(50%)",
+    "keys are narrow enough that dual labels are sr-only",
+  );
+
+  const shiftIconFs = Number.parseFloat(
+    window.getComputedStyle(shift.querySelector<HTMLElement>(`.${DOM.classes.keyIcon}`)!).fontSize,
+  );
+
+  const navKeys = Array.from(getKeyElements(kb)).filter((k) => k.hasAttribute("data-fkey"));
+  assert.strictEqual(navKeys.length, 8, "eight nav fkey keys rendered");
+
+  for (const navKey of navKeys) {
+    const icon = navKey.querySelector<HTMLElement>(`.${DOM.classes.keyIcon}`)!;
+    const name = navKey.getAttribute("data-key") ?? "";
+    const iconFs = Number.parseFloat(window.getComputedStyle(icon).fontSize);
+    assert.ok(
+      Math.abs(iconFs - shiftIconFs) <= 0.5,
+      `"${name}" icon matches the Shift icon (${iconFs.toFixed(1)} vs ${shiftIconFs.toFixed(1)}px)`,
+    );
+  }
+
+  kb.destroy();
+});
+
 QUnit.test("Navigation key tap fires keyPress and does not insert text", async (assert) => {
   const input = new Input({ value: "test" });
   const kb = new KioskKeyboard({ layout: "nav", controls: [input.getId()] });

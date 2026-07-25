@@ -542,8 +542,14 @@
     }
 
     /* Scale the icon up when the label is hidden so the key
-       is not visually empty (especially Shift, Enter, Backspace). */
-    .ui5KioskKey--dual .ui5KioskKey__icon {
+       is not visually empty (especially Shift, Enter, Backspace).
+       Nav/function keys are icon-only here too, so the second arm repeats
+       the rule for them at (0,4,0) to outrank the [data-fkey] icon-scaling
+       rule (0,3,0) on specificity rather than source order: cqi scaling is
+       for wide keys, and below this threshold there is no label to balance
+       the icon against. */
+    .ui5KioskKey--dual .ui5KioskKey__icon,
+    .ui5KioskKey.ui5KioskKey--dual[data-fkey] .ui5KioskKey__icon {
       font-size: var(--ui5KioskKeyboard-keyFontSize);
     }
   }
