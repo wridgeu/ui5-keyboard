@@ -125,10 +125,9 @@ QUnit.test("Nav/fkey icon takes the icon-only bump like every other dual key", a
     "keys are narrow enough that dual labels are sr-only",
   );
 
-  // Anchored against the key's own font size, not only against Shift: modifier
-  // keys carry a reduced font (modifierFontScale), so an icon still sitting at
-  // 1em of it has not been bumped. Comparing the two keys alone cannot tell the
-  // bump missing on nav keys from the bump missing altogether.
+  // Every icon is anchored against its own key's font size: modifier keys carry a
+  // reduced font (modifierFontScale), so an icon still sitting at 1em of it has
+  // not been bumped.
   const shiftIconFs = Number.parseFloat(
     window.getComputedStyle(shift.querySelector<HTMLElement>(`.${DOM.classes.keyIcon}`)!).fontSize,
   );
