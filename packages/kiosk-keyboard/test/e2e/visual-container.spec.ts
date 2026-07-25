@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { openPage, keyboardRoot } from "./helpers.js";
+import { test, type Page } from "@playwright/test";
+import { openPage, keyboardRoot, expectVisualMatch } from "./helpers.js";
 
 // Fixed-container visual regression (desktop + device matrix). Tests that need a
 // wider viewport than a small phone skip themselves at runtime.
@@ -26,6 +26,6 @@ for (const [kind, id, tag, minWidth] of cases) {
   test(tag, async ({ page }) => {
     test.skip(vw(page) < minWidth, `fixture needs >= ${minWidth}px`);
     const locator = kind === "root" ? keyboardRoot(page, id) : page.locator(`#${id}`);
-    await expect(locator).toHaveScreenshot(`${tag}.png`);
+    await expectVisualMatch(page, locator, `${tag}.png`);
   });
 }

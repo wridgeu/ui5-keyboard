@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { openPage, keyboardRoot } from "./helpers.js";
+import { test, type Page } from "@playwright/test";
+import { openPage, expectKeyboardVisualMatch } from "./helpers.js";
 
 // Per-theme visual regression (desktop + device matrix). The theme is set via a
 // URL parameter so OpenUI5 bootstraps with the right CSS from the start.
@@ -29,11 +29,11 @@ for (const theme of ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_
     });
 
     test(`kb-qwerty-${theme}`, async ({ page }) => {
-      await expect(keyboardRoot(page, "kb-qwerty")).toHaveScreenshot(`kb-qwerty-${theme}.png`);
+      await expectKeyboardVisualMatch(page, "kb-qwerty", `kb-qwerty-${theme}.png`);
     });
 
     test(`kb-numpad-${theme}`, async ({ page }) => {
-      await expect(keyboardRoot(page, "kb-numpad")).toHaveScreenshot(`kb-numpad-${theme}.png`);
+      await expectKeyboardVisualMatch(page, "kb-numpad", `kb-numpad-${theme}.png`);
     });
   });
 }

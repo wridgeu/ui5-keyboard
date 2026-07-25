@@ -1,5 +1,5 @@
-import { test, expect } from "@playwright/test";
-import { openPage, keyboardRoot } from "./helpers.js";
+import { test } from "@playwright/test";
+import { openPage, keyboardRoot, expectVisualMatch } from "./helpers.js";
 
 // Responsive height-constrained visual regression (desktop + device matrix).
 // Some targets are the container/wrapper (content overflows the keyboard root).
@@ -20,6 +20,6 @@ const cases: Array<["root" | "el", string, string]> = [
 for (const [kind, id, tag] of cases) {
   test(tag, async ({ page }) => {
     const locator = kind === "root" ? keyboardRoot(page, id) : page.locator(`#${id}`);
-    await expect(locator).toHaveScreenshot(`${tag}.png`);
+    await expectVisualMatch(page, locator, `${tag}.png`);
   });
 }
