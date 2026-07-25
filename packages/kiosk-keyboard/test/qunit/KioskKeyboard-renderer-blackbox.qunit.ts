@@ -640,7 +640,7 @@ QUnit.test("layout-switch labels stay legible at the narrowest supported width",
   const switchKeys = Array.from(getKeyElements(kb)).filter((k) =>
     (k.getAttribute("data-key") ?? "").startsWith("{layout:"),
   );
-  assert.ok(switchKeys.length >= 3, `ja-kana renders its layout-switch keys (${switchKeys.length})`);
+  assert.strictEqual(switchKeys.length, 3, "ja-kana renders its three layout-switch keys");
 
   for (const keyEl of switchKeys) {
     const label = keyEl.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!;

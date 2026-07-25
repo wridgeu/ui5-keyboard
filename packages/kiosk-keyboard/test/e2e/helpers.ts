@@ -61,9 +61,8 @@ export async function expectVisualMatch(
   name: string,
   options?: VisualMatchOptions,
 ): Promise<void> {
-  // The clip is a fixed box: toHaveScreenshot retries the capture but not this
-  // measurement, so anything that still moves the element afterwards (a late
-  // web font, an element not yet laid out) would be baked into a stale crop.
+  // toHaveScreenshot retries the capture but not this measurement, so settle
+  // what still moves the element (layout, late web fonts) before reading the box.
   await locator.waitFor({ state: "visible" });
   const clip = await locator.evaluate(async (el) => {
     await document.fonts.ready;
