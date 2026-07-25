@@ -1,4 +1,4 @@
-import { type Page, type Locator } from "@playwright/test";
+import { expect, type Page, type Locator, type PageAssertionsToHaveScreenshotOptions } from "@playwright/test";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/internal/dom-contract.js";
 
 /**
@@ -37,6 +37,72 @@ export function keyboardRoot(page: Page, containerId: string): Locator {
 /** A key inside a container by its data-key value. */
 export function key(page: Page, containerId: string, dataKey: string): Locator {
   return page.locator(`#${containerId}`).locator(`[data-key="${dataKey}"]`);
+}
+
+/** Pixel-tolerance options a visual spec may pass through; `fullPage`/`clip` are set here. */
+type VisualMatchOptions = Omit<PageAssertionsToHaveScreenshotOptions, "fullPage" | "clip">;
+
+/**
+ * Compare an in-flow element against its committed visual baseline.
+ *
+ * Crops a full-page capture to the element's document box rather than taking an
+ * element screenshot. The fixture page is deliberately wider than a phone
+ * viewport (fixtures pinned to 320/400/600px), so the document overflows
+ * horizontally, and an element screenshot then crops a region elsewhere on the
+ * page: under mobile emulation Chrome inflates the layout viewport to the
+ * content width (620x1101 against an emulated 320x568) while the capture stays
+ * visual-viewport sized, and in RTL the scroll origin sits at the right so the
+ * viewport-relative box maps to the wrong document offset. Both silently
+ * corrupted most phone baselines (#204). A full-page capture is in document
+ * coordinates, which is the same space the clip is measured in.
+ *
+ * `position: fixed` elements have no meaningful document box (a full-page
+ * capture pins them to the resized viewport), so they must keep using an
+ * element screenshot.
+ *
+ * The clip is measured once, so callers must have already awaited whatever
+ * state change they are capturing.
+ */
+export async function expectVisualMatch(
+  page: Page,
+  locator: Locator,
+  name: string,
+  options?: VisualMatchOptions,
+): Promise<void> {
+  const clip = await locator.evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    const root = document.documentElement;
+    const origin = root.getBoundingClientRect();
+    // A full-page capture starts at the leftmost edge of the scrollable overflow.
+    // In LTR that is the root's own left edge; in RTL the overflow grows leftwards,
+    // so the capture starts that much further left than the root box.
+    const overflowLeft =
+      getComputedStyle(root).direction === "rtl" ? Math.max(0, root.scrollWidth - root.clientWidth) : 0;
+    // Enclosing integer box, matching how an element screenshot rounds a
+    // fractional layout box outwards; a fractional clip rounds inwards and
+    // shifts the image by a pixel.
+    const left = rect.left - origin.left + overflowLeft;
+    const top = rect.top - origin.top;
+    const x = Math.floor(left);
+    const y = Math.floor(top);
+    return {
+      x,
+      y,
+      width: Math.ceil(left + rect.width) - x,
+      height: Math.ceil(top + rect.height) - y,
+    };
+  });
+  await expect(page).toHaveScreenshot(name, { ...options, fullPage: true, clip });
+}
+
+/** {@link expectVisualMatch} against the keyboard root inside a container. */
+export async function expectKeyboardVisualMatch(
+  page: Page,
+  containerId: string,
+  name: string,
+  options?: VisualMatchOptions,
+): Promise<void> {
+  await expectVisualMatch(page, keyboardRoot(page, containerId), name, options);
 }
 
 /** Set `dir`/`lang` on <html> and toggle the UI5 RTL body class (no native API for this). */

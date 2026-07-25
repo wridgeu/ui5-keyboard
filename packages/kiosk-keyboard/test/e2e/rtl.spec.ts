@@ -1,5 +1,5 @@
-import { test, expect } from "@playwright/test";
-import { openPage, keyboardRoot, setDocumentDirection } from "./helpers.js";
+import { test } from "@playwright/test";
+import { openPage, expectKeyboardVisualMatch, setDocumentDirection } from "./helpers.js";
 
 // Right-to-left visual regression (desktop + device matrix).
 
@@ -15,6 +15,6 @@ for (const { id, tag } of [
   { id: "kb-arabic", tag: "kb-arabic-rtl" },
 ]) {
   test(tag, async ({ page }) => {
-    await expect(keyboardRoot(page, id)).toHaveScreenshot(`${tag}.png`);
+    await expectKeyboardVisualMatch(page, id, `${tag}.png`);
   });
 }

@@ -1,5 +1,5 @@
-import { test, expect } from "@playwright/test";
-import { openPage, keyboardRoot } from "./helpers.js";
+import { test } from "@playwright/test";
+import { openPage, expectKeyboardVisualMatch } from "./helpers.js";
 
 // Forced-colors (high contrast) visual regression (desktop + device matrix).
 // Media is emulated before navigation so the control renders in the target mode.
@@ -9,5 +9,5 @@ import { openPage, keyboardRoot } from "./helpers.js";
 test("kb-qwerty-forced-colors", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
   await openPage(page);
-  await expect(keyboardRoot(page, "kb-qwerty")).toHaveScreenshot("kb-qwerty-forced-colors.png");
+  await expectKeyboardVisualMatch(page, "kb-qwerty", "kb-qwerty-forced-colors.png");
 });

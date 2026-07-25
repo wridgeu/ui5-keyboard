@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openPage, keyboardRoot, key, CLOSED_CLASS } from "./helpers.js";
+import { openPage, keyboardRoot, key, expectKeyboardVisualMatch, CLOSED_CLASS } from "./helpers.js";
 
 // Layout + interactive visual regression (desktop + device matrix). Hover is
 // gated at runtime; shift/docked are activated through the public API.
@@ -36,7 +36,7 @@ const LAYOUTS = [
 
 for (const id of LAYOUTS) {
   test(id, async ({ page }) => {
-    await expect(keyboardRoot(page, id)).toHaveScreenshot(`${id}.png`);
+    await expectKeyboardVisualMatch(page, id, `${id}.png`);
   });
 }
 
@@ -51,7 +51,7 @@ for (const id of ["kb-ja-kana", "kb-ko-hangul", "kb-qwerty-es"]) {
     test.skip(id === "kb-qwerty-es" && PHONES.includes(testInfo.project.name), "unstable under phone emulation");
     await key(page, id, "{shift}").click();
     await expect(key(page, id, "{shift}")).toHaveAttribute("aria-pressed", "true");
-    await expect(keyboardRoot(page, id)).toHaveScreenshot(`${id}-shifted.png`, SOFT);
+    await expectKeyboardVisualMatch(page, id, `${id}-shifted.png`, SOFT);
   });
 }
 
@@ -59,7 +59,7 @@ test.describe("Interactive States", () => {
   test("kb-key-hovered", async ({ page }) => {
     test.skip(!(await page.evaluate(() => matchMedia("(hover: hover)").matches)), "no hover on this device profile");
     await page.locator('#kb-qwerty [data-key="f"]').hover();
-    await expect(keyboardRoot(page, "kb-qwerty")).toHaveScreenshot("kb-key-hovered.png");
+    await expectKeyboardVisualMatch(page, "kb-qwerty", "kb-key-hovered.png");
   });
 
   test("kb-shift-active", async ({ page }) => {
@@ -67,7 +67,7 @@ test.describe("Interactive States", () => {
     await expect(key(page, "kb-shift", "{shift}")).toHaveAttribute("aria-pressed", "true");
     // Park the cursor away so it does not introduce a hover artifact.
     await page.mouse.move(0, 0);
-    await expect(keyboardRoot(page, "kb-shift")).toHaveScreenshot("kb-shift-active.png", SOFT);
+    await expectKeyboardVisualMatch(page, "kb-shift", "kb-shift-active.png", SOFT);
   });
 
   test("kb-docked", async ({ page }, testInfo) => {
@@ -86,6 +86,9 @@ test.describe("Interactive States", () => {
     await expect(keyboardRoot(page, "kb-docked")).not.toHaveClass(CLOSED);
     // Wait for the docked keys to finish rendering before snapshotting.
     await page.locator('#kb-docked [role="button"]').first().waitFor();
+    // Element screenshot, not expectKeyboardVisualMatch: the docked keyboard is
+    // position: fixed, so it has no document box to crop from a full-page capture.
+    // Safe here because this case is desktop/tablet-only, where the two agree.
     await expect(keyboardRoot(page, "kb-docked")).toHaveScreenshot("kb-docked.png", SOFT);
   });
 });

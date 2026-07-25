@@ -279,7 +279,9 @@ Navigation and function keys (`{fkey:*}`) override the dual-key defaults with a 
 | Label size | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)` | Scales responsively; floor 8px, ceiling 0.7em of parent                                                                                                  |
 | Gap        | `0.05em`                                    | Tight spacing since icon and label have distinct visual weight                                                                                           |
 
-The `15cqi` ideal value prevents the "icon looks lost" appearance on wide nav-only layouts where each key spans ~33% of the keyboard. These variables are scoped to `[data-fkey]` (a presence attribute set by the renderer when a key's value starts with `{fkey:`) to avoid affecting Shift/Enter/Backspace.
+The `15cqi` ideal value prevents the "icon looks lost" appearance as keys widen, taking over from the `1em` floor at roughly 6.7em of key width and reaching the `1.6em` ceiling at roughly 10.7em. Beyond that the ceiling governs, so on wide nav-only layouts where each key spans ~33% of the keyboard the icon sits at `1.6em`. These variables are scoped to `[data-fkey]` (a presence attribute set by the renderer when a key's value starts with `{fkey:`) to avoid affecting Shift/Enter/Backspace.
+
+Below the 7rem per-key threshold described under [Dual Icon + Label Keys](#dual-icon--label-keys) the label is hidden, and the icon is scaled to the key font size instead, matching Shift/Enter/Backspace: there is no label left to balance it against.
 
 ### F-Key Row Wrap
 
