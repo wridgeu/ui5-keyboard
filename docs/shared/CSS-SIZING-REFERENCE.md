@@ -265,19 +265,19 @@ At narrow key widths (below 7rem per-key inline size), the dual label is visuall
 
 ```css
 --kiosk-keyboard-fkey-direction: column;
---kiosk-keyboard-fkey-icon-size: clamp(1em, 15cqi, 3em);
+--kiosk-keyboard-fkey-icon-size: clamp(1em, 15cqi, 1.6em);
 --kiosk-keyboard-fkey-label-size: clamp(0.5rem, calc(100cqi * 0.35), 0.7em);
 --kiosk-keyboard-fkey-gap: 0.05em;
 ```
 
 Navigation and function keys (`{fkey:*}`) override the dual-key defaults with a column layout that stacks the icon above a smaller caption label.
 
-| Property   | Default                                     | Rationale                                                      |
-| ---------- | ------------------------------------------- | -------------------------------------------------------------- |
-| Direction  | `column`                                    | Icon above label; consumers can set to `row` for side-by-side  |
-| Icon size  | `clamp(1em, 15cqi, 3em)`                    | Scales with key width (cqi units), clamped between 1em and 3em |
-| Label size | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)` | Scales responsively; floor 8px, ceiling 0.7em of parent        |
-| Gap        | `0.05em`                                    | Tight spacing since icon and label have distinct visual weight |
+| Property   | Default                                     | Rationale                                                                                                                                                |
+| ---------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Direction  | `column`                                    | Icon above label; consumers can set to `row` for side-by-side                                                                                            |
+| Icon size  | `clamp(1em, 15cqi, 1.6em)`                  | Scales with key width (cqi units), clamped between 1em and 1.6em; the 1.6em ceiling keeps a stacked icon from overflowing its key and clipping the label |
+| Label size | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)` | Scales responsively; floor 8px, ceiling 0.7em of parent                                                                                                  |
+| Gap        | `0.05em`                                    | Tight spacing since icon and label have distinct visual weight                                                                                           |
 
 The `15cqi` ideal value prevents the "icon looks lost" appearance on wide nav-only layouts where each key spans ~33% of the keyboard. These variables are scoped to `[data-fkey]` (a presence attribute set by the renderer when a key's value starts with `{fkey:`) to avoid affecting Shift/Enter/Backspace.
 
@@ -390,7 +390,7 @@ All public CSS custom properties defined on `:host`, listed with their default v
 | `--kiosk-keyboard-dual-label-size`       | `1em`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
 | `--kiosk-keyboard-dual-gap`              | `0.3em`                                         | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
 | `--kiosk-keyboard-fkey-direction`        | `column`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
-| `--kiosk-keyboard-fkey-icon-size`        | `clamp(1em, 15cqi, 3em)`                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
+| `--kiosk-keyboard-fkey-icon-size`        | `clamp(1em, 15cqi, 1.6em)`                      | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
 | `--kiosk-keyboard-fkey-label-size`       | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`     | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
 | `--kiosk-keyboard-fkey-gap`              | `0.05em`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
 | `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |

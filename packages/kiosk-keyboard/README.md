@@ -1184,7 +1184,7 @@ Navigation and function keys (`{fkey:*}`) default to column layout with scaled i
 | Property                           | Default                                     | Description                                                |
 | ---------------------------------- | ------------------------------------------- | ---------------------------------------------------------- |
 | `--ui5KioskKeyboard-fkeyDirection` | `column`                                    | Flex direction for nav/function keys                       |
-| `--ui5KioskKeyboard-fkeyIconSize`  | `clamp(1em, 15cqi, 3em)`                    | Icon size, scales with key width via container query units |
+| `--ui5KioskKeyboard-fkeyIconSize`  | `clamp(1em, 15cqi, 1.6em)`                  | Icon size, scales with key width via container query units |
 | `--ui5KioskKeyboard-fkeyLabelSize` | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)` | Label size, scales responsively with key width             |
 | `--ui5KioskKeyboard-fkeyGap`       | `0.05em`                                    | Gap between icon and label                                 |
 
@@ -1423,7 +1423,7 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 | `--ui5KioskKeyboard-dualLabelSize`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)         |
 | `--ui5KioskKeyboard-dualGap`             | `0.3em`                                                   | Gap between icon and label in dual mode                      |
 | `--ui5KioskKeyboard-fkeyDirection`       | `column`                                                  | Flex direction for nav/function keys                         |
-| `--ui5KioskKeyboard-fkeyIconSize`        | `clamp(1em, 15cqi, 3em)`                                  | Icon size for nav/function keys (scales with key width)      |
+| `--ui5KioskKeyboard-fkeyIconSize`        | `clamp(1em, 15cqi, 1.6em)`                                | Icon size for nav/function keys (scales with key width)      |
 | `--ui5KioskKeyboard-fkeyLabelSize`       | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`               | Label size for nav/function keys (responsive)                |
 | `--ui5KioskKeyboard-fkeyGap`             | `0.05em`                                                  | Gap between icon and label for nav/function keys             |
 | `--ui5KioskKeyboard-cjkFontFamily`       | _(not declared)_                                          | Override font stack for CJK glyph labels                     |
