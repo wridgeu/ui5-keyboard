@@ -38,7 +38,7 @@ Thresholds are configurable via `--ui5KioskKeyboard-cqShortThreshold` and `--ui5
 
 ### Dual-Key Label Hiding
 
-Keys with both an icon and a label (Shift, Enter, Backspace, nav keys) use the `--dual` variant. At narrow key widths (`<=7rem` per-key container query), the label is visually hidden via the sr-only pattern while remaining in the accessibility tree.
+Keys with both an icon and a label (Shift, Enter, Backspace, nav keys) use the `--dual` variant. At narrow key widths (`<=7rem` per-key container query), the label is visually hidden via the sr-only pattern while remaining in the accessibility tree, and the icon is scaled up to `--ui5KioskKeyboard-keyFontSize` so the key does not read as empty. Nav/function keys are included: below this threshold their `--ui5KioskKeyboard-fkeyIconSize` scaling is superseded, since it exists to balance the icon against a visible label.
 
 ## Customizing Visual Appearance Per Size
 

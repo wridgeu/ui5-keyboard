@@ -86,9 +86,9 @@ test.describe("Interactive States", () => {
     await expect(keyboardRoot(page, "kb-docked")).not.toHaveClass(CLOSED);
     // Wait for the docked keys to finish rendering before snapshotting.
     await page.locator('#kb-docked [role="button"]').first().waitFor();
-    // Element screenshot, not expectKeyboardVisualMatch: the docked keyboard is
-    // position: fixed, so it has no document box to crop from a full-page capture.
-    // Safe here because this case is desktop/tablet-only, where the two agree.
+    // Element screenshot: the docked keyboard is position: fixed, so it has no
+    // document box for expectKeyboardVisualMatch to crop. Fine on the projects
+    // this case runs on, which exclude the phones the helper exists for.
     await expect(keyboardRoot(page, "kb-docked")).toHaveScreenshot("kb-docked.png", SOFT);
   });
 });

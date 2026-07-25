@@ -45,21 +45,13 @@ type VisualMatchOptions = Omit<PageAssertionsToHaveScreenshotOptions, "fullPage"
 /**
  * Compare an in-flow element against its committed visual baseline.
  *
- * Crops a full-page capture to the element's document box rather than taking an
- * element screenshot. The fixture page is deliberately wider than a phone
- * viewport (fixtures pinned to 320/400/600px), so the document overflows
- * horizontally, and an element screenshot then crops a region elsewhere on the
- * page: under mobile emulation Chrome inflates the layout viewport to the
- * content width (620x1101 against an emulated 320x568) while the capture stays
- * visual-viewport sized, and in RTL the scroll origin sits at the right so the
- * viewport-relative box maps to the wrong document offset. Both silently
- * corrupted most phone baselines (#204). A full-page capture is in document
- * coordinates, which is the same space the clip is measured in.
+ * Crops a full-page capture, which is in document coordinates, rather than
+ * taking an element screenshot. #204: the fixture page pins fixtures to
+ * 320/400/600px, so it overflows horizontally and an element screenshot's
+ * viewport-relative box no longer maps to what is captured (mobile emulation
+ * inflates the layout viewport; RTL moves the scroll origin to the right).
  *
- * `position: fixed` elements have no meaningful document box (a full-page
- * capture pins them to the resized viewport), so they must keep using an
- * element screenshot.
- *
+ * Only for in-flow elements: a `position: fixed` element has no document box.
  * The clip is measured once, so callers must have already awaited whatever
  * state change they are capturing.
  */
