@@ -134,11 +134,10 @@ QUnit.test("Nav/fkey icon takes the icon-only bump like every other dual key", a
 
   for (const navKey of navKeys) {
     const icon = navKey.querySelector<HTMLElement>(`.${DOM.classes.keyIcon}`)!;
-    const name = navKey.getAttribute("data-key") ?? "";
     const iconFs = Number.parseFloat(window.getComputedStyle(icon).fontSize);
     assert.ok(
       Math.abs(iconFs - shiftIconFs) <= 0.5,
-      `"${name}" icon matches the Shift icon (${iconFs.toFixed(1)} vs ${shiftIconFs.toFixed(1)}px)`,
+      `"${navKey.getAttribute("data-key")}" icon matches the Shift icon (${iconFs.toFixed(1)} vs ${shiftIconFs.toFixed(1)}px)`,
     );
   }
 
