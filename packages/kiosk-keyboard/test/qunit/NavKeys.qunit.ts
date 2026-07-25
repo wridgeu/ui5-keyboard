@@ -7,7 +7,10 @@ import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
+  getFirstKeyElement,
+  getKeyboardDom,
   getKeyElement,
+  getKeyElements,
   getRequiredKeyElement,
   getRowElements,
   hasKeyClass,
@@ -55,6 +58,51 @@ QUnit.test("Standalone nav layout renders expected keys", async (assert) => {
   assert.ok(getKeyElement(kb, "{fkey:End}"), "End rendered");
   assert.ok(getKeyElement(kb, "{fkey:PageUp}"), "PageUp rendered");
   assert.ok(getKeyElement(kb, "{fkey:PageDown}"), "PageDown rendered");
+
+  kb.destroy();
+});
+
+QUnit.test("Nav/fkey icon scales up yet its label stays within the key on wide keys", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "nav" });
+  await placeAndWait(kb);
+
+  // Widen the keyboard so nav keys are wide enough to drive the fkey icon to its
+  // clamp cap (and stay above the 7rem threshold where the label goes sr-only).
+  // A dual [data-fkey] key clips its stacked label against its overflow:hidden
+  // box once the icon grows too tall.
+  const dom = getKeyboardDom(kb);
+  dom.style.width = "1200px";
+  await nextUIUpdate();
+
+  // Theme-loaded canary: without the stylesheet the geometry below collapses to
+  // the browser default and the fit checks would false-pass.
+  assert.strictEqual(window.getComputedStyle(getFirstKeyElement(kb)).cursor, "pointer", "theme CSS is loaded");
+
+  const navKeys = Array.from(getKeyElements(kb)).filter((k) => k.hasAttribute("data-fkey"));
+  assert.strictEqual(navKeys.length, 8, "eight nav fkey keys rendered");
+
+  let maxKeyWidth = 0;
+  for (const navKey of navKeys) {
+    const icon = navKey.querySelector<HTMLElement>(`.${DOM.classes.keyIcon}`)!;
+    const label = navKey.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!;
+    const keyRect = navKey.getBoundingClientRect();
+    const iconRect = icon.getBoundingClientRect();
+    const labelRect = label.getBoundingClientRect();
+    const name = label.textContent ?? "";
+    maxKeyWidth = Math.max(maxKeyWidth, keyRect.width);
+
+    const keyFs = Number.parseFloat(window.getComputedStyle(navKey).fontSize);
+    const iconFs = Number.parseFloat(window.getComputedStyle(icon).fontSize);
+    assert.ok(
+      iconFs > keyFs + 1,
+      `"${name}" icon scales past the 1em reset (${iconFs.toFixed(1)} > ${keyFs.toFixed(1)}px)`,
+    );
+    assert.ok(keyRect.top - iconRect.top <= 0.5, `"${name}" icon does not overflow the key top`);
+    assert.ok(labelRect.bottom - keyRect.bottom <= 0.5, `"${name}" label is not clipped at the key bottom`);
+  }
+
+  // Non-vacuous: the clip only manifests once keys are wide enough to hit the cap.
+  assert.ok(maxKeyWidth > 250, `nav keys are wide (${Math.round(maxKeyWidth)}px), so the icon reaches its cap`);
 
   kb.destroy();
 });
