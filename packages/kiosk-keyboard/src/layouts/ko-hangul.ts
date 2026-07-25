@@ -71,7 +71,7 @@ const koHangul: LayoutDefinition = [
   // Row 5: bottom row
   [
     { value: "{layout:numeric}", label: "123", width: "1.5", type: "modifier" },
-    { value: "{layout:qwerty}", label: "ABC", type: "modifier" },
+    { value: "{layout:qwerty}", label: "ABC", width: "1.5", type: "modifier" },
     { value: " ", width: "space", type: "space" },
     { value: "/", shiftValue: "?" },
     { value: "{layout:fkeys}", label: "Fn", width: "1.5", type: "modifier" },

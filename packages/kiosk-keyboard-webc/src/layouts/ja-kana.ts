@@ -78,7 +78,7 @@ const jaKana: LayoutDefinition = [
   // Row 5: bottom row
   [
     { value: "{layout:numeric}", label: "123", width: "1.5", type: "modifier" },
-    { value: "{layout:ja-romaji}", label: "\u30ED\u30FC\u30DE\u5B57", type: "modifier" }, // ローマ字
+    { value: "{layout:ja-romaji}", label: "\u82F1\u6570", width: "1.75", type: "modifier" }, // 英数
     { value: " ", width: "space", type: "space" },
     { value: "\u30FC" }, // ー prolonged sound mark
     { value: "\u308D" }, // ろ (JIS \ key)

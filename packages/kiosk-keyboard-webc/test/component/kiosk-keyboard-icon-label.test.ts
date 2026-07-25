@@ -334,6 +334,25 @@ describe("icon + label rendering", () => {
     });
   }
 
+  it("multi-character labels shrink responsively whatever the key type", async () => {
+    const el = await createKeyboard([
+      [
+        { value: "{layout:numeric}", label: "123", type: "modifier" },
+        { value: "{enter}", label: "Enter", type: "action" },
+        { value: "x", label: "Custom" },
+        { value: "y", label: "あ" },
+      ],
+    ]);
+
+    for (const value of ["{layout:numeric}", "{enter}", "x"]) {
+      const label = queryKeyLabel(queryKey(el, value))!;
+      expect(label.classList.contains(DOM.classes.keyLabelMulti), `${value} word label shrinks`).to.be.true;
+    }
+
+    const glyph = queryKeyLabel(queryKey(el, "y"))!;
+    expect(glyph.classList.contains(DOM.classes.keyLabelMulti), "single-glyph label keeps its own sizing").to.be.false;
+  });
+
   it("icon: '' + capsLockIcon shows icon only during caps lock", async () => {
     const el = await createKeyboard([
       [{ value: "{shift}", type: "modifier", width: "2.25", icon: "", capsLockIcon: "\u{1F512}" }],

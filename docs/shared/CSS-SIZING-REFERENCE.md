@@ -140,7 +140,9 @@ At desktop sizes, `modifier-font-size` (0.875rem from `--sapFontSize`) is alread
 }
 ```
 
-This applies to labels with multiple characters (F10, Home, PgUp, Space). Each `.kiosk-key` element has `container-type: inline-size`, so `cqi` units inside the key refer to that key's own inline width.
+This applies to every label with multiple characters, whatever the key type — `123`, `ABC`, `Fn` and `英数` on layout-switch keys as much as `F10`, `Home` or `PgUp`. A word label that does not scale is ellipsized instead, and on the narrowest keys there is not even room for the ellipsis. Single-glyph labels are exempt: they take `--glyph` sizing and overflow visibly rather than being clipped.
+
+Each `.kiosk-key` element has `container-type: inline-size`, so `cqi` units inside the key refer to that key's own inline width. Because the ceiling is `1em`, the clamp is a no-op on wide keys and only takes effect once a key is too narrow for its label at full size.
 
 The three parts of the clamp:
 
@@ -281,7 +283,7 @@ Navigation and function keys (`{fkey:*}`) override the dual-key defaults with a 
 
 The `15cqi` ideal value prevents the "icon looks lost" appearance as keys widen, taking over from the `1em` floor at roughly 6.7em of key width and reaching the `1.6em` ceiling at roughly 10.7em. Beyond that the ceiling governs, so on wide nav-only layouts where each key spans ~33% of the keyboard the icon sits at `1.6em`. These variables are scoped to `[data-fkey]` (a presence attribute set by the renderer when a key's value starts with `{fkey:`) to avoid affecting Shift/Enter/Backspace.
 
-Below the 7rem per-key threshold described under [Dual Icon + Label Keys](#dual-icon--label-keys) the label is hidden, so the cqi scaling no longer has a label to balance against. This is one of the few places the two packages diverge: UI5 scales every icon-only dual key, nav keys included, to the key font size, so nav keys match Shift/Enter/Backspace; WebC has no such rule and leaves the icon at the `1em` clamp floor. Tracked in [#205](https://github.com/wridgeu/ui5-keyboard/issues/205).
+Below the 7rem per-key threshold described under [Dual Icon + Label Keys](#dual-icon--label-keys) the label is hidden, so the cqi scaling no longer has a label to balance against. Both packages then scale every icon-only dual key, nav keys included, to the key font size, so nav keys match Shift/Enter/Backspace.
 
 ### F-Key Row Wrap
 
