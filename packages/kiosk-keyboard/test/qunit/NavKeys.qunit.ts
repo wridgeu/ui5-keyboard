@@ -125,8 +125,17 @@ QUnit.test("Nav/fkey icon takes the icon-only bump like every other dual key", a
     "keys are narrow enough that dual labels are sr-only",
   );
 
+  // Anchored against the key's own font size, not only against Shift: modifier
+  // keys carry a reduced font (modifierFontScale), so an icon still sitting at
+  // 1em of it has not been bumped. Comparing the two keys alone cannot tell the
+  // bump missing on nav keys from the bump missing altogether.
   const shiftIconFs = Number.parseFloat(
     window.getComputedStyle(shift.querySelector<HTMLElement>(`.${DOM.classes.keyIcon}`)!).fontSize,
+  );
+  const shiftKeyFs = Number.parseFloat(window.getComputedStyle(shift).fontSize);
+  assert.ok(
+    shiftIconFs > shiftKeyFs + 0.5,
+    `Shift icon is bumped above its own key font (${shiftIconFs.toFixed(1)} vs ${shiftKeyFs.toFixed(1)}px)`,
   );
 
   const navKeys = Array.from(getKeyElements(kb)).filter((k) => k.hasAttribute("data-fkey"));
@@ -135,9 +144,15 @@ QUnit.test("Nav/fkey icon takes the icon-only bump like every other dual key", a
   for (const navKey of navKeys) {
     const icon = navKey.querySelector<HTMLElement>(`.${DOM.classes.keyIcon}`)!;
     const iconFs = Number.parseFloat(window.getComputedStyle(icon).fontSize);
+    const keyFs = Number.parseFloat(window.getComputedStyle(navKey).fontSize);
+    const name = navKey.getAttribute("data-key");
+    assert.ok(
+      iconFs > keyFs + 0.5,
+      `"${name}" icon is bumped above its own key font (${iconFs.toFixed(1)} vs ${keyFs.toFixed(1)}px)`,
+    );
     assert.ok(
       Math.abs(iconFs - shiftIconFs) <= 0.5,
-      `"${navKey.getAttribute("data-key")}" icon matches the Shift icon (${iconFs.toFixed(1)} vs ${shiftIconFs.toFixed(1)}px)`,
+      `"${name}" icon matches the Shift icon (${iconFs.toFixed(1)} vs ${shiftIconFs.toFixed(1)}px)`,
     );
   }
 

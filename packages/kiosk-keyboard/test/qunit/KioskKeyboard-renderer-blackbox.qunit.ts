@@ -3,6 +3,7 @@ import { KeyboardType } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import {
   freezeDoubleClickWindow,
+  getKeyboardDom,
   getKeyElement,
   getKeyElements,
   getRequiredKeyElement,
@@ -599,6 +600,58 @@ QUnit.test("title attribute is present only for multi-character labels", async (
 
     kb.destroy();
   }
+});
+
+// ──────────────────────────────────────────────
+// Responsive shrink for word labels
+// ──────────────────────────────────────────────
+
+QUnit.test("multi-character labels shrink responsively whatever the key type", async (assert) => {
+  const layout: LayoutDefinition = [
+    [
+      { value: "{layout:numeric}", label: "123", type: "modifier" },
+      { value: "{enter}", label: "Enter", type: "action" },
+      { value: "x", label: "Custom" },
+      { value: "y", label: "あ" },
+    ],
+  ];
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-multi": layout }, layout: "test-multi" });
+  await placeAndWait(kb);
+
+  for (const value of ["{layout:numeric}", "{enter}", "x"]) {
+    const label = getRequiredKeyElement(kb, value).querySelector(`.${DOM.classes.keyLabel}`)!;
+    assert.ok(label.classList.contains(DOM.classes.keyLabelMulti), `${value} word label shrinks with key width`);
+  }
+
+  const glyph = getRequiredKeyElement(kb, "y").querySelector(`.${DOM.classes.keyLabel}`)!;
+  assert.notOk(glyph.classList.contains(DOM.classes.keyLabelMulti), "single-glyph label keeps its own sizing");
+
+  kb.destroy();
+});
+
+QUnit.test("layout-switch labels stay legible at the narrowest supported width", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+
+  const dom = getKeyboardDom(kb);
+  dom.style.width = "320px";
+  await waitForRender();
+
+  const switchKeys = Array.from(getKeyElements(kb)).filter((k) =>
+    (k.getAttribute("data-key") ?? "").startsWith("{layout:"),
+  );
+  assert.ok(switchKeys.length >= 3, `ja-kana renders its layout-switch keys (${switchKeys.length})`);
+
+  for (const keyEl of switchKeys) {
+    const label = keyEl.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!;
+    assert.ok(
+      label.scrollWidth <= label.clientWidth,
+      `"${keyEl.getAttribute("data-key")}" label "${label.textContent}" is not ellipsized ` +
+        `(needs ${label.scrollWidth}px, has ${label.clientWidth}px)`,
+    );
+  }
+
+  kb.destroy();
 });
 
 QUnit.test("special key with i18n label gets title (e.g. Enter)", async (assert) => {

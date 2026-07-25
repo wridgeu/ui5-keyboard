@@ -786,6 +786,16 @@
     clip-path: inset(50%);
     white-space: nowrap;
   }
+
+  /* Scale the icon up when the label is hidden so the key is not visually
+     empty (Shift, Enter, Backspace, and the nav keys). The nav arm is written
+     at (0,4,0) to outrank the [data-fkey] icon rule below on specificity
+     rather than source order; its cqi scaling balances an icon against a
+     visible label, and below this threshold there is none. */
+  .kiosk-key--dual .kiosk-key__icon,
+  .kiosk-key[data-fkey].kiosk-key--dual .kiosk-key__icon {
+    font-size: var(--kiosk-keyboard-key-font-size);
+  }
 }
 
 /* Navigation / function keys: column layout with scaled icon.

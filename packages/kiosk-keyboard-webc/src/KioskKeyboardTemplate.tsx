@@ -126,8 +126,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                       class={{
                         [KIOSK_KEYBOARD_DOM.classes.keyLabel]: true,
                         [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph]: isSingleGlyphLabel,
-                        [KIOSK_KEYBOARD_DOM.classes.keyLabelMulti]:
-                          !isSingleGlyphLabel && key.type !== "modifier" && key.type !== "action",
+                        [KIOSK_KEYBOARD_DOM.classes.keyLabelMulti]: !isSingleGlyphLabel,
                       }}
                       data-glyph-script={glyphScript}
                       part="key-label"

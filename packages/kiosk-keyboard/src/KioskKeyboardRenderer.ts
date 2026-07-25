@@ -317,7 +317,7 @@ const KioskKeyboardRenderer = {
   },
 
   /** Render the label element inside a key. */
-  renderKeyLabel(rm: RenderManager, _oControl: KioskKeyboard, key: KeyDefinition, label: string): void {
+  renderKeyLabel(rm: RenderManager, _oControl: KioskKeyboard, _key: KeyDefinition, label: string): void {
     rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
     if (isSingleGlyph(label)) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
@@ -338,7 +338,7 @@ const KioskKeyboardRenderer = {
       if (glyphScript) {
         rm.attr(KIOSK_KEYBOARD_DOM.attributes.glyphScript, glyphScript);
       }
-    } else if (key.type !== "modifier" && key.type !== "action") {
+    } else {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelMulti);
     }
     rm.openEnd();
