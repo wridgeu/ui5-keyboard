@@ -187,7 +187,9 @@
       --ui5KioskKeyboard-keyFontSize: 1.375rem;
 
       .ui5KioskKey {
-        min-width: var(--_ui5KioskKeyboard-numpadKeyMinWidth);
+        /* Logical to cleanly override the base key's min-inline-size on the same
+           axis; a physical min-width here would compete with it ambiguously. */
+        min-inline-size: var(--_ui5KioskKeyboard-numpadKeyMinWidth);
       }
 
       .ui5KioskKey--modifier,
@@ -310,9 +312,35 @@
     cursor: pointer;
     box-sizing: border-box;
     box-shadow: var(--_ui5KioskKeyboard-keyShadow);
-    min-width: 0;
+    position: relative;
+    /* WCAG 2.5.8 (AA): keys hold a 24px minimum target size on the inline axis
+       instead of shrinking to zero; narrow widths recover room by tightening the
+       inter-key gap (see the width-responsive @container rules) rather than the keys. */
+    min-inline-size: 1.5rem;
     white-space: nowrap;
     container-type: inline-size;
+
+    /* Long-press affordance: a folded-corner triangle marking keys that carry an
+       accent-variant popup. Neutral grey at a WCAG SC 1.4.11-compliant opacity;
+       suppressed on sub-target-size keys where it would only add noise. */
+    &[data-has-variants]::after {
+      content: "";
+      position: absolute;
+      inset-block-start: var(--ui5KioskKeyboard-variantHintInset, 0.1875rem);
+      inset-inline-end: var(--ui5KioskKeyboard-variantHintInset, 0.1875rem);
+      inline-size: var(--ui5KioskKeyboard-variantHintSize, 0.3125rem);
+      block-size: var(--ui5KioskKeyboard-variantHintSize, 0.3125rem);
+      background: var(--ui5KioskKeyboard-variantHintColor, var(--sapContent_LabelColor));
+      opacity: var(--ui5KioskKeyboard-variantHintOpacity, 0.71);
+      clip-path: polygon(0 0, 100% 0, 100% 100%);
+      pointer-events: none;
+    }
+
+    @container (max-inline-size: 1.5rem) {
+      &[data-has-variants]::after {
+        display: none;
+      }
+    }
 
     &:active,
     &--pressed,
@@ -554,6 +582,23 @@
 
   /* Width-responsive @container */
 
+  /* Pair for the 24px key floor: tighten the inter-key gap on narrow keyboards so
+     a full row of floored keys fits rather than overflowing. Mirrors the height-
+     driven cqShort/cqTiny gap drops, but keyed off the keyboard's own width. The
+     gap is set on the row (a container descendant); the container element itself
+     cannot be targeted from its own @container query. */
+  @container keyboard (max-width: 22rem) {
+    .ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskRow {
+      gap: 0.25rem;
+    }
+  }
+
+  @container keyboard (max-width: 20rem) {
+    .ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskRow {
+      gap: 0.125rem;
+    }
+  }
+
   @container keyboard (max-width: 30rem) {
     .ui5KioskKey {
       --ui5KioskKeyboard-keyFontSize: ~"min(var(--_ui5KioskKeyboard-keyFontBase), 1rem)";
@@ -687,6 +732,12 @@
     direction: rtl;
   }
 
+  /* clip-path coordinates are physical, so mirror the corner triangle for RTL
+     (the logical inset-inline-end already moves it to the leading edge). */
+  .sapUiRtl .ui5KioskKey[data-has-variants]::after {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+
   /* Hover affordances apply only where a hovering primary pointer exists.
      Gating the declarations keeps a tap on a touch device from leaving the
      key painted in its hover colors. */
@@ -759,6 +810,19 @@
 
       &:focus-visible {
         outline-color: Highlight;
+      }
+
+      /* System colors ignore the neutral token; keep the hint a visible system
+         color, inverting to HighlightText where the key paints on Highlight. */
+      &[data-has-variants]::after {
+        background: ButtonText;
+        opacity: 1;
+      }
+
+      &:active[data-has-variants]::after,
+      &.ui5KioskKey--pressed[data-has-variants]::after,
+      &.ui5KioskKey--highlight[data-has-variants]::after {
+        background: HighlightText;
       }
     }
 

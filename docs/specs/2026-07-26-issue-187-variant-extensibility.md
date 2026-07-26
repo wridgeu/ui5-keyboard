@@ -12,10 +12,20 @@ Four phases, one PR. Decisions taken with the maintainer up front:
   Phase 1 is **not** output-identical for existing `accentVariants` users on those four
   layouts — their (semantically wrong) variant popups disappear. Output stays identical
   for every Latin layout.
-- **Overflow beyond the gap reduction (open-Q7):** the 24px floor + width-driven gap
-  reduction covers every built-in layout. A custom layout with enough keys/row to still
-  overflow at 24px overflows naturally (flexbox), documented as a supported-width floor.
-  No runtime warning, no inline-scroll machinery.
+- **Overflow beyond the gap reduction (open-Q7):** empirically corrected. The issue
+  claimed the 24px floor + gap reduction "covers every built-in layout" — it does not.
+  The 10-key Latin rows fit down to 320px, but the **12-key `ja-kana` / `ko-hangul`**
+  rows do not: 12 x 24px + gaps + the container's own padding exceeds 320px, and because
+  the row is `justify-content: center`, the overflow clips **both** edges, leaving the
+  leftmost `{shift}` key unreachable. This cannot be closed in pure CSS: the recoverable
+  space is the container padding, which lives on the container element itself and so
+  cannot be reduced from that element's own `@container` query. Resolution shipped:
+  document a **minimum supported width (~360px)** for the dense non-Latin layouts and let
+  the row overflow (no scroll machinery, per the agreed scope); the two phone-sm shifted
+  interaction tests are skipped there (the wider phones fit and still cover them).
+  **Open for the maintainer:** if reachability at 320px matters more than the target-size
+  floor for `ja-kana`/`ko-hangul`, the alternative is horizontal-scroll overflow — a
+  larger change deferred pending that call.
 
 The issue body's line numbers predate `main` advancing; anchor every edit to the symbol,
 not the issue's number. Corrected anchors live in the understanding pass, not repeated here.

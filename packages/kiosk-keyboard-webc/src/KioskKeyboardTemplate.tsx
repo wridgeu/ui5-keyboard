@@ -83,6 +83,8 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                       ? "arabic"
                       : undefined;
 
+              const hasVariants = !!(key.variants && key.variants.length > 0);
+
               return (
                 <div
                   key={id}
@@ -103,7 +105,9 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   data-fkey={isFkey ? "" : undefined}
                   data-key-span={key.width || undefined}
                   data-shift-value={key.shiftValue || undefined}
-                  data-has-variants={key.variants && key.variants.length > 0 ? "" : undefined}
+                  data-has-variants={hasVariants ? "" : undefined}
+                  aria-haspopup={hasVariants ? "dialog" : undefined}
+                  aria-expanded={hasVariants ? (this._variantPopup?.anchorKeyId === id ? "true" : "false") : undefined}
                   aria-pressed={isShift ? this._shifted : undefined}
                   aria-disabled={this.disabled ? "true" : undefined}
                   title={hasLabel && !isSingleGlyphLabel ? label : undefined}

@@ -258,9 +258,14 @@ const KioskKeyboardRenderer = {
     }
 
     // Marker for the long-press / right-click accent-variant gate: a cheap
-    // hasAttribute() presence check lets the pointer handlers skip keys with no variants.
+    // hasAttribute() presence check lets the pointer handlers skip keys with no
+    // variants. The same keys advertise the popup to assistive tech through
+    // aria-haspopup; aria-expanded starts collapsed and is toggled true while the
+    // key's popup is open (see VariantPopupBehavior).
     if (key.variants && key.variants.length > 0) {
       rm.attr(KIOSK_KEYBOARD_DOM.attributes.hasVariants, "");
+      rm.attr("aria-haspopup", "dialog");
+      rm.attr("aria-expanded", "false");
     }
 
     // Native tooltip for labels that may be truncated by text-overflow: ellipsis.
