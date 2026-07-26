@@ -200,3 +200,12 @@ const library = Lib.init({
 });
 
 export default library;
+
+/**
+ * The built-in Latin-diacritic accent-variant table and its type, re-exported so
+ * consumers can spread it to extend the defaults when supplying `instanceVariants`.
+ *
+ * @public
+ * @since 0.1.0
+ */
+export { LATIN_DIACRITIC_VARIANTS, type VariantTable } from "./internal/latin-variants";

@@ -149,4 +149,54 @@ describe("kiosk-keyboard - instance overrides", () => {
     expect(secondFactoryCalls).to.equal(1);
     expect(firstFactoryCalls).to.equal(1);
   });
+
+  it("invalid instanceVariants entries warn and are skipped, falling through to the built-in table", async () => {
+    const originalWarn = console.warn;
+    let warned = false;
+    console.warn = (): void => {
+      warned = true;
+    };
+    try {
+      const el = await fixture<KioskKeyboard>(html`
+        <kiosk-keyboard layout="qwerty" accent-variants></kiosk-keyboard>
+      `);
+      el.instanceVariants = { qwerty: { a: [""] } }; // empty glyph -> invalid table
+      await nextRender();
+      const aKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!;
+      expect(warned, "an invalid entry is logged").to.equal(true);
+      expect(
+        aKey.hasAttribute(DOM.attributes.hasVariants),
+        "the invalid entry is dropped, so 'a' falls through to the built-in Latin table",
+      ).to.equal(true);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it("mixed-case instanceVariants layout names resolve through lowercase lookup", async () => {
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" accent-variants></kiosk-keyboard> `);
+    el.instanceVariants = { QWERTY: { b: ["ḃ"] } };
+    await nextRender();
+    const aKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!;
+    const bKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("b"))!;
+    expect(bKey.hasAttribute(DOM.attributes.hasVariants), "mixed-case 'QWERTY' shadows built-in 'qwerty'").to.equal(
+      true,
+    );
+    expect(aKey.hasAttribute(DOM.attributes.hasVariants), "the replacing table drops built-in 'a'").to.equal(false);
+  });
+
+  it("reassigning instanceVariants re-resolves on next render", async () => {
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" accent-variants></kiosk-keyboard> `);
+    await nextRender();
+    const aKey = (): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!;
+    expect(aKey().hasAttribute(DOM.attributes.hasVariants), "built-in 'a' armed before override").to.equal(true);
+
+    el.instanceVariants = { qwerty: null };
+    await nextRender();
+    expect(aKey().hasAttribute(DOM.attributes.hasVariants), "opted out after reassign").to.equal(false);
+
+    el.instanceVariants = null;
+    await nextRender();
+    expect(aKey().hasAttribute(DOM.attributes.hasVariants), "built-in restored after clearing").to.equal(true);
+  });
 });

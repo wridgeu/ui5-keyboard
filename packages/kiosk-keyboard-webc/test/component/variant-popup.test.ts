@@ -1,10 +1,11 @@
-import { expect, waitUntil } from "@open-wc/testing";
+import { expect, fixture, html, waitUntil } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import type Popover from "@ui5/webcomponents/dist/Popover.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type { LayoutDefinition } from "../../src/types.js";
 import { requireKey, setupWithLayout } from "../helpers/fixtures.js";
 import { getText, setI18nResolver } from "../../src/core/i18n.js";
+import { LATIN_DIACRITIC_VARIANTS } from "../../src/core/latin-variants.js";
 
 const DOM = KioskKeyboard.DOM;
 
@@ -556,6 +557,55 @@ describe("kiosk-keyboard - accent-variant popup", () => {
   it("does not mark base keys when accent-variants is off", async () => {
     const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
     expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(false);
+  });
+
+  it("instanceVariants replaces the built-in table and drives the popup", async () => {
+    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
+    kb.accentVariants = true;
+    kb.instanceVariants = { spike: { b: ["ḃ", "ƀ"] } };
+    await renderFinished();
+
+    expect(requireKey(kb, "b").hasAttribute(DOM.attributes.hasVariants), "'b' gains the instance variants").to.equal(
+      true,
+    );
+    expect(
+      requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+      "'a' dropped: an instance table replaces, not merges",
+    ).to.equal(false);
+
+    await holdOpen(requireKey(kb, "b"));
+    expect(optionGlyphs(kb)).to.deep.equal(["ḃ", "ƀ"]);
+    pointerUp();
+  });
+
+  it("a spread-extended instanceVariants table keeps the built-in entries", async () => {
+    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
+    kb.accentVariants = true;
+    kb.instanceVariants = { spike: { ...LATIN_DIACRITIC_VARIANTS, b: ["ḃ"] } };
+    await renderFinished();
+    expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants), "built-in 'a' retained").to.equal(true);
+    expect(requireKey(kb, "b").hasAttribute(DOM.attributes.hasVariants), "added 'b' present").to.equal(true);
+  });
+
+  it("a null instanceVariants entry opts the layout out of the built-in table", async () => {
+    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
+    kb.accentVariants = true;
+    kb.instanceVariants = { spike: null };
+    await renderFinished();
+    expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(false);
+  });
+
+  it("the built-in non-Latin layouts carry no accent variants", async () => {
+    const kb = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="ja-romaji" accent-variants></kiosk-keyboard>`);
+    await renderFinished();
+    expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(false);
+  });
+
+  it("the '*' wildcard re-enables variants on an excluded non-Latin layout", async () => {
+    const kb = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="ja-romaji" accent-variants></kiosk-keyboard>`);
+    kb.instanceVariants = { "*": { a: ["ä"] } };
+    await renderFinished();
+    expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(true);
   });
 
   it("scales the option glyph font-size from the key-font-size token", async () => {

@@ -27,7 +27,13 @@ import {
   isBuiltInLayout,
 } from "./core/layout-registry.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
-import { applyVariantDefaults, shiftedGlyph, toShiftVariants } from "./core/latin-variants.js";
+import {
+  applyVariantDefaults,
+  resolveVariantTable,
+  shiftedGlyph,
+  toShiftVariants,
+  type VariantTable,
+} from "./core/latin-variants.js";
 import { VariantPopupController, type VariantPopupState } from "./core/variant-popup-controller.js";
 import { MemoMapView } from "./core/memo-map-view.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
@@ -500,6 +506,22 @@ class KioskKeyboard extends UI5Element {
    */
   @property({ type: Object, noAttribute: true })
   instanceMiddleware: Record<string, () => CompositionMiddleware> | null = null;
+
+  /**
+   * Per-instance accent-variant table overrides, keyed by layout name (or
+   * `"*"` for every layout). Resolution order is
+   * **instance entry -> instance `"*"` wildcard -> built-in table**. A `null`
+   * entry opts a layout out of the built-in Latin table. Effective only while
+   * `accentVariants` is set.
+   *
+   * Programmatic only: accepts a JS object (not a stringifiable attribute).
+   *
+   * @default null
+   * @public
+   * @since 0.1.0
+   */
+  @property({ type: Object, noAttribute: true })
+  instanceVariants: Record<string, VariantTable | null> | null = null;
 
   // ── Internal reactive state (triggers re-render, no attribute) ──
 
@@ -1157,10 +1179,14 @@ class KioskKeyboard extends UI5Element {
             icon: LAYOUT_RETURN_ICON,
             ariaLabel: getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
           });
-    // When enabled, fill the built-in Latin-diacritics table onto matching base
-    // keys so any layout gains the long-press variants; author-declared
-    // `variants` are preserved (applyVariantDefaults never overrides them).
-    return this.accentVariants ? applyVariantDefaults(base) : base;
+    // When enabled, fill the resolved accent-variant table onto matching base
+    // keys so any layout gains the long-press variants. The table is resolved
+    // per instance (instanceVariants -> `"*"` wildcard -> built-in); a `null`
+    // table leaves the layout without variants. Author-declared `variants` are
+    // preserved (applyVariantDefaults never overrides them).
+    if (!this.accentVariants) return base;
+    const table = resolveVariantTable(layoutName, this._variantsView.get(this.instanceVariants));
+    return table ? applyVariantDefaults(base, table) : base;
   }
 
   // ── Memoized Map views of the instance-* properties ──
@@ -1189,6 +1215,16 @@ class KioskKeyboard extends UI5Element {
     typeof factory === "function" ? (factory as () => CompositionMiddleware) : undefined,
   );
 
+  private readonly _variantsView = new MemoMapView<VariantTable | null>((name, table) => {
+    // `null` is a meaningful entry: it opts the layout out of the built-in table.
+    if (table === null) return null;
+    if (KioskKeyboard._isValidVariantTable(table)) return table;
+    console.warn(
+      `[kiosk-keyboard] Invalid instanceVariants entry "${name}": must be null or an object mapping base letters to non-empty arrays of non-empty strings.`,
+    );
+    return undefined;
+  });
+
   private static _isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
     return (
       Array.isArray(def) &&
@@ -1198,6 +1234,16 @@ class KioskKeyboard extends UI5Element {
           Array.isArray(row) &&
           row.length > 0 &&
           row.every((key) => key && typeof (key as KeyDefinition).value === "string" && (key as KeyDefinition).value),
+      )
+    );
+  }
+
+  private static _isValidVariantTable(table: unknown): table is VariantTable {
+    return (
+      typeof table === "object" &&
+      table !== null &&
+      Object.values(table).every(
+        (list) => Array.isArray(list) && list.length > 0 && list.every((glyph) => typeof glyph === "string" && glyph),
       )
     );
   }

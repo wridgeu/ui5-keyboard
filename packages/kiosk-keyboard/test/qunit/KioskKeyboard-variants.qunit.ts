@@ -1,5 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import { MobileKeyboard } from "ui5/kiosk/library";
+import { MobileKeyboard, LATIN_DIACRITIC_VARIANTS } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import Popover from "sap/m/Popover";
 import { placeAndWait, getRequiredKeyElement, simulateTap, tapKey, waitForRender } from "./test-helpers";
@@ -140,6 +140,104 @@ QUnit.test("no data-has-variants when accentVariants is off", async (assert) => 
   const kb = new KioskKeyboard({ controls: [input.getId()] });
   await placeAndWait(kb);
   assert.strictEqual(getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants), false, "off by default");
+  cleanup(kb, input);
+});
+
+QUnit.test("instanceVariants replaces the built-in table and drives the popup", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    accentVariants: true,
+    layout: "qwerty",
+    instanceVariants: { qwerty: { b: ["ḃ", "ƀ"] } },
+  });
+  await placeAndWait(kb);
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(0, 0);
+
+  const bKey = getRequiredKeyElement(kb, "b");
+  assert.strictEqual(bKey.hasAttribute(DOM.attributes.hasVariants), true, "'b' gains the instance table's variants");
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    false,
+    "'a' loses its built-in variants: an instance table replaces rather than merges",
+  );
+  await holdOpen(kb, bKey);
+  assert.deepEqual(getOptions().map(glyphOf), ["ḃ", "ƀ"], "the popup offers the instance table's 'b' glyphs");
+  release(kb, bKey);
+  cleanup(kb, input);
+});
+
+QUnit.test("a spread-extended instanceVariants table keeps the built-in entries", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    accentVariants: true,
+    layout: "qwerty",
+    instanceVariants: { qwerty: { ...LATIN_DIACRITIC_VARIANTS, b: ["ḃ"] } },
+  });
+  await placeAndWait(kb);
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    true,
+    "built-in 'a' retained via the spread",
+  );
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "b").hasAttribute(DOM.attributes.hasVariants),
+    true,
+    "added 'b' present",
+  );
+  cleanup(kb, input);
+});
+
+QUnit.test("a null instanceVariants entry opts the layout out of the built-in table", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    accentVariants: true,
+    layout: "qwerty",
+    instanceVariants: { qwerty: null },
+  });
+  await placeAndWait(kb);
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    false,
+    "opted-out layout arms no keys",
+  );
+  cleanup(kb, input);
+});
+
+QUnit.test("the built-in non-Latin layouts carry no accent variants", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ controls: [input.getId()], accentVariants: true, layout: "ja-romaji" });
+  await placeAndWait(kb);
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    false,
+    "romaji 'a' is excluded from the built-in Latin table",
+  );
+  cleanup(kb, input);
+});
+
+QUnit.test("the '*' wildcard re-enables variants on an excluded non-Latin layout", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    accentVariants: true,
+    layout: "ja-romaji",
+    instanceVariants: { "*": { a: ["ä"] } },
+  });
+  await placeAndWait(kb);
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    true,
+    "the wildcard table arms romaji 'a'",
+  );
   cleanup(kb, input);
 });
 

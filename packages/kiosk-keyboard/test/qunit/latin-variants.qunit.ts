@@ -1,10 +1,13 @@
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import {
   LATIN_DIACRITIC_VARIANTS,
+  WILDCARD_LAYOUT,
   applyVariantDefaults,
+  resolveVariantTable,
   shiftedGlyph,
   toShiftVariant,
   toShiftVariants,
+  type VariantTable,
 } from "ui5/kiosk/internal/latin-variants";
 
 // Unit coverage for the framework-agnostic long-press variant helpers: the
@@ -75,6 +78,71 @@ QUnit.test("leaves keys named after Object.prototype members untouched", (assert
   assert.strictEqual(out[0][0].variants, undefined, "'constructor' does not resolve Object.prototype.constructor");
   assert.strictEqual(out[0][1].variants, undefined, "'toString' untouched");
   assert.strictEqual(out[0][2].variants, undefined, "'valueOf' untouched");
+});
+
+QUnit.test("skips table application on action, modifier, and space keys", (assert) => {
+  const out = applyVariantDefaults([
+    [{ value: "a" }, { value: "a", type: "modifier" }, { value: "a", type: "space" }, { value: "a", type: "action" }],
+  ]);
+  assert.deepEqual(out[0][0].variants, [...LATIN_DIACRITIC_VARIANTS.a], "a plain character key is filled");
+  assert.strictEqual(out[0][1].variants, undefined, "modifier keyed to a table base is not filled");
+  assert.strictEqual(out[0][2].variants, undefined, "space keyed to a table base is not filled");
+  assert.strictEqual(out[0][3].variants, undefined, "action keyed to a table base is not filled");
+});
+
+QUnit.test("keeps authored variants on action/modifier/space keys (filter gates only the table fill)", (assert) => {
+  const out = applyVariantDefaults([
+    [
+      { value: "{backspace}", type: "action", variants: ["x", "y"] },
+      { value: "{shift}", type: "modifier", variants: ["z"] },
+    ],
+  ]);
+  assert.deepEqual(out[0][0].variants, ["x", "y"], "authored action-key variants preserved");
+  assert.deepEqual(out[0][1].variants, ["z"], "authored modifier-key variants preserved");
+});
+
+QUnit.module("latin-variants - resolveVariantTable");
+
+QUnit.test("falls back to the built-in Latin table for a layout with no instance entry", (assert) => {
+  assert.strictEqual(resolveVariantTable("qwerty"), LATIN_DIACRITIC_VARIANTS, "built-in Latin table");
+});
+
+QUnit.test("returns null for the built-in non-Latin layouts", (assert) => {
+  for (const name of ["ja-romaji", "ja-kana", "arabic", "ko-hangul"]) {
+    assert.strictEqual(resolveVariantTable(name), null, `${name} has no built-in variants`);
+  }
+});
+
+QUnit.test("normalizes the layout name (case and surrounding space)", (assert) => {
+  assert.strictEqual(resolveVariantTable("  JA-Kana "), null, "trimmed + lowercased to the excluded name");
+  assert.strictEqual(resolveVariantTable("QWERTY"), LATIN_DIACRITIC_VARIANTS, "uppercase resolves the Latin table");
+});
+
+QUnit.test("an instance entry wins over the built-in table", (assert) => {
+  const custom: VariantTable = { b: ["ḃ"] };
+  const map = new Map<string, VariantTable | null>([["qwerty", custom]]);
+  assert.strictEqual(resolveVariantTable("qwerty", map), custom, "instance entry beats the built-in");
+});
+
+QUnit.test("an explicit null instance entry opts the layout out", (assert) => {
+  const map = new Map<string, VariantTable | null>([["qwerty", null]]);
+  assert.strictEqual(resolveVariantTable("qwerty", map), null, "null entry suppresses the built-in table");
+});
+
+QUnit.test("the '*' wildcard applies to layouts without their own entry, even non-Latin ones", (assert) => {
+  const custom: VariantTable = { b: ["ḃ"] };
+  const map = new Map<string, VariantTable | null>([[WILDCARD_LAYOUT, custom]]);
+  assert.strictEqual(resolveVariantTable("qwerty", map), custom, "wildcard covers a Latin layout");
+  assert.strictEqual(resolveVariantTable("arabic", map), custom, "wildcard re-enables a non-Latin layout");
+});
+
+QUnit.test("an explicit entry beats the wildcard", (assert) => {
+  const custom: VariantTable = { b: ["ḃ"] };
+  const map = new Map<string, VariantTable | null>([
+    [WILDCARD_LAYOUT, custom],
+    ["qwerty", null],
+  ]);
+  assert.strictEqual(resolveVariantTable("qwerty", map), null, "the layout's own null entry wins over the wildcard");
 });
 
 QUnit.module("latin-variants - shift mapping");

@@ -2,10 +2,13 @@ import { describe, it, expect } from "vitest";
 import type { LayoutDefinition } from "../../src/types.js";
 import {
   LATIN_DIACRITIC_VARIANTS,
+  WILDCARD_LAYOUT,
   applyVariantDefaults,
+  resolveVariantTable,
   shiftedGlyph,
   toShiftVariant,
   toShiftVariants,
+  type VariantTable,
 } from "../../src/core/latin-variants.js";
 
 // Unit coverage for the framework-agnostic long-press variant helpers: the
@@ -75,6 +78,70 @@ describe("applyVariantDefaults", () => {
     expect(out[0][0].variants).toBeUndefined();
     expect(out[0][1].variants).toBeUndefined();
     expect(out[0][2].variants).toBeUndefined();
+  });
+
+  it("skips table application on action, modifier, and space keys", () => {
+    const out = applyVariantDefaults([
+      [{ value: "a" }, { value: "a", type: "modifier" }, { value: "a", type: "space" }, { value: "a", type: "action" }],
+    ]);
+    expect(out[0][0].variants, "a plain character key is filled").toEqual([...LATIN_DIACRITIC_VARIANTS.a]);
+    expect(out[0][1].variants, "modifier keyed to a table base is not filled").toBeUndefined();
+    expect(out[0][2].variants, "space keyed to a table base is not filled").toBeUndefined();
+    expect(out[0][3].variants, "action keyed to a table base is not filled").toBeUndefined();
+  });
+
+  it("keeps authored variants on action/modifier/space keys (filter gates only the table fill)", () => {
+    const out = applyVariantDefaults([
+      [
+        { value: "{backspace}", type: "action", variants: ["x", "y"] },
+        { value: "{shift}", type: "modifier", variants: ["z"] },
+      ],
+    ]);
+    expect(out[0][0].variants).toEqual(["x", "y"]);
+    expect(out[0][1].variants).toEqual(["z"]);
+  });
+});
+
+describe("resolveVariantTable", () => {
+  const custom: VariantTable = { b: ["ḃ"] };
+
+  it("falls back to the built-in Latin table for a layout with no instance entry", () => {
+    expect(resolveVariantTable("qwerty")).toBe(LATIN_DIACRITIC_VARIANTS);
+  });
+
+  it("returns null for the built-in non-Latin layouts", () => {
+    for (const name of ["ja-romaji", "ja-kana", "arabic", "ko-hangul"]) {
+      expect(resolveVariantTable(name), name).toBeNull();
+    }
+  });
+
+  it("normalizes the layout name (case and surrounding space)", () => {
+    expect(resolveVariantTable("  JA-Kana ")).toBeNull();
+    expect(resolveVariantTable("QWERTY")).toBe(LATIN_DIACRITIC_VARIANTS);
+  });
+
+  it("an instance entry wins over the built-in table", () => {
+    const map = new Map<string, VariantTable | null>([["qwerty", custom]]);
+    expect(resolveVariantTable("qwerty", map)).toBe(custom);
+  });
+
+  it("an explicit null instance entry opts the layout out", () => {
+    const map = new Map<string, VariantTable | null>([["qwerty", null]]);
+    expect(resolveVariantTable("qwerty", map)).toBeNull();
+  });
+
+  it("the '*' wildcard applies to layouts without their own entry, even non-Latin ones", () => {
+    const map = new Map<string, VariantTable | null>([[WILDCARD_LAYOUT, custom]]);
+    expect(resolveVariantTable("qwerty", map)).toBe(custom);
+    expect(resolveVariantTable("arabic", map)).toBe(custom);
+  });
+
+  it("an explicit entry beats the wildcard", () => {
+    const map = new Map<string, VariantTable | null>([
+      [WILDCARD_LAYOUT, custom],
+      ["qwerty", null],
+    ]);
+    expect(resolveVariantTable("qwerty", map)).toBeNull();
   });
 });
 
