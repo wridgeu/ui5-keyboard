@@ -13,7 +13,14 @@ import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
 import { resolveWithCustomResolver, isParticipating, KEY_ID_SUFFIX_RE, type TargetResolverFn } from "./internal/dom";
-import { applyVariantDefaults, shiftedGlyph, toShiftVariants } from "./internal/latin-variants";
+import {
+  applyVariantDefaults,
+  resolveVariantTable,
+  shiftedGlyph,
+  toShiftVariants,
+  type InstanceVariants,
+  type VariantTable,
+} from "./internal/latin-variants";
 import VariantPopupBehavior from "./internal/variant-popup-behavior";
 import { KeyboardType } from "./library"; // side-effect: ensures Lib.init() runs
 import {
@@ -142,6 +149,8 @@ export default class KioskKeyboard extends Control {
   private _instanceLocaleLayoutsMap!: InstanceLocaleLayouts | undefined;
   /** Per-instance middleware factory overrides, derived from the `instanceMiddleware` property. */
   private _instanceMiddlewareMap!: InstanceMiddleware | undefined;
+  /** Per-instance accent-variant table overrides, derived from the `instanceVariants` property. */
+  private _instanceVariantsMap!: InstanceVariants | undefined;
   /** Owns the ResizeObserver-driven height-responsive class application. */
   private _responsiveSizing!: ResponsiveSizingController;
   /** Owns `fKeyMode`-driven F-key dispatch (native keydown + caret navigation). */
@@ -399,6 +408,22 @@ export default class KioskKeyboard extends Control {
        * @since 0.1.0
        */
       instanceMiddleware: {
+        type: "object",
+        defaultValue: null,
+        group: "Behavior",
+      },
+      /**
+       * Per-instance accent-variant table overrides, keyed by layout name
+       * (or `"*"` for every layout). Resolution order is
+       * **instance entry -> instance `"*"` wildcard -> built-in table**. A
+       * `null` entry opts a layout out of the built-in Latin table. Effective
+       * only while `accentVariants` is set. Accepts a plain
+       * `Record<string, Record<string, string[]> | null>`; the control stores
+       * it as a `Map` internally.
+       *
+       * @since 0.1.0
+       */
+      instanceVariants: {
         type: "object",
         defaultValue: null,
         group: "Behavior",
@@ -765,6 +790,7 @@ export default class KioskKeyboard extends Control {
     this._instanceLayoutsMap = undefined;
     this._instanceLocaleLayoutsMap = undefined;
     this._instanceMiddlewareMap = undefined;
+    this._instanceVariantsMap = undefined;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
     this._rendererApi = null;
@@ -1044,6 +1070,15 @@ export default class KioskKeyboard extends Control {
     return this.setProperty("instanceMiddleware", value) as this;
   }
 
+  /**
+   * Custom setter for `instanceVariants` - keeps the internal `Map`
+   * cache in sync with the property value.
+   */
+  setInstanceVariants(value: Record<string, VariantTable | null> | null): this {
+    this._instanceVariantsMap = KioskKeyboard._toVariantMap(value);
+    return this.setProperty("instanceVariants", value) as this;
+  }
+
   private static _toLayoutMap(value: unknown): InstanceLayouts | undefined {
     if (!value || typeof value !== "object") return undefined;
     const entries: [string, LayoutDefinition][] = [];
@@ -1098,6 +1133,36 @@ export default class KioskKeyboard extends Control {
       entries.push([key, factory as () => CompositionMiddleware]);
     }
     return entries.length === 0 ? undefined : new Map(entries);
+  }
+
+  private static _toVariantMap(value: unknown): InstanceVariants | undefined {
+    if (!value || typeof value !== "object") return undefined;
+    const entries: [string, VariantTable | null][] = [];
+    for (const [name, table] of Object.entries(value as Record<string, unknown>)) {
+      // `null` is a meaningful entry: it opts the layout out of the built-in table.
+      if (table !== null && !KioskKeyboard._isValidVariantTable(table)) {
+        Log.warning(
+          `Invalid instanceVariants entry "${name}": must be null or an object mapping base letters to non-empty arrays of non-empty strings.`,
+          undefined,
+          "ui5.kiosk.KioskKeyboard",
+        );
+        continue;
+      }
+      const key = name.trim().toLowerCase();
+      if (!key) continue;
+      entries.push([key, table]);
+    }
+    return entries.length === 0 ? undefined : new Map(entries);
+  }
+
+  private static _isValidVariantTable(table: unknown): table is VariantTable {
+    return (
+      typeof table === "object" &&
+      table !== null &&
+      Object.values(table).every(
+        (list) => Array.isArray(list) && list.length > 0 && list.every((glyph) => typeof glyph === "string" && glyph),
+      )
+    );
   }
 
   /**
@@ -1704,9 +1769,13 @@ export default class KioskKeyboard extends Control {
             ariaLabel: getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
           });
     // Opt-in Latin-diacritics: fill default variants onto matching base keys so
-    // umlauts/accents are reachable from any layout. Author-declared `variants`
+    // umlauts/accents are reachable from any layout. The effective table is
+    // resolved per instance (instanceVariants -> `"*"` wildcard -> built-in); a
+    // `null` table leaves the layout without variants. Author-declared `variants`
     // always win (applyVariantDefaults guarantees this).
-    return this.getAccentVariants() ? applyVariantDefaults(base) : base;
+    if (!this.getAccentVariants()) return base;
+    const table = resolveVariantTable(layoutName, this._instanceVariantsMap);
+    return table ? applyVariantDefaults(base, table) : base;
   }
 
   /**

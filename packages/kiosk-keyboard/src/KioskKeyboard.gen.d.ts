@@ -182,6 +182,19 @@ declare module "./KioskKeyboard" {
          * @since 0.1.0
          */
         instanceMiddleware?: (object | null) | PropertyBindingInfo | `{${string}}`;
+
+        /**
+         * Per-instance accent-variant table overrides, keyed by layout name
+        (or `"*"` for every layout). Resolution order is
+        **instance entry -> instance `"*"` wildcard -> built-in table**. A
+        `null` entry opts a layout out of the built-in Latin table. Effective
+        only while `accentVariants` is set. Accepts a plain
+        `Record<string, Record<string, string[]> | null>`; the control stores
+        it as a `Map` internally.
+         *
+         * @since 0.1.0
+         */
+        instanceVariants?: (object | null) | PropertyBindingInfo | `{${string}}`;
         _activeTarget?: Control | string;
         ariaLabelledBy?: Control | string | (Control | string)[];
         ariaDescribedBy?: Control | string | (Control | string)[];
@@ -753,6 +766,44 @@ declare module "./KioskKeyboard" {
          * @returns Reference to "this" in order to allow method chaining
          */
         setInstanceMiddleware(instanceMiddleware: object | null): this;
+
+        // property: instanceVariants
+
+        /**
+         * Gets current value of property "instanceVariants".
+         *
+         * Per-instance accent-variant table overrides, keyed by layout name
+        (or `"*"` for every layout). Resolution order is
+        **instance entry -> instance `"*"` wildcard -> built-in table**. A
+        `null` entry opts a layout out of the built-in Latin table. Effective
+        only while `accentVariants` is set. Accepts a plain
+        `Record<string, Record<string, string[]> | null>`; the control stores
+        it as a `Map` internally.
+         *
+         * @since 0.1.0
+         *
+         * @returns Value of property "instanceVariants"
+         */
+        getInstanceVariants(): object | null;
+
+        /**
+         * Sets a new value for property "instanceVariants".
+         *
+         * Per-instance accent-variant table overrides, keyed by layout name
+        (or `"*"` for every layout). Resolution order is
+        **instance entry -> instance `"*"` wildcard -> built-in table**. A
+        `null` entry opts a layout out of the built-in Latin table. Effective
+        only while `accentVariants` is set. Accepts a plain
+        `Record<string, Record<string, string[]> | null>`; the control stores
+        it as a `Map` internally.
+         *
+         * @since 0.1.0
+         * When called with a value of "null" or "undefined", the default value of the property will be restored.
+         *
+         * @param instanceVariants New value for property "instanceVariants"
+         * @returns Reference to "this" in order to allow method chaining
+         */
+        setInstanceVariants(instanceVariants: object | null): this;
 
         // association: _activeTarget
 

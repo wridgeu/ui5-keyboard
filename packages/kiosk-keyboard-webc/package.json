@@ -56,6 +56,10 @@
       "types": "./dist/middleware/*.d.ts",
       "default": "./dist/middleware/*.js"
     },
+    "./variants": {
+      "types": "./dist/core/latin-variants.d.ts",
+      "default": "./dist/core/latin-variants.js"
+    },
     "./customElements": "./dist/custom-elements.json",
     "./dist/*": "./dist/*",
     "./*": "./dist/*"

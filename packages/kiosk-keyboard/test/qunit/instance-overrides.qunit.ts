@@ -1,9 +1,12 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
+import Log from "sap/base/Log";
 import type { LayoutDefinition, CompositionMiddleware } from "ui5/kiosk/types";
 import Localization from "sap/base/i18n/Localization";
 import type LanguageTag from "sap/base/i18n/LanguageTag";
-import { placeAndWait, getRenderedLayoutKeys, tapKey } from "./test-helpers";
+import { placeAndWait, getRenderedLayoutKeys, getRequiredKeyElement, tapKey } from "./test-helpers";
+
+const DOM = KioskKeyboard.DOM;
 
 // ── Helpers ──
 
@@ -428,6 +431,99 @@ QUnit.test("setInstanceMiddleware after first key resets the cached middleware",
   tapKey(kb, "c");
   assert.strictEqual(secondFactoryCalls, 1, "Second factory invoked after swap");
   assert.strictEqual(firstFactoryCalls, 1, "First factory not re-invoked");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// ───────────────────────────────────────────────────
+// Accent-variant tables: instanceVariants shadows/opts-out the built-in
+// Latin-diacritic table per layout, keyed lowercase, invalid entries skipped.
+// ───────────────────────────────────────────────────
+
+QUnit.module("instance-overrides - accent-variant tables", { afterEach: commonAfterEach });
+
+QUnit.test(
+  "Invalid instanceVariants entries warn and are skipped, falling through to the built-in table",
+  async (assert) => {
+    const warn = sandbox.stub(Log, "warning");
+    const input = new Input({ value: "" });
+    input.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({
+      controls: [input.getId()],
+      accentVariants: true,
+      layout: "qwerty",
+      instanceVariants: { qwerty: { a: [""] } }, // empty glyph -> invalid table
+    });
+    await placeAndWait(kb);
+
+    assert.ok(warn.called, "an invalid entry is logged");
+    assert.strictEqual(
+      getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+      true,
+      "the invalid entry is dropped, so 'a' falls through to the built-in Latin table",
+    );
+
+    input.destroy();
+    kb.destroy();
+  },
+);
+
+QUnit.test("Mixed-case instanceVariants layout names resolve through lowercase lookup", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    accentVariants: true,
+    layout: "qwerty",
+    instanceVariants: { QWERTY: { b: ["ḃ"] } },
+  });
+  await placeAndWait(kb);
+
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "b").hasAttribute(DOM.attributes.hasVariants),
+    true,
+    "mixed-case 'QWERTY' shadows built-in 'qwerty'",
+  );
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    false,
+    "the replacing table drops built-in 'a'",
+  );
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("setInstanceVariants after construction re-resolves on next render", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()], accentVariants: true, layout: "qwerty" });
+  await placeAndWait(kb);
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    true,
+    "built-in 'a' armed before the override",
+  );
+
+  kb.setInstanceVariants({ qwerty: null });
+  await placeAndWait(kb);
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    false,
+    "opted out after setInstanceVariants",
+  );
+
+  kb.setInstanceVariants(null);
+  await placeAndWait(kb);
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    true,
+    "built-in restored after clearing the override",
+  );
 
   input.destroy();
   kb.destroy();
