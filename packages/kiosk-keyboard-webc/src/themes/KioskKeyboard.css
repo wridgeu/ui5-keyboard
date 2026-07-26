@@ -740,10 +740,6 @@
    The fonts below cover Windows (Segoe UI Symbol), macOS (Apple Symbols),
    and Linux/Android (Noto Sans Symbols). */
 .kiosk-key__icon {
-  display: inline-block;
-  width: 1.25em;
-  height: 1.25em;
-  color: inherit;
   font-family:
     var(--sapFontFamily, "72", "72full", Arial, Helvetica, sans-serif), "Segoe UI Symbol", "Apple Symbols",
     "Noto Sans Symbols 2", "Noto Sans Symbols", sans-serif;
