@@ -608,6 +608,57 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(true);
   });
 
+  it("variant keys advertise the popup via aria-haspopup and reflect aria-expanded", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    const aKey = requireKey(kb, "a");
+    expect(aKey.getAttribute("aria-haspopup")).to.equal("dialog");
+    expect(aKey.getAttribute("aria-expanded")).to.equal("false");
+    expect(requireKey(kb, "b").hasAttribute("aria-haspopup"), "a bare key has no haspopup").to.equal(false);
+
+    await holdOpen(aKey);
+    expect(aKey.getAttribute("aria-expanded"), "expanded while open").to.equal("true");
+    pointerUp();
+
+    keyDown(popupEl(kb)!, "Escape");
+    await renderFinished();
+    expect(requireKey(kb, "a").getAttribute("aria-expanded"), "collapsed after dismiss").to.equal("false");
+  });
+
+  it("renders the corner hint pseudo-element only on variant keys", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    const aKey = requireKey(kb, "a");
+    const bKey = requireKey(kb, "b");
+    expect(getComputedStyle(aKey).position, "the key anchors its hint").to.equal("relative");
+    expect(getComputedStyle(aKey, "::after").content, "variant key shows the hint").to.equal('""');
+    expect(getComputedStyle(bKey, "::after").content, "bare key shows no hint").to.not.equal('""');
+  });
+
+  it("holds the WCAG 2.5.8 24px minimum key inline size at a narrow width", async () => {
+    const { kb } = await setupWithLayout([
+      [
+        { value: "q" },
+        { value: "w" },
+        { value: "e" },
+        { value: "r" },
+        { value: "t" },
+        { value: "y" },
+        { value: "u" },
+        { value: "i" },
+        { value: "o" },
+        { value: "p" },
+      ],
+    ]);
+    // Narrow enough that flex alone would shrink the 10-key row below 24px; the
+    // floor must hold each key at >= 24px (the row overflows its hidden container).
+    kb.style.width = "200px";
+    await renderFinished();
+    const keys = [...kb.shadowRoot!.querySelectorAll<HTMLElement>(DOM.selectors.key)];
+    expect(keys.length).to.equal(10);
+    for (const key of keys) {
+      expect(key.getBoundingClientRect().width, `key '${key.dataset.key}' holds >= 24px`).to.be.at.least(23.99);
+    }
+  });
+
   it("scales the option glyph font-size from the key-font-size token", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     await holdOpen(requireKey(kb, "a"));

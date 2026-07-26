@@ -46,6 +46,9 @@ sap.ui.define(
     // 1. Default QWERTY
     new KioskKeyboard().placeAt("kb-qwerty");
 
+    // 1b. Accent variants: the corner hint marks keys with a long-press popup.
+    new KioskKeyboard({ accentVariants: true }).placeAt("kb-accent-variants");
+
     // 2. With Input Target
     var input = new Input({ value: "Hello World", width: "300px" });
     input.placeAt("input-area");

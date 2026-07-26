@@ -133,6 +133,23 @@
   box-sizing: border-box;
 }
 
+/* Pair for the 24px key floor: tighten the inter-key gap on narrow keyboards so a
+   full row of floored keys fits rather than overflowing. Mirrors the height-driven
+   cq-tier gap drops, but keyed off the keyboard's own width. The gap is set on the
+   row (a container descendant); the container element cannot be targeted from its
+   own @container query. */
+@container keyboard (max-width: 22rem) {
+  .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-row {
+    gap: 0.25rem;
+  }
+}
+
+@container keyboard (max-width: 20rem) {
+  .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-row {
+    gap: 0.125rem;
+  }
+}
+
 /* Responsive font scaling
    @container queries (30rem / 20rem) handle width-responsive sizing.
    min() caps rather than hard-replaces consumer-provided values:
@@ -201,7 +218,9 @@
   --kiosk-keyboard-key-font-size: 1.375rem;
 
   & .kiosk-key {
-    min-width: var(--_kiosk-keyboard-numpad-key-min-width);
+    /* Logical to cleanly override the base key's min-inline-size on the same
+       axis; a physical min-width here would compete with it ambiguously. */
+    min-inline-size: var(--_kiosk-keyboard-numpad-key-min-width);
   }
 
   /* Numpad modifier and action keys are primary interaction targets,
@@ -295,9 +314,41 @@
   cursor: pointer;
   box-sizing: border-box;
   box-shadow: var(--_kiosk-keyboard-key-shadow);
-  min-width: 0;
+  position: relative;
+  /* WCAG 2.5.8 (AA): keys hold a 24px minimum target size on the inline axis
+     instead of shrinking to zero; narrow widths recover room by tightening the
+     inter-key gap (see the width-responsive @container rules) rather than the keys. */
+  min-inline-size: 1.5rem;
   white-space: nowrap;
   container-type: inline-size;
+
+  /* Long-press affordance: a folded-corner triangle marking keys that carry an
+     accent-variant popup. Neutral grey at a WCAG SC 1.4.11-compliant opacity;
+     suppressed on sub-target-size keys where it would only add noise. */
+  &[data-has-variants]::after {
+    content: "";
+    position: absolute;
+    inset-block-start: var(--kiosk-keyboard-variant-hint-inset, 0.1875rem);
+    inset-inline-end: var(--kiosk-keyboard-variant-hint-inset, 0.1875rem);
+    inline-size: var(--kiosk-keyboard-variant-hint-size, 0.3125rem);
+    block-size: var(--kiosk-keyboard-variant-hint-size, 0.3125rem);
+    background: var(--kiosk-keyboard-variant-hint-color, var(--sapContent_LabelColor, #556b82));
+    opacity: var(--kiosk-keyboard-variant-hint-opacity, 0.71);
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+    pointer-events: none;
+  }
+
+  /* clip-path coordinates are physical, so mirror the triangle in RTL (the
+     logical inset-inline-end already moves it to the leading edge). */
+  &[data-has-variants]:dir(rtl)::after {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+
+  @container (max-inline-size: 1.5rem) {
+    &[data-has-variants]::after {
+      display: none;
+    }
+  }
 
   /* Transitions are scoped to interactive states so that Preact re-renders
      (e.g. layout switches) apply instantly instead of animating from the
@@ -490,6 +541,18 @@
 
     &:focus-visible {
       outline-color: Highlight;
+    }
+
+    /* System colors ignore the neutral token; keep the hint a visible system
+       color, inverting to HighlightText where the key paints on Highlight. */
+    &[data-has-variants]::after {
+      background: ButtonText;
+      opacity: 1;
+    }
+
+    &:active[data-has-variants]::after,
+    &.kiosk-key--highlight[data-has-variants]::after {
+      background: HighlightText;
     }
   }
 

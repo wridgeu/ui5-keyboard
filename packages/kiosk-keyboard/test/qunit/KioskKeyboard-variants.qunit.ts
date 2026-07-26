@@ -241,6 +241,51 @@ QUnit.test("the '*' wildcard re-enables variants on an excluded non-Latin layout
   cleanup(kb, input);
 });
 
+QUnit.test("variant keys advertise the popup via aria-haspopup and toggle aria-expanded", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  assert.strictEqual(aKey.getAttribute("aria-haspopup"), "dialog", "a variant key advertises a dialog popup");
+  assert.strictEqual(aKey.getAttribute("aria-expanded"), "false", "collapsed before opening");
+  assert.strictEqual(getRequiredKeyElement(kb, "b").hasAttribute("aria-haspopup"), false, "a bare key has no haspopup");
+
+  await holdOpen(kb, aKey);
+  assert.strictEqual(aKey.getAttribute("aria-expanded"), "true", "expanded while the popup is open");
+  release(kb, aKey);
+  keydownOnPopup("Escape");
+  assert.strictEqual(aKey.getAttribute("aria-expanded"), "false", "collapsed again after dismiss");
+  cleanup(kb, input);
+});
+
+QUnit.test("the corner hint pseudo-element renders only on variant keys", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  const bKey = getRequiredKeyElement(kb, "b");
+  assert.strictEqual(
+    getComputedStyle(aKey).position,
+    "relative",
+    "the key establishes a containing block for the hint",
+  );
+  assert.strictEqual(getComputedStyle(aKey, "::after").content, '""', "variant key renders the hint pseudo-element");
+  assert.notStrictEqual(getComputedStyle(bKey, "::after").content, '""', "bare key renders no hint pseudo-element");
+  cleanup(kb, input);
+});
+
+QUnit.test("keys hold the WCAG 2.5.8 24px minimum inline size at a narrow width", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const root = kb.getDomRef() as HTMLElement;
+  // Narrow enough that flex alone would shrink the 10-key row below 24px; the
+  // floor must hold each key at >= 24px (the row overflows its hidden container).
+  root.style.width = "200px";
+  await waitForRender();
+  const keys = Array.from(root.querySelectorAll<HTMLElement>(DOM.selectors.key));
+  assert.ok(keys.length >= 10, "the full keyboard rendered");
+  for (const key of keys) {
+    const width = key.getBoundingClientRect().width;
+    assert.ok(width >= 23.99, `key '${key.dataset.key}' holds >= 24px (${width.toFixed(1)}px)`);
+  }
+  cleanup(kb, input);
+});
+
 QUnit.test("a plain tap still inserts the base character", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const aKey = getRequiredKeyElement(kb, "a");
