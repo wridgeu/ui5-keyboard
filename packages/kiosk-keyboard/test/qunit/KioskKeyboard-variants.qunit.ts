@@ -256,6 +256,28 @@ QUnit.test("variant keys advertise the popup via aria-haspopup and toggle aria-e
   cleanup(kb, input);
 });
 
+QUnit.test("aria-expanded survives a re-render while the popup is open", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  await holdOpen(kb, getRequiredKeyElement(kb, "a"));
+  assert.strictEqual(getRequiredKeyElement(kb, "a").getAttribute("aria-expanded"), "true", "expanded while open");
+
+  // An unrelated invalidation (locale/theme/property change) re-runs the renderer
+  // while the static-area popup stays open. The rendered aria-expanded must track
+  // the open anchor, not reset to collapsed under the still-open dialog.
+  kb.invalidate();
+  await waitForRender();
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").getAttribute("aria-expanded"),
+    "true",
+    "still expanded after re-render",
+  );
+
+  release(kb, getRequiredKeyElement(kb, "a"));
+  keydownOnPopup("Escape");
+  assert.strictEqual(getRequiredKeyElement(kb, "a").getAttribute("aria-expanded"), "false", "collapsed after dismiss");
+  cleanup(kb, input);
+});
+
 QUnit.test("the corner hint pseudo-element renders only on variant keys", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const aKey = getRequiredKeyElement(kb, "a");
@@ -266,6 +288,11 @@ QUnit.test("the corner hint pseudo-element renders only on variant keys", async 
     "the key establishes a containing block for the hint",
   );
   assert.strictEqual(getComputedStyle(aKey, "::after").content, '""', "variant key renders the hint pseudo-element");
+  assert.notStrictEqual(
+    getComputedStyle(aKey, "::after").clipPath,
+    "none",
+    "the hint is clipped to the folded-corner triangle",
+  );
   assert.notStrictEqual(getComputedStyle(bKey, "::after").content, '""', "bare key renders no hint pseudo-element");
   cleanup(kb, input);
 });

@@ -1348,6 +1348,11 @@ export default class KioskKeyboard extends Control {
     return typeof value === "string" ? value : "";
   }
 
+  /** Id of the key whose accent-variant popup is currently open, or `null`. */
+  _getOpenVariantAnchorId(): string | null {
+    return this._variantPopup.getOpenAnchorId();
+  }
+
   _getKeyboardTypeSource(): KeyboardTypeSource {
     return this._keyboardTypeSource;
   }
