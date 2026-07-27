@@ -25,6 +25,18 @@ Four phases, one PR. Decisions taken with the maintainer up front:
   with zero clipped keys and a fully visible `{shift}`, so the two phone-sm shifted
   interaction skips were removed rather than kept.
 
+  The narrowest tier is arithmetic, not preference. At the 320px phone-sm profile the
+  keyboard root is 280px wide, and the `0.75rem` container padding on each side leaves 256px
+  of content. The `qwerty` digit row is 11 keys but 12 units of width (ten digits plus a
+  double-width `{backspace}`), and SC 2.5.8's Spacing exception requires a 24px-diameter
+  circle centred on each target not to intersect a neighbour's, i.e. at least 24px
+  centre-to-centre, so the row needs 12 x 24 = 288px. That exceeds the 256px available and
+  still exceeds the 280px root at zero padding, so no combination of key width and gap makes
+  that row conform at 320px - not the floor, not the gap reduction, not trimming the
+  container padding. Single-width `{backspace}` does not close it either (11 units = 264px).
+  The only conforming routes are structural: at most 10 units in the row (moving
+  `{backspace}` off it below the tier), or horizontal-scroll overflow.
+
 The issue body's line numbers predate `main` advancing; anchor every edit to the symbol,
 not the issue's number. Corrected anchors live in the understanding pass, not repeated here.
 
