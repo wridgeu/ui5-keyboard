@@ -81,6 +81,20 @@ jobs:
       - name: DOM-contract drift check
         run: npm run test:dom-contract
 
+      # Asserts the two hand-mirrored stylesheets expose the same public custom
+      # property set, compared modulo the camelCase/kebab-case naming split; see
+      # tools/check-style-twin-drift.mjs.
+      - name: Stylesheet twin-drift check
+        run: npm run test:style-twin-drift
+
+      # The unscoped-selector class only exists after LESS compilation, so the
+      # kiosk library is built here and the emitted themes are scanned; see
+      # tools/check-css-scope.mjs.
+      - name: CSS scope check
+        run: |
+          npm run build:kiosk
+          npm run test:css-scope
+
   # Unit + component suites: QUnit (puppeteer chromium) for the two UI5 libs,
   # vitest (jsdom) and web-test-runner (playwright chromium) for the web component.
   unit:
@@ -163,3 +177,10 @@ jobs:
 
       - name: End-to-end (behavioral; visual snapshots ignored)
         run: npm run test:e2e:ci -w packages/${{ matrix.package }}
+
+      # The structural invariants (hint painted, no key clipped, target-size
+      # floor, icon color) are measured rather than snapshotted, so they run
+      # across every device project - which the step above cannot, being pinned
+      # to desktop. The phone profiles are where the #187/#210 regressions hid.
+      - name: Structural invariants (all device profiles)
+        run: npm run test:e2e:invariants -w packages/${{ matrix.package }}

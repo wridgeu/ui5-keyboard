@@ -114,6 +114,36 @@ Adversarial validation record: `docs/specs/2026-06-11-twin-drift-check-adversari
 
 Run via `npm run test:twin-drift` (also part of `check`, `check:parallel`, and CI).
 
+## `check-css-scope.mjs`
+
+Scope check for the built kiosk library stylesheet
+(`packages/kiosk-keyboard/dist/resources/ui5/kiosk/themes/*/library.css` and its
+`library-RTL.css` sibling, all five themes).
+
+A UI5 library stylesheet is loaded page-globally, so every rule it ships must be
+scoped to one of the library's own `ui5Kiosk*` classes. less-openui5 does not
+resolve the LESS parent selector `&` inside an at-rule it does not model, so a
+rule nested as `.ui5KioskKey { @container (...) { &[data-has-variants]::after {
+... } } }` compiles with the `.ui5KioskKey` scope dropped and then matches
+arbitrary host-page elements. That shipped once and was caught by hand;
+`packages/kiosk-keyboard/src/themes/base/KioskKeyboard.less` hoists such blocks
+to the top level with their full selector for this reason, and this check is
+what catches one that was nested instead.
+
+- Tokenizes the compiled css (no dependencies), checking every selector at the
+  top level and inside `@media` / `@container` / `@supports` / `@layer`;
+  `@keyframes` and the other non-grouping at-rules own their block contents and
+  are skipped whole.
+- Fails naming the offending selector and its enclosing at-rule chain. Absent
+  build output, a missing theme file, and a stylesheet that parsed to zero rules
+  are hard failures, never a silent pass.
+- The two unscoped selectors the theme build itself emits
+  (`.sapUiAccKeysHighlighDom:first-letter` from `sap/ui/core`'s `global.less`,
+  and the `#sap-ui-theme-*` parameter marker) are allowlisted at the top of the
+  script.
+
+Reads compiled css, so it must run after `npm run build:kiosk`.
+
 ## `copy-license.mjs`
 
 Copies the monorepo's root `LICENSE` into the current working directory (the package being published) so `npm publish` includes it in the tarball. Each publishable package calls it from its `prepublishOnly` script (`node ../../tools/copy-license.mjs`).
