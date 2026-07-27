@@ -86,5 +86,13 @@ proves nothing about the triangle or the floor — the visual pass runs locally.
 - **H6 (Phase 4 overflow masked):** confirm the 24px floor without the gap reduction produces
   a red row-overflow visual, proving the two are coupled, before landing them together.
 - **H7 (aria not reflected):** assert `aria-haspopup="dialog"` present on a variant key and
-  ABSENT on a bare key; assert `aria-expanded` tracks open/closed. Hardcode `expanded=true`
-  → red on the closed-state assertion.
+  ABSENT on a bare key, and that a variant key carries NO `aria-expanded` (a type-on-activate
+  key is not an expand/collapse control; see the review decision below). Drop the haspopup gate
+  → red on the present-on-variant-key assertion.
+
+**Post-review correction (2026-07-27).** Phase 3 originally emitted `aria-expanded` on variant
+keys. It was removed: the key's own Enter/Space types the glyph rather than toggling the popup,
+so per MDN (avoid `aria-expanded` on elements that do not control the expanded state) and the
+WAI-ARIA APG modal-dialog trigger (no `aria-expanded`), the key advertises only
+`aria-haspopup="dialog"`. The keyboard open-path is the context-menu gesture (Menu key /
+Shift+F10 → `oncontextmenu`).
