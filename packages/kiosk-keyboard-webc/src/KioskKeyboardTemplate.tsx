@@ -107,7 +107,6 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   data-shift-value={key.shiftValue || undefined}
                   data-has-variants={hasVariants ? "" : undefined}
                   aria-haspopup={hasVariants ? "dialog" : undefined}
-                  aria-expanded={hasVariants ? (this._variantPopup?.anchorKeyId === id ? "true" : "false") : undefined}
                   aria-pressed={isShift ? this._shifted : undefined}
                   aria-disabled={this.disabled ? "true" : undefined}
                   title={hasLabel && !isSingleGlyphLabel ? label : undefined}

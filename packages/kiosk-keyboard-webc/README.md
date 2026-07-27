@@ -465,6 +465,8 @@ The `qwertz-de` layout ships dedicated **ä / ö / ü** keys and **ß**, and a G
 
 **Long-press / right-click popup.** Press and hold a key (or right-click it) to open a popup of accent variants; tap, drag-and-release, or arrow-and-Enter to insert one, Escape to dismiss. A plain tap still inserts the key's base character. When Shift or Caps Lock is active, the popup surfaces the uppercase forms, including the capital sharp S **ẞ** for `s`/`ß`.
 
+**Accessibility.** A variant key carries a corner-triangle hint and advertises the popup to assistive technology with `aria-haspopup="dialog"`. Keyboard users open it with the context-menu gesture (the Menu key, or Shift+F10) on the focused key; the key's own Enter/Space still types its base character, so the key carries no `aria-expanded` state.
+
 **Built-in Latin-diacritics table.** The `accent-variants` attribute merges a broad Latin-diacritics table (à á â ä, ç, è é ê ë, ñ, ö œ ø, ß, ü, …) onto every matching base letter of the resolved layout, so umlauts and accents work on any Latin layout without editing layout data:
 
 ```html
