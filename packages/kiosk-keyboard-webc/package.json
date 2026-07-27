@@ -88,6 +88,7 @@
     "test:coverage:component": "npm run generate && web-test-runner --coverage",
     "test:e2e": "npm run generate && playwright test --project=desktop",
     "test:e2e:ci": "npm run generate && playwright test --project=desktop --ignore-snapshots",
+    "test:e2e:invariants": "npm run generate && playwright test invariants.spec.ts",
     "test:e2e:open": "npm run generate && playwright test --project=desktop --ui",
     "test:e2e:update": "npm run generate && playwright test --project=desktop --update-snapshots",
     "test:e2e:phone": "npm run test:e2e:phone-md",

@@ -693,6 +693,17 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     }
   });
 
+  it("holds the block floor when the key-height property is set below it", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    // Every built-in height tier is already above 24px, so the block floor only
+    // binds against a consumer value - which is the case it exists for.
+    kb.style.setProperty("--kiosk-keyboard-key-height", "1rem");
+    await renderFinished();
+    for (const key of kb.shadowRoot!.querySelectorAll<HTMLElement>(DOM.selectors.key)) {
+      expect(key.getBoundingClientRect().height, `key '${key.dataset.key}' holds >= 24px block`).to.be.at.least(23.99);
+    }
+  });
+
   it("lifts the inline floor below the narrowest tier so every key stays inside the keyboard", async () => {
     const { kb } = await setupWithLayout([
       [
