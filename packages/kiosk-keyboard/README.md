@@ -416,7 +416,7 @@ The generated file above covers UI5 metadata accessors. The convenience/runtime 
 
 ### Static Methods
 
-The static surface is read-only. Customization is per instance via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties (see [Per-Instance Customization](#per-instance-customization)).
+The static surface is read-only. Customization is per instance via the `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` properties (see [Per-Instance Customization](#per-instance-customization)).
 
 | Method                        | Returns             | Description                                                                           |
 | ----------------------------- | ------------------- | ------------------------------------------------------------------------------------- |
@@ -1386,7 +1386,10 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 - Disabled state applies `aria-disabled="true"` to both the root and individual keys
 - ARIA live region announces keyboard open/close and shift state changes to screen readers
 - Closing the keyboard or switching targets fires a `change` event on modified single-line inputs (mirrors physical keyboard commit behavior)
-- Compact mode key sizes meet WCAG 2.5.8 minimum touch target size (24x24 CSS px)
+- Compact mode key sizes meet WCAG 2.5.8 minimum touch target size (24x24 CSS px). The floor is
+  lifted below a 20rem-wide keyboard, where the densest rows cannot fit a full set of floored keys:
+  keys shrink to fit there so that every key stays reachable rather than being clipped off the
+  edge of a center-justified row. Below that width the 24x24 minimum is therefore not met.
 
 ---
 
@@ -1412,45 +1415,49 @@ For the rationale behind default values, breakpoint thresholds, and scaling fact
 
 Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 
-| Property                                 | Default                                                   | Description                                                  |
-| ---------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------ |
-| `--ui5KioskKeyboard-border`              | `1px solid` _(theme)_                                     | Container border (set to `none` for borderless)              |
-| `--ui5KioskKeyboard-borderRadius`        | _(theme)_                                                 | Container border radius                                      |
-| `--ui5KioskKeyboard-padding`             | `0.75rem`                                                 | Container padding                                            |
-| `--ui5KioskKeyboard-keyGap`              | `0.375rem`                                                | Gap between keys and rows                                    |
-| `--ui5KioskKeyboard-keyHeight`           | `3rem`                                                    | Key height / touch target                                    |
-| `--ui5KioskKeyboard-keyPaddingInline`    | `0.25rem`                                                 | Horizontal key padding                                       |
-| `--ui5KioskKeyboard-keyPaddingInlineXs`  | `min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)` | Horizontal key padding in extra-narrow mode                  |
-| `--ui5KioskKeyboard-keyPadding`          | `0 var(--ui5KioskKeyboard-keyPaddingInline)`              | Full key padding shorthand                                   |
-| `--ui5KioskKeyboard-keyPaddingXs`        | `0 var(--ui5KioskKeyboard-keyPaddingInlineXs)`            | Key padding at narrow widths                                 |
-| `--ui5KioskKeyboard-keyBorderColor`      | _(not declared)_                                          | Override all key border colors                               |
-| `--ui5KioskKeyboard-keyFontSize`         | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)`         | Key label font size                                          |
-| `--ui5KioskKeyboard-keyShadow`           | _(theme)_                                                 | Key resting shadow                                           |
-| `--ui5KioskKeyboard-keyShadowHover`      | _(theme)_                                                 | Key hover shadow                                             |
-| `--ui5KioskKeyboard-maxWidth`            | `100%`                                                    | Max width for the default inline keyboard                    |
-| `--ui5KioskKeyboard-dockedMaxWidth`      | `1024px`                                                  | Max width when docked                                        |
-| `--ui5KioskKeyboard-dockedShadow`        | _(theme)_                                                 | Shadow when docked                                           |
-| `--ui5KioskKeyboard-dockedZIndex`        | `100`                                                     | Z-index for the docked keyboard                              |
-| `--ui5KioskKeyboard-modifierFontSize`    | `@sapUiFontSize`                                          | Modifier / action key font size                              |
-| `--ui5KioskKeyboard-modifierFontScale`   | `0.8`                                                     | Scale factor capping modifier font relative to key font size |
-| `--ui5KioskKeyboard-modifierShadow`      | _(theme)_                                                 | Modifier key resting shadow                                  |
-| `--ui5KioskKeyboard-modifierShadowHover` | _(theme)_                                                 | Modifier key hover shadow                                    |
-| `--ui5KioskKeyboard-numpadMaxWidth`      | `20rem`                                                   | Numpad container max-width                                   |
-| `--ui5KioskKeyboard-numpadKeyMinWidth`   | `4rem`                                                    | Numpad key min-width                                         |
-| `--ui5KioskKeyboard-cqShortThreshold`    | `16rem`                                                   | Height threshold for `ui5KioskKeyboard--cqShort`             |
-| `--ui5KioskKeyboard-cqTinyThreshold`     | `12rem`                                                   | Height threshold for `ui5KioskKeyboard--cqTiny`              |
-| `--ui5KioskKeyboard-dualDirection`       | `row`                                                     | Flex direction for dual icon+label keys (`row` or `column`)  |
-| `--ui5KioskKeyboard-dualIconSize`        | `1em`                                                     | Icon font size in dual mode                                  |
-| `--ui5KioskKeyboard-dualLabelSize`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)         |
-| `--ui5KioskKeyboard-dualGap`             | `0.3em`                                                   | Gap between icon and label in dual mode                      |
-| `--ui5KioskKeyboard-fkeyDirection`       | `column`                                                  | Flex direction for nav/function keys                         |
-| `--ui5KioskKeyboard-fkeyIconSize`        | `clamp(1em, 15cqi, 1.6em)`                                | Icon size for nav/function keys (scales with key width)      |
-| `--ui5KioskKeyboard-fkeyLabelSize`       | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`               | Label size for nav/function keys (responsive)                |
-| `--ui5KioskKeyboard-fkeyGap`             | `0.05em`                                                  | Gap between icon and label for nav/function keys             |
-| `--ui5KioskKeyboard-cjkFontFamily`       | _(not declared)_                                          | Override font stack for CJK glyph labels                     |
-| `--ui5KioskKeyboard-hangulFontFamily`    | _(not declared)_                                          | Override font stack for Hangul glyph labels                  |
-| `--ui5KioskKeyboard-indicFontFamily`     | _(not declared)_                                          | Override font stack for Indic glyph labels                   |
-| `--ui5KioskKeyboard-arabicFontFamily`    | _(not declared)_                                          | Override font stack for Arabic glyph labels                  |
+| Property                                 | Default                                                   | Description                                                    |
+| ---------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------- |
+| `--ui5KioskKeyboard-border`              | `1px solid` _(theme)_                                     | Container border (set to `none` for borderless)                |
+| `--ui5KioskKeyboard-borderRadius`        | _(theme)_                                                 | Container border radius                                        |
+| `--ui5KioskKeyboard-padding`             | `0.75rem`                                                 | Container padding                                              |
+| `--ui5KioskKeyboard-keyGap`              | `0.375rem`                                                | Gap between keys and rows                                      |
+| `--ui5KioskKeyboard-keyHeight`           | `3rem`                                                    | Key height / touch target                                      |
+| `--ui5KioskKeyboard-keyPaddingInline`    | `0.25rem`                                                 | Horizontal key padding                                         |
+| `--ui5KioskKeyboard-keyPaddingInlineXs`  | `min(var(--ui5KioskKeyboard-keyPaddingInline), 0.125rem)` | Horizontal key padding in extra-narrow mode                    |
+| `--ui5KioskKeyboard-keyPadding`          | `0 var(--ui5KioskKeyboard-keyPaddingInline)`              | Full key padding shorthand                                     |
+| `--ui5KioskKeyboard-keyPaddingXs`        | `0 var(--ui5KioskKeyboard-keyPaddingInlineXs)`            | Key padding at narrow widths                                   |
+| `--ui5KioskKeyboard-keyBorderColor`      | _(not declared)_                                          | Override all key border colors                                 |
+| `--ui5KioskKeyboard-variantHintInset`    | `0.1875rem`                                               | Accent-variant corner hint inset from the key's top/end edge   |
+| `--ui5KioskKeyboard-variantHintSize`     | `0.3125rem`                                               | Accent-variant corner hint size                                |
+| `--ui5KioskKeyboard-variantHintColor`    | `var(--sapContent_LabelColor)`                            | Accent-variant corner hint color (ignored under forced colors) |
+| `--ui5KioskKeyboard-variantHintOpacity`  | `0.71`                                                    | Accent-variant corner hint opacity                             |
+| `--ui5KioskKeyboard-keyFontSize`         | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)`         | Key label font size                                            |
+| `--ui5KioskKeyboard-keyShadow`           | _(theme)_                                                 | Key resting shadow                                             |
+| `--ui5KioskKeyboard-keyShadowHover`      | _(theme)_                                                 | Key hover shadow                                               |
+| `--ui5KioskKeyboard-maxWidth`            | `100%`                                                    | Max width for the default inline keyboard                      |
+| `--ui5KioskKeyboard-dockedMaxWidth`      | `1024px`                                                  | Max width when docked                                          |
+| `--ui5KioskKeyboard-dockedShadow`        | _(theme)_                                                 | Shadow when docked                                             |
+| `--ui5KioskKeyboard-dockedZIndex`        | `100`                                                     | Z-index for the docked keyboard                                |
+| `--ui5KioskKeyboard-modifierFontSize`    | `@sapUiFontSize`                                          | Modifier / action key font size                                |
+| `--ui5KioskKeyboard-modifierFontScale`   | `0.8`                                                     | Scale factor capping modifier font relative to key font size   |
+| `--ui5KioskKeyboard-modifierShadow`      | _(theme)_                                                 | Modifier key resting shadow                                    |
+| `--ui5KioskKeyboard-modifierShadowHover` | _(theme)_                                                 | Modifier key hover shadow                                      |
+| `--ui5KioskKeyboard-numpadMaxWidth`      | `20rem`                                                   | Numpad container max-width                                     |
+| `--ui5KioskKeyboard-numpadKeyMinWidth`   | `4rem`                                                    | Numpad key min-width                                           |
+| `--ui5KioskKeyboard-cqShortThreshold`    | `16rem`                                                   | Height threshold for `ui5KioskKeyboard--cqShort`               |
+| `--ui5KioskKeyboard-cqTinyThreshold`     | `12rem`                                                   | Height threshold for `ui5KioskKeyboard--cqTiny`                |
+| `--ui5KioskKeyboard-dualDirection`       | `row`                                                     | Flex direction for dual icon+label keys (`row` or `column`)    |
+| `--ui5KioskKeyboard-dualIconSize`        | `1em`                                                     | Icon font size in dual mode                                    |
+| `--ui5KioskKeyboard-dualLabelSize`       | `1em`                                                     | Label font size in dual mode (inherits modifier cap)           |
+| `--ui5KioskKeyboard-dualGap`             | `0.3em`                                                   | Gap between icon and label in dual mode                        |
+| `--ui5KioskKeyboard-fkeyDirection`       | `column`                                                  | Flex direction for nav/function keys                           |
+| `--ui5KioskKeyboard-fkeyIconSize`        | `clamp(1em, 15cqi, 1.6em)`                                | Icon size for nav/function keys (scales with key width)        |
+| `--ui5KioskKeyboard-fkeyLabelSize`       | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`               | Label size for nav/function keys (responsive)                  |
+| `--ui5KioskKeyboard-fkeyGap`             | `0.05em`                                                  | Gap between icon and label for nav/function keys               |
+| `--ui5KioskKeyboard-cjkFontFamily`       | _(not declared)_                                          | Override font stack for CJK glyph labels                       |
+| `--ui5KioskKeyboard-hangulFontFamily`    | _(not declared)_                                          | Override font stack for Hangul glyph labels                    |
+| `--ui5KioskKeyboard-indicFontFamily`     | _(not declared)_                                          | Override font stack for Indic glyph labels                     |
+| `--ui5KioskKeyboard-arabicFontFamily`    | _(not declared)_                                          | Override font stack for Arabic glyph labels                    |
 
 By default, the inline keyboard takes the full width of its container (`100%`). To prevent wide desktop containers from stretching the rows indefinitely, cap the width explicitly:
 

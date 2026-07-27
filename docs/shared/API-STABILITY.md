@@ -35,7 +35,7 @@ Use these imports for application code:
 - `ui5/kiosk/layouts/nav-row` - stable shared row for custom layout composition
 - `ui5/kiosk/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware via `instanceMiddleware` (built-ins are already bundled)
 
-Customization is per control via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties, assigned directly on the control. The static surface is read-only:
+Customization is per control via the `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` properties, assigned directly on the control. The static surface is read-only:
 
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
 - `getLocaleLayout`
@@ -57,6 +57,7 @@ The stable consumer surface consists of the package entry points and the `<kiosk
 - `kiosk-keyboard-webc/layouts/fkey-row` - stable shared row for custom layout composition
 - `kiosk-keyboard-webc/layouts/nav-row` - stable shared row for custom layout composition
 - `kiosk-keyboard-webc/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware via `instanceMiddleware` (built-ins are already bundled)
+- `kiosk-keyboard-webc/variants` - the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type; spread the table to extend the defaults when supplying `instanceVariants`
 
 Stable exports from the bundle entry:
 
@@ -64,7 +65,7 @@ Stable exports from the bundle entry:
 - Enum exports: `FKeyMode`, `KeyboardType`, `MobileKeyboard`
 - Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
 
-Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, and `instanceMiddleware` properties, assigned directly on the element. The static surface is read-only:
+Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` properties, assigned directly on the element. The static surface is read-only:
 
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
 - `getLocaleLayout`

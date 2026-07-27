@@ -28,6 +28,13 @@
  *   --ui5KioskKeyboard-keyBorderColor   Uniform border color for all key types (default: unset).
  *                                       When set, overrides per-type border colors.
  *
+ * Accent-variant corner hint (keys carrying a long-press variant popup):
+ *   --ui5KioskKeyboard-variantHintInset  Inset from the key's top/end edge (default: 0.1875rem)
+ *   --ui5KioskKeyboard-variantHintSize   Hint size (default: 0.3125rem)
+ *   --ui5KioskKeyboard-variantHintColor  Hint color (default: @sapContent_LabelColor). Ignored
+ *                                       under forced colors, which uses system colors.
+ *   --ui5KioskKeyboard-variantHintOpacity Hint opacity (default: 0.71)
+ *
  * Container:
  *   --ui5KioskKeyboard-border           Container border (default: 1px solid <theme border color>)
  *   --ui5KioskKeyboard-borderRadius     Container border radius (default: theme corner radius)
@@ -313,16 +320,21 @@
     box-sizing: border-box;
     box-shadow: var(--_ui5KioskKeyboard-keyShadow);
     position: relative;
-    /* WCAG 2.5.8 (AA): keys hold a 24px minimum target size on the inline axis
-       instead of shrinking to zero; narrow widths recover room by tightening the
-       inter-key gap (see the width-responsive @container rules) rather than the keys. */
+    /* WCAG 2.5.8 (AA): keys hold a 24x24px minimum target size instead of
+       shrinking to zero; narrow widths recover room by tightening the inter-key
+       gap (see the width-responsive @container rules) rather than the keys. The
+       inline floor is lifted below 20rem, where holding it pushes a full row past
+       the container edge - see that tier's rule. */
     min-inline-size: 1.5rem;
+    min-block-size: 1.5rem;
     white-space: nowrap;
     container-type: inline-size;
 
     /* Long-press affordance: a folded-corner triangle marking keys that carry an
-       accent-variant popup. Neutral grey at a WCAG SC 1.4.11-compliant opacity;
-       suppressed on sub-target-size keys where it would only add noise. */
+       accent-variant popup. Neutral grey at a WCAG SC 1.4.11-compliant opacity.
+       Painted at every width: long-press is the only route to the variants on
+       touch, and the mark sits in the corner of a key that stays full height, so
+       it never competes with the centered glyph however narrow the key gets. */
     &[data-has-variants]::after {
       content: "";
       position: absolute;
@@ -334,12 +346,6 @@
       opacity: var(--ui5KioskKeyboard-variantHintOpacity, 0.71);
       clip-path: polygon(0 0, 100% 0, 100% 100%);
       pointer-events: none;
-    }
-
-    @container (max-inline-size: 1.5rem) {
-      &[data-has-variants]::after {
-        display: none;
-      }
     }
 
     &:active,
@@ -608,6 +614,13 @@
   @container keyboard (max-width: 20rem) {
     .ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
       --_ui5KioskKeyboard-keyPadding: ~"var(--_ui5KioskKeyboard-keyPaddingXs)";
+
+      /* Reachability outranks the target-size floor at the narrowest tier: the
+         densest rows do not fit a full set of floored keys here, and a
+         center-justified row that overflows is clipped at BOTH edges, taking its
+         outermost keys with it. Keys shrink to fit instead, so every key stays
+         on screen; SC 2.5.8 is consequently not met below this width. */
+      min-inline-size: 0;
     }
 
     .ui5KioskKey {

@@ -17,6 +17,9 @@ for (const { id, tag } of [
   { id: "kb-numpad", tag: "webc-numpad-rtl" },
   { id: "kb-numeric", tag: "webc-numeric-rtl" },
   { id: "kb-arabic", tag: "webc-arabic-rtl" },
+  // The corner hint's clip-path is mirrored for RTL. This is the only fixture
+  // that arms variants: `arabic` resolves its built-in table to null.
+  { id: "kb-accent-variants", tag: "webc-accent-variants-rtl" },
 ]) {
   test(tag, async ({ page }) => {
     await expect(keyboardRoot(page, id)).toHaveScreenshot(`${tag}.png`);
