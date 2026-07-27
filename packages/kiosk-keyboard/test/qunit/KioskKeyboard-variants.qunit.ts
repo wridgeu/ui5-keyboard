@@ -310,6 +310,22 @@ QUnit.test("keys hold the WCAG 2.5.8 24x24px minimum target size above the narro
   cleanup(kb, input);
 });
 
+QUnit.test("keys hold the block floor when the key-height property is set below it", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const root = kb.getDomRef() as HTMLElement;
+  // Every built-in height tier is already above 24px, so the block floor only
+  // binds against a consumer value - which is the case it exists for.
+  root.style.setProperty("--ui5KioskKeyboard-keyHeight", "1rem");
+  await waitForRender();
+  const keys = Array.from(root.querySelectorAll<HTMLElement>(DOM.selectors.key));
+  assert.ok(keys.length >= 10, "the full keyboard rendered");
+  for (const key of keys) {
+    const height = key.getBoundingClientRect().height;
+    assert.ok(height >= 23.99, `key '${key.dataset.key}' holds >= 24px block (${height.toFixed(1)}px)`);
+  }
+  cleanup(kb, input);
+});
+
 QUnit.test("the inline floor lifts below the narrowest tier so no key is clipped", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const root = kb.getDomRef() as HTMLElement;
