@@ -12,20 +12,18 @@ Four phases, one PR. Decisions taken with the maintainer up front:
   Phase 1 is **not** output-identical for existing `accentVariants` users on those four
   layouts — their (semantically wrong) variant popups disappear. Output stays identical
   for every Latin layout.
-- **Overflow beyond the gap reduction (open-Q7):** empirically corrected. The issue
-  claimed the 24px floor + gap reduction "covers every built-in layout" — it does not.
-  The 10-key Latin rows fit down to 320px, but the **12-key `ja-kana` / `ko-hangul`**
-  rows do not: 12 x 24px + gaps + the container's own padding exceeds 320px, and because
-  the row is `justify-content: center`, the overflow clips **both** edges, leaving the
-  leftmost `{shift}` key unreachable. This cannot be closed in pure CSS: the recoverable
-  space is the container padding, which lives on the container element itself and so
-  cannot be reduced from that element's own `@container` query. Resolution shipped:
-  document a **minimum supported width (~360px)** for the dense non-Latin layouts and let
-  the row overflow (no scroll machinery, per the agreed scope); the two phone-sm shifted
-  interaction tests are skipped there (the wider phones fit and still cover them).
-  **Open for the maintainer:** if reachability at 320px matters more than the target-size
-  floor for `ja-kana`/`ko-hangul`, the alternative is horizontal-scroll overflow — a
-  larger change deferred pending that call.
+- **Overflow beyond the gap reduction (open-Q7):** closed in review. The issue claimed the
+  24px floor + gap reduction "covers every built-in layout" — it does not, and the shortfall
+  is wider than first measured: the default **11-element `qwerty` digit row** clips at the
+  320px phone-sm width too, not only the 12-key `ja-kana` / `ko-hangul` rows. A
+  `justify-content: center` row that overflows is clipped at **both** edges, so it is the
+  outermost keys that are lost. Resolution shipped: **reachability outranks the target-size
+  floor at the narrowest tier.** `min-inline-size` is lifted to `0` inside the existing
+  `@container keyboard (max-width: 20rem)` block, so keys shrink to fit and every key stays
+  on screen; SC 2.5.8 is met at every width above that tier and documented as not met below
+  it. Measured at phone-sm after the change: `qwerty`, `ja-kana` and `ko-hangul` all render
+  with zero clipped keys and a fully visible `{shift}`, so the two phone-sm shifted
+  interaction skips were removed rather than kept.
 
 The issue body's line numbers predate `main` advancing; anchor every edit to the symbol,
 not the issue's number. Corrected anchors live in the understanding pass, not repeated here.
@@ -89,6 +87,22 @@ proves nothing about the triangle or the floor — the visual pass runs locally.
   ABSENT on a bare key, and that a variant key carries NO `aria-expanded` (a type-on-activate
   key is not an expand/collapse control; see the review decision below). Drop the haspopup gate
   → red on the present-on-variant-key assertion.
+
+**Post-review corrections (2026-07-27), hint suppression and the target-size floor.** Phase 2
+shipped a `@container (max-inline-size: 1.5rem)` rule suppressing the hint on "sub-target-size"
+keys. It could never do that: a size container query evaluates the query container's _content_
+box while `min-inline-size` floors its _border_ box, so the rule fired up to a ~34px key (~30px
+in the xs padding tier) and never at 24px, where the floor made the state unreachable anyway.
+Measured effect: zero hint pixels on all three phone profiles — the touch form factors where
+long-press is the only route to the popup. The rule is removed rather than recalibrated; the
+hint is painted at every width, since it occupies a corner of a key that keeps its full height
+and so never competes with the centered glyph. **H8 (hint suppressed rather than painted):**
+`content` and `clip-path` both survive `display: none`, so the original assertions could not
+see this; both twins now assert `display` and add a narrow-key case. Seen red by restoring the
+suppression rule.
+
+Phase 4's floor is now `min-inline-size` **and** `min-block-size` (SC 2.5.8 is 24x24; the block
+axis was previously unconstrained and fell to whatever `--*-keyHeight` was set to).
 
 **Post-review correction (2026-07-27).** Phase 3 originally emitted `aria-expanded` on variant
 keys. It was removed: the key's own Enter/Space types the glyph rather than toggling the popup,

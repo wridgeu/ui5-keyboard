@@ -273,21 +273,61 @@ QUnit.test("the corner hint pseudo-element renders only on variant keys", async 
     "the hint is clipped to the folded-corner triangle",
   );
   assert.notStrictEqual(getComputedStyle(bKey, "::after").content, '""', "bare key renders no hint pseudo-element");
+  // `content` and `clip-path` both survive `display: none`, so only this
+  // assertion can tell a painted hint from a suppressed one.
+  assert.strictEqual(getComputedStyle(aKey, "::after").display, "block", "the hint is painted");
   cleanup(kb, input);
 });
 
-QUnit.test("keys hold the WCAG 2.5.8 24px minimum inline size at a narrow width", async (assert) => {
+QUnit.test("the corner hint stays painted on a narrow key", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const root = kb.getDomRef() as HTMLElement;
-  // Narrow enough that flex alone would shrink the 10-key row below 24px; the
-  // floor must hold each key at >= 24px (the row overflows its hidden container).
+  // Long-press is the only route to the variants on touch, so the affordance has
+  // to survive the narrowest widths rather than drop out with the key size.
   root.style.width = "200px";
+  await waitForRender();
+  const aKey = getRequiredKeyElement(kb, "a");
+  const width = aKey.getBoundingClientRect().width;
+  assert.ok(width < 24, `the key really is narrow (${width.toFixed(1)}px)`);
+  assert.strictEqual(getComputedStyle(aKey, "::after").display, "block", "the hint is still painted");
+  cleanup(kb, input);
+});
+
+QUnit.test("keys hold the WCAG 2.5.8 24x24px minimum target size above the narrowest tier", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const root = kb.getDomRef() as HTMLElement;
+  // 21rem: narrow enough that flex alone would shrink the 10-key row below 24px,
+  // but above the 20rem tier where the inline floor is lifted.
+  root.style.width = "336px";
   await waitForRender();
   const keys = Array.from(root.querySelectorAll<HTMLElement>(DOM.selectors.key));
   assert.ok(keys.length >= 10, "the full keyboard rendered");
   for (const key of keys) {
-    const width = key.getBoundingClientRect().width;
-    assert.ok(width >= 23.99, `key '${key.dataset.key}' holds >= 24px (${width.toFixed(1)}px)`);
+    const box = key.getBoundingClientRect();
+    assert.ok(box.width >= 23.99, `key '${key.dataset.key}' holds >= 24px inline (${box.width.toFixed(1)}px)`);
+    assert.ok(box.height >= 23.99, `key '${key.dataset.key}' holds >= 24px block (${box.height.toFixed(1)}px)`);
+  }
+  cleanup(kb, input);
+});
+
+QUnit.test("the inline floor lifts below the narrowest tier so no key is clipped", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const root = kb.getDomRef() as HTMLElement;
+  // Below 20rem the densest rows cannot fit a full set of floored keys. Holding
+  // the floor would overflow a center-justified row and clip its outermost keys
+  // at both edges, so the keys shrink instead and reachability is preserved.
+  root.style.width = "280px";
+  await waitForRender();
+  const board = root.querySelector<HTMLElement>(DOM.selectors.root) ?? root;
+  const boardBox = board.getBoundingClientRect();
+  const keys = Array.from(root.querySelectorAll<HTMLElement>(DOM.selectors.key));
+  assert.ok(keys.length >= 10, "the full keyboard rendered");
+  for (const key of keys) {
+    const box = key.getBoundingClientRect();
+    assert.ok(box.left >= boardBox.left - 0.5, `key '${key.dataset.key}' is not clipped at the leading edge`);
+    assert.ok(box.right <= boardBox.right + 0.5, `key '${key.dataset.key}' is not clipped at the trailing edge`);
+    // The block axis is unaffected by the inline relaxation.
+    assert.ok(box.height >= 23.99, `key '${key.dataset.key}' holds >= 24px block (${box.height.toFixed(1)}px)`);
   }
   cleanup(kb, input);
 });

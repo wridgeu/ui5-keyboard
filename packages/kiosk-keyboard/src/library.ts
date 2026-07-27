@@ -208,4 +208,8 @@ export default library;
  * @public
  * @since 0.1.0
  */
-export { LATIN_DIACRITIC_VARIANTS, type VariantTable } from "./internal/latin-variants";
+export { LATIN_DIACRITIC_VARIANTS } from "./internal/latin-variants";
+// Separate `export type`: the transpile pipeline does not honour an inline
+// `type` modifier on a re-export, and would assign the type name onto the
+// library object at runtime, publishing an undefined ui5.kiosk member.
+export type { VariantTable } from "./internal/latin-variants";

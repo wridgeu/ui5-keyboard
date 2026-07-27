@@ -636,9 +636,36 @@ describe("kiosk-keyboard - accent-variant popup", () => {
       "the hint is clipped to the folded-corner triangle",
     ).to.not.equal("none");
     expect(getComputedStyle(bKey, "::after").content, "bare key shows no hint").to.not.equal('""');
+    // `content` and `clip-path` both survive `display: none`, so only this
+    // assertion can tell a painted hint from a suppressed one.
+    expect(getComputedStyle(aKey, "::after").display, "the hint is painted").to.equal("block");
   });
 
-  it("holds the WCAG 2.5.8 24px minimum key inline size at a narrow width", async () => {
+  it("keeps the corner hint painted on a narrow key", async () => {
+    const { kb } = await setupWithLayout([
+      [
+        { value: "a", variants: ["à", "á"] },
+        { value: "b" },
+        { value: "c" },
+        { value: "d" },
+        { value: "e" },
+        { value: "f" },
+        { value: "g" },
+        { value: "h" },
+        { value: "i" },
+        { value: "j" },
+      ],
+    ]);
+    // Long-press is the only route to the variants on touch, so the affordance
+    // has to survive the narrowest widths rather than drop out with the key size.
+    kb.style.width = "200px";
+    await renderFinished();
+    const aKey = requireKey(kb, "a");
+    expect(aKey.getBoundingClientRect().width, "the key really is narrow").to.be.below(24);
+    expect(getComputedStyle(aKey, "::after").display, "the hint is still painted").to.equal("block");
+  });
+
+  it("holds the WCAG 2.5.8 24x24px minimum key target size above the narrowest tier", async () => {
     const { kb } = await setupWithLayout([
       [
         { value: "q" },
@@ -653,14 +680,54 @@ describe("kiosk-keyboard - accent-variant popup", () => {
         { value: "p" },
       ],
     ]);
-    // Narrow enough that flex alone would shrink the 10-key row below 24px; the
-    // floor must hold each key at >= 24px (the row overflows its hidden container).
-    kb.style.width = "200px";
+    // 21rem: narrow enough that flex alone would shrink the 10-key row below
+    // 24px, but above the 20rem tier where the inline floor is lifted.
+    kb.style.width = "336px";
     await renderFinished();
     const keys = [...kb.shadowRoot!.querySelectorAll<HTMLElement>(DOM.selectors.key)];
     expect(keys.length).to.equal(10);
     for (const key of keys) {
-      expect(key.getBoundingClientRect().width, `key '${key.dataset.key}' holds >= 24px`).to.be.at.least(23.99);
+      const box = key.getBoundingClientRect();
+      expect(box.width, `key '${key.dataset.key}' holds >= 24px inline`).to.be.at.least(23.99);
+      expect(box.height, `key '${key.dataset.key}' holds >= 24px block`).to.be.at.least(23.99);
+    }
+  });
+
+  it("lifts the inline floor below the narrowest tier so every key stays inside the keyboard", async () => {
+    const { kb } = await setupWithLayout([
+      [
+        { value: "q" },
+        { value: "w" },
+        { value: "e" },
+        { value: "r" },
+        { value: "t" },
+        { value: "y" },
+        { value: "u" },
+        { value: "i" },
+        { value: "o" },
+        { value: "p" },
+      ],
+    ]);
+    // Below 20rem the row cannot fit ten floored keys. Holding the floor would
+    // overflow a center-justified row and clip its outermost keys at both edges,
+    // so the keys shrink instead and reachability is preserved.
+    kb.style.width = "280px";
+    await renderFinished();
+    const root = kb.shadowRoot!;
+    const board = root.querySelector<HTMLElement>(DOM.selectors.root)!;
+    const boardBox = board.getBoundingClientRect();
+    const keys = [...root.querySelectorAll<HTMLElement>(DOM.selectors.key)];
+    expect(keys.length).to.equal(10);
+    for (const key of keys) {
+      const box = key.getBoundingClientRect();
+      expect(box.left, `key '${key.dataset.key}' is not clipped at the leading edge`).to.be.at.least(
+        boardBox.left - 0.5,
+      );
+      expect(box.right, `key '${key.dataset.key}' is not clipped at the trailing edge`).to.be.at.most(
+        boardBox.right + 0.5,
+      );
+      // The block axis is unaffected by the inline relaxation.
+      expect(box.height, `key '${key.dataset.key}' holds >= 24px block`).to.be.at.least(23.99);
     }
   });
 
