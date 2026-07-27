@@ -608,20 +608,21 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(true);
   });
 
-  it("variant keys advertise the popup via aria-haspopup and reflect aria-expanded", async () => {
+  it("variant keys advertise the popup via aria-haspopup, without aria-expanded", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     const aKey = requireKey(kb, "a");
     expect(aKey.getAttribute("aria-haspopup")).to.equal("dialog");
-    expect(aKey.getAttribute("aria-expanded")).to.equal("false");
     expect(requireKey(kb, "b").hasAttribute("aria-haspopup"), "a bare key has no haspopup").to.equal(false);
 
+    // No aria-expanded: the key's own activation types the glyph rather than
+    // toggling the popup, so a dialog trigger carries no expand/collapse state.
+    expect(aKey.hasAttribute("aria-expanded"), "no aria-expanded before opening").to.equal(false);
     await holdOpen(aKey);
-    expect(aKey.getAttribute("aria-expanded"), "expanded while open").to.equal("true");
+    expect(aKey.hasAttribute("aria-expanded"), "still no aria-expanded while open").to.equal(false);
     pointerUp();
 
     keyDown(popupEl(kb)!, "Escape");
     await renderFinished();
-    expect(requireKey(kb, "a").getAttribute("aria-expanded"), "collapsed after dismiss").to.equal("false");
   });
 
   it("renders the corner hint pseudo-element only on variant keys", async () => {

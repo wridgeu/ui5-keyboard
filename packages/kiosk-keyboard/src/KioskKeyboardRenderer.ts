@@ -259,17 +259,14 @@ const KioskKeyboardRenderer = {
 
     // Marker for the long-press / right-click accent-variant gate: a cheap
     // hasAttribute() presence check lets the pointer handlers skip keys with no
-    // variants. The same keys advertise the popup to assistive tech through
-    // aria-haspopup; aria-expanded reflects the open state. It is derived from the
-    // open-popup anchor id (not a static "false") so a re-render while a popup is
-    // open re-emits the true state instead of clobbering it back to collapsed;
-    // VariantPopupBehavior also toggles it imperatively across the open/close
-    // transition, which does not re-render the control.
+    // variants. The same keys advertise the dialog popup to assistive tech through
+    // aria-haspopup. No aria-expanded: the key's own activation types the glyph
+    // rather than toggling the popup, and a dialog trigger is not an
+    // expand/collapse control (WAI-ARIA APG dialog pattern; MDN cautions against
+    // aria-expanded on elements that do not control the expanded state).
     if (key.variants && key.variants.length > 0) {
       rm.attr(KIOSK_KEYBOARD_DOM.attributes.hasVariants, "");
       rm.attr("aria-haspopup", "dialog");
-      const isOpen = oControl._getOpenVariantAnchorId() === keyElementId(oControl.getId(), ri, ci);
-      rm.attr("aria-expanded", isOpen ? "true" : "false");
     }
 
     // Native tooltip for labels that may be truncated by text-overflow: ellipsis.

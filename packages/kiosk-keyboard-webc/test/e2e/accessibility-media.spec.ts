@@ -17,3 +17,11 @@ test("webc-qwerty-forced-colors", async ({ page }) => {
   await openPage(page, "/test/pages/visual.html");
   await expect(keyboardRoot(page, "kb-qwerty")).toHaveScreenshot("webc-qwerty-forced-colors.png");
 });
+
+// The variant-hint ::after paints only under `accent-variants`, so it needs its
+// own forced-colors capture (the qwerty fixture above carries no variant keys).
+test("webc-accent-variants-forced-colors", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await openPage(page, "/test/pages/visual.html");
+  await expect(keyboardRoot(page, "kb-accent-variants")).toHaveScreenshot("webc-accent-variants-forced-colors.png");
+});

@@ -264,11 +264,6 @@ export default class VariantPopupBehavior {
     return true;
   }
 
-  /** The id of the key whose variant popup is currently open, or `null` when closed. */
-  getOpenAnchorId(): string | null {
-    return this._popover ? (this._anchorKeyEl?.id ?? null) : null;
-  }
-
   destroy(): void {
     this.stop();
     this._pendingAnchorKeyEl = null;
@@ -431,7 +426,6 @@ export default class VariantPopupBehavior {
     // popup a few pixels sideways. The marker must be on before openBy so the
     // baseline is already the resting box.
     anchorKeyEl.classList.add(KIOSK_KEYBOARD_DOM.classes.keyVariantAnchor);
-    anchorKeyEl.setAttribute("aria-expanded", "true");
     popover.openBy(anchorKeyEl);
 
     // Keyboard navigation lives on the grid: it intercepts Arrow/Home/End/Enter/
@@ -562,7 +556,6 @@ export default class VariantPopupBehavior {
     // Restore the anchor key's normal pressed transform: the popup no longer
     // docks to it, so its rect is free to change again.
     anchor?.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyVariantAnchor);
-    anchor?.setAttribute("aria-expanded", "false");
 
     this._teardownOpenState();
     this._anchorKeyEl = null;

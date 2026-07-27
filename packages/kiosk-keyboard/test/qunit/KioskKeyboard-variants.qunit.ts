@@ -241,40 +241,19 @@ QUnit.test("the '*' wildcard re-enables variants on an excluded non-Latin layout
   cleanup(kb, input);
 });
 
-QUnit.test("variant keys advertise the popup via aria-haspopup and toggle aria-expanded", async (assert) => {
+QUnit.test("variant keys advertise the popup via aria-haspopup, without aria-expanded", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const aKey = getRequiredKeyElement(kb, "a");
   assert.strictEqual(aKey.getAttribute("aria-haspopup"), "dialog", "a variant key advertises a dialog popup");
-  assert.strictEqual(aKey.getAttribute("aria-expanded"), "false", "collapsed before opening");
   assert.strictEqual(getRequiredKeyElement(kb, "b").hasAttribute("aria-haspopup"), false, "a bare key has no haspopup");
 
+  // No aria-expanded: the key's own activation types the glyph rather than
+  // toggling the popup, so a dialog trigger carries no expand/collapse state.
+  assert.strictEqual(aKey.hasAttribute("aria-expanded"), false, "no aria-expanded before opening");
   await holdOpen(kb, aKey);
-  assert.strictEqual(aKey.getAttribute("aria-expanded"), "true", "expanded while the popup is open");
+  assert.strictEqual(aKey.hasAttribute("aria-expanded"), false, "still no aria-expanded while the popup is open");
   release(kb, aKey);
   keydownOnPopup("Escape");
-  assert.strictEqual(aKey.getAttribute("aria-expanded"), "false", "collapsed again after dismiss");
-  cleanup(kb, input);
-});
-
-QUnit.test("aria-expanded survives a re-render while the popup is open", async (assert) => {
-  const { kb, input } = await makeKeyboard();
-  await holdOpen(kb, getRequiredKeyElement(kb, "a"));
-  assert.strictEqual(getRequiredKeyElement(kb, "a").getAttribute("aria-expanded"), "true", "expanded while open");
-
-  // An unrelated invalidation (locale/theme/property change) re-runs the renderer
-  // while the static-area popup stays open. The rendered aria-expanded must track
-  // the open anchor, not reset to collapsed under the still-open dialog.
-  kb.invalidate();
-  await waitForRender();
-  assert.strictEqual(
-    getRequiredKeyElement(kb, "a").getAttribute("aria-expanded"),
-    "true",
-    "still expanded after re-render",
-  );
-
-  release(kb, getRequiredKeyElement(kb, "a"));
-  keydownOnPopup("Escape");
-  assert.strictEqual(getRequiredKeyElement(kb, "a").getAttribute("aria-expanded"), "false", "collapsed after dismiss");
   cleanup(kb, input);
 });
 
