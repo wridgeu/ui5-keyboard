@@ -630,6 +630,10 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     const bKey = requireKey(kb, "b");
     expect(getComputedStyle(aKey).position, "the key anchors its hint").to.equal("relative");
     expect(getComputedStyle(aKey, "::after").content, "variant key shows the hint").to.equal('""');
+    expect(
+      getComputedStyle(aKey, "::after").clipPath,
+      "the hint is clipped to the folded-corner triangle",
+    ).to.not.equal("none");
     expect(getComputedStyle(bKey, "::after").content, "bare key shows no hint").to.not.equal('""');
   });
 

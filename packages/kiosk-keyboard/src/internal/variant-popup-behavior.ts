@@ -264,6 +264,11 @@ export default class VariantPopupBehavior {
     return true;
   }
 
+  /** The id of the key whose variant popup is currently open, or `null` when closed. */
+  getOpenAnchorId(): string | null {
+    return this._popover ? (this._anchorKeyEl?.id ?? null) : null;
+  }
+
   destroy(): void {
     this.stop();
     this._pendingAnchorKeyEl = null;

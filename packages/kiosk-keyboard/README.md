@@ -606,7 +606,7 @@ const kb = new KioskKeyboard({
 });
 ```
 
-The four non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `arabic`, `ko-hangul`) resolve the built-in table to nothing, so `accentVariants` adds no popups there; supply an `instanceVariants` entry (or a `"*"` wildcard) to opt one back in. That exclusion list is only the shipped default for those built-ins — it never locks you out. A **custom** layout whose Latin-looking keys should _not_ surface accent popups (a transliteration IME, say) opts out the same way, with a `null` entry: `instanceVariants: { "my-ime": null }`. Action, modifier, and space keys never take table variants even when a table is keyed to their value.
+The four non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `arabic`, `ko-hangul`) resolve the built-in table to nothing, so `accentVariants` adds no popups there; supply an `instanceVariants` entry (or a `"*"` wildcard) to opt one back in. That exclusion list is only the shipped default for those built-ins; it never locks you out. A **custom** layout whose Latin-looking keys should _not_ surface accent popups (a transliteration IME, say) opts out the same way, with a `null` entry: `instanceVariants: { "my-ime": null }`. Action, modifier, and space keys never take table variants even when a table is keyed to their value.
 
 ---
 
