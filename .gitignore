@@ -14,8 +14,9 @@ test-results/
 playwright-report/
 .last-run.json
 
-# ui5-test-runner output
-report/
+# ui5-test-runner output. The directory takes a port suffix (report-p8081) when
+# its default port is taken, so a concurrent run lands outside plain `report/`.
+report*/
 .nyc_output/
 
 # @ui5/linter coverage report (written to cwd by `ui5lint --coverage`)

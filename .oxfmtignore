@@ -10,3 +10,7 @@ dist/
 
 # ui5-tooling-modules cache output (generated during serve/build)
 .ui5-tooling-modules/
+
+# ui5-test-runner output. The directory takes a port suffix (report-p8081) when
+# its default port is taken, so a concurrent run lands outside plain `report/`.
+report*/
