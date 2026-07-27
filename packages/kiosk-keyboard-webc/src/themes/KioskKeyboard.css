@@ -803,6 +803,18 @@
    The fonts below cover Windows (Segoe UI Symbol), macOS (Apple Symbols),
    and Linux/Android (Noto Sans Symbols). */
 .kiosk-key__icon {
+  /* A SAP icon renders as a `ui5-icon`, whose own `:host` rule sets
+     `color: var(--sapContent_IconColor)` and a fixed `1rem` box. An outer-tree
+     declaration beats `:host` on a specificity tie, so these two are what make
+     the glyph track the key's text color and font size instead of painting a
+     theme icon color at a constant size - which on an Emphasized key means a
+     dark glyph on the blue fill. `ui5-button` styles its own icon the same way
+     (`.ui5-button-icon { color: inherit }`). Both are no-ops on the
+     unicode-glyph `span`, which already inherits and ignores sizing while
+     inline. */
+  color: inherit;
+  inline-size: 1em;
+  block-size: 1em;
   font-family:
     var(--sapFontFamily, "72", "72full", Arial, Helvetica, sans-serif), "Segoe UI Symbol", "Apple Symbols",
     "Noto Sans Symbols 2", "Noto Sans Symbols", sans-serif;

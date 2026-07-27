@@ -419,4 +419,40 @@ describe("icon + label rendering", () => {
     expect(iconEl).to.exist;
     expect(iconEl!.textContent).to.equal("\u{1F512}");
   });
+
+  // A `ui5-icon` carries its own `:host` color and a fixed 1rem box, which win
+  // unless the key's stylesheet overrides them from the outer tree. Left alone,
+  // an Emphasized key paints a dark theme icon on its blue fill.
+  it("paints a SAP icon in the key's own color on every key type", async () => {
+    const el = await createKeyboard([
+      [
+        { value: "{enter}", type: "action", icon: "sap-icon://accept" },
+        { value: "{shift}", type: "modifier", icon: "sap-icon://arrow-top" },
+        { value: "x", icon: "sap-icon://home" },
+      ],
+    ]);
+    for (const value of ["{enter}", "{shift}", "x"]) {
+      const keyEl = queryKey(el, value);
+      const iconEl = queryKeyIcon(keyEl)!;
+      expect(iconEl.tagName.toLowerCase(), `"${value}" renders a ui5-icon`).to.equal("ui5-icon");
+      expect(getComputedStyle(iconEl).color, `"${value}" icon takes the key's color`).to.equal(
+        getComputedStyle(keyEl).color,
+      );
+    }
+  });
+
+  it("sizes a SAP icon from the key font size rather than pinning it to 1rem", async () => {
+    const el = await createKeyboard([[{ value: "x", icon: "sap-icon://home" }]]);
+    // `ui5-icon` sizes by width/height, not font-size, so its own `:host` 1rem box
+    // would stay put while the key scales. Its box tracking its font size is what
+    // says the outer rule is winning.
+    for (const size of ["12px", "20px"]) {
+      el.style.setProperty("--kiosk-keyboard-key-font-size", size);
+      await nextRender();
+      const style = getComputedStyle(queryKeyIcon(queryKey(el, "x")) as HTMLElement);
+      expect(style.fontSize, `the icon inherits the ${size} key font size`).to.equal(size);
+      expect(style.width, `the icon box follows the ${size} font size`).to.equal(size);
+      expect(style.height, `the icon box follows the ${size} font size`).to.equal(size);
+    }
+  });
 });
