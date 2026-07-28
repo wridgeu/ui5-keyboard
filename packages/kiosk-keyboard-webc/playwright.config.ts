@@ -46,8 +46,14 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [["html", { open: "never" }], ["list"]],
+  // Percentage rather than a count: Playwright's own default is "50%", which
+  // floors to a single worker on the 2-vCPU hosted runner and quietly cancels
+  // the fullyParallel above. A hardcoded 2 oversubscribes when the runner is
+  // larger.
+  workers: process.env.CI ? "100%" : undefined,
+  // The html report is written into the runner and discarded with it; the github
+  // reporter puts failures inline on the job summary and file annotations.
+  reporter: process.env.CI ? [["github"], ["list"]] : [["html", { open: "never" }], ["list"]],
 
   expect: {
     toHaveScreenshot: {
@@ -69,9 +75,14 @@ export default defineConfig({
     },
     // The behavioral component spec is desktop-only; the device matrix runs the
     // visual specs (which gate hover/pointer scenarios at runtime via matchMedia).
+    // On CI the device profiles carry the structural invariants only: CI runs
+    // with --ignore-snapshots, under which toHaveScreenshot passes without
+    // capturing, so the visual specs there cost a browser and assert nothing.
+    // Locally every project still runs every spec and compares pixels.
     ...devices.map((d) => ({
       name: d.name,
       testIgnore: /component\.spec\.ts/,
+      testMatch: process.env.CI ? /invariants\.spec\.ts$/ : undefined,
       use: {
         viewport: d.viewport,
         deviceScaleFactor: d.deviceScaleFactor,
