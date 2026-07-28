@@ -38,6 +38,14 @@ const deviceProfiles = [
 const DESKTOP_ONLY_SPECS = /(autotype|focus|i18n|inputmode|interop)\.spec\.ts$/;
 const SEPARATE_CONFIG_SPECS = /(flp-lifecycle|readme-screenshots)\.spec\.ts$/;
 
+// On CI the device profiles carry the structural invariants only. The visual
+// specs are the rest of their matrix, and CI runs with --ignore-snapshots, under
+// which toHaveScreenshot passes without capturing - so on that runner they cost
+// a browser and assert nothing. Locally every project still runs every spec and
+// compares pixels. Playwright prints the selected test count on every run, so a
+// narrowing here is visible rather than silent.
+const CI_DEVICE_SPECS = /invariants\.spec\.ts$/;
+
 export default defineConfig({
   testDir: "./test/e2e",
   testMatch: "**/*.spec.ts",
@@ -45,8 +53,14 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: [["html", { open: "never" }], ["list"]],
+  // Percentage rather than a count: Playwright's own default is "50%", which
+  // floors to a single worker on the 2-vCPU hosted runner and quietly cancels
+  // the fullyParallel above. A hardcoded 2 oversubscribes when the runner is
+  // larger.
+  workers: process.env.CI ? "100%" : undefined,
+  // The html report is written into the runner and discarded with it; the github
+  // reporter puts failures inline on the job summary and file annotations.
+  reporter: process.env.CI ? [["github"], ["list"]] : [["html", { open: "never" }], ["list"]],
 
   expect: {
     toHaveScreenshot: { animations: "disabled", caret: "hide" },
@@ -69,6 +83,7 @@ export default defineConfig({
     ...deviceProfiles.map((d) => ({
       name: d.name,
       testIgnore: [DESKTOP_ONLY_SPECS, SEPARATE_CONFIG_SPECS],
+      testMatch: process.env.CI ? CI_DEVICE_SPECS : undefined,
       use: {
         viewport: d.viewport,
         deviceScaleFactor: d.deviceScaleFactor,

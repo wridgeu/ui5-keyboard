@@ -23,7 +23,12 @@ runs:
         path: |
           node_modules
           packages/*/node_modules
-        key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'package.json', 'packages/*/package.json', 'patches/*.patch', 'patches/apply-nested.mjs', '.npmrc') }}
+        # Workspace manifests are deliberately absent: `npm ci` refuses to run
+        # when a manifest and the lockfile disagree, so a dependency change
+        # always moves package-lock.json and stays covered. Including them
+        # invalidated the cache on every script-only edit. Add a workspace
+        # manifest back if one ever gains its own install lifecycle hook.
+        key: node-modules-${{ runner.os }}-node24-${{ hashFiles('package-lock.json', 'package.json', 'patches/*.patch', 'patches/apply-nested.mjs', '.npmrc') }}
 
     - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
