@@ -37,6 +37,17 @@ const expected = [
 ];
 
 /**
+ * The parent selector a conditional group rule must carry through, and how many
+ * of the fixture's nested at-rules must reproduce it (@container, @supports,
+ * @layer, @media). A rule that loses this prefix compiles to a page-global
+ * selector, so the count has to be exact rather than "at least one".
+ */
+const SCOPED_SELECTOR = ".scoped .nested[data-flag]::after {";
+const SCOPED_OCCURRENCES = 4;
+/** The same rule with its scope dropped, at the start of a line. */
+const UNSCOPED_SELECTOR = /^\s*\[data-flag\]::after\s*\{/m;
+
+/**
  * Finds every nested less-openui5 copy under an `@ui5/cli` install (the root
  * node_modules or any workspace's), mirroring apply-nested.mjs's search so the
  * suite covers each copy apply-nested.mjs syncs.
@@ -106,13 +117,28 @@ function runSuite(label, less) {
         }
       }
 
+      const scopedCount = css.split(SCOPED_SELECTOR).length - 1;
+      if (scopedCount === SCOPED_OCCURRENCES) {
+        console.log(`  PASS  ${SCOPED_SELECTOR} x${SCOPED_OCCURRENCES}`);
+      } else {
+        console.error(`  FAIL  ${SCOPED_SELECTOR} x${SCOPED_OCCURRENCES} (found ${scopedCount})`);
+        failed++;
+      }
+
+      if (UNSCOPED_SELECTOR.test(css)) {
+        console.error(`  FAIL  a nested rule reached the top level unscoped`);
+        failed++;
+      } else {
+        console.log(`  PASS  no nested rule reached the top level unscoped`);
+      }
+
       if (failed > 0) {
-        console.error(`\n${failed} of ${expected.length} checks failed for ${label}.\n`);
+        console.error(`\n${failed} check(s) failed for ${label}.\n`);
         console.error("Compiled CSS:\n" + css);
         process.exit(1);
       }
 
-      console.log(`  All ${expected.length} checks passed.\n`);
+      console.log(`  All ${expected.length + 2} checks passed.\n`);
       resolveDone();
     });
   });

@@ -114,35 +114,28 @@ Adversarial validation record: `docs/specs/2026-06-11-twin-drift-check-adversari
 
 Run via `npm run test:twin-drift` (also part of `check`, `check:parallel`, and CI).
 
-## `check-css-scope.mjs`
+## `check-style-twin-drift.mjs`
 
-Scope check for the built kiosk library stylesheet
-(`packages/kiosk-keyboard/dist/resources/ui5/kiosk/themes/*/library.css` and its
-`library-RTL.css` sibling, all five themes).
+Parity check for the two hand-mirrored stylesheets
+(`packages/kiosk-keyboard/src/themes/base/KioskKeyboard.less` vs
+`packages/kiosk-keyboard-webc/src/themes/KioskKeyboard.css`) on the one thing that
+must not diverge: the public custom-property surface.
 
-A UI5 library stylesheet is loaded page-globally, so every rule it ships must be
-scoped to one of the library's own `ui5Kiosk*` classes. less-openui5 does not
-resolve the LESS parent selector `&` inside an at-rule it does not model, so a
-rule nested as `.ui5KioskKey { @container (...) { &[data-has-variants]::after {
-... } } }` compiles with the `.ui5KioskKey` scope dropped and then matches
-arbitrary host-page elements. That shipped once and was caught by hand;
-`packages/kiosk-keyboard/src/themes/base/KioskKeyboard.less` hoists such blocks
-to the top level with their full selector for this reason, and this check is
-what catches one that was nested instead.
+- The twins are not compared line by line - they differ by language and by naming
+  convention (`--ui5KioskKeyboard-variantHintInset` vs
+  `--kiosk-keyboard-variant-hint-inset`), so names are compared as canonical
+  lowercase tokens and privately-prefixed (`--_`) properties are excluded.
+- Fails naming the property and which twin is missing it. A count below
+  `EXPECTED_MIN_PROPERTIES` is a hard failure: two empty sets compare equal, so a
+  renamed prefix or a broken pattern would otherwise pass while verifying nothing.
+- Properties that legitimately exist in one twin only (the accent-variant popup
+  layout, which webc owns and kiosk delegates to the UI5 static area) are listed in
+  `PROPERTY_PARITY` with a reason, and an entry that no longer exists is itself a
+  failure so the allowlist cannot rot.
 
-- Tokenizes the compiled css (no dependencies), checking every selector at the
-  top level and inside `@media` / `@container` / `@supports` / `@layer`;
-  `@keyframes` and the other non-grouping at-rules own their block contents and
-  are skipped whole.
-- Fails naming the offending selector and its enclosing at-rule chain. Absent
-  build output, a missing theme file, and a stylesheet that parsed to zero rules
-  are hard failures, never a silent pass.
-- The two unscoped selectors the theme build itself emits
-  (`.sapUiAccKeysHighlighDom:first-letter` from `sap/ui/core`'s `global.less`,
-  and the `#sap-ui-theme-*` parameter marker) are allowlisted at the top of the
-  script.
+Adversarial validation record: `docs/specs/2026-07-28-stylesheet-guards-adversarial-hypotheses.md`.
 
-Reads compiled css, so it must run after `npm run build:kiosk`.
+Run via `npm run test:style-twin-drift` (also part of `check:base` and CI).
 
 ## `copy-license.mjs`
 

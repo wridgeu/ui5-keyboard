@@ -31,9 +31,18 @@ index faa0653..155b9dc 100644
                      value = hasExpression ? this.expression() : this.entity();
                      if (value && $char(';')) {
 diff --git a/node_modules/less-openui5/lib/thirdparty/less/tree/directive.js b/node_modules/less-openui5/lib/thirdparty/less/tree/directive.js
-index a4404bd..204301e 100644
+index a4404bd..5d65b8e 100644
 --- a/node_modules/less-openui5/lib/thirdparty/less/tree/directive.js
 +++ b/node_modules/less-openui5/lib/thirdparty/less/tree/directive.js
+@@ -4,7 +4,7 @@ tree.Directive = function (name, value, index, currentFileInfo) {
+     this.name = name;
+ 
+     if (Array.isArray(value)) {
+-        this.rules = [new(tree.Ruleset)(null, value)];
++        this.rules = [new(tree.Ruleset)(this.isConditionalGroup() ? this.emptySelectors() : null, value)];
+         this.rules[0].allowImports = true;
+     } else {
+         this.value = value;
 @@ -27,8 +27,9 @@ tree.Directive.prototype = {
          output.add(this.name, this.currentFileInfo, this.index);
          if (this.rules) {
@@ -46,3 +55,28 @@ index a4404bd..204301e 100644
              this.value.genCSS(env, output);
              output.add(';');
          }
+@@ -40,11 +41,23 @@ tree.Directive.prototype = {
+             env.frames.unshift(this);
+             evaldDirective = new(tree.Directive)(this.name, null, this.index, this.currentFileInfo);
+             evaldDirective.rules = [this.rules[0].eval(env)];
+-            evaldDirective.rules[0].root = true;
++            evaldDirective.rules[0].root = !this.isConditionalGroup();
+             env.frames.shift();
+         }
+         return evaldDirective;
+     },
++    // Conditional group rules hold style rules that stay bound to the enclosing
++    // selector, the way @media does. Without a parent selector their contents
++    // bubble to the top level and silently lose that scope.
++    isConditionalGroup: function () {
++        return /^@(?:-[a-z]+-)?(?:supports|container|layer)\b/i.test(this.name);
++    },
++    emptySelectors: function () {
++        var el = new(tree.Element)('', '&', this.index, this.currentFileInfo),
++            sels = [new(tree.Selector)([el], null, null, this.index, this.currentFileInfo)];
++        sels[0].mediaEmpty = true;
++        return sels;
++    },
+     variable: function (name) { return tree.Ruleset.prototype.variable.call(this.rules[0], name); },
+     find: function () { return tree.Ruleset.prototype.find.apply(this.rules[0], arguments); },
+     rulesets: function () { return tree.Ruleset.prototype.rulesets.apply(this.rules[0]); },

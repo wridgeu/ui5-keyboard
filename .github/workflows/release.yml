@@ -22,9 +22,7 @@ jobs:
     permissions:
       contents: read
 
-  # Runs alongside `ci` rather than after it: `release-please` already gates on
-  # both, so serializing them only delays the release without changing what has
-  # to pass.
+  # Independent of `ci`; `release-please` below gates on both.
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
