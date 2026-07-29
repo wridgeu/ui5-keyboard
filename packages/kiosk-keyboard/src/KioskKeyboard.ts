@@ -1768,11 +1768,9 @@ export default class KioskKeyboard extends Control {
             icon: LAYOUT_RETURN_ICON,
             ariaLabel: getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
           });
-    // Opt-in Latin-diacritics: fill default variants onto matching base keys so
-    // umlauts/accents are reachable from any layout. The effective table is
-    // resolved per instance (instanceVariants -> `"*"` wildcard -> built-in); a
-    // `null` table leaves the layout without variants. Author-declared `variants`
-    // always win (applyVariantDefaults guarantees this).
+    // Opt-in Latin-diacritics: fill the resolved table's variants onto matching
+    // base keys so umlauts/accents are reachable from any layout. Author-declared
+    // `variants` always win (applyVariantDefaults guarantees this).
     if (!this.getAccentVariants()) return base;
     const table = resolveVariantTable(layoutName, this._instanceVariantsMap);
     return table ? applyVariantDefaults(base, table) : base;

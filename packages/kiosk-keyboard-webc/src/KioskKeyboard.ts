@@ -1180,10 +1180,8 @@ class KioskKeyboard extends UI5Element {
             ariaLabel: getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
           });
     // When enabled, fill the resolved accent-variant table onto matching base
-    // keys so any layout gains the long-press variants. The table is resolved
-    // per instance (instanceVariants -> `"*"` wildcard -> built-in); a `null`
-    // table leaves the layout without variants. Author-declared `variants` are
-    // preserved (applyVariantDefaults never overrides them).
+    // keys so any layout gains the long-press variants. Author-declared
+    // `variants` are preserved (applyVariantDefaults never overrides them).
     if (!this.accentVariants) return base;
     const table = resolveVariantTable(layoutName, this._variantsView.get(this.instanceVariants));
     return table ? applyVariantDefaults(base, table) : base;

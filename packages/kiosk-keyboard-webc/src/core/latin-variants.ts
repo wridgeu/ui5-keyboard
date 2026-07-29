@@ -69,9 +69,6 @@ export type InstanceVariants = ReadonlyMap<string, VariantTable | null>;
 /**
  * Built-in layouts whose scripts have no Latin-diacritic long-press variants, so the
  * built-in tier resolves to `null` for them rather than arming meaningless popups.
- * This is only the shipped default for these built-ins; it binds nothing for consumers,
- * who set the effective table per layout through `instanceVariants` (an entry, a `null`
- * opt-out, or a `*` wildcard) for built-in and custom layouts alike.
  */
 const NON_LATIN_VARIANT_LAYOUTS: ReadonlySet<string> = new Set(["ja-romaji", "ja-kana", "arabic", "ko-hangul"]);
 
