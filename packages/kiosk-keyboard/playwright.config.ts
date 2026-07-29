@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
 import { CHROMIUM_ARGS, DESKTOP_VIEWPORT, ui5ServeWebServer } from "./playwright.shared.js";
 
@@ -15,8 +17,9 @@ import { CHROMIUM_ARGS, DESKTOP_VIEWPORT, ui5ServeWebServer } from "./playwright
  * Browser provisioning: `npx playwright install chromium` (`--with-deps` in CI).
  * Visual baselines under test/e2e/__baselines__/<project>/ are committed and
  * carry no platform suffix, so a baseline is only valid for the OS it was
- * generated on. The desktop project runs in CI via test:e2e:ci as render smoke
- * tests; pixel comparison is not gated (snapshots ignored).
+ * generated on. test:e2e:ci runs every project with --ignore-snapshots, so pixel
+ * comparison is never gated on CI; see CI_DEVICE_SPECS for what the device
+ * projects run there.
  */
 
 const PORT = 8085;
@@ -38,13 +41,22 @@ const deviceProfiles = [
 const DESKTOP_ONLY_SPECS = /(autotype|focus|i18n|inputmode|interop)\.spec\.ts$/;
 const SEPARATE_CONFIG_SPECS = /(flp-lifecycle|readme-screenshots)\.spec\.ts$/;
 
-// On CI the device profiles carry the structural invariants only. The visual
-// specs are the rest of their matrix, and CI runs with --ignore-snapshots, under
-// which toHaveScreenshot passes without capturing - so on that runner they cost
-// a browser and assert nothing. Locally every project still runs every spec and
-// compares pixels. Playwright prints the selected test count on every run, so a
-// narrowing here is visible rather than silent.
-const CI_DEVICE_SPECS = /invariants\.spec\.ts$/;
+// CI narrows the device profiles to the structural invariants. The rest of their
+// matrix is pixel comparison, and CI passes --ignore-snapshots, under which
+// toHaveScreenshot returns without capturing. The non-pixel assertions those
+// specs also carry (shift aria-pressed, the docked class, the forced-colors hint
+// inversion) still run on CI via the desktop project, which keeps the full spec
+// list. Locally every project runs every spec and compares pixels.
+const CI_DEVICE_SPEC = "invariants.spec.ts";
+const CI_DEVICE_SPECS = new RegExp(`${CI_DEVICE_SPEC.replace(".", "\\.")}$`);
+
+// A project whose testMatch selects nothing still exits 0: Playwright's
+// "no tests found" check looks at the whole run, not per project. Renaming the
+// spec would turn all four device legs into silent no-ops, so fail the config
+// instead. A config that throws exits 1.
+if (process.env.CI && !existsSync(join(__dirname, "test", "e2e", CI_DEVICE_SPEC))) {
+  throw new Error(`CI device projects match ${CI_DEVICE_SPEC}, which no longer exists in test/e2e.`);
+}
 
 export default defineConfig({
   testDir: "./test/e2e",
@@ -55,8 +67,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   // Percentage rather than a count: Playwright's own default is "50%", which
   // floors to a single worker on the 2-vCPU hosted runner and quietly cancels
-  // the fullyParallel above. A hardcoded 2 oversubscribes when the runner is
-  // larger.
+  // the fullyParallel above. A hardcoded 2 would not grow with a runner that
+  // has more cores.
   workers: process.env.CI ? "100%" : undefined,
   // The html report is written into the runner and discarded with it; the github
   // reporter puts failures inline on the job summary and file annotations.

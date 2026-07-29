@@ -40,7 +40,15 @@ const HOSTS = [
 // emoji icon is a plain span that inherits regardless.
 const ICON_HOSTS = ["kb-qwerty", "kb-numpad", "kb-nav", "kb-fkeys", "kb-icon-label-variations"];
 
-type KeyBox = { key: string; left: number; right: number; width: number; height: number };
+type KeyBox = {
+  key: string;
+  left: number;
+  right: number;
+  width: number;
+  height: number;
+  /** Whether a hit test at the key's centre lands on the key or its own content. */
+  reachable: boolean;
+};
 
 type Geometry = {
   /** Root font size in px: the floor and the tier threshold are both authored in rem. */
@@ -53,11 +61,15 @@ type Geometry = {
   keys: KeyBox[];
 };
 
-function readGeometry(page: Page, hostId: string): Promise<Geometry> {
+async function readGeometry(page: Page, hostId: string): Promise<Geometry> {
+  // Hit testing is viewport-relative and the page stacks its hosts down a
+  // scrolling column, so bring this one into view before measuring.
+  await page.locator(`#${hostId}`).scrollIntoViewIfNeeded();
   return page.evaluate(
     async ({ id, rootSel, keySel, keyAttr }) => {
       await document.fonts.ready;
-      const root = document.getElementById(id)!.shadowRoot!.querySelector(rootSel) as HTMLElement;
+      const shadow = document.getElementById(id)!.shadowRoot!;
+      const root = shadow.querySelector(rootSel) as HTMLElement;
       const rootBox = root.getBoundingClientRect();
       const rootStyle = getComputedStyle(root);
       return {
@@ -67,12 +79,15 @@ function readGeometry(page: Page, hostId: string): Promise<Geometry> {
         right: rootBox.right,
         keys: [...root.querySelectorAll(keySel)].map((k) => {
           const box = k.getBoundingClientRect();
+          // Retargets to the host from `document`, so hit test inside the shadow tree.
+          const hit = shadow.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
           return {
             key: k.getAttribute(keyAttr) ?? "",
             left: box.left,
             right: box.right,
             width: box.width,
             height: box.height,
+            reachable: k.contains(hit),
           };
         }),
       };
@@ -118,7 +133,7 @@ test("keys hold the target-size floor their container tier allows", async ({ pag
           floor - EPSILON,
         );
       } else {
-        expect(key.width, `${id} "${key.key}" collapsed to zero width`).toBeGreaterThan(0);
+        expect(key.reachable, `${id} "${key.key}" is not hit-testable`).toBe(true);
       }
     }
   }
@@ -126,7 +141,7 @@ test("keys hold the target-size floor their container tier allows", async ({ pag
 
 // The long-press affordance is a `::after` triangle. `content` and `clip-path`
 // both survive `display: none`, so the generated box is what has to be read:
-// display, the resolved size, and the opacity it paints at.
+// display, the resolved size, and the colour it paints in.
 test("variant keys paint their corner hint", async ({ page }) => {
   const hints = await page.evaluate(
     ({ id, rootSel, keySel, keyAttr, variantsAttr }) => {
@@ -137,7 +152,7 @@ test("variant keys paint their corner hint", async ({ page }) => {
           key: k.getAttribute(keyAttr) ?? "",
           display: hint.display,
           content: hint.content,
-          opacity: parseFloat(hint.opacity),
+          background: hint.backgroundColor,
           width: parseFloat(hint.width),
           height: parseFloat(hint.height),
         };
@@ -156,7 +171,7 @@ test("variant keys paint their corner hint", async ({ page }) => {
   for (const hint of hints) {
     expect(hint.display, `"${hint.key}" hint generates no box`).not.toBe("none");
     expect(hint.content, `"${hint.key}" hint has no content`).not.toMatch(/^(none|normal)$/);
-    expect(hint.opacity, `"${hint.key}" hint is fully transparent`).toBeGreaterThan(0);
+    expect(hint.background, `"${hint.key}" hint is fully transparent`).not.toBe("rgba(0, 0, 0, 0)");
     expect(hint.width, `"${hint.key}" hint has zero inline size`).toBeGreaterThan(0);
     expect(hint.height, `"${hint.key}" hint has zero block size`).toBeGreaterThan(0);
   }

@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { defineConfig } from "@playwright/test";
 
 /**
@@ -16,8 +18,9 @@ import { defineConfig } from "@playwright/test";
  * baseline is only valid for the OS it was generated on (font / anti-aliasing
  * rendering differs across platforms). Regenerate on whatever platform runs
  * the comparison. Update with `npm run test:e2e:update` (desktop) or the
- * per-device update scripts. The desktop project runs in CI via test:e2e:ci as
- * render smoke tests; pixel comparison is not gated (snapshots ignored).
+ * per-device update scripts. test:e2e:ci runs every project with
+ * --ignore-snapshots, so pixel comparison is never gated on CI; the device
+ * projects are narrowed to CI_DEVICE_SPEC there (see the projects block).
  */
 
 const PORT = 8086;
@@ -36,6 +39,17 @@ const devices = [
   { name: "tablet", viewport: { width: 768, height: 1024 }, deviceScaleFactor: 2 },
 ];
 
+const CI_DEVICE_SPEC = "invariants.spec.ts";
+const CI_DEVICE_SPECS = new RegExp(`${CI_DEVICE_SPEC.replace(".", "\\.")}$`);
+
+// A project whose testMatch selects nothing still exits 0: Playwright's
+// "no tests found" check looks at the whole run, not per project. Renaming the
+// spec would turn all four device legs into silent no-ops, so fail the config
+// instead. A config that throws exits 1.
+if (process.env.CI && !existsSync(join(__dirname, "test", "e2e", CI_DEVICE_SPEC))) {
+  throw new Error(`CI device projects match ${CI_DEVICE_SPEC}, which no longer exists in test/e2e.`);
+}
+
 export default defineConfig({
   testDir: "./test/e2e",
   testMatch: "**/*.spec.ts",
@@ -48,8 +62,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   // Percentage rather than a count: Playwright's own default is "50%", which
   // floors to a single worker on the 2-vCPU hosted runner and quietly cancels
-  // the fullyParallel above. A hardcoded 2 oversubscribes when the runner is
-  // larger.
+  // the fullyParallel above. A hardcoded 2 would not grow with a runner that
+  // has more cores.
   workers: process.env.CI ? "100%" : undefined,
   // The html report is written into the runner and discarded with it; the github
   // reporter puts failures inline on the job summary and file annotations.
@@ -75,14 +89,16 @@ export default defineConfig({
     },
     // The behavioral component spec is desktop-only; the device matrix runs the
     // visual specs (which gate hover/pointer scenarios at runtime via matchMedia).
-    // On CI the device profiles carry the structural invariants only: CI runs
-    // with --ignore-snapshots, under which toHaveScreenshot passes without
-    // capturing, so the visual specs there cost a browser and assert nothing.
-    // Locally every project still runs every spec and compares pixels.
+    // CI narrows the device profiles to the structural invariants: the rest of
+    // their matrix is pixel comparison, and CI passes --ignore-snapshots, under
+    // which toHaveScreenshot returns without capturing. The narrowing does give
+    // up the two (pointer: coarse)-gated cases in visual.spec.ts, which the
+    // desktop project skips (they never ran on CI on main either). Locally every
+    // project runs every spec and compares pixels.
     ...devices.map((d) => ({
       name: d.name,
       testIgnore: /component\.spec\.ts/,
-      testMatch: process.env.CI ? /invariants\.spec\.ts$/ : undefined,
+      testMatch: process.env.CI ? CI_DEVICE_SPECS : undefined,
       use: {
         viewport: d.viewport,
         deviceScaleFactor: d.deviceScaleFactor,
