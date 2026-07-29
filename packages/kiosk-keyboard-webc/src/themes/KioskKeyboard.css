@@ -225,8 +225,6 @@
   --kiosk-keyboard-key-font-size: 1.375rem;
 
   & .kiosk-key {
-    /* Logical to cleanly override the base key's min-inline-size on the same
-       axis; a physical min-width here would compete with it ambiguously. */
     min-inline-size: var(--_kiosk-keyboard-numpad-key-min-width);
   }
 
@@ -322,11 +320,12 @@
   box-sizing: border-box;
   box-shadow: var(--_kiosk-keyboard-key-shadow);
   position: relative;
-  /* WCAG 2.5.8 (AA): keys hold a 24x24px minimum target size instead of
-     shrinking to zero; narrow widths recover room by tightening the inter-key
-     gap (see the width-responsive @container rules) rather than the keys. The
-     inline floor is lifted below 20rem, where holding it pushes a full row past
-     the container edge - see that tier's rule. */
+  /* WCAG 2.5.8 (AA, 24x24 CSS px): keys hold a 1.5rem floor - 24px at the default
+     16px root, and it scales with the root - instead of shrinking to zero; narrow
+     widths recover room by tightening the inter-key gap (see the width-responsive
+     @container rules) rather than the keys. The inline floor is lifted below 20rem,
+     where holding it pushes a full row past the container edge - see that tier's
+     rule. */
   min-inline-size: 1.5rem;
   min-block-size: 1.5rem;
   white-space: nowrap;
@@ -344,14 +343,17 @@
     inset-inline-end: var(--kiosk-keyboard-variant-hint-inset, 0.1875rem);
     inline-size: var(--kiosk-keyboard-variant-hint-size, 0.3125rem);
     block-size: var(--kiosk-keyboard-variant-hint-size, 0.3125rem);
-    background: var(--kiosk-keyboard-variant-hint-color, var(--sapContent_LabelColor, #556b82));
-    opacity: var(--kiosk-keyboard-variant-hint-opacity, 0.71);
+    background: var(
+      --kiosk-keyboard-variant-hint-color,
+      color-mix(in srgb, var(--sapContent_LabelColor, #556b82) 71%, transparent)
+    );
     clip-path: polygon(0 0, 100% 0, 100% 100%);
     pointer-events: none;
   }
 
-  /* clip-path coordinates are physical, so mirror the triangle in RTL (the
-     logical inset-inline-end already moves it to the leading edge). */
+  /* clip-path coordinates are physical and do not flip with `direction`, so the
+     triangle is mirrored for RTL; inset-inline-end already carries the hint to
+     the key's other top corner. */
   &[data-has-variants]:dir(rtl)::after {
     clip-path: polygon(0 0, 100% 0, 0 100%);
   }
@@ -553,11 +555,11 @@
        color, inverting to HighlightText where the key paints on Highlight. */
     &[data-has-variants]::after {
       background: ButtonText;
-      opacity: 1;
     }
 
     &:active[data-has-variants]::after,
-    &.kiosk-key--highlight[data-has-variants]::after {
+    &.kiosk-key--highlight[data-has-variants]::after,
+    &.kiosk-key--shift-active[data-has-variants]::after {
       background: HighlightText;
     }
   }
@@ -810,20 +812,24 @@
    and Linux/Android (Noto Sans Symbols). */
 .kiosk-key__icon {
   /* A SAP icon renders as a `ui5-icon`, whose own `:host` rule sets
-     `color: var(--sapContent_IconColor)` and a fixed `1rem` box. An outer-tree
-     declaration beats `:host` on a specificity tie, so these two are what make
-     the glyph track the key's text color and font size instead of painting a
-     theme icon color at a constant size - which on an Emphasized key means a
-     dark glyph on the blue fill. `ui5-button` styles its own icon the same way
-     (`.ui5-button-icon { color: inherit }`). Both are no-ops on the
-     unicode-glyph `span`, which already inherits and ignores sizing while
-     inline. */
+     `color: var(--sapContent_IconColor)`. An outer-tree declaration beats
+     `:host` on a specificity tie, so this is what makes the glyph track the
+     key's text color instead of a theme icon color - which on an Emphasized key
+     means a dark glyph on the blue fill. `ui5-button` styles its own icon the
+     same way (`.ui5-button-icon { color: inherit }`). */
   color: inherit;
-  inline-size: 1em;
-  block-size: 1em;
   font-family:
     var(--sapFontFamily, "72", "72full", Arial, Helvetica, sans-serif), "Segoe UI Symbol", "Apple Symbols",
     "Noto Sans Symbols 2", "Noto Sans Symbols", sans-serif;
+}
+
+/* Sized to the key's font rather than `ui5-icon`'s fixed `1rem` box. Scoped to
+   the element: a key is `display: flex`, so the unicode-glyph `span` is a
+   blockified flex item on which a 1em box does apply, cropping any glyph whose
+   advance exceeds 1em and pulling every glyph off the key's centre. */
+ui5-icon.kiosk-key__icon {
+  inline-size: 1em;
+  block-size: 1em;
 }
 
 /* Dual icon + label */

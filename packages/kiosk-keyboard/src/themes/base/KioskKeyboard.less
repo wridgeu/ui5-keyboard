@@ -31,9 +31,9 @@
  * Accent-variant corner hint (keys carrying a long-press variant popup):
  *   --ui5KioskKeyboard-variantHintInset  Inset from the key's top/end edge (default: 0.1875rem)
  *   --ui5KioskKeyboard-variantHintSize   Hint size (default: 0.3125rem)
- *   --ui5KioskKeyboard-variantHintColor  Hint color (default: @sapContent_LabelColor). Ignored
- *                                       under forced colors, which uses system colors.
- *   --ui5KioskKeyboard-variantHintOpacity Hint opacity (default: 0.71)
+ *   --ui5KioskKeyboard-variantHintColor  Hint color (default: @sapUiContentLabelColor at 71%
+ *                                       alpha). Ignored under forced colors, which uses
+ *                                       system colors.
  *
  * Container:
  *   --ui5KioskKeyboard-border           Container border (default: 1px solid <theme border color>)
@@ -194,8 +194,6 @@
       --ui5KioskKeyboard-keyFontSize: 1.375rem;
 
       .ui5KioskKey {
-        /* Logical to cleanly override the base key's min-inline-size on the same
-           axis; a physical min-width here would compete with it ambiguously. */
         min-inline-size: var(--_ui5KioskKeyboard-numpadKeyMinWidth);
       }
 
@@ -320,11 +318,12 @@
     box-sizing: border-box;
     box-shadow: var(--_ui5KioskKeyboard-keyShadow);
     position: relative;
-    /* WCAG 2.5.8 (AA): keys hold a 24x24px minimum target size instead of
-       shrinking to zero; narrow widths recover room by tightening the inter-key
-       gap (see the width-responsive @container rules) rather than the keys. The
-       inline floor is lifted below 20rem, where holding it pushes a full row past
-       the container edge - see that tier's rule. */
+    /* WCAG 2.5.8 (AA, 24x24 CSS px): keys hold a 1.5rem floor - 24px at the default
+       16px root, and it scales with the root - instead of shrinking to zero; narrow
+       widths recover room by tightening the inter-key gap (see the width-responsive
+       @container rules) rather than the keys. The inline floor is lifted below 20rem,
+       where holding it pushes a full row past the container edge - see that tier's
+       rule. */
     min-inline-size: 1.5rem;
     min-block-size: 1.5rem;
     white-space: nowrap;
@@ -342,8 +341,7 @@
       inset-inline-end: var(--ui5KioskKeyboard-variantHintInset, 0.1875rem);
       inline-size: var(--ui5KioskKeyboard-variantHintSize, 0.3125rem);
       block-size: var(--ui5KioskKeyboard-variantHintSize, 0.3125rem);
-      background: var(--ui5KioskKeyboard-variantHintColor, var(--sapContent_LabelColor));
-      opacity: var(--ui5KioskKeyboard-variantHintOpacity, 0.71);
+      background: var(--ui5KioskKeyboard-variantHintColor, fade(@sapUiContentLabelColor, 71%));
       clip-path: polygon(0 0, 100% 0, 100% 100%);
       pointer-events: none;
     }
@@ -460,10 +458,31 @@
       text-overflow: ellipsis;
     }
 
-    /* Icon-only threshold for dual keys: moved outside this ruleset
-       because LESS does not resolve & inside @container blocks. See
-       the @container (max-inline-size) rule near the keyboard-level
-       container queries below. */
+    /* At narrow key widths, visually hide the dual label and show icon-only.
+       Uses the sr-only pattern (not display: none) so the label text stays
+       in the accessibility tree as the key's accessible name. */
+    @container (max-inline-size: 7rem) {
+      &--dual &__label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      /* Scale the icon up when the label is hidden so the key is not visually
+         empty (Shift, Enter, Backspace, and the nav keys). Both arms outrank
+         their competitors on specificity rather than source order, so this block
+         sits with the rules it modifies: the first at (0,3,0) over the modifier
+         and action `1em` icon rules (0,2,0), the nav arm at (0,4,0) over the
+         [data-fkey] icon rule (0,3,0), whose cqi scaling balances an icon
+         against a visible label - and below this threshold there is none. */
+      &&--dual &__icon,
+      &&--dual[data-fkey] &__icon {
+        font-size: var(--ui5KioskKeyboard-keyFontSize);
+      }
+    }
 
     /* Navigation / function keys: column layout with scaled icon.
        Scoped to [data-fkey] to avoid affecting Shift/Enter/Backspace. */
@@ -557,32 +576,6 @@
       box-shadow: 0 0 0 2px @sapUiButtonEmphasizedBackground;
       /* Only animate the ring; background/color snaps instantly via --shiftActive's transition: none. */
       transition: box-shadow 0.1s ease;
-    }
-  }
-
-  /* At narrow key widths, visually hide the dual label and show icon-only.
-     Uses the sr-only pattern (not display: none) so the label text stays
-     in the accessibility tree as the key's accessible name.
-     Written outside the .ui5KioskKey ruleset because LESS does not
-     resolve & inside @container blocks. */
-  @container (max-inline-size: 7rem) {
-    .ui5KioskKey--dual .ui5KioskKey__label {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-    }
-
-    /* Scale the icon up when the label is hidden so the key is not visually
-       empty (Shift, Enter, Backspace, and the nav keys). The nav arm is
-       written at (0,4,0) to outrank the [data-fkey] icon rule (0,3,0) on
-       specificity rather than source order; its cqi scaling balances an icon
-       against a visible label, and below this threshold there is none. */
-    .ui5KioskKey--dual .ui5KioskKey__icon,
-    .ui5KioskKey.ui5KioskKey--dual[data-fkey] .ui5KioskKey__icon {
-      font-size: var(--ui5KioskKeyboard-keyFontSize);
     }
   }
 
@@ -745,9 +738,11 @@
     direction: rtl;
   }
 
-  /* clip-path coordinates are physical, so mirror the corner triangle for RTL
-     (the logical inset-inline-end already moves it to the leading edge). */
-  .sapUiRtl .ui5KioskKey[data-has-variants]::after {
+  /* clip-path coordinates are physical and do not flip with `direction`, so the
+     corner triangle is mirrored for RTL; inset-inline-end already carries the
+     hint to the key's other top corner. less-openui5 mirrors physical properties
+     into library-RTL.css but leaves clip-path values untouched. */
+  html[dir="rtl"] .ui5KioskKey[data-has-variants]::after {
     clip-path: polygon(0 0, 100% 0, 0 100%);
   }
 
@@ -829,12 +824,12 @@
          color, inverting to HighlightText where the key paints on Highlight. */
       &[data-has-variants]::after {
         background: ButtonText;
-        opacity: 1;
       }
 
       &:active[data-has-variants]::after,
       &.ui5KioskKey--pressed[data-has-variants]::after,
-      &.ui5KioskKey--highlight[data-has-variants]::after {
+      &.ui5KioskKey--highlight[data-has-variants]::after,
+      &.ui5KioskKey--shiftActive[data-has-variants]::after {
         background: HighlightText;
       }
     }
