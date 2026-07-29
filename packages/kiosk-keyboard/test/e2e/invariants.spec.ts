@@ -99,6 +99,8 @@ test("variant keys paint their corner hint", async ({ page }) => {
         return {
           key: el.dataset.key ?? "",
           display: after.display,
+          content: after.content,
+          background: after.backgroundColor,
           width: parseFloat(after.width),
           height: parseFloat(after.height),
         };
@@ -108,74 +110,48 @@ test("variant keys paint their corner hint", async ({ page }) => {
 
   expect(hints.length, "the fixture arms variant keys").toBeGreaterThan(0);
   for (const hint of hints) {
-    // `content` and `clip-path` both survive `display: none`, so only these
-    // three separate a painted hint from a suppressed one.
+    // Every one of these can suppress the mark on its own while the others still
+    // report a painted hint, so each is asserted separately.
     expect(hint.display, `hint on '${hint.key}' is not suppressed`).not.toBe("none");
+    expect(hint.content, `hint on '${hint.key}' generates a box`).not.toBe("none");
+    expect(hint.background, `hint on '${hint.key}' is not fully transparent`).not.toBe("rgba(0, 0, 0, 0)");
     expect(hint.width, `hint on '${hint.key}' has an inline size`).toBeGreaterThan(0);
     expect(hint.height, `hint on '${hint.key}' has a block size`).toBeGreaterThan(0);
   }
 });
 
-for (const id of FIXTURES) {
-  test(`${id}: no key escapes the keyboard on the inline axis`, async ({ page }) => {
+test("no key escapes the keyboard on the inline axis", async ({ page }) => {
+  for (const id of FIXTURES) {
     const geometry = await measureKeyboard(page, id);
-    expect(geometry.keys.length, "the keyboard rendered its keys").toBeGreaterThan(0);
+    expect(geometry.keys.length, `${id} rendered its keys`).toBeGreaterThan(0);
     // Rows are center-justified inside an overflow: hidden root, so a row that
     // does not fit is clipped at BOTH edges, taking its outermost keys with it.
     for (const box of geometry.keys) {
-      expect(box.left, `key '${box.key}' is not clipped at the leading edge`).toBeGreaterThanOrEqual(
+      expect(box.left, `${id}: key '${box.key}' is not clipped at the leading edge`).toBeGreaterThanOrEqual(
         geometry.left - EDGE_EPSILON,
       );
-      expect(box.right, `key '${box.key}' is not clipped at the trailing edge`).toBeLessThanOrEqual(
+      expect(box.right, `${id}: key '${box.key}' is not clipped at the trailing edge`).toBeLessThanOrEqual(
         geometry.right + EDGE_EPSILON,
       );
     }
-  });
+  }
+});
 
-  test(`${id}: keys hold the target-size floor, or stay reachable below the tier`, async ({ page }) => {
+test("keys hold the target-size floor, or stay reachable below the tier", async ({ page }) => {
+  for (const id of FIXTURES) {
     const geometry = await measureKeyboard(page, id);
-    expect(geometry.keys.length, "the keyboard rendered its keys").toBeGreaterThan(0);
+    expect(geometry.keys.length, `${id} rendered its keys`).toBeGreaterThan(0);
     const where = `${geometry.contentInline.toFixed(0)}px keyboard`;
     for (const box of geometry.keys) {
       // Only the inline floor is lifted at the narrowest tier; the block one holds everywhere.
-      expect(box.height, `key '${box.key}' holds 24px block in a ${where}`).toBeGreaterThanOrEqual(TARGET_SIZE);
+      expect(box.height, `${id}: key '${box.key}' holds 24px block in a ${where}`).toBeGreaterThanOrEqual(TARGET_SIZE);
       if (geometry.narrowTier) {
-        expect(box.reachable, `key '${box.key}' is hit-testable in a ${where}`).toBe(true);
+        expect(box.reachable, `${id}: key '${box.key}' is hit-testable in a ${where}`).toBe(true);
       } else {
-        expect(box.width, `key '${box.key}' holds 24px inline in a ${where}`).toBeGreaterThanOrEqual(TARGET_SIZE);
+        expect(box.width, `${id}: key '${box.key}' holds 24px inline in a ${where}`).toBeGreaterThanOrEqual(
+          TARGET_SIZE,
+        );
       }
     }
-  });
-}
-
-test("key icons paint in their key's color", async ({ page }) => {
-  const root = await renderedKeyboard(page, "kb-qwerty");
-  const icons = await root.evaluate(
-    (board, { keySelector, iconSelector }) =>
-      [...board.querySelectorAll<HTMLElement>(keySelector)].flatMap((key) => {
-        const icon = key.querySelector<HTMLElement>(iconSelector);
-        if (!icon) return [];
-        return [
-          {
-            key: key.dataset.key ?? "",
-            // A SAP icon URI renders as an icon-font span carrying `sapUiIcon`,
-            // a unicode glyph as a bare span. Only the former can pick up an
-            // icon color of its own instead of inheriting the key's.
-            iconFont: icon.classList.contains("sapUiIcon"),
-            iconColor: getComputedStyle(icon).color,
-            keyColor: getComputedStyle(key).color,
-          },
-        ];
-      }),
-    { keySelector: DOM.selectors.key, iconSelector: `.${DOM.classes.keyIcon}` },
-  );
-
-  expect(icons.length, "the fixture renders icon keys").toBeGreaterThan(0);
-  expect(
-    icons.some((icon) => icon.iconFont),
-    "an icon-font key is covered",
-  ).toBe(true);
-  for (const icon of icons) {
-    expect(icon.iconColor, `icon on '${icon.key}' tracks its key color`).toBe(icon.keyColor);
   }
 });

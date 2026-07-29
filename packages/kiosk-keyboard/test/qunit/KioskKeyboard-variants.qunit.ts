@@ -19,6 +19,26 @@ import type { CompositionMiddleware, LayoutDefinition } from "ui5/kiosk/types";
 
 const DOM = KioskKeyboard.DOM;
 
+/** WCAG 2.5.8 (AA) target size, less a sub-pixel rounding allowance. */
+const TARGET_SIZE = 23.99;
+/** Sub-pixel slack when comparing a key rect against the keyboard rect. */
+const EDGE_EPSILON = 0.5;
+
+/** The rendered keys, asserting the full keyboard is there to measure. */
+function renderedKeys(assert: Assert, root: HTMLElement): HTMLElement[] {
+  const keys = Array.from(root.querySelectorAll<HTMLElement>(DOM.selectors.key));
+  assert.ok(keys.length >= 10, "the full keyboard rendered");
+  return keys;
+}
+
+/** The block floor holds at every width, including where the inline one is lifted. */
+function assertBlockFloor(assert: Assert, keys: HTMLElement[]): void {
+  for (const key of keys) {
+    const height = key.getBoundingClientRect().height;
+    assert.ok(height >= TARGET_SIZE, `key '${key.dataset.key}' holds >= 24px block (${height.toFixed(1)}px)`);
+  }
+}
+
 function press(kb: KioskKeyboard, el: HTMLElement): void {
   const event = new Event("touchstart", { bubbles: true });
   Object.defineProperty(event, "target", { value: el, writable: false });
@@ -300,13 +320,12 @@ QUnit.test("keys hold the WCAG 2.5.8 24x24px minimum target size above the narro
   // but above the 20rem tier where the inline floor is lifted.
   root.style.width = "336px";
   await waitForRender();
-  const keys = Array.from(root.querySelectorAll<HTMLElement>(DOM.selectors.key));
-  assert.ok(keys.length >= 10, "the full keyboard rendered");
+  const keys = renderedKeys(assert, root);
   for (const key of keys) {
-    const box = key.getBoundingClientRect();
-    assert.ok(box.width >= 23.99, `key '${key.dataset.key}' holds >= 24px inline (${box.width.toFixed(1)}px)`);
-    assert.ok(box.height >= 23.99, `key '${key.dataset.key}' holds >= 24px block (${box.height.toFixed(1)}px)`);
+    const width = key.getBoundingClientRect().width;
+    assert.ok(width >= TARGET_SIZE, `key '${key.dataset.key}' holds >= 24px inline (${width.toFixed(1)}px)`);
   }
+  assertBlockFloor(assert, keys);
   cleanup(kb, input);
 });
 
@@ -317,12 +336,7 @@ QUnit.test("keys hold the block floor when the key-height property is set below 
   // binds against a consumer value - which is the case it exists for.
   root.style.setProperty("--ui5KioskKeyboard-keyHeight", "1rem");
   await waitForRender();
-  const keys = Array.from(root.querySelectorAll<HTMLElement>(DOM.selectors.key));
-  assert.ok(keys.length >= 10, "the full keyboard rendered");
-  for (const key of keys) {
-    const height = key.getBoundingClientRect().height;
-    assert.ok(height >= 23.99, `key '${key.dataset.key}' holds >= 24px block (${height.toFixed(1)}px)`);
-  }
+  assertBlockFloor(assert, renderedKeys(assert, root));
   cleanup(kb, input);
 });
 
@@ -334,17 +348,18 @@ QUnit.test("the inline floor lifts below the narrowest tier so no key is clipped
   // at both edges, so the keys shrink instead and reachability is preserved.
   root.style.width = "280px";
   await waitForRender();
-  const board = root.querySelector<HTMLElement>(DOM.selectors.root) ?? root;
-  const boardBox = board.getBoundingClientRect();
-  const keys = Array.from(root.querySelectorAll<HTMLElement>(DOM.selectors.key));
-  assert.ok(keys.length >= 10, "the full keyboard rendered");
+  const boardBox = root.getBoundingClientRect();
+  const keys = renderedKeys(assert, root);
   for (const key of keys) {
     const box = key.getBoundingClientRect();
-    assert.ok(box.left >= boardBox.left - 0.5, `key '${key.dataset.key}' is not clipped at the leading edge`);
-    assert.ok(box.right <= boardBox.right + 0.5, `key '${key.dataset.key}' is not clipped at the trailing edge`);
-    // The block axis is unaffected by the inline relaxation.
-    assert.ok(box.height >= 23.99, `key '${key.dataset.key}' holds >= 24px block (${box.height.toFixed(1)}px)`);
+    assert.ok(box.left >= boardBox.left - EDGE_EPSILON, `key '${key.dataset.key}' is not clipped at the leading edge`);
+    assert.ok(
+      box.right <= boardBox.right + EDGE_EPSILON,
+      `key '${key.dataset.key}' is not clipped at the trailing edge`,
+    );
   }
+  // The block axis is unaffected by the inline relaxation.
+  assertBlockFloor(assert, keys);
   cleanup(kb, input);
 });
 

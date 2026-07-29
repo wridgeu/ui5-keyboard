@@ -9,6 +9,11 @@ import { LATIN_DIACRITIC_VARIANTS } from "../../src/core/latin-variants.js";
 
 const DOM = KioskKeyboard.DOM;
 
+/** WCAG 2.5.8 (AA) target size, less a sub-pixel rounding allowance. */
+const TARGET_SIZE = 23.99;
+/** Sub-pixel slack when comparing a key rect against the keyboard rect. */
+const EDGE_EPSILON = 0.5;
+
 // Long-press / right-click accent-variant popup: hold (or right-click) a key
 // with variants to open a listbox, pick a glyph via click or Arrow+Enter, and
 // have it inserted at the caret through the normal char path. A quick tap still
@@ -688,8 +693,8 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(keys.length).to.equal(10);
     for (const key of keys) {
       const box = key.getBoundingClientRect();
-      expect(box.width, `key '${key.dataset.key}' holds >= 24px inline`).to.be.at.least(23.99);
-      expect(box.height, `key '${key.dataset.key}' holds >= 24px block`).to.be.at.least(23.99);
+      expect(box.width, `key '${key.dataset.key}' holds >= 24px inline`).to.be.at.least(TARGET_SIZE);
+      expect(box.height, `key '${key.dataset.key}' holds >= 24px block`).to.be.at.least(TARGET_SIZE);
     }
   });
 
@@ -700,7 +705,9 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     kb.style.setProperty("--kiosk-keyboard-key-height", "1rem");
     await renderFinished();
     for (const key of kb.shadowRoot!.querySelectorAll<HTMLElement>(DOM.selectors.key)) {
-      expect(key.getBoundingClientRect().height, `key '${key.dataset.key}' holds >= 24px block`).to.be.at.least(23.99);
+      expect(key.getBoundingClientRect().height, `key '${key.dataset.key}' holds >= 24px block`).to.be.at.least(
+        TARGET_SIZE,
+      );
     }
   });
 
@@ -732,13 +739,13 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     for (const key of keys) {
       const box = key.getBoundingClientRect();
       expect(box.left, `key '${key.dataset.key}' is not clipped at the leading edge`).to.be.at.least(
-        boardBox.left - 0.5,
+        boardBox.left - EDGE_EPSILON,
       );
       expect(box.right, `key '${key.dataset.key}' is not clipped at the trailing edge`).to.be.at.most(
-        boardBox.right + 0.5,
+        boardBox.right + EDGE_EPSILON,
       );
       // The block axis is unaffected by the inline relaxation.
-      expect(box.height, `key '${key.dataset.key}' holds >= 24px block`).to.be.at.least(23.99);
+      expect(box.height, `key '${key.dataset.key}' holds >= 24px block`).to.be.at.least(TARGET_SIZE);
     }
   });
 
