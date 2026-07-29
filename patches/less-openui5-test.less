@@ -68,3 +68,34 @@
     }
   }
 }
+
+/* A conditional group rule nested inside a selector keeps that selector. The
+   parent reference has to survive, since a rule that loses its library scope
+   compiles to a page-global selector. */
+.scoped {
+  .nested {
+    @container keyboard (max-width: 20rem) {
+      &[data-flag]::after {
+        display: none;
+      }
+    }
+
+    @supports (display: grid) {
+      &[data-flag]::after {
+        display: none;
+      }
+    }
+
+    @layer kiosk {
+      &[data-flag]::after {
+        display: none;
+      }
+    }
+
+    @media (max-width: 20rem) {
+      &[data-flag]::after {
+        display: none;
+      }
+    }
+  }
+}

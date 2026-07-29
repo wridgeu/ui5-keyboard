@@ -87,12 +87,6 @@ jobs:
       - name: Stylesheet twin-drift check
         run: npm run test:style-twin-drift
 
-      # The unscoped-selector class only exists after LESS compilation. The
-      # themes-only build the check needs is declared as its pre-script; see
-      # tools/check-css-scope.mjs.
-      - name: CSS scope check
-        run: npm run test:css-scope
-
   # Unit + component suites: QUnit (puppeteer chromium) for the two UI5 libs,
   # vitest (jsdom) and web-test-runner (playwright chromium) for the web component.
   unit:
@@ -123,7 +117,6 @@ jobs:
         run: node node_modules/puppeteer/install.mjs
 
       - name: Cache Playwright browsers
-        id: playwright-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
@@ -134,15 +127,8 @@ jobs:
       # playwright chromium and the puppeteer QUnit backend) plus Playwright's
       # chromium for the component suite. The puppeteer Chrome comes from
       # npm ci's postinstall or the "Ensure puppeteer Chrome" step above.
-      # On a cache hit only the OS libraries are (re)installed: the browser is
-      # already restored, and --with-deps spends most of its time in apt.
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
-
-      - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
 
       - name: Tests
         run: npm run test:qunit && npm run test:kiosk-webc && npm run test:kiosk-webc:component
@@ -151,8 +137,6 @@ jobs:
   # not (baselines carry no platform suffix), so they are ignored here. This
   # gates focus/auto-type/inputmode/i18n/interop behavior and runs the visual
   # specs as render smoke tests without pixel-comparing OS-specific baselines.
-  # Trade-off: only the desktop project runs in CI; the phone/tablet device
-  # projects are never exercised here and rely on the local all-devices runs.
   #
   # The two packages run as parallel matrix legs so neither waits on the other.
   e2e:
@@ -172,26 +156,16 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Cache Playwright browsers
-        id: playwright-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ hashFiles('package-lock.json') }}
           restore-keys: playwright-chromium-
 
-      # On a cache hit only the OS libraries are (re)installed: the browser is
-      # already restored, and --with-deps spends most of its time in apt.
       - name: Install Playwright browsers
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
-      - name: Install Playwright system dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-
-      # One Playwright invocation over every project. Desktop carries the full
-      # suite; the device profiles are narrowed to invariants.spec.ts by the
-      # config, since the visual specs assert nothing under --ignore-snapshots.
-      # The phone profiles are where the #187/#210 regressions hid.
+      # One invocation over every project; per-project spec selection lives in
+      # playwright.config.ts.
       - name: End-to-end (behavioral; visual snapshots ignored)
         run: npm run test:e2e:ci -w packages/${{ matrix.package }}

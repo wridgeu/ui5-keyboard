@@ -135,7 +135,7 @@ These patches should be removed once the upstream issues are resolved. As of `@u
 
 ## less-openui5+0.11.6
 
-Adds `@container` and `@layer` at-rule support to the vendored LESS 1.6.3 parser.
+Adds `@container` and `@layer` at-rule support to the vendored LESS 1.6.3 parser, and resolves the parent selector inside conditional group rules.
 
 **Files:**
 
@@ -153,7 +153,9 @@ The patch adds both directives to the recognized list and handles all `@layer` s
 
 The approach follows the modern LESS 4.x parser (PRs #4337, #4340, #4349, #4351) adapted to the 1.6.3 architecture. The identifier regex is widened from `/^[^{]+/` to `/^[^{;]+/` so it stops at semicolons (for ordering statements). A fallback after failed block parsing handles the semicolon-terminated ordering form. The `genCSS` method in `directive.js` is adjusted to skip the leading space for empty-value directives.
 
-**Regression test:** `node patches/less-openui5-test.mjs` compiles a fixture with all directive types and verifies correct output.
+`tree.Directive` gives every other at-rule's block a `null` selector list and marks it as a root ruleset, so a style rule nested inside it renders with the parent selector dropped: `.ui5KioskKey { @container (…) { &[data-has-variants]::after { … } } }` compiles to a page-global `[data-has-variants]::after`. Since a UI5 library stylesheet is loaded page-globally, that silently matches arbitrary host-page elements. Conditional group rules (`@supports`, `@container`, `@layer`) instead take the parent reference `tree.Media` already uses (`emptySelectors()`, plus the `mediaEmpty` flag so the selector is not mistaken for a bare `&`) and are no longer marked as root, which makes them resolve `&` exactly like `@media`. Non-grouping at-rules (`@keyframes`, `@font-face`, …) own their block contents and keep the original behavior. Compiling the kiosk stylesheet with and without this hunk yields byte-identical output, including its top-level `@layer kiosk-keyboard` wrapper.
+
+**Regression test:** `node patches/less-openui5-test.mjs` compiles a fixture with all directive types and verifies correct output, including that all four conditional group rules keep their enclosing selector and that no nested rule reaches the top level unscoped.
 
 **Note:**
 
@@ -163,9 +165,9 @@ The approach follows the modern LESS 4.x parser (PRs #4337, #4340, #4349, #4351)
 
 patch-package does support nested dependency patches via the `parent/child` syntax (`npx patch-package @ui5/cli/less-openui5`, producing a `@ui5+cli++less-openui5+<version>.patch` file), but that path resolves strictly relative to the directory patch-package runs in: it can only reach `node_modules/@ui5/cli/node_modules/less-openui5` under the invoking root. In this workspace there is no root-level `@ui5/cli`; npm hoists a separate copy under each of three workspace packages, and which workspaces carry one is an npm hoisting decision that can change across npm versions. Expressing that natively would require running patch-package once per workspace directory (a bespoke wrapper again, plus hard failures in workspaces without a nested copy). The dynamic-discovery script remains the smaller and more robust solution, so it is kept and hardened (version-mismatch skip-and-warn). `patches/less-openui5-test.mjs` loads every nested copy when present, so a broken nested sync fails `npm run test:patches` instead of a later theme build.
 
-> **Why only `@container` and `@layer`?**
+> **Why not more?**
 >
-> The vendored LESS 1.6.3 has other gaps compared to modern CSS (e.g., `&` is not resolved inside `:not()`, making nested selectors like `&--cq-short:not(&--numpad)` output invalid CSS). Patching the parent-selector resolution would require changes throughout the parser's selector compilation pipeline, significantly more invasive than adding two case labels to a switch statement. `@container` and `@layer` follow the existing directive pattern exactly, making them safe and minimal patches. For `&`-in-`:not()`, the workaround is writing the full class name instead. The full fix belongs in an upstream LESS version update.
+> The vendored LESS 1.6.3 has other gaps compared to modern CSS: `&` is still not resolved inside `:not()`, so a nested selector like `&--cq-short:not(&--numpad)` outputs invalid CSS. That one lives in the selector compilation pipeline rather than in a single tree node, so it stays unpatched; the workaround is writing the full class name instead. The full fix belongs in an upstream LESS version update.
 
 ### Upstream
 
