@@ -455,4 +455,25 @@ describe("icon + label rendering", () => {
       expect(style.height, `the icon box follows the ${size} font size`).to.equal(size);
     }
   });
+
+  it("leaves a unicode-glyph icon unboxed so wide glyphs are not cropped", async () => {
+    // A key is a flex container, so its glyph span is a blockified flex item and
+    // a 1em box would apply to it too - cropping any glyph whose advance exceeds
+    // 1em (a dual key adds `overflow: hidden`) and pulling it off the key centre.
+    // The `ui5-icon` box must therefore not reach the span.
+    const el = await createKeyboard([[{ value: "{backspace}", icon: "⌫", label: "Back" }]]);
+    const iconEl = queryKeyIcon(queryKey(el, "{backspace}")) as HTMLElement;
+
+    expect(iconEl.tagName.toLowerCase(), "a unicode icon renders as a span").to.equal("span");
+    const style = getComputedStyle(iconEl);
+    expect(style.width, "the glyph span is not pinned to a 1em box").to.not.equal(style.fontSize);
+    expect(
+      iconEl.scrollWidth,
+      `the glyph is not cropped horizontally (${iconEl.scrollWidth} > ${iconEl.clientWidth})`,
+    ).to.be.at.most(iconEl.clientWidth + 1);
+    expect(
+      iconEl.scrollHeight,
+      `the glyph is not cropped vertically (${iconEl.scrollHeight} > ${iconEl.clientHeight})`,
+    ).to.be.at.most(iconEl.clientHeight + 1);
+  });
 });

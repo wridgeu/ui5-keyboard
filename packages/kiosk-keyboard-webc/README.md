@@ -748,7 +748,7 @@ This behavior is driven by a CSS `@container` query on individual keys (`contain
 - **Dual keys (icon + label visible):** The visible text provides the accessible name. No `aria-label` is set (WCAG 2.5.3 Label in Name).
 - **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
 - **Icons** always have `aria-hidden="true"`. They are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.
-- **Target size.** Keys hold the WCAG 2.5.8 minimum of 24x24 CSS px. The floor is lifted below a 20rem-wide keyboard, where the densest rows cannot fit a full set of floored keys: keys shrink to fit there so that every key stays reachable rather than being clipped off the edge of a center-justified row. Below that width the 24x24 minimum is therefore not met.
+- **Target size.** Keys hold a 1.5rem floor, meeting the WCAG 2.5.8 minimum of 24x24 CSS px at the default 16px root. The floor is lifted below a 20rem-wide keyboard, where the densest rows cannot fit a full set of floored keys: keys shrink to fit there so that every key stays reachable rather than being clipped off the edge of a center-justified row. Below that width the 24x24 minimum is therefore not met.
 
 ### Built-in icons
 
@@ -984,8 +984,7 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-key-border-color`        | _(not declared)_                                          | Override all key border colors when set                        |
 | `--kiosk-keyboard-variant-hint-inset`      | `0.1875rem`                                               | Accent-variant corner hint inset from the key's top/end edge   |
 | `--kiosk-keyboard-variant-hint-size`       | `0.3125rem`                                               | Accent-variant corner hint size                                |
-| `--kiosk-keyboard-variant-hint-color`      | `var(--sapContent_LabelColor)`                            | Accent-variant corner hint color (ignored under forced colors) |
-| `--kiosk-keyboard-variant-hint-opacity`    | `0.71`                                                    | Accent-variant corner hint opacity                             |
+| `--kiosk-keyboard-variant-hint-color`      | `var(--sapContent_LabelColor)` at 71% alpha               | Accent-variant corner hint color (ignored under forced colors) |
 | `--kiosk-keyboard-max-width`               | `100%`                                                    | Max width for the default inline keyboard                      |
 | `--kiosk-keyboard-docked-max-width`        | `1024px`                                                  | Max width in docked mode                                       |
 | `--kiosk-keyboard-docked-shadow`           | _(subtle)_                                                | Box shadow for the docked container                            |

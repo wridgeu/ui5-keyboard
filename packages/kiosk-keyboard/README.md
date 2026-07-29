@@ -1387,6 +1387,7 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 - ARIA live region announces keyboard open/close and shift state changes to screen readers
 - Closing the keyboard or switching targets fires a `change` event on modified single-line inputs (mirrors physical keyboard commit behavior)
 - Compact mode key sizes meet WCAG 2.5.8 minimum touch target size (24x24 CSS px). The floor is
+  authored in rem, so it tracks the root font size. It is
   lifted below a 20rem-wide keyboard, where the densest rows cannot fit a full set of floored keys:
   keys shrink to fit there so that every key stays reachable rather than being clipped off the
   edge of a center-justified row. Below that width the 24x24 minimum is therefore not met.
@@ -1429,8 +1430,7 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 | `--ui5KioskKeyboard-keyBorderColor`      | _(not declared)_                                          | Override all key border colors                                 |
 | `--ui5KioskKeyboard-variantHintInset`    | `0.1875rem`                                               | Accent-variant corner hint inset from the key's top/end edge   |
 | `--ui5KioskKeyboard-variantHintSize`     | `0.3125rem`                                               | Accent-variant corner hint size                                |
-| `--ui5KioskKeyboard-variantHintColor`    | `var(--sapContent_LabelColor)`                            | Accent-variant corner hint color (ignored under forced colors) |
-| `--ui5KioskKeyboard-variantHintOpacity`  | `0.71`                                                    | Accent-variant corner hint opacity                             |
+| `--ui5KioskKeyboard-variantHintColor`    | `@sapUiContentLabelColor` at 71% alpha                    | Accent-variant corner hint color (ignored under forced colors) |
 | `--ui5KioskKeyboard-keyFontSize`         | `calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)`         | Key label font size                                            |
 | `--ui5KioskKeyboard-keyShadow`           | _(theme)_                                                 | Key resting shadow                                             |
 | `--ui5KioskKeyboard-keyShadowHover`      | _(theme)_                                                 | Key hover shadow                                               |
