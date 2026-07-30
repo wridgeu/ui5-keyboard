@@ -11,6 +11,5 @@ dist/
 # ui5-tooling-modules cache output (generated during serve/build)
 .ui5-tooling-modules/
 
-# ui5-test-runner output (report-p* when a run passes its own --report-dir)
+# ui5-test-runner output
 report/
-report-p*/

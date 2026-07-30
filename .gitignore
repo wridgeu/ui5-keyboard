@@ -14,9 +14,8 @@ test-results/
 playwright-report/
 .last-run.json
 
-# ui5-test-runner output (report-p* when a run passes its own --report-dir)
+# ui5-test-runner output
 report/
-report-p*/
 .nyc_output/
 
 # @ui5/linter coverage report (written to cwd by `ui5lint --coverage`)
