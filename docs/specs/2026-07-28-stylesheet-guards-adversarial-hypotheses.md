@@ -22,8 +22,8 @@ dropped. Since a UI5 library stylesheet is loaded page-globally, `.ui5KioskKey {
 
 That is fixed at the source in `patches/less-openui5+0.11.6.patch` instead of policed in
 the output, so the gate is now a compile-time fixture that needs no build. `@media` was
-never affected — `tree.Media` already supplied the parent reference — which is why the
-class of bug was invisible in the one at-rule the stylesheet used most.
+never affected, because `tree.Media` already supplied the parent reference, which is why
+the class of bug was invisible in the one at-rule the stylesheet used most.
 
 **Accepted loss:** the deleted checker also asserted that _every_ rule in the built
 `library.css` carries a `.ui5Kiosk*` class, which would catch a hand-written rule that
@@ -51,6 +51,13 @@ worth guarding, guard it where a theme build already exists rather than adding o
   packages into silent no-ops while desktop still ran the renamed file and CI stayed
   green. The configs guard it with a load-time `existsSync`. Perturbation: rename
   `test/e2e/invariants.spec.ts` and list with `CI=1`. Expected: red.
+
+  Residual, deliberately not guarded: `existsSync` proves the file is there, not that it
+  still declares tests. A spec emptied in place, or one whose tests are all skipped or
+  filtered out, still selects nothing per project and exits 0. Closing that needs a
+  per-project test count, which Playwright exposes only through a custom reporter;
+  the native guard covers the realistic accident (rename, delete) and a reporter was
+  judged not worth owning for the rest.
 
 ## Results
 

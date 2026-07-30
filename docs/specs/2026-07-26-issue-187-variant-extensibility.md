@@ -1,4 +1,4 @@
-# Issue #187 — accent-variant extensibility, hint, a11y, target size
+# Issue #187: accent-variant extensibility, hint, a11y, target size
 
 Date: 2026-07-26. Branch: `feat/187-accent-variant-extensibility`.
 
@@ -10,10 +10,10 @@ Four phases, one PR. Decisions taken with the maintainer up front:
 - **Non-Latin exclusion set:** shipped in this PR (open-Q5). `ja-romaji`, `ja-kana`,
   `arabic`, `ko-hangul` resolve their built-in variant tier to `null`. Consequence:
   Phase 1 is **not** output-identical for existing `accentVariants` users on those four
-  layouts — their (semantically wrong) variant popups disappear. Output stays identical
+  layouts, so their (semantically wrong) variant popups disappear. Output stays identical
   for every Latin layout.
 - **Overflow beyond the gap reduction (open-Q7):** closed in review. The issue claimed the
-  24px floor + gap reduction "covers every built-in layout" — it does not, and the shortfall
+  24px floor + gap reduction "covers every built-in layout". It does not, and the shortfall
   is wider than first measured: the default **11-element `qwerty` digit row** clips at the
   320px phone-sm width too, not only the 12-key `ja-kana` / `ko-hangul` rows. A
   `justify-content: center` row that overflows is clipped at **both** edges, so it is the
@@ -38,16 +38,16 @@ Four phases, one PR. Decisions taken with the maintainer up front:
   `{backspace}` off it below the tier), or horizontal-scroll overflow.
 
 The issue body's line numbers predate `main` advancing; anchor every edit to the symbol,
-not the issue's number. Corrected anchors live in the understanding pass, not repeated here.
+not to a line number.
 
-## Design — Phase 1 resolution
+## Design: Phase 1 resolution
 
 `resolveVariantTable(layoutName, instanceVariants?)` in `latin-variants.ts` (both packages,
 byte-identical modulo the `.js` import suffix, drift-guarded):
 
-1. instance entry for `layoutName` — present (incl. explicit `null`) wins. `null` = opt out.
-2. instance `*` wildcard entry — same null semantics.
-3. built-in tier — `null` when `layoutName` is in the non-Latin exclusion set, else
+1. instance entry for `layoutName`: present (incl. explicit `null`) wins. `null` = opt out.
+2. instance `*` wildcard entry, same null semantics.
+3. built-in tier: `null` when `layoutName` is in the non-Latin exclusion set, else
    `LATIN_DIACRITIC_VARIANTS`.
 
 `null` return ⇒ `_getResolvedLayout` returns `base` unchanged ⇒ no `data-has-variants` ⇒
@@ -59,7 +59,7 @@ early return (authored intent, incl. `[]` suppression, always wins), a key whose
 are lone lowercase letters; those key types never carry such values), load-bearing for
 custom instance tables keyed `{enter}` etc.
 
-Per-package plumbing diverges (god-classes, not drift-guarded — mirror by hand):
+Per-package plumbing diverges (god-classes, not drift-guarded, so mirror by hand):
 
 - kiosk: `instanceVariants` UI5 metadata property, hand-written `setInstanceVariants`,
   static `_toVariantMap` (warn+skip invalid, store `null` as opt-out), `_instanceVariantsMap`
@@ -73,7 +73,7 @@ Per-package plumbing diverges (god-classes, not drift-guarded — mirror by hand
 A green suite can lie. Each hypothesis below is cleared only after the suite is SEEN red for
 it, then reverted. Test-infra risk is real here: Phase 4 rewrites committed visual baselines,
 and CI runs `test:e2e:ci` with `--ignore-snapshots` (never compares pixels), so a green CI
-proves nothing about the triangle or the floor — the visual pass runs locally.
+proves nothing about the triangle or the floor; the visual pass runs locally.
 
 - **H1 (vacuous instanceVariants test):** an `instanceVariants` integration test could pass
   with the feature unwired if it asserts on a layout the built-in table already covers.
@@ -105,7 +105,7 @@ shipped a `@container (max-inline-size: 1.5rem)` rule suppressing the hint on "s
 keys. It could never do that: a size container query evaluates the query container's _content_
 box while `min-inline-size` floors its _border_ box, so the rule fired up to a ~34px key (~30px
 in the xs padding tier) and never at 24px, where the floor made the state unreachable anyway.
-Measured effect: zero hint pixels on all three phone profiles — the touch form factors where
+Measured effect: zero hint pixels on all three phone profiles, the touch form factors where
 long-press is the only route to the popup. The rule is removed rather than recalibrated; the
 hint is painted at every width, since it occupies a corner of a key that keeps its full height
 and so never competes with the centered glyph. **H8 (hint suppressed rather than painted):**
