@@ -120,15 +120,19 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
-          restore-keys: playwright-chromium-
+          key: playwright-shell-${{ hashFiles('package-lock.json') }}
+          restore-keys: playwright-shell-
 
       # Installs the OS libraries chromium needs (shared by the web-test-runner
       # playwright chromium and the puppeteer QUnit backend) plus Playwright's
       # chromium for the component suite. The puppeteer Chrome comes from
       # npm ci's postinstall or the "Ensure puppeteer Chrome" step above.
+      # --only-shell: `install chromium` fetches the full headed build and the
+      # headless shell, and a headless launch resolves to the shell, so the headed
+      # build is downloaded and cached for nothing. Every browser CI starts is
+      # headless; the headed and --ui runs are local-only scripts.
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps --only-shell chromium
 
       - name: Tests
         run: npm run test:qunit && npm run test:kiosk-webc && npm run test:kiosk-webc:component
@@ -159,11 +163,13 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-chromium-${{ hashFiles('package-lock.json') }}
-          restore-keys: playwright-chromium-
+          key: playwright-shell-${{ hashFiles('package-lock.json') }}
+          restore-keys: playwright-shell-
 
+      # --only-shell: see the unit job. Every browser CI starts is headless, and a
+      # headless launch resolves to the shell, not the headed build.
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps --only-shell chromium
 
       # One invocation over every project; per-project spec selection lives in
       # playwright.config.ts.

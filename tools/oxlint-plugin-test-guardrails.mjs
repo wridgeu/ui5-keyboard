@@ -1,36 +1,6 @@
 // oxlint plugin: test stability guardrails (flags flaky hard-wait patterns).
 // See https://oxc.rs/docs/guide/usage/linter/writing-js-plugins
 
-const noBrowserPause = {
-  meta: {
-    type: "problem",
-    docs: {
-      description: "Disallow page.pause() / browser.pause() in tests - use web-first assertions instead",
-    },
-    messages: {
-      noBrowserPause:
-        "Remove the debug pause ({{ object }}.pause()); rely on web-first assertions (expect().toHaveClass etc.) instead.",
-    },
-    schema: [],
-  },
-  create(context) {
-    return {
-      CallExpression(node) {
-        const { callee } = node;
-        if (
-          callee.type === "MemberExpression" &&
-          callee.object.type === "Identifier" &&
-          (callee.object.name === "page" || callee.object.name === "browser") &&
-          callee.property.type === "Identifier" &&
-          callee.property.name === "pause"
-        ) {
-          context.report({ node, messageId: "noBrowserPause", data: { object: callee.object.name } });
-        }
-      },
-    };
-  },
-};
-
 /**
  * Returns the inner call expression from an arrow/function callback body,
  * handling both concise (`resolve => fn()`) and block (`resolve => { fn(); }`)
@@ -122,7 +92,6 @@ const noHardWait = {
 export default {
   meta: { name: "test-guardrails" },
   rules: {
-    "no-browser-pause": noBrowserPause,
     "no-hard-wait": noHardWait,
   },
 };

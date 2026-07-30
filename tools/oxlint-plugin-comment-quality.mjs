@@ -53,7 +53,8 @@ const noNarratorComment = {
     return {
       Program() {
         for (const comment of context.sourceCode.getAllComments()) {
-          if (comment.type === "Block") continue;
+          // Block comments are inspected too: a doc-block is exactly where a
+          // narrator preamble gets written. KEEPER_RE exempts the tagged forms.
           if (KEEPER_RE.test(comment.value)) continue;
           const text = commentText(comment);
           if (EXPLAINS_WHY_RE.test(text)) continue;
@@ -154,10 +155,9 @@ const noHedgingComment = {
     return {
       Program() {
         for (const comment of context.sourceCode.getAllComments()) {
-          // Skip line comments that are keeper directives
+          // Keeper directives are exempt; doc-blocks are not, since a hedge
+          // reads the same whether it is written above the symbol or inside it.
           if (KEEPER_RE.test(comment.value)) continue;
-          // Skip JSDoc / block comments (they often cite examples)
-          if (comment.type === "Block") continue;
           const text = commentText(comment);
           if (HEDGING_RE.test(text)) {
             context.report({ node: comment, messageId: "noHedgingComment" });

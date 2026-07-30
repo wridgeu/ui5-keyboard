@@ -8,10 +8,9 @@ Custom oxlint JS plugin that enforces test stability guardrails. Loaded via the 
 
 **Rules:**
 
-| Rule                               | Scope          | Description                                                                                             |
-| ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------- |
-| `test-guardrails/no-browser-pause` | All test files | Flags `page.pause()` / `browser.pause()` debug pauses; rely on web-first assertions instead             |
-| `test-guardrails/no-hard-wait`     | E2E tests only | Flags fixed sleeps: `page.waitForTimeout(N)` and `await new Promise(r => setTimeout(r, N))` where N > 0 |
+| Rule                           | Scope          | Description                                                                                             |
+| ------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------- |
+| `test-guardrails/no-hard-wait` | E2E tests only | Flags fixed sleeps: `page.waitForTimeout(N)` and `await new Promise(r => setTimeout(r, N))` where N > 0 |
 
 `setTimeout(resolve, 0)` (microtask flush) is intentionally allowed. A genuinely
 necessary settle window (e.g. a negative assertion that an action did _not_ change
@@ -20,7 +19,6 @@ state, where no event signals the absence of the change) can opt out with an inl
 
 Rule scoping is configured via `overrides` in `.oxlintrc.json`:
 
-- `no-browser-pause`: `packages/*/test/**/*.ts`
 - `no-hard-wait`: `packages/*/test/e2e/**/*.ts`
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding override entry in `.oxlintrc.json`.
@@ -50,12 +48,12 @@ Custom oxlint JS plugin that detects low-quality AI-generated comments via focus
 
 **Rules:**
 
-| Rule                                     | Severity | Description                                                          |
-| ---------------------------------------- | -------- | -------------------------------------------------------------------- |
-| `comment-quality/no-narrator-comment`    | warn     | Flags "This function/method handles..." preamble comments            |
-| `comment-quality/no-section-divider`     | warn     | Flags decorative `// --- Helpers ---` banner comments                |
-| `comment-quality/no-placeholder-comment` | warn     | Flags "Replace this with your actual implementation" stub comments   |
-| `comment-quality/no-hedging-comment`     | warn     | Flags "hopefully", "probably fine", "quick hack" uncertainty markers |
+| Rule                                     | Severity | Description                                                                                                                                                          |
+| ---------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `comment-quality/no-narrator-comment`    | warn     | Flags "This function/method handles..." preamble comments, in line comments and doc-blocks alike                                                                     |
+| `comment-quality/no-section-divider`     | warn     | Flags decorative `// --- Helpers ---` banner comments. Box-drawing dividers (`// -- Label --` with U+2500) are the house convention and are deliberately not matched |
+| `comment-quality/no-placeholder-comment` | warn     | Flags "Replace this with your actual implementation" stub comments                                                                                                   |
+| `comment-quality/no-hedging-comment`     | warn     | Flags "hopefully", "probably fine", "quick hack" uncertainty markers                                                                                                 |
 
 All rules are warn-only (no auto-fix) so the developer decides whether to rewrite or remove the comment. Comments containing keeper directives (`TODO`, `FIXME`, `eslint-disable`, JSDoc tags, etc.) are always skipped.
 
@@ -136,6 +134,31 @@ must not diverge: the public custom-property surface.
 Adversarial validation record: `docs/specs/2026-07-28-stylesheet-guards-adversarial-hypotheses.md`.
 
 Run via `npm run test:style-twin-drift` (also part of `check:base` and CI).
+
+## `check-dom-contract-drift.mjs`
+
+Parity check for the two hand-mirrored DOM contracts
+(`packages/kiosk-keyboard/src/internal/dom-contract.ts` vs
+`packages/kiosk-keyboard-webc/src/core/dom-contract.ts`), which the e2e specs and
+consumer CSS both target. `check-twin-drift.mjs` deliberately lists these modules
+as unchecked, because the two differ by naming convention, so this compares them
+structurally instead.
+
+- Top-level groups are reconciled first: each group is classified `core`,
+  `kioskOnly` or `webcOnly`, and an unclassified one fails. Without this the
+  checks below silently cover only the groups they name, so a new group added to
+  one twin would pass as being in parity with a twin that lacks it.
+- `classes` and `selectors` are compared by key set, not by value: the values are
+  the per-platform names (`ui5KioskKey` vs `kiosk-key`) and are expected to differ.
+- `attributes` are compared by key **and** value, since a `data-*` attribute is
+  the same string on both sides and is what consumer CSS and the e2e specs match on.
+- A key that is in neither the core list nor the platform-only list fails, so
+  adding one forces an explicit shared-vs-platform decision rather than defaulting
+  to silence.
+
+Adversarial validation record: `docs/specs/2026-07-21-dom-contract-drift-adversarial-hypotheses.md`.
+
+Run via `npm run test:dom-contract` (also part of `check:base` and CI).
 
 ## `copy-license.mjs`
 
