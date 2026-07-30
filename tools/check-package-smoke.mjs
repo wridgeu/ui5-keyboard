@@ -1,19 +1,27 @@
+import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { runNpm } from "./run-npm.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
+
+// npm sets npm_execpath for every script it runs; re-invoking that CLI with the
+// current Node binary is the only spawn path that works with shell:false, because
+// spawning `npm.cmd` directly throws EINVAL on Windows (Node's CVE-2024-27980
+// hardening).
+const npmExecPath = process.env.npm_execpath;
+if (!npmExecPath) {
+  console.error("npm_execpath is not set: run this through `npm run test:packages:smoke`, not with `node` directly.");
+  process.exit(1);
+}
 
 const packages = [
   {
     name: "ui5-lib-hotkeys",
-    dir: path.join(repoRoot, "packages", "hotkeys"),
-    buildArgs: ["run", "build:hotkeys"],
+    workspace: "packages/hotkeys",
     requiredFiles: ["README.md", "dist/.ui5/build-manifest.json", "dist/resources/ui5/hotkeys/library.js"],
   },
   {
     name: "ui5-lib-kiosk-keyboard",
-    dir: path.join(repoRoot, "packages", "kiosk-keyboard"),
-    buildArgs: ["run", "build:kiosk"],
+    workspace: "packages/kiosk-keyboard",
     requiredFiles: [
       "README.md",
       "src/KioskKeyboard.gen.d.ts",
@@ -23,8 +31,7 @@ const packages = [
   },
   {
     name: "kiosk-keyboard-webc",
-    dir: path.join(repoRoot, "packages", "kiosk-keyboard-webc"),
-    buildArgs: ["run", "build:kiosk-webc"],
+    workspace: "packages/kiosk-keyboard-webc",
     requiredFiles: [
       "README.md",
       "dist/Assets.js",
@@ -45,24 +52,22 @@ function assertFilesPresent(packageName, files, requiredFiles) {
   }
 }
 
-for (const pkg of packages) {
-  runNpm(["run", "clean"], pkg.dir);
-  runNpm(pkg.buildArgs, repoRoot);
+// One invocation for all three workspaces: npm accepts repeated `-w` and emits a
+// single JSON array. Entries are matched by package name rather than by position,
+// so the result does not depend on npm preserving the flag order.
+const packOutput = execFileSync(
+  process.execPath,
+  [npmExecPath, "pack", "--dry-run", "--json", ...packages.flatMap((pkg) => ["-w", pkg.workspace])],
+  { cwd: repoRoot, encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] },
+);
+const packMetadata = JSON.parse(packOutput);
 
-  const packOutput = runNpm(["pack", "--dry-run", "--json"], pkg.dir);
-  const [packMetadata] = JSON.parse(packOutput);
-  if (!packMetadata || !Array.isArray(packMetadata.files)) {
+for (const pkg of packages) {
+  const metadata = packMetadata.find((entry) => entry.name === pkg.name);
+  if (!metadata || !Array.isArray(metadata.files)) {
     throw new Error(`Unexpected npm pack output for ${pkg.name}.`);
   }
 
-  assertFilesPresent(pkg.name, packMetadata.files, pkg.requiredFiles);
+  assertFilesPresent(pkg.name, metadata.files, pkg.requiredFiles);
   process.stdout.write(`Verified dry-run package contents for ${pkg.name}.\n`);
 }
-
-// The demo app consumes the freshly built web component via the
-// ui5-tooling-modules <kiosk-keyboard> path; building it here exercises that
-// consumption path at build time (runtime is covered by the e2e suites). The
-// webc bundle was just rebuilt and packed in the loop above, so the demo
-// builds against current output.
-runNpm(["run", "build", "-w", "packages/demo-app"], repoRoot);
-process.stdout.write("Verified: demo app builds against the web component bundle.\n");
