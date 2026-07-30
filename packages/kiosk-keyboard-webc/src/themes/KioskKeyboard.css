@@ -64,6 +64,16 @@
   --kiosk-keyboard-variant-popup-gap: 0.25rem;
   --kiosk-keyboard-variant-popup-padding: 0.25rem;
   --kiosk-keyboard-variant-popup-max-width: 92vw;
+
+  /* Corner hint marking keys that carry a variant popup. */
+  --kiosk-keyboard-variant-hint-inset: 0.1875rem;
+  --kiosk-keyboard-variant-hint-size: 0.3125rem;
+  /* --kiosk-keyboard-variant-hint-color: unset by default.
+     The default is state-dependent, so it cannot be declared here: a neutral grey
+     on the resting fill, the key's own text colour on the emphasized and active
+     fills, where the grey would not clear SC 1.4.11. Setting it pins one colour
+     across every state, which is what a consumer asking for a specific hint colour
+     means. Ignored under forced colors, which uses system colors. */
   /* --kiosk-keyboard-key-border-color: unset by default.
      When set, applies a uniform border color to all key types
      (default, modifier, action). Useful for industrial/kiosk
@@ -137,16 +147,17 @@
    full row of floored keys fits rather than overflowing. Mirrors the height-driven
    cq-tier gap drops, but keyed off the keyboard's own width. The gap is set on the
    row (a container descendant); the container element cannot be targeted from its
-   own @container query. */
+   own @container query. min() caps rather than hard-replaces, so a consumer's
+   --kiosk-keyboard-key-gap and an already-tighter height tier both survive. */
 @container keyboard (max-width: 22rem) {
   .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-row {
-    gap: 0.25rem;
+    gap: min(var(--_kiosk-keyboard-key-gap), 0.25rem);
   }
 }
 
 @container keyboard (max-width: 20rem) {
   .kiosk-keyboard:not(.kiosk-keyboard--numpad) .kiosk-row {
-    gap: 0.125rem;
+    gap: min(var(--_kiosk-keyboard-key-gap), 0.125rem);
   }
 }
 
@@ -320,29 +331,30 @@
   box-sizing: border-box;
   box-shadow: var(--_kiosk-keyboard-key-shadow);
   position: relative;
-  /* WCAG 2.5.8 (AA, 24x24 CSS px): keys hold a 1.5rem floor - 24px at the default
-     16px root, and it scales with the root - instead of shrinking to zero; narrow
-     widths recover room by tightening the inter-key gap (see the width-responsive
-     @container rules) rather than the keys. The inline floor is lifted below 20rem,
-     where holding it pushes a full row past the container edge - see that tier's
-     rule. */
-  min-inline-size: 1.5rem;
-  min-block-size: 1.5rem;
+  /* WCAG 2.5.8 (AA): keys hold a 24 CSS px floor on both axes, growing with the root
+     font size but never falling below the criterion's absolute pixel value on a page
+     that shrinks the root. Narrow widths recover room by tightening the inter-key gap
+     (see the width-responsive @container rules) rather than the keys. The inline
+     floor is lifted below 20rem, where holding it pushes a full row past the
+     container edge - see that tier's rule. */
+  min-inline-size: max(1.5rem, 24px);
+  min-block-size: max(1.5rem, 24px);
   white-space: nowrap;
   container-type: inline-size;
 
   /* Long-press affordance: a folded-corner triangle marking keys that carry an
-     accent-variant popup. Neutral grey at a WCAG SC 1.4.11-compliant opacity.
-     Painted at every width: long-press is the only route to the variants on
-     touch, and the mark sits in the corner of a key that stays full height, so
-     it never competes with the centered glyph however narrow the key gets. */
+     accent-variant popup. The neutral grey default clears WCAG SC 1.4.11 (3:1)
+     against the resting key fill. Painted at every width: long-press is the only
+     route to the variants on touch, and the mark sits in the corner of a key that
+     stays full height, so it never competes with the centered glyph however narrow
+     the key gets. */
   &[data-has-variants]::after {
     content: "";
     position: absolute;
-    inset-block-start: var(--kiosk-keyboard-variant-hint-inset, 0.1875rem);
-    inset-inline-end: var(--kiosk-keyboard-variant-hint-inset, 0.1875rem);
-    inline-size: var(--kiosk-keyboard-variant-hint-size, 0.3125rem);
-    block-size: var(--kiosk-keyboard-variant-hint-size, 0.3125rem);
+    inset-block-start: var(--kiosk-keyboard-variant-hint-inset);
+    inset-inline-end: var(--kiosk-keyboard-variant-hint-inset);
+    inline-size: var(--kiosk-keyboard-variant-hint-size);
+    block-size: var(--kiosk-keyboard-variant-hint-size);
     background: var(
       --kiosk-keyboard-variant-hint-color,
       color-mix(in srgb, var(--sapContent_LabelColor, #556b82) 71%, transparent)
@@ -356,6 +368,25 @@
      the key's other top corner. */
   &[data-has-variants]:dir(rtl)::after {
     clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+
+  /* The neutral grey has no contrast against the emphasized and active fills, so on
+     every key state that repaints the background the hint tracks the key's own text
+     colour instead, which those states already pick for contrast. Applies to the
+     pressed states of any key and to the resting fill of an action, modifier or
+     latched-shift key carrying author-declared `variants`. Each arm is written at
+     (0,3,0) to outrank the base hint rule (0,2,0) on specificity rather than source
+     order, which is also why the whole treatment is gated off forced colors: there
+     the system-color arms below are authoritative, and they sit at (0,2,0) and
+     (0,3,0). */
+  @media (forced-colors: none) {
+    &:active[data-has-variants]::after,
+    &.kiosk-key--highlight[data-has-variants]::after,
+    &.kiosk-key--shift-active[data-has-variants]::after,
+    &.kiosk-key--action[data-has-variants]::after,
+    &.kiosk-key--modifier[data-has-variants]::after {
+      background: var(--kiosk-keyboard-variant-hint-color, color-mix(in srgb, currentColor 71%, transparent));
+    }
   }
 
   /* Transitions are scoped to interactive states so that Preact re-renders

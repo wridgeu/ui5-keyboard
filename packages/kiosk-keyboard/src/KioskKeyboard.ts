@@ -279,7 +279,9 @@ export default class KioskKeyboard extends Control {
        * resolved layout so every matching base letter (a, e, i, o, u, c, n,
        * s, y, z, l, ...) gains a long-press / right-click accent-variant
        * popup, making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
-       * from any Latin layout without editing layout data.
+       * from any Latin layout without editing layout data. `ja-romaji` is
+       * excluded with the other non-Latin built-ins; an `instanceVariants`
+       * entry arms it anyway.
        *
        * A per-key `variants` declaration always wins over the default table.
        * When Shift or Caps Lock is active, the popup surfaces the uppercase
@@ -596,9 +598,9 @@ export default class KioskKeyboard extends Control {
 
   // ── Static delegates: layout registry (read-only views) ──
   // Customization is per-instance: pass `instanceLayouts`,
-  // `instanceLocaleLayouts`, and `instanceMiddleware` to the constructor
-  // (or via the corresponding setters). There is no public mutation API
-  // for the global registry; built-ins ship sealed.
+  // `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` to the
+  // constructor (or via the corresponding setters). There is no public mutation
+  // API for the global registry; built-ins ship sealed.
 
   /**
    * Get a built-in layout definition by name. Returns `undefined` for
@@ -1769,7 +1771,8 @@ export default class KioskKeyboard extends Control {
             ariaLabel: getText("ARIA_RETURN_TO_NUMBERS", "Return to numbers"),
           });
     // Opt-in Latin-diacritics: fill the resolved table's variants onto matching
-    // base keys so umlauts/accents are reachable from any layout. Author-declared
+    // base keys so umlauts/accents are reachable without editing layout data;
+    // a layout the table resolution excludes keeps its keys unchanged. Author-declared
     // `variants` always win (applyVariantDefaults guarantees this).
     if (!this.getAccentVariants()) return base;
     const table = resolveVariantTable(layoutName, this._instanceVariantsMap);
