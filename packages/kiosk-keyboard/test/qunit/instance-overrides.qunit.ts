@@ -497,6 +497,47 @@ QUnit.test("Mixed-case instanceVariants layout names resolve through lowercase l
   kb.destroy();
 });
 
+QUnit.test("A custom layout opts out of the built-in table with a null entry", async (assert) => {
+  // The README's opt-out recipe, exercised on an instanceLayouts-registered
+  // layout rather than a built-in: a custom Latin layout inherits the built-in
+  // table through `accentVariants`, and `{ "<layout>": null }` is the documented
+  // way to take it back off.
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const customLayout = { mylayout: [[{ value: "a" }, { value: "b" }, { value: "e" }]] };
+
+  const armed = new KioskKeyboard({
+    controls: [input.getId()],
+    accentVariants: true,
+    instanceLayouts: customLayout,
+    layout: "mylayout",
+  });
+  await placeAndWait(armed);
+  assert.strictEqual(
+    getRequiredKeyElement(armed, "a").hasAttribute(DOM.attributes.hasVariants),
+    true,
+    "a custom layout inherits the built-in table",
+  );
+  armed.destroy();
+
+  const optedOut = new KioskKeyboard({
+    controls: [input.getId()],
+    accentVariants: true,
+    instanceLayouts: customLayout,
+    layout: "mylayout",
+    instanceVariants: { mylayout: null },
+  });
+  await placeAndWait(optedOut);
+  assert.strictEqual(
+    getRequiredKeyElement(optedOut, "a").hasAttribute(DOM.attributes.hasVariants),
+    false,
+    "a null entry opts the custom layout out",
+  );
+
+  input.destroy();
+  optedOut.destroy();
+});
+
 QUnit.test("setInstanceVariants after construction re-resolves on next render", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");

@@ -35,6 +35,17 @@ const HOSTS = [
   "kb-icon-label-variations",
 ];
 
+// Fixtures whose host caps the keyboard's height, directly or through an
+// ancestor. The block half of the target-size floor never lifts, so these are
+// the fixtures where it can push the last row past `overflow: hidden`.
+const HEIGHT_CAPPED_HOSTS = [
+  "kb-height-constrained",
+  "kb-height-tiny",
+  "kb-ancestor-constrained",
+  "kb-ancestor-tiny",
+  "kb-narrow-short",
+];
+
 // Fixtures that render at least one SAP icon. A SAP icon is a `ui5-icon` custom
 // element carrying its own shadow root and its own `:host` color; a unicode or
 // emoji icon is a plain span that inherits regardless.
@@ -44,6 +55,8 @@ type KeyBox = {
   key: string;
   left: number;
   right: number;
+  top: number;
+  bottom: number;
   width: number;
   height: number;
   /** Whether a hit test at the key's centre lands on the key or its own content. */
@@ -58,6 +71,8 @@ type Geometry = {
   /** Border-box edges of the keyboard root, where `:host { overflow: hidden }` clips. */
   left: number;
   right: number;
+  top: number;
+  bottom: number;
   keys: KeyBox[];
 };
 
@@ -77,6 +92,8 @@ async function readGeometry(page: Page, hostId: string): Promise<Geometry> {
         containerWidth: root.clientWidth - parseFloat(rootStyle.paddingLeft) - parseFloat(rootStyle.paddingRight),
         left: rootBox.left,
         right: rootBox.right,
+        top: rootBox.top,
+        bottom: rootBox.bottom,
         keys: [...root.querySelectorAll(keySel)].map((k) => {
           const box = k.getBoundingClientRect();
           // Retargets to the host from `document`, so hit test inside the shadow tree.
@@ -85,6 +102,8 @@ async function readGeometry(page: Page, hostId: string): Promise<Geometry> {
             key: k.getAttribute(keyAttr) ?? "",
             left: box.left,
             right: box.right,
+            top: box.top,
+            bottom: box.bottom,
             width: box.width,
             height: box.height,
             reachable: k.contains(hit),
@@ -101,14 +120,18 @@ test.beforeEach(async ({ page }) => {
 });
 
 // A row that overflows is center-justified, so it is the outermost keys of the
-// widest row that leave the box and get clipped by the host.
+// widest row that leave the box and get clipped by the host. The block axis
+// matters for the same reason: the key floor holds at every width, so a
+// height-capped host is where it can push the last row out of the box.
 test("keys stay inside the keyboard box", async ({ page }) => {
-  for (const id of HOSTS) {
+  for (const id of [...HOSTS, ...HEIGHT_CAPPED_HOSTS]) {
     const geometry = await readGeometry(page, id);
     expect(geometry.keys.length, `${id} rendered no keys`).toBeGreaterThan(0);
     for (const key of geometry.keys) {
       expect(key.left, `${id} "${key.key}" overflows the leading edge`).toBeGreaterThanOrEqual(geometry.left - EPSILON);
       expect(key.right, `${id} "${key.key}" overflows the trailing edge`).toBeLessThanOrEqual(geometry.right + EPSILON);
+      expect(key.top, `${id} "${key.key}" overflows the top edge`).toBeGreaterThanOrEqual(geometry.top - EPSILON);
+      expect(key.bottom, `${id} "${key.key}" overflows the bottom edge`).toBeLessThanOrEqual(geometry.bottom + EPSILON);
     }
   }
 });

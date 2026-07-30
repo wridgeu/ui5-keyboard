@@ -48,12 +48,13 @@ const SEPARATE_CONFIG_SPECS = /(flp-lifecycle|readme-screenshots)\.spec\.ts$/;
 // inversion) still run on CI via the desktop project, which keeps the full spec
 // list. Locally every project runs every spec and compares pixels.
 const CI_DEVICE_SPEC = "invariants.spec.ts";
-const CI_DEVICE_SPECS = new RegExp(`${CI_DEVICE_SPEC.replace(".", "\\.")}$`);
+const CI_DEVICE_SPECS = new RegExp(`${CI_DEVICE_SPEC.replaceAll(".", "\\.")}$`);
 
 // A project whose testMatch selects nothing still exits 0: Playwright's
 // "no tests found" check looks at the whole run, not per project. Renaming the
 // spec would turn all four device legs into silent no-ops, so fail the config
-// instead. A config that throws exits 1.
+// instead. A config that throws exits 1. A spec left in place but emptied is not
+// covered; see docs/specs/2026-07-28-stylesheet-guards-adversarial-hypotheses.md.
 if (process.env.CI && !existsSync(join(__dirname, "test", "e2e", CI_DEVICE_SPEC))) {
   throw new Error(`CI device projects match ${CI_DEVICE_SPEC}, which no longer exists in test/e2e.`);
 }

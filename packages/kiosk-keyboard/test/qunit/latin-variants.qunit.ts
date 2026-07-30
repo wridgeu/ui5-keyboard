@@ -15,6 +15,22 @@ import {
 // without clobbering author intent, and the Shift/Caps uppercasing that must
 // surface the capital sharp S (ẞ) for ß.
 
+QUnit.module("latin-variants - library re-export");
+
+QUnit.test("the library publishes the table without publishing its type name", async (assert) => {
+  // `export { LATIN_DIACRITIC_VARIANTS, type VariantTable }` transpiles to a
+  // runtime assignment for both names, publishing `ui5.kiosk.VariantTable` as
+  // `undefined`. The type has to leave through a separate `export type`, which
+  // only this assertion distinguishes from the collapsed form.
+  const library = (await import("ui5/kiosk/library")) as unknown as Record<string, unknown>;
+  assert.strictEqual(
+    library.LATIN_DIACRITIC_VARIANTS,
+    LATIN_DIACRITIC_VARIANTS,
+    "the built-in table is re-exported from the library module",
+  );
+  assert.notOk("VariantTable" in library, "the type name is not published as a runtime member");
+});
+
 QUnit.module("latin-variants - table");
 
 QUnit.test("covers the German umlaut bases and never repeats the base letter", (assert) => {

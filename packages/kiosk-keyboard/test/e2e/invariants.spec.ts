@@ -13,6 +13,19 @@ import { openPage, keyboardRoot } from "./helpers.js";
 // variants that carry the corner hint.
 const FIXTURES = ["kb-qwerty", "kb-narrow", "kb-accent-variants"];
 
+// Fixtures whose host caps the keyboard's height, directly or through an
+// ancestor. The block half of the target-size floor never lifts, so these are
+// the fixtures where it can push the last row past `overflow: hidden`.
+// Addressed by container id, which for the ancestor cases is the wrapper the
+// keyboard is placed into (see test/e2e/visual/init.js).
+const HEIGHT_CAPPED_FIXTURES = [
+  "kb-height-constrained",
+  "kb-height-tiny",
+  "kb-ancestor-constrained-wrap",
+  "kb-ancestor-tiny-wrap",
+  "kb-narrow-short",
+];
+
 /** WCAG 2.5.8 (AA) target size, less a sub-pixel rounding allowance. */
 const TARGET_SIZE = 23.99;
 /** Sub-pixel slack when comparing a key rect against the keyboard rect. */
@@ -24,6 +37,8 @@ interface KeyBox {
   key: string;
   left: number;
   right: number;
+  top: number;
+  bottom: number;
   width: number;
   height: number;
   /** Whether a hit test at the key's center lands on the key or its own content. */
@@ -33,6 +48,8 @@ interface KeyBox {
 interface KeyboardGeometry {
   left: number;
   right: number;
+  top: number;
+  bottom: number;
   /** Inline content box: the box `@container keyboard (max-width: ...)` is evaluated against. */
   contentInline: number;
   narrowTier: boolean;
@@ -66,6 +83,8 @@ async function measureKeyboard(page: Page, containerId: string): Promise<Keyboar
       return {
         left: rect.left,
         right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
         contentInline,
         narrowTier: contentInline <= narrowTierRem * rem,
         keys: [...board.querySelectorAll<HTMLElement>(keySelector)].map((el) => {
@@ -75,6 +94,8 @@ async function measureKeyboard(page: Page, containerId: string): Promise<Keyboar
             key: el.dataset.key ?? "",
             left: box.left,
             right: box.right,
+            top: box.top,
+            bottom: box.bottom,
             width: box.width,
             height: box.height,
             reachable: el.contains(hit),
@@ -120,18 +141,26 @@ test("variant keys paint their corner hint", async ({ page }) => {
   }
 });
 
-test("no key escapes the keyboard on the inline axis", async ({ page }) => {
-  for (const id of FIXTURES) {
+test("no key escapes the keyboard box", async ({ page }) => {
+  for (const id of [...FIXTURES, ...HEIGHT_CAPPED_FIXTURES]) {
     const geometry = await measureKeyboard(page, id);
     expect(geometry.keys.length, `${id} rendered its keys`).toBeGreaterThan(0);
     // Rows are center-justified inside an overflow: hidden root, so a row that
     // does not fit is clipped at BOTH edges, taking its outermost keys with it.
+    // The block axis clips the same way, and the block half of the target-size
+    // floor never lifts, so a height-capped host is where it can push a row out.
     for (const box of geometry.keys) {
       expect(box.left, `${id}: key '${box.key}' is not clipped at the leading edge`).toBeGreaterThanOrEqual(
         geometry.left - EDGE_EPSILON,
       );
       expect(box.right, `${id}: key '${box.key}' is not clipped at the trailing edge`).toBeLessThanOrEqual(
         geometry.right + EDGE_EPSILON,
+      );
+      expect(box.top, `${id}: key '${box.key}' is not clipped at the top edge`).toBeGreaterThanOrEqual(
+        geometry.top - EDGE_EPSILON,
+      );
+      expect(box.bottom, `${id}: key '${box.key}' is not clipped at the bottom edge`).toBeLessThanOrEqual(
+        geometry.bottom + EDGE_EPSILON,
       );
     }
   }

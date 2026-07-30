@@ -2,7 +2,21 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { KeyboardType } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
-import { placeAndWait, waitForRender } from "./test-helpers";
+import { placeAndWait } from "./test-helpers";
+
+/**
+ * Puts the document into RTL the way OpenUI5 does, by setting `dir` on the
+ * document element (`sap/ui/core/boot/initDOM.js`). `sapUiRtl` is a
+ * configuration parameter name, not a class the framework applies, so a test
+ * that sets it exercises nothing a real app reaches.
+ */
+function withDocumentRtl(): void {
+  document.documentElement.setAttribute("dir", "rtl");
+}
+
+function restoreDocumentDir(): void {
+  document.documentElement.removeAttribute("dir");
+}
 
 QUnit.module("KioskKeyboard events and RTL", {
   afterEach() {
@@ -151,22 +165,17 @@ QUnit.test("autoType does not fire keyboardTypeChange when type stays Full", asy
   kb.destroy();
 });
 
-QUnit.test("RTL: renders with direction rtl inside .sapUiRtl container", async (assert) => {
-  const rtlContainer = document.createElement("div");
-  rtlContainer.className = "sapUiRtl";
-  rtlContainer.id = "rtl-container";
-  document.getElementById("qunit-fixture")!.appendChild(rtlContainer);
-
+QUnit.test("RTL: renders with direction rtl under a document dir of rtl", async (assert) => {
   const kb = new KioskKeyboard();
-  kb.placeAt("rtl-container");
-  await nextUIUpdate();
-  await waitForRender();
-
-  const dom = kb.getDomRef() as HTMLElement;
-  const computed = window.getComputedStyle(dom);
-  assert.strictEqual(computed.direction, "rtl", "Keyboard has direction: rtl in RTL context");
-
-  kb.destroy();
+  withDocumentRtl();
+  try {
+    await placeAndWait(kb);
+    const computed = window.getComputedStyle(kb.getDomRef() as HTMLElement);
+    assert.strictEqual(computed.direction, "rtl", "Keyboard has direction: rtl in RTL context");
+  } finally {
+    restoreDocumentDir();
+    kb.destroy();
+  }
 });
 
 QUnit.test("RTL: renders with direction ltr when not in RTL container", async (assert) => {
@@ -181,15 +190,9 @@ QUnit.test("RTL: renders with direction ltr when not in RTL container", async (a
 });
 
 QUnit.test("RTL: ArrowRight moves focus to the visually right (lower-index) key", async (assert) => {
-  const rtlContainer = document.createElement("div");
-  rtlContainer.className = "sapUiRtl";
-  rtlContainer.id = "rtl-nav-container";
-  document.getElementById("qunit-fixture")!.appendChild(rtlContainer);
-
   const kb = new KioskKeyboard();
-  kb.placeAt("rtl-nav-container");
-  await nextUIUpdate();
-  await waitForRender();
+  withDocumentRtl();
+  await placeAndWait(kb);
 
   const origin = document.getElementById(`${kb.getId()}-key-1-1`)!;
   origin.setAttribute("tabindex", "0");
@@ -203,19 +206,14 @@ QUnit.test("RTL: ArrowRight moves focus to the visually right (lower-index) key"
     "ArrowRight lands on the neighbour one column lower",
   );
 
+  restoreDocumentDir();
   kb.destroy();
 });
 
 QUnit.test("RTL: ArrowLeft moves focus to the visually left (higher-index) key", async (assert) => {
-  const rtlContainer = document.createElement("div");
-  rtlContainer.className = "sapUiRtl";
-  rtlContainer.id = "rtl-nav-container";
-  document.getElementById("qunit-fixture")!.appendChild(rtlContainer);
-
   const kb = new KioskKeyboard();
-  kb.placeAt("rtl-nav-container");
-  await nextUIUpdate();
-  await waitForRender();
+  withDocumentRtl();
+  await placeAndWait(kb);
 
   const origin = document.getElementById(`${kb.getId()}-key-1-1`)!;
   origin.setAttribute("tabindex", "0");
@@ -229,6 +227,7 @@ QUnit.test("RTL: ArrowLeft moves focus to the visually left (higher-index) key",
     "ArrowLeft lands on the neighbour one column higher",
   );
 
+  restoreDocumentDir();
   kb.destroy();
 });
 
