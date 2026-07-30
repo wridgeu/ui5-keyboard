@@ -448,7 +448,10 @@ class KioskKeyboard extends UI5Element {
    * Whether to fill the built-in Latin-diacritics table onto the resolved
    * layout so every matching Latin base key (a, e, o, u, s, c, n, …) exposes a
    * long-press / right-click accent-variant popup, so the umlauts and accents
-   * become reachable from any layout without editing layout data.
+   * become reachable without editing layout data.
+   *
+   * The `ja-romaji`, `ja-kana`, `arabic` and `ko-hangul` built-ins resolve to no
+   * table; give a layout an `instanceVariants` entry to arm it anyway.
    *
    * A per-key `variants` declared in the layout always wins over the table.
    * Attribute name: `accent-variants`.

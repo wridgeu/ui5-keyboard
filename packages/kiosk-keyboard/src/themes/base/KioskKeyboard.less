@@ -32,8 +32,10 @@
  *   --ui5KioskKeyboard-variantHintInset  Inset from the key's top/end edge (default: 0.1875rem)
  *   --ui5KioskKeyboard-variantHintSize   Hint size (default: 0.3125rem)
  *   --ui5KioskKeyboard-variantHintColor  Hint color (default: @sapUiContentLabelColor at 71%
- *                                       alpha). Ignored under forced colors, which uses
- *                                       system colors.
+ *                                       alpha on the resting fill, the key's own text color
+ *                                       on emphasized and active fills). Setting it pins one
+ *                                       color across every state. Ignored under forced
+ *                                       colors, which uses system colors.
  *
  * Container:
  *   --ui5KioskKeyboard-border           Container border (default: 1px solid <theme border color>)
@@ -145,6 +147,16 @@
     --ui5KioskKeyboard-fkeyIconSize: ~"clamp(1em, 15cqi, 1.6em)";
     --ui5KioskKeyboard-fkeyLabelSize: ~"clamp(0.5rem, calc(100cqi * 0.35), 0.7em)";
     --ui5KioskKeyboard-fkeyGap: 0.05em;
+
+    /* Corner hint marking keys that carry a variant popup. */
+    --ui5KioskKeyboard-variantHintInset: 0.1875rem;
+    --ui5KioskKeyboard-variantHintSize: 0.3125rem;
+    /* --ui5KioskKeyboard-variantHintColor: unset by default.
+       The default is state-dependent, so it cannot be declared here: a neutral grey
+       on the resting fill, the key's own text colour on the emphasized and active
+       fills, where the grey would not clear SC 1.4.11. Setting it pins one colour
+       across every state, which is what a consumer asking for a specific hint colour
+       means. Ignored under forced colors, which uses system colors. */
 
     /* Private styling aliases */
     --_ui5KioskKeyboard-padding: ~"var(--ui5KioskKeyboard-padding)";
@@ -318,32 +330,53 @@
     box-sizing: border-box;
     box-shadow: var(--_ui5KioskKeyboard-keyShadow);
     position: relative;
-    /* WCAG 2.5.8 (AA, 24x24 CSS px): keys hold a 1.5rem floor - 24px at the default
-       16px root, and it scales with the root - instead of shrinking to zero; narrow
-       widths recover room by tightening the inter-key gap (see the width-responsive
-       @container rules) rather than the keys. The inline floor is lifted below 20rem,
-       where holding it pushes a full row past the container edge - see that tier's
-       rule. */
-    min-inline-size: 1.5rem;
-    min-block-size: 1.5rem;
+    /* WCAG 2.5.8 (AA): keys hold a 24 CSS px floor on both axes, growing with the
+       root font size but never falling below the criterion's absolute pixel value
+       on a page that shrinks the root. Narrow widths recover room by tightening the
+       inter-key gap (see the width-responsive @container rules) rather than the
+       keys. The inline floor is lifted below 20rem, where holding it pushes a full
+       row past the container edge - see that tier's rule. */
+    min-inline-size: ~"max(1.5rem, 24px)";
+    min-block-size: ~"max(1.5rem, 24px)";
     white-space: nowrap;
     container-type: inline-size;
 
     /* Long-press affordance: a folded-corner triangle marking keys that carry an
-       accent-variant popup. Neutral grey at a WCAG SC 1.4.11-compliant opacity.
-       Painted at every width: long-press is the only route to the variants on
-       touch, and the mark sits in the corner of a key that stays full height, so
-       it never competes with the centered glyph however narrow the key gets. */
+       accent-variant popup. The neutral grey default clears WCAG SC 1.4.11 (3:1)
+       against the resting key fill. Painted at every width: long-press is the only
+       route to the variants on touch, and the mark sits in the corner of a key that
+       stays full height, so it never competes with the centered glyph however
+       narrow the key gets. */
     &[data-has-variants]::after {
       content: "";
       position: absolute;
-      inset-block-start: var(--ui5KioskKeyboard-variantHintInset, 0.1875rem);
-      inset-inline-end: var(--ui5KioskKeyboard-variantHintInset, 0.1875rem);
-      inline-size: var(--ui5KioskKeyboard-variantHintSize, 0.3125rem);
-      block-size: var(--ui5KioskKeyboard-variantHintSize, 0.3125rem);
+      inset-block-start: var(--ui5KioskKeyboard-variantHintInset);
+      inset-inline-end: var(--ui5KioskKeyboard-variantHintInset);
+      inline-size: var(--ui5KioskKeyboard-variantHintSize);
+      block-size: var(--ui5KioskKeyboard-variantHintSize);
       background: var(--ui5KioskKeyboard-variantHintColor, fade(@sapUiContentLabelColor, 71%));
       clip-path: polygon(0 0, 100% 0, 100% 100%);
       pointer-events: none;
+    }
+
+    /* The neutral grey has no contrast against the emphasized and active fills, so
+       on every key state that repaints the background the hint tracks the key's own
+       text colour instead, which those states already pick for contrast. Applies to
+       the pressed states of any key and to the resting fill of an action, modifier
+       or latched-shift key carrying author-declared `variants`. Each arm is written
+       at (0,3,0) to outrank the base hint rule (0,2,0) on specificity rather than
+       source order, which is also why the whole treatment is gated off forced
+       colors: there the system-color arms below are authoritative, and they sit at
+       (0,2,0) and (0,3,0). */
+    @media (forced-colors: none) {
+      &:active[data-has-variants]::after,
+      &.ui5KioskKey--pressed[data-has-variants]::after,
+      &.ui5KioskKey--highlight[data-has-variants]::after,
+      &.ui5KioskKey--shiftActive[data-has-variants]::after,
+      &.ui5KioskKey--action[data-has-variants]::after,
+      &.ui5KioskKey--modifier[data-has-variants]::after {
+        background: ~"var(--ui5KioskKeyboard-variantHintColor, color-mix(in srgb, currentColor 71%, transparent))";
+      }
     }
 
     &:active,
@@ -585,16 +618,18 @@
      a full row of floored keys fits rather than overflowing. Mirrors the height-
      driven cqShort/cqTiny gap drops, but keyed off the keyboard's own width. The
      gap is set on the row (a container descendant); the container element itself
-     cannot be targeted from its own @container query. */
+     cannot be targeted from its own @container query. min() caps rather than
+     hard-replaces, so a consumer's --ui5KioskKeyboard-keyGap and an already-tighter
+     height tier both survive. */
   @container keyboard (max-width: 22rem) {
     .ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskRow {
-      gap: 0.25rem;
+      gap: ~"min(var(--_ui5KioskKeyboard-keyGap), 0.25rem)";
     }
   }
 
   @container keyboard (max-width: 20rem) {
     .ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskRow {
-      gap: 0.125rem;
+      gap: ~"min(var(--_ui5KioskKeyboard-keyGap), 0.125rem)";
     }
   }
 
@@ -734,7 +769,10 @@
 
   /* RTL support */
 
-  .sapUiRtl .ui5KioskKeyboard {
+  /* OpenUI5 signals RTL by setting `dir` on the document element (see
+     sap/ui/core/boot/initDOM.js); `sapUiRtl` is a configuration parameter name, not
+     a class the framework applies anywhere. */
+  html[dir="rtl"] .ui5KioskKeyboard {
     direction: rtl;
   }
 
