@@ -51,7 +51,7 @@ const idGen = createIdGenerator("hk_");
  * Functions become `callback` targets for lazy dispatch-time resolution.
  */
 function resolveTarget(target: Element | (() => Element | null) | null | undefined): ResolvedTarget {
-  if (target == null) return null; // eslint-disable-line eqeqeq -- intentional nullish check
+  if (target == null) return null; // oxlint-disable-line eqeqeq -- intentional nullish check
   if (typeof target === "function") return { kind: "callback", fn: target };
   return { kind: "element", el: target };
 }

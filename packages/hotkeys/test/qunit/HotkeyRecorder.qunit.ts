@@ -327,7 +327,7 @@ QUnit.test("Recorder blocks HotkeyManager hotkeys while recording", (assert) => 
 QUnit.test("Direct instantiation throws without INTERNAL_TOKEN", (assert) => {
   assert.throws(
     () => {
-      // eslint-disable-next-line no-new -- assert.throws requires the side effect
+      // oxlint-disable-next-line no-new -- assert.throws requires the side effect
       new HotkeyRecorder({ onRecord: () => {} } as never, {} as never, Symbol() as never);
     },
     /cannot be instantiated directly/i,

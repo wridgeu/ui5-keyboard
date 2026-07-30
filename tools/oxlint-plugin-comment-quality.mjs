@@ -3,12 +3,14 @@
 
 // ── Shared helpers ──
 
+/** @typedef {import('./oxlint-plugin.js').OxlintRule} OxlintRule */
+
 /**
  * Directives and keeper patterns that must never be flagged, regardless
  * of what the rest of the comment text looks like.
  */
 const KEEPER_RE =
-  /(?:^|\s)(?:TODO|FIXME|HACK|BUG|NOTE|SAFETY|PERF|IMPORTANT|XXX|LICENSE|COPYRIGHT|eslint-disable|eslint-enable|@ts-ignore|@ts-expect-error|@ts-nocheck|@ts-check|@type|@param|@returns?|@throws|@see|@example|@deprecated|@override|@internal|@public|@private|@protected|@readonly|@satisfies|istanbul\s+ignore|c8\s+ignore|vitest)/i;
+  /(?:^|\s)(?:TODO|FIXME|HACK|BUG|NOTE|SAFETY|PERF|IMPORTANT|XXX|LICENSE|COPYRIGHT|oxlint-disable|oxlint-enable|eslint-disable|eslint-enable|@ts-ignore|@ts-expect-error|@ts-nocheck|@ts-check|@type|@param|@returns?|@throws|@see|@example|@deprecated|@override|@internal|@public|@private|@protected|@readonly|@satisfies|istanbul\s+ignore|c8\s+ignore|vitest)/i;
 
 /**
  * Words that signal a comment is explaining *why*, not *what*.
@@ -38,6 +40,7 @@ function commentText(node) {
 const NARRATOR_RE =
   /^\s*this\s+(?:function|method|class|component|hook|module|handler|helper|utility|service|controller|provider|manager|resolver|wrapper|plugin|factory)\s+(?:is\s+(?:responsible\s+for|used\s+(?:to|for))|(?:will|should|can)\s+(?:handle|create|process|manage|return|generate|provide)|handles|creates|initializes|processes|manages|controls|provides|returns|generates|validates|renders|transforms|computes)/i;
 
+/** @type {OxlintRule} */
 const noNarratorComment = {
   meta: {
     type: "suggestion",
@@ -73,6 +76,7 @@ const noNarratorComment = {
  */
 const SECTION_DIVIDER_RE = /^\s*[-=*#~_/\\]{3,}\s*(?:\w[\w\s]*\s*[-=*#~_/\\]*)?$/;
 
+/** @type {OxlintRule} */
 const noSectionDivider = {
   meta: {
     type: "suggestion",
@@ -106,6 +110,7 @@ const noSectionDivider = {
 const PLACEHOLDER_RE =
   /(?:\.{3}\s*(?:rest|more|other|remaining|additional)|omitted\s+for\s+brevity|replace\s+(?:this|the\s+above)\s+with|your\s+(?:actual|real)\s+(?:implementation|code|logic)|add\s+(?:your|the\s+rest)\s+(?:implementation|code|logic)|implement\s+(?:this|here)|not\s+yet\s+implemented)/i;
 
+/** @type {OxlintRule} */
 const noPlaceholderComment = {
   meta: {
     type: "problem",
@@ -140,6 +145,7 @@ const noPlaceholderComment = {
 const HEDGING_RE =
   /(?:hopefully|probably\s+(?:fine|works?|correct|ok|okay)|not\s+sure\s+(?:if|why|whether|about)|i\s+think\s+this|good\s+enough\s+for\s+now|fix\s+(?:this\s+)?later|quick\s+(?:hack|fix|workaround)|temporary\s+(?:fix|hack|workaround|solution))/i;
 
+/** @type {OxlintRule} */
 const noHedgingComment = {
   meta: {
     type: "suggestion",
@@ -168,7 +174,87 @@ const noHedgingComment = {
   },
 };
 
-/** @type {import('eslint').ESLint.Plugin} */
+/**
+ * Flags comments that narrate the edit rather than state the current contract.
+ *
+ * Deliberately narrow: only phrases that cannot describe anything but a change
+ * to the code. Broader wording ("this change", "extracted from", "was
+ * previously") carries legitimate domain meanings here, such as a change event
+ * or a type derived from a signature. A comment that also explains a why is
+ * exempt, because history that justifies a live constraint is worth keeping.
+ */
+const EDIT_NARRATION_RE =
+  /\b(?:renamed\s+from|moved\s+(?:here|it)\s+for\s+clarity|moved\s+(?:outside|out\s+of)\s+this\s+(?:ruleset|block|file)|as\s+of\s+#\d+|in\s+this\s+(?:PR|commit|patch)|this\s+(?:commit|PR)|previously\s+(?:called|named|lived)|used\s+to\s+live|replaces?\s+the\s+old|collapsed\s+from|split\s+out\s+from|no\s+longer\s+(?:called|named))\b/i;
+
+/** @type {OxlintRule} */
+const noEditNarration = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description: "Disallow comments that narrate the edit instead of the current contract",
+    },
+    messages: {
+      noEditNarration:
+        "Comment narrates the edit, not the contract. State what the code does now; the history belongs in the commit message.",
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      Program() {
+        for (const comment of context.sourceCode.getAllComments()) {
+          if (KEEPER_RE.test(comment.value)) continue;
+          const text = commentText(comment);
+          if (EXPLAINS_WHY_RE.test(text)) continue;
+          if (EDIT_NARRATION_RE.test(text)) {
+            context.report({ node: comment, messageId: "noEditNarration" });
+          }
+        }
+      },
+    };
+  },
+};
+
+/**
+ * Flags issue pointers and known-limitation notes left in code.
+ *
+ * Unlike its siblings this skips only tooling directives, not `TODO` / `FIXME`,
+ * since a ticket pointer behind a TODO is the very pattern being caught.
+ */
+const TOOLING_DIRECTIVE_RE =
+  /(?:eslint-disable|eslint-enable|oxlint-disable|@ts-ignore|@ts-expect-error|@ts-nocheck|istanbul\s+ignore|c8\s+ignore)/i;
+
+const ISSUE_REFERENCE_RE =
+  /(?:tracked\s+in\s+#\d+|\bsee\s+#\d+|known\s+limitation|fixed\s+in\s+#\d+|follow-?up\s+in\s+#\d+|addressed\s+in\s+#\d+)/i;
+
+/** @type {OxlintRule} */
+const noIssueReferenceComment = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description: "Disallow issue-tracker pointers and known-limitation notes in comments",
+    },
+    messages: {
+      noIssueReferenceComment:
+        "Issue pointer in code. Fix it here, or record the limitation in the issue; a comment pointing at a ticket rots once the ticket closes.",
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      Program() {
+        for (const comment of context.sourceCode.getAllComments()) {
+          if (TOOLING_DIRECTIVE_RE.test(comment.value)) continue;
+          if (ISSUE_REFERENCE_RE.test(commentText(comment))) {
+            context.report({ node: comment, messageId: "noIssueReferenceComment" });
+          }
+        }
+      },
+    };
+  },
+};
+
+/** @type {import('./oxlint-plugin.js').OxlintPlugin} */
 export default {
   meta: { name: "comment-quality" },
   rules: {
@@ -176,5 +262,7 @@ export default {
     "no-section-divider": noSectionDivider,
     "no-placeholder-comment": noPlaceholderComment,
     "no-hedging-comment": noHedgingComment,
+    "no-edit-narration": noEditNarration,
+    "no-issue-reference-comment": noIssueReferenceComment,
   },
 };

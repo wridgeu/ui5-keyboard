@@ -1,6 +1,9 @@
 // oxlint plugin: AI-generated code anti-patterns.
 // See https://oxc.rs/docs/guide/usage/linter/writing-js-plugins
 
+/** @typedef {import('./oxlint-plugin.js').OxlintRule} OxlintRule */
+
+/** @type {OxlintRule} */
 const noDoubleTypeAssertion = {
   meta: {
     type: "problem",
@@ -32,6 +35,7 @@ const noDoubleTypeAssertion = {
  * should either re-throw, return an error value, or do meaningful
  * recovery.
  */
+/** @type {OxlintRule} */
 const noConsoleOnlyCatch = {
   meta: {
     type: "problem",
@@ -51,7 +55,7 @@ const noConsoleOnlyCatch = {
         if (!body || body.body.length !== 1) return;
 
         const stmt = body.body[0];
-        if (stmt.type !== "ExpressionStatement") return;
+        if (stmt?.type !== "ExpressionStatement") return;
 
         const expr = stmt.expression;
         if (expr.type !== "CallExpression") return;
@@ -74,6 +78,7 @@ const noConsoleOnlyCatch = {
  * the inverse. Auto-fix wraps with `!!` to preserve boolean return type
  * when the condition might not already be a boolean.
  */
+/** @type {OxlintRule} */
 const noRedundantBooleanReturn = {
   meta: {
     type: "suggestion",
@@ -154,6 +159,7 @@ const hasFancyDash = (text) => text.includes(EM_DASH) || text.includes(EN_DASH);
  *
  * Auto-fix: replaces with `-` in strings and comments.
  */
+/** @type {OxlintRule} */
 const noEmDash = {
   meta: {
     type: "suggestion",
@@ -178,10 +184,15 @@ const noEmDash = {
     ],
   },
   create(context) {
-    const opts = context.options[0] || {};
+    // Shape is enforced by this rule’s own `schema`, which oxlint validates
+    // before calling `create`; `context.options` itself is typed as raw JSON.
+    const [configured] = context.options;
+    /** @type {{ checkStrings?: boolean; checkComments?: boolean }} */
+    const opts = configured && typeof configured === "object" && !Array.isArray(configured) ? configured : {};
     const checkStrings = opts.checkStrings !== false;
     const checkComments = opts.checkComments !== false;
 
+    /** @type {Record<string, (node: any) => void>} */
     const visitors = {};
 
     if (checkStrings) {
@@ -237,7 +248,7 @@ const noEmDash = {
   },
 };
 
-/** @type {import('eslint').ESLint.Plugin} */
+/** @type {import('./oxlint-plugin.js').OxlintPlugin} */
 export default {
   meta: { name: "code-quality" },
   rules: {
