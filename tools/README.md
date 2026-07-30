@@ -59,31 +59,30 @@ All rules are warn-only (no auto-fix) so the developer decides whether to rewrit
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
 
-## `run-npm.mjs`
+## `oxlint-plugin-*.test.mjs`
 
-Utility module for running npm commands synchronously from within Node scripts.
+Unit tests for the custom rules, using oxlint's own `RuleTester` (exported from
+`oxlint/plugins-dev`) on Node's built-in test runner. No new dependency and no
+test framework: `RuleTester` looks for `globalThis.describe` / `globalThis.it`
+once at module load, and `node --test` installs neither, so each test file
+assigns `RuleTester.describe` and `RuleTester.it` explicitly before running.
 
-Requires `npm_execpath` (set by npm for every script it runs): consumers must be invoked via an npm script (e.g. `npm run test:packages:smoke`), not with `node` directly. Without it the module fails fast with a clear message; the old direct `npm.cmd` spawn fallback throws EINVAL on Windows since Node 18.20 (CVE-2024-27980 hardening).
+These rules gate every other lint run, so a silently broken regex or AST matcher
+would disarm the whole thing. Each rule carries both valid cases (including the
+`KEEPER_RE` and `EXPLAINS_WHY_RE` escapes, which are what keep the rules from
+firing on legitimate comments) and invalid ones.
 
-### `runNpm(args, cwd)`
-
-Spawns `npm` with the given arguments in the specified working directory. Forwards stdout/stderr and exits the process on failure. Returns the captured stdout string.
-
-```js
-import { runNpm } from "./run-npm.mjs";
-runNpm(["run", "build"], "packages/hotkeys");
-```
+Run via `npm run test:lint-plugins` (also part of `check:base` and CI).
 
 ## `check-package-smoke.mjs`
 
 Packaging smoke check for the publishable packages.
 
-- Rebuilds `packages/hotkeys`, `packages/kiosk-keyboard`, and `packages/kiosk-keyboard-webc`
-- Runs `npm pack --dry-run --json` in each package
-- Verifies contract-critical files are actually present in the tarball (for example UI5 build manifests and the WebC bundle outputs)
-- Builds `packages/demo-app` against the freshly built web component, exercising the `ui5-tooling-modules` `<kiosk-keyboard>` consumption path at build time (runtime consumption is covered by the e2e suites)
+- `npm run test:packages:smoke` runs `npm run clean && npm run build:all` first, so every package and the demo app are rebuilt from a clean tree before anything is inspected. The orchestration is npm workspaces, not a spawn helper.
+- Building `packages/demo-app` exercises the `ui5-tooling-modules` `<kiosk-keyboard>` consumption path at build time against the freshly built web component (runtime consumption is covered by the e2e suites)
+- The script then runs a single `npm pack --dry-run --json` across the three publishable workspaces and verifies contract-critical files are present in each tarball (for example UI5 build manifests and the WebC bundle outputs)
 
-Run via `npm run test:packages:smoke`.
+Requires `npm_execpath` (set by npm for every script it runs), so it must be run via `npm run test:packages:smoke` rather than with `node` directly. Without it the script fails fast with a clear message; spawning `npm.cmd` directly throws EINVAL on Windows since Node 18.20 (CVE-2024-27980 hardening), so the pack call re-invokes `npm_execpath` with the current Node binary.
 
 ### Native alternatives considered (2026-06-11)
 
@@ -100,8 +99,9 @@ Drift check for the deliberately hand-duplicated kiosk twin modules
   `key-action-meta`, `layout-constraint`, and `latin-variants` core helpers)
   after normalization: comments stripped
   (string-aware), relative `.js` import suffixes removed, whitespace collapsed
-  outside string literals, logging idioms (`Log.warning` vs `console.warn`)
-  equated.
+  outside string literals. Nothing else is equated: a normalizer that rewrites a
+  line also hides real drift on it, so the set stays limited to differences the
+  two packaging conventions force.
 - Fails with a unified-diff-style report naming the drifted pair; a missing
   file or a shrunken manifest is a hard failure, never a silent skip.
 - Intentionally divergent or framework-adapted modules (e.g.

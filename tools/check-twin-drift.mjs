@@ -8,7 +8,7 @@
  * duplicated by hand and must stay logically identical. Hand-syncing has
  * already missed one-sided fixes, so this check compares each twin pair after
  * normalizing away the differences that are legitimate (comments, blank lines,
- * `.js` ESM import suffixes, logging idioms) and fails with the first drifting
+ * `.js` ESM import suffixes) and fails with the first drifting
  * line when anything else drifts. Intra-line spacing is left to oxfmt (run
  * before this check in the same pipeline), so the normalizer does not collapse it.
  *
@@ -195,8 +195,6 @@ function stripComments(src) {
   return out;
 }
 
-const LOG_CALL = /\b(?:Log\.(?:warning|error|info|debug|fatal|trace)|console\.(?:warn|error|info|log|debug))\s*\(/;
-const LOG_IMPORT = /^import\s+Log\s+from\s*["']sap\/base\/Log["'];?$/;
 const RELATIVE_JS_SUFFIX = /((?:from|import)\s*\(?\s*["'])(\.{1,2}\/[^"']*)\.js(["'])/g;
 
 /**
@@ -210,13 +208,7 @@ function normalize(filePath) {
   for (let line of stripComments(readFileSync(filePath, "utf8")).split("\n")) {
     line = line.trim();
     if (!line) continue;
-    if (LOG_IMPORT.test(line)) continue; // kiosk-only logger import
     line = line.replace(RELATIVE_JS_SUFFIX, "$1$2$3"); // webc ESM `.js` suffixes
-    if (LOG_CALL.test(line)) {
-      // Logging idioms legitimately differ (UI5 Log vs console, message
-      // prefixes, log-component arguments): equate any logging line.
-      line = "__LOG_CALL__";
-    }
     lines.push(line);
   }
   return lines;

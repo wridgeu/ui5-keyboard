@@ -81,6 +81,12 @@ jobs:
       - name: DOM-contract drift check
         run: npm run test:dom-contract
 
+      # Unit tests for the custom oxlint rules in tools/, on oxlint's own
+      # RuleTester and Node's built-in test runner. These rules gate every other
+      # lint run, so a silently broken regex or AST matcher would disarm it.
+      - name: Lint-plugin rule tests
+        run: npm run test:lint-plugins
+
       # Asserts the two hand-mirrored stylesheets expose the same public custom
       # property set, compared modulo the camelCase/kebab-case naming split; see
       # tools/check-style-twin-drift.mjs.
