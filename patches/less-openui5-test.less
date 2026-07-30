@@ -99,3 +99,12 @@
     }
   }
 }
+
+/* An ordering statement followed by a plain rule. Without the identifier regex
+   stopping at `;` the directive name swallows the rule that follows it, and the
+   declaration is dropped from the output rather than failing the build. */
+@layer ordering-a, ordering-b;
+
+.after-ordering {
+  color: red;
+}

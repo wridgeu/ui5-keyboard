@@ -167,6 +167,50 @@ function checkAttributeParity(spec) {
   }
 }
 
+/**
+ * The top-level groups each contract is allowed to expose. Without this the
+ * checks below silently cover only the three groups they name, so a new group
+ * added to one twin passes as being in parity with a twin that lacks it.
+ * @type {{ core: string[]; kioskOnly: string[]; webcOnly: string[] }}
+ */
+const GROUP_PARITY = {
+  core: ["classes", "attributes", "selectors"],
+  // The keyboard-type class is derived on the kiosk renderer; webc drives the
+  // same distinction from a host attribute, so it has no class map for it.
+  kioskOnly: ["keyboardTypeClass"],
+  // Shadow-DOM only: `parts` / `exportParts` are the ::part() surface, and
+  // `cqTierValues` the host attribute the container-query tiers are keyed on.
+  webcOnly: ["cqTierValues", "parts", "exportParts"],
+};
+
+function checkGroupParity({ core, kioskOnly, webcOnly }) {
+  for (const [label, contract, allowed] of [
+    ["kiosk", kiosk, new Set([...core, ...kioskOnly])],
+    ["webc", webc, new Set([...core, ...webcOnly])],
+  ]) {
+    for (const group of Object.keys(contract)) {
+      if (!allowed.has(group))
+        errors.push(
+          `groups: ${label} "${group}" is unclassified. Add it to core (present on both twins, and give it a parity check) or to ${label}Only with a reason in tools/check-dom-contract-drift.mjs.`,
+        );
+    }
+  }
+  for (const group of core) {
+    if (!(group in kiosk)) errors.push(`groups: core "${group}" is missing from the kiosk contract.`);
+    if (!(group in webc)) errors.push(`groups: core "${group}" is missing from the webc contract.`);
+  }
+  for (const [label, contract, own] of [
+    ["kiosk", kiosk, kioskOnly],
+    ["webc", webc, webcOnly],
+  ]) {
+    for (const group of own) {
+      if (!(group in contract))
+        errors.push(`groups: ${label}Only "${group}" no longer exists; drop it from GROUP_PARITY.`);
+    }
+  }
+}
+
+checkGroupParity(GROUP_PARITY);
 checkKeyParity("classes", KEY_PARITY.classes);
 checkKeyParity("selectors", KEY_PARITY.selectors);
 checkAttributeParity(ATTR_PARITY);

@@ -24,15 +24,23 @@ if (!existsSync(source)) {
  * @param {string} dir package directory
  * @returns {string | undefined} the package's version, if readable
  */
-function readVersion(dir) {
+/**
+ * The version of the LESS fork vendored under `lib/thirdparty/less`, which is
+ * what the patch actually rewrites. less-openui5 has carried the same fork
+ * across its own releases, so this stays stable where its package version does
+ * not: gating on the package version skips a nested copy whose vendored parser
+ * is byte-identical, leaving the theme build unpatched.
+ */
+function readVendoredLessVersion(dir) {
   try {
-    return JSON.parse(readFileSync(join(dir, "package.json"), "utf8")).version;
+    const index = readFileSync(join(dir, "lib/thirdparty/less/index.js"), "utf8");
+    return /version:\s*\[([^\]]+)\]/.exec(index)?.[1]?.replaceAll(/\s/g, "");
   } catch {
     return undefined;
   }
 }
 
-const sourceVersion = readVersion(source);
+const sourceVersion = readVendoredLessVersion(source);
 
 // Exactly the files the less-openui5 patch modifies.
 const patchedFiles = ["lib/thirdparty/less/parser.js", "lib/thirdparty/less/tree/directive.js"];
@@ -53,13 +61,13 @@ for (const nodeModules of nodeModulesDirs) {
   if (!existsSync(target)) {
     continue;
   }
-  // Overwriting files of a different release with the hoisted version's
-  // patched files could mix incompatible parser internals: skip and warn so
-  // the mismatch gets resolved (rebase the patch or align the versions).
-  const targetVersion = readVersion(target);
+  // Overwriting a different LESS fork with the hoisted version's patched files
+  // could mix incompatible parser internals: skip and warn so the mismatch gets
+  // resolved (rebase the patch or align the versions).
+  const targetVersion = readVendoredLessVersion(target);
   if (targetVersion !== sourceVersion) {
     console.warn(
-      `less-openui5 patch: skipped ${target} (version ${targetVersion ?? "unknown"} differs from hoisted ${sourceVersion ?? "unknown"}); align the versions or rebase the patch.`,
+      `less-openui5 patch: skipped ${target} (vendored LESS ${targetVersion ?? "unknown"} differs from hoisted ${sourceVersion ?? "unknown"}); align the versions or rebase the patch.`,
     );
     continue;
   }

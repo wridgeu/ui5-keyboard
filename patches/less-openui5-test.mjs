@@ -34,6 +34,11 @@ const expected = [
   "@media (max-width: 600px) {",
   "@supports (display: grid) {",
   ".parent .child {",
+  "@layer ordering-a, ordering-b;",
+  // The rule after an ordering statement. Without the `;`-terminated identifier
+  // regex the directive name swallows it and the declaration is silently
+  // dropped, which no other assertion here distinguishes from correct output.
+  ".after-ordering {",
 ];
 
 /**
