@@ -1,6 +1,8 @@
 // oxlint plugin: test stability guardrails (flags flaky hard-wait patterns).
 // See https://oxc.rs/docs/guide/usage/linter/writing-js-plugins
 
+/** @typedef {import('./oxlint-plugin.js').OxlintRule} OxlintRule */
+
 /**
  * Returns the inner call expression from an arrow/function callback body,
  * handling both concise (`resolve => fn()`) and block (`resolve => { fn(); }`)
@@ -31,6 +33,7 @@ function extractSingleCallFromBody(body) {
  *
  * Scope: e2e test files only (configured via oxlintrc overrides).
  */
+/** @type {OxlintRule} */
 const noHardWait = {
   meta: {
     type: "problem",
@@ -71,7 +74,7 @@ const noHardWait = {
         if (args?.length !== 1) return;
 
         const callback = args[0];
-        if (callback.type !== "ArrowFunctionExpression" && callback.type !== "FunctionExpression") return;
+        if (callback?.type !== "ArrowFunctionExpression" && callback?.type !== "FunctionExpression") return;
 
         const callExpr = extractSingleCallFromBody(callback.body);
         if (!callExpr) return;
@@ -88,7 +91,7 @@ const noHardWait = {
   },
 };
 
-/** @type {import('eslint').ESLint.Plugin} */
+/** @type {import('./oxlint-plugin.js').OxlintPlugin} */
 export default {
   meta: { name: "test-guardrails" },
   rules: {
