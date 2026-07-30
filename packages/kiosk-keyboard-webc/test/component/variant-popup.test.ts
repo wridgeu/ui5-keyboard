@@ -624,6 +624,13 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(aKey.hasAttribute("aria-expanded"), "no aria-expanded before opening").to.equal(false);
     await holdOpen(aKey);
     expect(aKey.hasAttribute("aria-expanded"), "still no aria-expanded while open").to.equal(false);
+
+    // haspopup="dialog" is a promise about what opens, so assert the thing that
+    // opens keeps it. Without this the advertisement could drift from the popup.
+    const dialog = popoverEl(kb)!.shadowRoot!.querySelector('[role="dialog"]');
+    expect(dialog, "the popup that opens carries role=dialog, as advertised").to.not.equal(null);
+    expect(dialog!.getAttribute("aria-modal"), "the dialog is modal").to.equal("true");
+
     pointerUp();
 
     keyDown(popupEl(kb)!, "Escape");
@@ -671,6 +678,11 @@ describe("kiosk-keyboard - accent-variant popup", () => {
   });
 
   it("holds the WCAG 2.5.8 24x24px minimum key target size above the narrowest tier", async () => {
+    // A uniform row cannot demonstrate the inline floor: if flex would shrink
+    // every key below 24px, then flooring every key overflows the row by
+    // construction, which is why the floor is lifted below the 20rem tier. The
+    // floor earns its keep on a mixed-span row, where a wide key absorbs the
+    // width the floored keys take.
     const { kb } = await setupWithLayout([
       [
         { value: "q" },
@@ -683,19 +695,47 @@ describe("kiosk-keyboard - accent-variant popup", () => {
         { value: "i" },
         { value: "o" },
         { value: "p" },
+        { value: " ", width: "space", type: "space" },
       ],
     ]);
-    // 21rem: narrow enough that flex alone would shrink the 10-key row below
-    // 24px, but above the 20rem tier where the inline floor is lifted.
-    kb.style.width = "336px";
+    kb.style.width = "348px";
     await renderFinished();
+    const root = kb.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.root)!;
+    const rootBox = root.getBoundingClientRect();
+    const rootStyle = getComputedStyle(root);
+    const containerWidth = root.clientWidth - parseFloat(rootStyle.paddingLeft) - parseFloat(rootStyle.paddingRight);
+    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+    // The lift below 20rem is keyed off the container's content box, so assert
+    // the regime rather than trusting the host width to imply it.
+    expect(containerWidth, "fixture must sit above the 20rem tier").to.be.above(20 * remPx);
+
     const keys = [...kb.shadowRoot!.querySelectorAll<HTMLElement>(DOM.selectors.key)];
-    expect(keys.length).to.equal(10);
-    for (const key of keys) {
-      const box = key.getBoundingClientRect();
-      expect(box.width, `key '${key.dataset.key}' holds >= 24px inline`).to.be.at.least(TARGET_SIZE);
-      expect(box.height, `key '${key.dataset.key}' holds >= 24px block`).to.be.at.least(TARGET_SIZE);
+    const boxes = keys.map((key) => ({ key: key.dataset.key ?? "", box: key.getBoundingClientRect() }));
+    for (const { key, box } of boxes) {
+      expect(box.width, `key '${key}' holds >= 24px inline`).to.be.at.least(TARGET_SIZE);
+      expect(box.height, `key '${key}' holds >= 24px block`).to.be.at.least(TARGET_SIZE);
+      expect(box.left, `key '${key}' overflows the leading edge`).to.be.at.least(rootBox.left - EDGE_EPSILON);
+      expect(box.right, `key '${key}' overflows the trailing edge`).to.be.at.most(rootBox.right + EDGE_EPSILON);
     }
+
+    // Without the floor the eight single-span keys land well under 24px, so at
+    // least one key resting exactly on it is what proves the floor is load
+    // bearing here. Drop this and the test passes on any layout that happens to
+    // be wide enough.
+    // Prove the fixture actually exercises the floor rather than merely being
+    // wide enough: drop the floor and the same row must fall under 24px. Without
+    // this the test would keep passing on any layout that happens to fit.
+    const lift = document.createElement("style");
+    lift.textContent = `${DOM.selectors.key} { min-inline-size: 0 !important }`;
+    kb.shadowRoot!.append(lift);
+    const unfloored = keys.map((key) => key.getBoundingClientRect().width);
+    lift.remove();
+
+    expect(
+      Math.min(...unfloored),
+      "no key drops under 24px without the floor, so this row does not exercise it",
+    ).to.be.below(TARGET_SIZE);
   });
 
   it("holds the block floor when the key-height property is set below it", async () => {

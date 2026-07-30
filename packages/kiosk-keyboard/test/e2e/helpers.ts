@@ -101,12 +101,17 @@ export async function expectKeyboardVisualMatch(
   await expectVisualMatch(page, keyboardRoot(page, containerId), name, options);
 }
 
-/** Set `dir`/`lang` on <html> and toggle the UI5 RTL body class (no native API for this). */
+/**
+ * Set `dir`/`lang` on <html>, which is how OpenUI5 signals RTL
+ * (`sap/ui/core/boot/initDOM.js`); there is no native API to drive it from here.
+ * Nothing else is set: `sapUiRtl` is a configuration parameter name rather than
+ * a class the framework applies, so adding it would let a rule keyed on it pass
+ * a test it cannot pass in a real app.
+ */
 export async function setDocumentDirection(page: Page, dir: "ltr" | "rtl"): Promise<void> {
   await page.evaluate((d) => {
     document.documentElement.setAttribute("dir", d);
     document.documentElement.setAttribute("lang", d === "rtl" ? "ar" : "en");
-    document.body.classList.toggle("sapUiRtl", d === "rtl");
   }, dir);
 }
 

@@ -26,16 +26,23 @@ test("kb-accent-variants-forced-colors", async ({ page }) => {
 // pseudo-element rather than captured: the variant fixture has no target input
 // to drive a physical-key highlight, and holding a pointer down to force
 // `:active` also arms the long-press variant popup.
-test("kb-accent-variants-forced-colors-highlight", async ({ page }) => {
-  await page.emulateMedia({ forcedColors: "active" });
-  await openPage(page);
-  const variantKey = key(page, "kb-accent-variants", "a");
-  await expect(variantKey).toHaveAttribute(DOM.attributes.hasVariants, "");
-  const restingHint = await variantKey.evaluate((el) => getComputedStyle(el, "::after").backgroundColor);
-  const highlighted = await variantKey.evaluate((el, highlightClass) => {
-    el.classList.add(highlightClass);
-    return { hint: getComputedStyle(el, "::after").backgroundColor, text: getComputedStyle(el).color };
-  }, DOM.classes.keyHighlight);
-  expect(highlighted.hint).toBe(highlighted.text);
-  expect(highlighted.hint).not.toBe(restingHint);
-});
+// Every class that repaints the key on Highlight needs its own arm; a latched
+// shift key with author-declared variants is as much a Highlight fill as a
+// pressed one, and only an arm per class keeps the hint legible on it.
+for (const stateClass of [DOM.classes.keyHighlight, DOM.classes.keyPressed, DOM.classes.keyShiftActive]) {
+  test(`kb-accent-variants-forced-colors-${stateClass}`, async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await openPage(page);
+    const variantKey = key(page, "kb-accent-variants", "a");
+    await expect(variantKey).toHaveAttribute(DOM.attributes.hasVariants, "");
+    const restingHint = await variantKey.evaluate((el) => getComputedStyle(el, "::after").backgroundColor);
+    const highlighted = await variantKey.evaluate((el, cls) => {
+      el.classList.add(cls);
+      const styles = { hint: getComputedStyle(el, "::after").backgroundColor, text: getComputedStyle(el).color };
+      el.classList.remove(cls);
+      return styles;
+    }, stateClass);
+    expect(highlighted.hint).toBe(highlighted.text);
+    expect(highlighted.hint).not.toBe(restingHint);
+  });
+}

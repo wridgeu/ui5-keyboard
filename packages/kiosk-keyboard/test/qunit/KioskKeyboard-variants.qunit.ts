@@ -272,6 +272,13 @@ QUnit.test("variant keys advertise the popup via aria-haspopup, without aria-exp
   assert.strictEqual(aKey.hasAttribute("aria-expanded"), false, "no aria-expanded before opening");
   await holdOpen(kb, aKey);
   assert.strictEqual(aKey.hasAttribute("aria-expanded"), false, "still no aria-expanded while the popup is open");
+
+  // haspopup="dialog" is a promise about what opens, so assert the thing that
+  // opens keeps it. Without this the advertisement could drift from the popup.
+  const popupRoot = getPopup()?.closest('[role="dialog"]');
+  assert.ok(popupRoot, "the popup that opens carries role=dialog, as advertised");
+  assert.strictEqual(popupRoot?.getAttribute("aria-modal"), "true", "the dialog is modal");
+
   release(kb, aKey);
   keydownOnPopup("Escape");
   cleanup(kb, input);
@@ -314,18 +321,66 @@ QUnit.test("the corner hint stays painted on a narrow key", async (assert) => {
 });
 
 QUnit.test("keys hold the WCAG 2.5.8 24x24px minimum target size above the narrowest tier", async (assert) => {
-  const { kb, input } = await makeKeyboard();
+  // A uniform row cannot demonstrate the inline floor: if flex would shrink every
+  // key below 24px, flooring every key overflows the row by construction, which
+  // is why the floor is lifted below the 20rem tier. The floor earns its keep on
+  // a mixed-span row, where a wide key absorbs the width the floored keys take.
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    accentVariants: true,
+    controls: [input.getId()],
+    instanceLayouts: {
+      floortest: [
+        [
+          { value: "q" },
+          { value: "w" },
+          { value: "e" },
+          { value: "r" },
+          { value: "t" },
+          { value: "y" },
+          { value: "u" },
+          { value: "i" },
+          { value: "o" },
+          { value: "p" },
+          { value: " ", width: "space", type: "space" },
+        ],
+      ],
+    },
+    layout: "floortest",
+  });
+  await placeAndWait(kb);
   const root = kb.getDomRef() as HTMLElement;
-  // 21rem: narrow enough that flex alone would shrink the 10-key row below 24px,
-  // but above the 20rem tier where the inline floor is lifted.
-  root.style.width = "336px";
+  root.style.width = "348px";
   await waitForRender();
+
+  const rootBox = root.getBoundingClientRect();
+  const rootStyle = getComputedStyle(root);
+  const containerWidth = root.clientWidth - parseFloat(rootStyle.paddingLeft) - parseFloat(rootStyle.paddingRight);
+  const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  // The lift below 20rem is keyed off the container's content box, so assert the
+  // regime rather than trusting the host width to imply it.
+  assert.ok(containerWidth > 20 * remPx, `fixture sits above the 20rem tier (${containerWidth.toFixed(1)}px)`);
+
   const keys = renderedKeys(assert, root);
   for (const key of keys) {
-    const width = key.getBoundingClientRect().width;
-    assert.ok(width >= TARGET_SIZE, `key '${key.dataset.key}' holds >= 24px inline (${width.toFixed(1)}px)`);
+    const box = key.getBoundingClientRect();
+    assert.ok(box.width >= TARGET_SIZE, `key '${key.dataset.key}' holds >= 24px inline (${box.width.toFixed(1)}px)`);
+    assert.ok(box.left >= rootBox.left - EDGE_EPSILON, `key '${key.dataset.key}' stays inside the leading edge`);
+    assert.ok(box.right <= rootBox.right + EDGE_EPSILON, `key '${key.dataset.key}' stays inside the trailing edge`);
   }
   assertBlockFloor(assert, keys);
+
+  // Prove the fixture actually exercises the floor rather than merely being wide
+  // enough: drop the floor and the same row must fall under 24px. Without this
+  // the test would keep passing on any layout that happens to fit.
+  const lift = document.createElement("style");
+  lift.textContent = `${DOM.selectors.key} { min-inline-size: 0 }`;
+  document.head.append(lift);
+  const narrowest = Math.min(...keys.map((key) => key.getBoundingClientRect().width));
+  lift.remove();
+  assert.ok(narrowest < TARGET_SIZE, `without the floor the row drops under 24px (${narrowest.toFixed(1)}px)`);
+
   cleanup(kb, input);
 });
 

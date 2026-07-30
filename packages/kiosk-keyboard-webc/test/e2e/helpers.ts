@@ -137,12 +137,11 @@ export function isHoverCapable(page: Page): Promise<boolean> {
 
 // ── Visual helpers ──
 
-/** Set `dir`/`lang` on <html> and toggle the UI5 RTL body class, then wait for reflow. */
+/** Set `dir`/`lang` on <html>, which is what `:dir(rtl)` resolves against, then wait for reflow. */
 export async function setDocumentDirection(page: Page, dir: "ltr" | "rtl"): Promise<void> {
   await page.evaluate((d) => {
     document.documentElement.setAttribute("dir", d);
     document.documentElement.setAttribute("lang", d === "rtl" ? "ar" : "en");
-    document.body.classList.toggle("sapUiRtl", d === "rtl");
   }, dir);
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null)))));
 }
