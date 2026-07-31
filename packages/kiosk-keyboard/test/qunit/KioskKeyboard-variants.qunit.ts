@@ -209,26 +209,37 @@ QUnit.test("an instanceVariants entry overrides one built-in letter's popup glyp
   cleanup(kb, input);
 });
 
-QUnit.test("a spread-extended instanceVariants table keeps the built-in entries", async (assert) => {
+QUnit.test("a full-size table restating the built-in entries validates and applies", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
+  // A consumer who builds a table from LATIN_DIACRITIC_VARIANTS instead of naming only
+  // the letters they change: every one of its entries has to clear validation, and the
+  // letters it does change still have to win over the built-in list.
   const kb = new KioskKeyboard({
     controls: [input.getId()],
     accentVariants: true,
     layout: "qwerty",
-    instanceVariants: { qwerty: { ...LATIN_DIACRITIC_VARIANTS, b: ["ḃ"] } },
+    instanceVariants: { qwerty: { ...LATIN_DIACRITIC_VARIANTS, a: ["ā"], b: ["ḃ"] } },
   });
   await placeAndWait(kb);
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(0, 0);
+
   assert.strictEqual(
     getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
     true,
-    "built-in 'a' retained via the spread",
+    "the full table validates",
   );
   assert.strictEqual(
     getRequiredKeyElement(kb, "b").hasAttribute(DOM.attributes.hasVariants),
     true,
     "added 'b' present",
   );
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  assert.deepEqual(getOptions().map(glyphOf), ["ā"], "an overridden letter takes the table's own list");
+  release(kb, aKey);
   cleanup(kb, input);
 });
 

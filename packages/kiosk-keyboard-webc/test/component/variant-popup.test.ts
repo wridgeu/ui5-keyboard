@@ -594,13 +594,20 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     pointerUp();
   });
 
-  it("a spread-extended instanceVariants table keeps the built-in entries", async () => {
+  it("a full-size table restating the built-in entries validates and applies", async () => {
     const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
     kb.accentVariants = true;
-    kb.instanceVariants = { spike: { ...LATIN_DIACRITIC_VARIANTS, b: ["ḃ"] } };
+    // A consumer who builds a table from LATIN_DIACRITIC_VARIANTS instead of naming
+    // only the letters they change: every one of its entries has to clear validation,
+    // and the letters it does change still have to win over the built-in list.
+    kb.instanceVariants = { spike: { ...LATIN_DIACRITIC_VARIANTS, a: ["ā"], b: ["ḃ"] } };
     await renderFinished();
-    expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants), "built-in 'a' retained").to.equal(true);
+    expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants), "the full table validates").to.equal(true);
     expect(requireKey(kb, "b").hasAttribute(DOM.attributes.hasVariants), "added 'b' present").to.equal(true);
+
+    await holdOpen(requireKey(kb, "a"));
+    expect(optionGlyphs(kb), "an overridden letter takes the table's own list").to.deep.equal(["ā"]);
+    pointerUp();
   });
 
   it("a null instanceVariants entry opts the layout out of the built-in table", async () => {

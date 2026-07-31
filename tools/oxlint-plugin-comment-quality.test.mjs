@@ -86,6 +86,10 @@ ruleTester.run("no-obvious-comment", rule("no-obvious-comment"), {
     // Declarations are out of scope; a doc-style summary over one is the
     // contract, not a restatement.
     "// Focus the first key\nfunction focusFirstKey(key) {}",
+    // Pins the single-line requirement: the call spans every line below it, so its
+    // tokens carry `optionWidth` and `open` from the body rather than from the line
+    // the comment sits on.
+    '// The option width is read at open\nit("sizes them", () => {\n  const optionWidth = 1;\n  open(optionWidth);\n});',
   ],
   invalid: [
     {

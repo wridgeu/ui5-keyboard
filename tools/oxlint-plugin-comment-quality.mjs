@@ -283,9 +283,6 @@ const NAMING_TOKENS = new Set(["Identifier", "Keyword", "PrivateIdentifier"]);
 /** A comment longer than this carries prose, not a label. */
 const MAX_COMMENT_WORDS = 10;
 
-/** A statement naming more than this many things overlaps by chance, not by restatement. */
-const MAX_STATEMENT_WORDS = 30;
-
 /**
  * Splits text into lowercase word stems: separators and camelCase boundaries
  * both break, and a trailing plural `s` is dropped so `keys` matches `key`.
@@ -302,6 +299,10 @@ function wordStems(text) {
 /**
  * Returns the plain statement that starts on the line directly under `comment`,
  * or null when the comment does not sit on top of one.
+ *
+ * A statement spanning more than one line is rejected. Its token list covers every
+ * nested line - the body of an `it(...)` call, say - so a comment naming words that
+ * appear anywhere inside it is no evidence that it restates the line below.
  */
 function statementBelow(sourceCode, comment) {
   const nextLine = sourceCode.lines[comment.loc.end.line];
@@ -314,7 +315,8 @@ function statementBelow(sourceCode, comment) {
   // `Program` starts at its first token, so a leading comment leaves it sharing
   // the start offset of the statement below; climbing into it loses the statement.
   while (node?.parent && node.parent.type !== "Program" && node.parent.start === node.start) node = node.parent;
-  return node && RESTATEABLE_STATEMENTS.has(node.type) ? node : null;
+  if (!node || !RESTATEABLE_STATEMENTS.has(node.type)) return null;
+  return sourceCode.getLocFromIndex(node.start).line === sourceCode.getLocFromIndex(node.end).line ? node : null;
 }
 
 /**
@@ -357,12 +359,12 @@ const noObviousComment = {
           if (ownLine === undefined || ownLine.slice(0, comment.loc.start.column).trim() !== "") continue;
           const statement = statementBelow(sourceCode, comment);
           if (!statement) continue;
-          const names = sourceCode
-            .getTokens(statement)
-            .filter((token) => NAMING_TOKENS.has(token.type))
-            .flatMap((token) => wordStems(token.value));
-          if (names.length > MAX_STATEMENT_WORDS) continue;
-          const codeWords = new Set(names);
+          const codeWords = new Set(
+            sourceCode
+              .getTokens(statement)
+              .filter((token) => NAMING_TOKENS.has(token.type))
+              .flatMap((token) => wordStems(token.value)),
+          );
           if (content.every((word) => codeWords.has(word))) {
             context.report({ node: comment, messageId: "noObviousComment" });
           }
