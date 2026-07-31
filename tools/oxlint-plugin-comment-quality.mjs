@@ -254,6 +254,124 @@ const noIssueReferenceComment = {
   },
 };
 
+/**
+ * Grammatical glue that carries no information about the code below.
+ */
+const FUNCTION_WORD_RE =
+  /^(?:a|an|and|any|are|as|at|be|by|for|from|here|if|in|into|is|it|its|of|on|or|our|that|the|their|then|this|to|we|when|which|will|with)$/;
+
+/**
+ * Verbs the code shape already states, so they add nothing when a comment
+ * repeats them: an assignment is a "set", a member read is a "get".
+ */
+const CODE_SHAPE_VERB_RE =
+  /^(?:add|assign|build|calculate|call|check|compute|create|declare|decrement|define|delete|fetch|find|get|increment|init|initialize|instantiate|invoke|iterate|look|lookup|loop|make|new|read|remove|return|save|set|store|update|write)$/;
+
+/** Statements plain enough that a comment naming their words is a restatement. */
+const RESTATEABLE_STATEMENTS = new Set(["VariableDeclaration", "ExpressionStatement", "ReturnStatement"]);
+
+/**
+ * Words that count as restatement candidates: prose, not literal debris.
+ * A fragment carrying digits (`F9`, `AC00`) names a value, not a description,
+ * so its presence on both sides is no evidence that the comment repeats the code.
+ */
+const PROSE_WORD_RE = /^[a-z]{2,}$/;
+
+/** Tokens that spell out what the statement says; literals carry data, not description. */
+const NAMING_TOKENS = new Set(["Identifier", "Keyword", "PrivateIdentifier"]);
+
+/** A comment longer than this carries prose, not a label. */
+const MAX_COMMENT_WORDS = 10;
+
+/** A statement naming more than this many things overlaps by chance, not by restatement. */
+const MAX_STATEMENT_WORDS = 30;
+
+/**
+ * Splits text into lowercase word stems: separators and camelCase boundaries
+ * both break, and a trailing plural `s` is dropped so `keys` matches `key`.
+ */
+function wordStems(text) {
+  return text
+    .split(/[^A-Za-z0-9]+/)
+    .flatMap((word) => word.split(/(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/))
+    .filter(Boolean)
+    .map((word) => word.toLowerCase())
+    .map((word) => (word.length > 3 && word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1) : word));
+}
+
+/**
+ * Returns the plain statement that starts on the line directly under `comment`,
+ * or null when the comment does not sit on top of one.
+ */
+function statementBelow(sourceCode, comment) {
+  const nextLine = sourceCode.lines[comment.loc.end.line];
+  if (nextLine === undefined) return null;
+  const indent = nextLine.search(/\S/);
+  if (indent === -1) return null;
+  let node = sourceCode.getNodeByRangeIndex(
+    sourceCode.getIndexFromLoc({ line: comment.loc.end.line + 1, column: indent }),
+  );
+  // `Program` starts at its first token, so a leading comment leaves it sharing
+  // the start offset of the statement below; climbing into it loses the statement.
+  while (node?.parent && node.parent.type !== "Program" && node.parent.start === node.start) node = node.parent;
+  return node && RESTATEABLE_STATEMENTS.has(node.type) ? node : null;
+}
+
+/**
+ * Flags a comment whose every word is already spelled out by the statement it
+ * sits on: `// Get the user name` above `const name = user.name;`.
+ *
+ * Line comments only. A doc-block restating its symbol is the JSDoc contract
+ * this repo asks for ("Returns the memoized Map view of `source`."), and the
+ * narrating preamble form is already covered by `no-narrator-comment`.
+ *
+ * @type {OxlintRule}
+ */
+const noObviousComment = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description: "Disallow comments that only restate the statement below them",
+    },
+    messages: {
+      noObviousComment: "Comment restates the code below it. Delete it, or say why the code is written this way.",
+    },
+    schema: [],
+  },
+  create(context) {
+    const { sourceCode } = context;
+    return {
+      Program() {
+        for (const comment of sourceCode.getAllComments()) {
+          if (comment.type !== "Line") continue;
+          if (KEEPER_RE.test(comment.value)) continue;
+          const text = commentText(comment);
+          if (EXPLAINS_WHY_RE.test(text)) continue;
+          const words = wordStems(text);
+          if (words.length > MAX_COMMENT_WORDS) continue;
+          const content = words.filter(
+            (word) => PROSE_WORD_RE.test(word) && !FUNCTION_WORD_RE.test(word) && !CODE_SHAPE_VERB_RE.test(word),
+          );
+          if (content.length < 2) continue;
+          const ownLine = sourceCode.lines[comment.loc.start.line - 1];
+          if (ownLine === undefined || ownLine.slice(0, comment.loc.start.column).trim() !== "") continue;
+          const statement = statementBelow(sourceCode, comment);
+          if (!statement) continue;
+          const names = sourceCode
+            .getTokens(statement)
+            .filter((token) => NAMING_TOKENS.has(token.type))
+            .flatMap((token) => wordStems(token.value));
+          if (names.length > MAX_STATEMENT_WORDS) continue;
+          const codeWords = new Set(names);
+          if (content.every((word) => codeWords.has(word))) {
+            context.report({ node: comment, messageId: "noObviousComment" });
+          }
+        }
+      },
+    };
+  },
+};
+
 /** @type {import('./oxlint-plugin.js').OxlintPlugin} */
 export default {
   meta: { name: "comment-quality" },
@@ -264,5 +382,6 @@ export default {
     "no-hedging-comment": noHedgingComment,
     "no-edit-narration": noEditNarration,
     "no-issue-reference-comment": noIssueReferenceComment,
+    "no-obvious-comment": noObviousComment,
   },
 };

@@ -1091,7 +1091,6 @@ QUnit.test("composedPath fallback - event with empty composedPath uses target fa
   document.body.appendChild(target);
 
   let fired = false;
-  // Register on the target
   manager.register(
     "Escape",
     () => {

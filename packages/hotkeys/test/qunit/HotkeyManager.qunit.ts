@@ -1767,7 +1767,6 @@ QUnit.test("Target element: setOptions target swap triggers conflict detection (
   div2.tabIndex = 0;
   fixture.appendChild(div2);
 
-  // Register F9 on div2 with error conflict behavior
   manager.register("F9", () => {}, { target: div2, conflictBehavior: ConflictBehavior.Error });
 
   // Register the same hotkey on div1
