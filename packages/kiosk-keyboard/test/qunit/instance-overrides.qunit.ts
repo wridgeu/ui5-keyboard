@@ -437,8 +437,9 @@ QUnit.test("setInstanceMiddleware after first key resets the cached middleware",
 });
 
 // ───────────────────────────────────────────────────
-// Accent-variant tables: instanceVariants shadows/opts-out the built-in
-// Latin-diacritic table per layout, keyed lowercase, invalid entries skipped.
+// Accent-variant tables: instanceVariants merges onto (or opts out of) the
+// built-in Latin-diacritic table per layout, keyed lowercase, invalid entries
+// skipped.
 // ───────────────────────────────────────────────────
 
 QUnit.module("instance-overrides - accent-variant tables", { afterEach: commonAfterEach });

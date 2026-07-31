@@ -627,8 +627,6 @@ The four non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `arabic`, `ko-hangu
 
 `LATIN_DIACRITIC_VARIANTS` is re-exported from `ui5/kiosk/library` for inspection (to read what the defaults are, or to build a table from them); merging means you no longer need to spread it to extend the defaults.
 
-The map is read by object identity: assign a new object to change the tables. Mutating the object already assigned is not observed until the next render triggered by something else. The same holds for `instanceLayouts`, `instanceLocaleLayouts` and `instanceMiddleware`.
-
 Setting `instanceVariants` while `accentVariants` is off applies nothing, and logs a warning saying so.
 
 ---

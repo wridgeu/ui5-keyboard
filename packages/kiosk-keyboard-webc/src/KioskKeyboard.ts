@@ -583,8 +583,6 @@ class KioskKeyboard extends UI5Element {
   private _layoutSource: LayoutSource = "external";
   /** Caps the disarmed-`instanceVariants` diagnostic at one emission per element. */
   private _warnedDisarmedVariants = false;
-  /** The last layout name the unregistered-layout diagnostic was emitted for. */
-  private _warnedUnregisteredLayout: string | null = null;
   /** Owns the ARIA live-region announcement queue and its drain timer. */
   private readonly _announcements = new AnnouncementQueue({
     isConnected: () => this.isConnected,
@@ -1192,12 +1190,9 @@ class KioskKeyboard extends UI5Element {
   _getResolvedLayout(): LayoutDefinition {
     const layoutsMap = this._layoutsView.get(this.instanceLayouts);
     // The effective name, not the requested one: an unregistered name falls back to the
-    // default layout, and everything else keyed by layout name has to agree with the
-    // surface actually rendered. Resolved here rather than when `layout` changes, so an
-    // element assigned `layout` before `instanceLayouts` is judged on the final pair.
-    const requestedName = this._resolvedLayoutName();
-    const layoutName = resolveLayoutName(requestedName, layoutsMap);
-    this._warnUnregisteredLayout(requestedName, layoutName);
+    // default layout, and everything keyed by layout name below has to agree with the
+    // surface actually rendered.
+    const layoutName = resolveLayoutName(this._resolvedLayoutName(), layoutsMap);
     const resolved = getLayoutOrDefault(layoutName, layoutsMap);
     const constrainedName = constrainedLayoutName(this.keyboardType);
     const base =
@@ -1217,20 +1212,6 @@ class KioskKeyboard extends UI5Element {
     }
     const table = resolveVariantTable(layoutName, variantsMap);
     return table ? applyVariantDefaults(base, table) : base;
-  }
-
-  /**
-   * Warns when the requested layout is not registered and the render falls back to the
-   * default, which is otherwise silent. Once per name, so a persistently bad `layout`
-   * does not log on every render.
-   */
-  private _warnUnregisteredLayout(requested: string, effective: string): void {
-    const name = requested.trim().toLowerCase();
-    if (!name || name === effective || this._warnedUnregisteredLayout === name) return;
-    this._warnedUnregisteredLayout = name;
-    console.warn(
-      `[kiosk-keyboard] Layout "${requested}" is not registered, falling back to "${effective}". Pass it through the instanceLayouts property.`,
-    );
   }
 
   /**
