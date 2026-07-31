@@ -156,6 +156,10 @@ declare module "./KioskKeyboard" {
         the German layout) without affecting other controls. Accepts
         a plain `Record<string, LayoutDefinition>`; the control stores
         it as a `Map` internally.
+        
+        Read by object identity: assign a new object to change the layouts.
+        Mutating the object already assigned is not observed until the next
+        render triggered by something else.
          *
          * @since 0.1.0
          */
@@ -187,12 +191,18 @@ declare module "./KioskKeyboard" {
 
         /**
          * Per-instance accent-variant table overrides, keyed by layout name
-        (or `"*"` for every layout). Resolution order is
-        **instance entry -> instance `"*"` wildcard -> built-in table**. A
-        `null` entry opts a layout out of the built-in Latin table. Effective
-        only while `accentVariants` is set. Accepts a plain
+        (or `"*"` for every layout). The entry for a layout wins, else the
+        `"*"` wildcard; either is merged onto the built-in table per base
+        letter, so it extends the defaults rather than replacing them. A base
+        letter mapped to `[]` drops that letter, and a `null` entry opts the
+        layout out entirely. Base letters must be lowercase. Effective only
+        while `accentVariants` is set. Accepts a plain
         `Record<string, Record<string, string[]> | null>`; the control stores
         it as a `Map` internally.
+        
+        Read by object identity: assign a new object to change the tables.
+        Mutating the object already assigned is not observed until the next
+        render triggered by something else.
          *
          * @since 0.1.0
          */
@@ -675,6 +685,10 @@ declare module "./KioskKeyboard" {
         the German layout) without affecting other controls. Accepts
         a plain `Record<string, LayoutDefinition>`; the control stores
         it as a `Map` internally.
+        
+        Read by object identity: assign a new object to change the layouts.
+        Mutating the object already assigned is not observed until the next
+        render triggered by something else.
          *
          * @since 0.1.0
          *
@@ -692,6 +706,10 @@ declare module "./KioskKeyboard" {
         the German layout) without affecting other controls. Accepts
         a plain `Record<string, LayoutDefinition>`; the control stores
         it as a `Map` internally.
+        
+        Read by object identity: assign a new object to change the layouts.
+        Mutating the object already assigned is not observed until the next
+        render triggered by something else.
          *
          * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
@@ -779,12 +797,18 @@ declare module "./KioskKeyboard" {
          * Gets current value of property "instanceVariants".
          *
          * Per-instance accent-variant table overrides, keyed by layout name
-        (or `"*"` for every layout). Resolution order is
-        **instance entry -> instance `"*"` wildcard -> built-in table**. A
-        `null` entry opts a layout out of the built-in Latin table. Effective
-        only while `accentVariants` is set. Accepts a plain
+        (or `"*"` for every layout). The entry for a layout wins, else the
+        `"*"` wildcard; either is merged onto the built-in table per base
+        letter, so it extends the defaults rather than replacing them. A base
+        letter mapped to `[]` drops that letter, and a `null` entry opts the
+        layout out entirely. Base letters must be lowercase. Effective only
+        while `accentVariants` is set. Accepts a plain
         `Record<string, Record<string, string[]> | null>`; the control stores
         it as a `Map` internally.
+        
+        Read by object identity: assign a new object to change the tables.
+        Mutating the object already assigned is not observed until the next
+        render triggered by something else.
          *
          * @since 0.1.0
          *
@@ -796,12 +820,18 @@ declare module "./KioskKeyboard" {
          * Sets a new value for property "instanceVariants".
          *
          * Per-instance accent-variant table overrides, keyed by layout name
-        (or `"*"` for every layout). Resolution order is
-        **instance entry -> instance `"*"` wildcard -> built-in table**. A
-        `null` entry opts a layout out of the built-in Latin table. Effective
-        only while `accentVariants` is set. Accepts a plain
+        (or `"*"` for every layout). The entry for a layout wins, else the
+        `"*"` wildcard; either is merged onto the built-in table per base
+        letter, so it extends the defaults rather than replacing them. A base
+        letter mapped to `[]` drops that letter, and a `null` entry opts the
+        layout out entirely. Base letters must be lowercase. Effective only
+        while `accentVariants` is set. Accepts a plain
         `Record<string, Record<string, string[]> | null>`; the control stores
         it as a `Map` internally.
+        
+        Read by object identity: assign a new object to change the tables.
+        Mutating the object already assigned is not observed until the next
+        render triggered by something else.
          *
          * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.

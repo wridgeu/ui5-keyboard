@@ -35,7 +35,7 @@ Use these imports for application code:
 - `ui5/kiosk/layouts/nav-row` - stable shared row for custom layout composition
 - `ui5/kiosk/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware via `instanceMiddleware` (built-ins are already bundled)
 
-`ui5/kiosk/library` re-exports the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type; spread the table to extend the defaults when supplying `instanceVariants`. The module and those exported names are stable, the table's contents are additive: a minor release may add entries, while removing or reordering existing ones is breaking.
+`ui5/kiosk/library` re-exports the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type, for inspecting the defaults; an `instanceVariants` entry merges onto them per base letter, so extending them needs no spread. The module and those exported names are stable, the table's contents are additive: a minor release may add entries, while removing or reordering existing ones is breaking.
 
 Customization is per control via the `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` properties, assigned directly on the control. The static surface is read-only:
 
@@ -59,7 +59,7 @@ The stable consumer surface consists of the package entry points and the `<kiosk
 - `kiosk-keyboard-webc/layouts/fkey-row` - stable shared row for custom layout composition
 - `kiosk-keyboard-webc/layouts/nav-row` - stable shared row for custom layout composition
 - `kiosk-keyboard-webc/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware via `instanceMiddleware` (built-ins are already bundled)
-- `kiosk-keyboard-webc/variants` - the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type; spread the table to extend the defaults when supplying `instanceVariants`
+- `kiosk-keyboard-webc/variants` - the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type, for inspecting the defaults; an `instanceVariants` entry merges onto them per base letter, so extending them needs no spread. `VariantTable` is also re-exported from the element module
 
 For `kiosk-keyboard-webc/variants`, the module and those exported names are stable, the table's contents are additive: a minor release may add entries, while removing or reordering existing ones is breaking.
 

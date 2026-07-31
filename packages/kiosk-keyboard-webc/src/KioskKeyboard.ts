@@ -25,6 +25,7 @@ import {
   getRegisteredLayout,
   getRegisteredLayoutNames,
   isBuiltInLayout,
+  resolveLayoutName,
 } from "./core/layout-registry.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
 import {
@@ -475,11 +476,14 @@ class KioskKeyboard extends UI5Element {
    * Programmatic only: this property accepts a JS object (not a
    * stringifiable attribute), so it cannot be set via HTML markup.
    *
+   * Read by object identity: assign a new object to change the layouts.
+   * Mutating the object already assigned is not observed.
+   *
    * @default null
    * @public
    * @since 0.1.0
    */
-  @property({ type: Object, noAttribute: true })
+  @property({ type: Object })
   instanceLayouts: Record<string, LayoutDefinition> | null = null;
 
   /**
@@ -490,11 +494,14 @@ class KioskKeyboard extends UI5Element {
    *
    * Programmatic only: accepts a JS object (`Record<string, string>`).
    *
+   * Read by object identity: assign a new object to change the mappings.
+   * Mutating the object already assigned is not observed.
+   *
    * @default null
    * @public
    * @since 0.1.0
    */
-  @property({ type: Object, noAttribute: true })
+  @property({ type: Object })
   instanceLocaleLayouts: Record<string, string> | null = null;
 
   /**
@@ -503,27 +510,35 @@ class KioskKeyboard extends UI5Element {
    * Programmatic only: accepts a JS object whose values are factory
    * functions returning a `CompositionMiddleware`.
    *
+   * Read by object identity: assign a new object to change the factories.
+   * Mutating the object already assigned is not observed.
+   *
    * @default null
    * @public
    * @since 0.1.0
    */
-  @property({ type: Object, noAttribute: true })
+  @property({ type: Object })
   instanceMiddleware: Record<string, () => CompositionMiddleware> | null = null;
 
   /**
    * Per-instance accent-variant table overrides, keyed by layout name (or
-   * `"*"` for every layout). Resolution order is
-   * **instance entry -> instance `"*"` wildcard -> built-in table**. A `null`
-   * entry opts a layout out of the built-in Latin table. Effective only while
-   * `accentVariants` is set.
+   * `"*"` for every layout). The entry for a layout wins, else the `"*"`
+   * wildcard; either is merged onto the built-in table per base letter, so it
+   * extends the defaults rather than replacing them. A base letter mapped to
+   * `[]` drops that letter, and a `null` entry opts the layout out entirely.
+   * Base letters must be lowercase. Effective only while `accentVariants` is
+   * set.
    *
    * Programmatic only: accepts a JS object (not a stringifiable attribute).
+   *
+   * Read by object identity: assign a new object to change the tables.
+   * Mutating the object already assigned is not observed.
    *
    * @default null
    * @public
    * @since 0.1.0
    */
-  @property({ type: Object, noAttribute: true })
+  @property({ type: Object })
   instanceVariants: Record<string, VariantTable | null> | null = null;
 
   // ── Internal reactive state (triggers re-render, no attribute) ──
@@ -566,6 +581,10 @@ class KioskKeyboard extends UI5Element {
   /** Accessed by the JSX template for highlight class binding - not private. */
   _highlightedKey: string | null = null;
   private _layoutSource: LayoutSource = "external";
+  /** Caps the disarmed-`instanceVariants` diagnostic at one emission per element. */
+  private _warnedDisarmedVariants = false;
+  /** The last layout name the unregistered-layout diagnostic was emitted for. */
+  private _warnedUnregisteredLayout: string | null = null;
   /** Owns the ARIA live-region announcement queue and its drain timer. */
   private readonly _announcements = new AnnouncementQueue({
     isConnected: () => this.isConnected,
@@ -1172,7 +1191,13 @@ class KioskKeyboard extends UI5Element {
 
   _getResolvedLayout(): LayoutDefinition {
     const layoutsMap = this._layoutsView.get(this.instanceLayouts);
-    const layoutName = this._resolvedLayoutName();
+    // The effective name, not the requested one: an unregistered name falls back to the
+    // default layout, and everything else keyed by layout name has to agree with the
+    // surface actually rendered. Resolved here rather than when `layout` changes, so an
+    // element assigned `layout` before `instanceLayouts` is judged on the final pair.
+    const requestedName = this._resolvedLayoutName();
+    const layoutName = resolveLayoutName(requestedName, layoutsMap);
+    this._warnUnregisteredLayout(requestedName, layoutName);
     const resolved = getLayoutOrDefault(layoutName, layoutsMap);
     const constrainedName = constrainedLayoutName(this.keyboardType);
     const base =
@@ -1185,9 +1210,39 @@ class KioskKeyboard extends UI5Element {
     // When enabled, fill the resolved accent-variant table onto matching base
     // keys so any layout gains the long-press variants. Author-declared
     // `variants` are preserved (applyVariantDefaults never overrides them).
-    if (!this.accentVariants) return base;
-    const table = resolveVariantTable(layoutName, this._variantsView.get(this.instanceVariants));
+    const variantsMap = this._variantsView.get(this.instanceVariants);
+    if (!this.accentVariants) {
+      this._warnDisarmedVariants(variantsMap);
+      return base;
+    }
+    const table = resolveVariantTable(layoutName, variantsMap);
     return table ? applyVariantDefaults(base, table) : base;
+  }
+
+  /**
+   * Warns when the requested layout is not registered and the render falls back to the
+   * default, which is otherwise silent. Once per name, so a persistently bad `layout`
+   * does not log on every render.
+   */
+  private _warnUnregisteredLayout(requested: string, effective: string): void {
+    const name = requested.trim().toLowerCase();
+    if (!name || name === effective || this._warnedUnregisteredLayout === name) return;
+    this._warnedUnregisteredLayout = name;
+    console.warn(
+      `[kiosk-keyboard] Layout "${requested}" is not registered, falling back to "${effective}". Pass it through the instanceLayouts property.`,
+    );
+  }
+
+  /**
+   * Warns once when `instanceVariants` carries usable entries while `accentVariants` is
+   * off, the combination in which the tables resolve but nothing applies them.
+   */
+  private _warnDisarmedVariants(variantsMap: ReadonlyMap<string, VariantTable | null> | undefined): void {
+    if (this._warnedDisarmedVariants || !variantsMap) return;
+    this._warnedDisarmedVariants = true;
+    console.warn(
+      "[kiosk-keyboard] instanceVariants is set but accentVariants is false, so no variant table is applied. Set accent-variants to arm the long-press popups.",
+    );
   }
 
   // ── Memoized Map views of the instance-* properties ──
@@ -1221,7 +1276,7 @@ class KioskKeyboard extends UI5Element {
     if (table === null) return null;
     if (KioskKeyboard._isValidVariantTable(table)) return table;
     console.warn(
-      `[kiosk-keyboard] Invalid instanceVariants entry "${name}": must be null or an object mapping base letters to non-empty arrays of non-empty strings.`,
+      `[kiosk-keyboard] Invalid instanceVariants entry "${name}": must be null, or a non-empty object mapping lowercase base letters to arrays of non-empty glyph strings (an empty array suppresses that letter).`,
     );
     return undefined;
   });
@@ -1239,12 +1294,23 @@ class KioskKeyboard extends UI5Element {
     );
   }
 
+  /**
+   * A variant table is a non-empty plain object mapping lowercase base letters to glyph
+   * lists. Arrays and exotic objects (`Map`, `Date`) are rejected rather than read as an
+   * empty table, and an uppercased or padded base letter is rejected rather than
+   * normalized: the letters are matched against `key.value.toLowerCase()`, so a mis-keyed
+   * table would arm nothing while shadowing the built-in.
+   */
   private static _isValidVariantTable(table: unknown): table is VariantTable {
+    if (typeof table !== "object" || table === null || Array.isArray(table)) return false;
+    const entries = Object.entries(table);
     return (
-      typeof table === "object" &&
-      table !== null &&
-      Object.values(table).every(
-        (list) => Array.isArray(list) && list.length > 0 && list.every((glyph) => typeof glyph === "string" && glyph),
+      entries.length > 0 &&
+      entries.every(
+        ([base, glyphs]) =>
+          base === base.trim().toLowerCase() &&
+          Array.isArray(glyphs) &&
+          glyphs.every((glyph) => typeof glyph === "string" && glyph),
       )
     );
   }
@@ -1827,3 +1893,4 @@ KioskKeyboard.define();
 export default KioskKeyboard;
 
 export type { CompositionMiddleware } from "./types.js";
+export type { VariantTable } from "./core/latin-variants.js";

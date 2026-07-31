@@ -282,24 +282,24 @@ Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operati
 
 ## Attributes / Properties
 
-| Attribute             | Property                | Type                                                  | Default     | Description                                                                                                                                                                                                                                                              |
-| --------------------- | ----------------------- | ----------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `layout`              | `layout`                | `string`                                              | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.                                                                                                                                                                                               |
-| `keyboard-type`       | `keyboardType`          | `string`                                              | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                                                                                                                                                                                                                    |
-| `open`                | `open`                  | `boolean`                                             | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.                                                                                                                                                                                                      |
-| `docked`              | `docked`                | `boolean`                                             | `false`     | Fixed-position mode at bottom of viewport.                                                                                                                                                                                                                               |
-| `auto-show`           | `autoShow`              | `boolean`                                             | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).                                                                                                                                                                                                  |
-| `auto-type`           | `autoType`              | `boolean`                                             | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                                                                                                                                                                                                           |
-| `disabled`            | `disabled`              | `boolean`                                             | `false`     | Disables all key interaction.                                                                                                                                                                                                                                            |
-| `controls`            | `controls`              | `string`                                              | `""`        | Comma-separated IDs of target elements. Supports single or multiple inputs.                                                                                                                                                                                              |
-| `accessible-name`     | `accessibleName`        | `string`                                              | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".                                                                                                                                                                                               |
-| `mobile-keyboard`     | `mobileKeyboard`        | `string`                                              | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                                                                                                                                                                                                          |
-| `f-key-mode`          | `fKeyMode`              | `string`                                              | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                                                                                                                                                                         |
-| `accent-variants`     | `accentVariants`        | `boolean`                                             | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key exposes a long-press / right-click accent-variant popup. See [Accent variants](#accent-variants-german-umlauts).                                                                                       |
-| _(programmatic only)_ | `instanceLayouts`       | `Record<string, LayoutDefinition> \| null`            | `null`      | Per-instance layout overrides; shadow the built-in registry. See [Per-Instance Customization](#per-instance-customization).                                                                                                                                              |
-| _(programmatic only)_ | `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the built-in locale map.                                                                                                                                                                                                  |
-| _(programmatic only)_ | `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                                                                                                                                                                      |
-| _(programmatic only)_ | `instanceVariants`      | `Record<string, VariantTable \| null> \| null`        | `null`      | Per-instance accent-variant tables keyed by layout name (or `"*"`). Effective only with `accent-variants`. Resolution order is **instance entry → `"*"` wildcard → built-in**; a `null` entry opts a layout out. See [Accent variants](#accent-variants-german-umlauts). |
+| Attribute             | Property                | Type                                                  | Default     | Description                                                                                                                                                                                                                                                                                 |
+| --------------------- | ----------------------- | ----------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`              | `layout`                | `string`                                              | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.                                                                                                                                                                                                                  |
+| `keyboard-type`       | `keyboardType`          | `string`                                              | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                                                                                                                                                                                                                                       |
+| `open`                | `open`                  | `boolean`                                             | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.                                                                                                                                                                                                                         |
+| `docked`              | `docked`                | `boolean`                                             | `false`     | Fixed-position mode at bottom of viewport.                                                                                                                                                                                                                                                  |
+| `auto-show`           | `autoShow`              | `boolean`                                             | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).                                                                                                                                                                                                                     |
+| `auto-type`           | `autoType`              | `boolean`                                             | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                                                                                                                                                                                                                              |
+| `disabled`            | `disabled`              | `boolean`                                             | `false`     | Disables all key interaction.                                                                                                                                                                                                                                                               |
+| `controls`            | `controls`              | `string`                                              | `""`        | Comma-separated IDs of target elements. Supports single or multiple inputs.                                                                                                                                                                                                                 |
+| `accessible-name`     | `accessibleName`        | `string`                                              | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".                                                                                                                                                                                                                  |
+| `mobile-keyboard`     | `mobileKeyboard`        | `string`                                              | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                                                                                                                                                                                                                             |
+| `f-key-mode`          | `fKeyMode`              | `string`                                              | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                                                                                                                                                                                            |
+| `accent-variants`     | `accentVariants`        | `boolean`                                             | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The four non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts).                             |
+| _(programmatic only)_ | `instanceLayouts`       | `Record<string, LayoutDefinition> \| null`            | `null`      | Per-instance layout overrides; shadow the built-in registry. See [Per-Instance Customization](#per-instance-customization).                                                                                                                                                                 |
+| _(programmatic only)_ | `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the built-in locale map.                                                                                                                                                                                                                     |
+| _(programmatic only)_ | `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                                                                                                                                                                                         |
+| _(programmatic only)_ | `instanceVariants`      | `Record<string, VariantTable \| null> \| null`        | `null`      | Per-instance accent-variant tables keyed by layout name (or `"*"`). Effective only with `accent-variants`. The entry, else the `"*"` wildcard, is merged onto the built-in table per base letter; a `null` entry opts a layout out. See [Accent variants](#accent-variants-german-umlauts). |
 
 ### Keyboard type override via `data-keyboard-type`
 
@@ -488,18 +488,32 @@ el.instanceLayouts = {
 
 Because an explicit `variants` wins, declaring `variants: []` suppresses the popup on a single key the built-in table would otherwise cover, e.g. to skip a diacritic already reachable as its own dedicated key on the layout.
 
-**Per-layout variant tables (`instanceVariants`).** With `accent-variants` on, the built-in Latin table is resolved through the per-element `instanceVariants` map before it is applied, keyed by layout name (or `"*"` for every layout). An entry **replaces** the built-in table for that layout, so spread `LATIN_DIACRITIC_VARIANTS` (from the `kiosk-keyboard-webc/variants` subpath) to extend rather than replace; a `null` entry opts the layout out:
+**Per-layout variant tables (`instanceVariants`).**
+
+With `accent-variants` on, the built-in Latin table is resolved through the per-element `instanceVariants` map before it is applied, keyed by layout name (or `"*"` for every layout). An entry is **merged onto** the built-in table per base letter, so it extends the defaults rather than replacing them, and only the letters it names change:
 
 ```ts
-import { LATIN_DIACRITIC_VARIANTS } from "kiosk-keyboard-webc/variants";
-
 el.accentVariants = true;
 el.instanceVariants = {
-  [KioskKeyboard.getLocaleLayout()]: { ...LATIN_DIACRITIC_VARIANTS, s: ["ś", "š"], z: ["ż", "ź", "ž"] },
+  [KioskKeyboard.getLocaleLayout()]: { s: ["ś", "š"], z: ["ż", "ź", "ž"] },
 };
 ```
 
-The four non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `arabic`, `ko-hangul`) resolve the built-in table to nothing, so `accent-variants` adds no popups there; supply an `instanceVariants` entry (or a `"*"` wildcard) to opt one back in. That exclusion list is only the shipped default for those built-ins; it never locks you out. A **custom** layout whose Latin-looking keys should _not_ surface accent popups (a transliteration IME, say) opts out the same way, with a `null` entry: `el.instanceVariants = { "my-ime": null }`. Action, modifier, and space keys never take table variants even when a table is keyed to their value.
+Base letters must be **lowercase**; a mis-keyed letter is logged and the entry skipped, rather than silently arming nothing.
+
+Three levels of opt-out, narrowest first:
+
+| Recipe                              | Effect                                                   |
+| ----------------------------------- | -------------------------------------------------------- |
+| `{ "<layout>": { s: [] } }`         | Drops one base letter, leaving the rest of the table     |
+| `{ "<layout>": null }`              | Opts that layout out of variants entirely                |
+| `variants: []` on a `KeyDefinition` | Suppresses the popup on that one key, whatever the table |
+
+The four non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `arabic`, `ko-hangul`) resolve the built-in table to nothing, so `accent-variants` adds no popups there; supply an `instanceVariants` entry (or a `"*"` wildcard) to opt one back in, and because there is no built-in tier to merge onto, that entry stands alone. That exclusion list is only the shipped default for those built-ins; it never locks you out. A **custom** layout whose Latin-looking keys should _not_ surface accent popups (a transliteration IME, say) opts out with a `null` entry: `el.instanceVariants = { "my-ime": null }`. Action, modifier, and space keys never take table variants even when a table is keyed to their value.
+
+`LATIN_DIACRITIC_VARIANTS` is exported from the `kiosk-keyboard-webc/variants` subpath for inspection (to read what the defaults are, or to build a table from them); merging means you no longer need to spread it to extend the defaults.
+
+Setting `instanceVariants` while `accent-variants` is off applies nothing, and logs a warning saying so.
 
 ## Per-Instance Customization
 
@@ -510,13 +524,15 @@ const el = document.createElement("kiosk-keyboard");
 el.instanceLayouts = { "warehouse-pos": warehousePosLayout };
 el.instanceLocaleLayouts = { de: "warehouse-pos-de" };
 el.instanceMiddleware = { "ja-kana": kanaDakutenFactory };
-el.instanceVariants = { "warehouse-pos": { ...LATIN_DIACRITIC_VARIANTS, s: ["ś", "š"] } };
+el.instanceVariants = { "warehouse-pos": { s: ["ś", "š"] } };
 el.accentVariants = true;
 el.layout = "warehouse-pos";
 document.body.appendChild(el);
 ```
 
 These properties accept JS objects, not strings, so they cannot be set via HTML attributes - assign them programmatically before connecting the element (or before the next render cycle).
+
+All four are read by object identity: assign a new object to change a map. Mutating the object already assigned is not observed.
 
 No teardown is needed: the overrides live on the element and are released when the host application removes it. The component does not maintain any window-global mutable customization state, so multiple apps sharing the same page (Fiori Launchpad, micro-frontends) cannot pollute each other through the keyboard.
 
@@ -585,6 +601,7 @@ The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The pac
 | `kiosk-keyboard-webc`                   | Full entry (all built-in layouts)                                                                                            |
 | `kiosk-keyboard-webc/layouts/<name>`    | Built-in layout definitions (data for custom composition)                                                                    |
 | `kiosk-keyboard-webc/middleware/<name>` | Composition middleware                                                                                                       |
+| `kiosk-keyboard-webc/variants`          | Built-in accent-variant table (`LATIN_DIACRITIC_VARIANTS`) and its `VariantTable` type                                       |
 | `kiosk-keyboard-webc/bundle`            | Convenience entry: element + Assets (needs a bundler/import map; for a plain `<script>` use `dist/kiosk-keyboard.bundle.js`) |
 | `kiosk-keyboard-webc/Assets`            | Theme + i18n registration                                                                                                    |
 | `kiosk-keyboard-webc/customElements`    | Custom Elements Manifest (`custom-elements.json`) for IDE/tooling                                                            |
@@ -748,6 +765,7 @@ This behavior is driven by a CSS `@container` query on individual keys (`contain
 - **Dual keys (icon + label visible):** The visible text provides the accessible name. No `aria-label` is set (WCAG 2.5.3 Label in Name).
 - **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
 - **Icons** always have `aria-hidden="true"`. They are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.
+- **Accent-variant keys.** A key carrying variants advertises them with `aria-haspopup="dialog"`. Keyboard users open the popup with the context-menu gesture (the Menu key, or Shift+F10) on the focused key, arrow/Home/End to choose, Enter or Space to insert, and Escape to dismiss and return focus to the key. The key carries no `aria-expanded`: its own Enter/Space types the base character rather than toggling the popup.
 - **Target size.** Keys hold a 24x24 CSS px floor on both axes, meeting the WCAG 2.5.8 minimum touch target size, and grow with the root font size. The inline half is lifted below a 20rem-wide keyboard, where the densest rows cannot fit a full set of floored keys: keys shrink to fit there so that every key stays reachable rather than being clipped off the edge of a center-justified row. Below that width the 24x24 minimum is therefore not met. The block half holds at every width, so a `--kiosk-keyboard-key-height` set below 24px is raised to it, and a keyboard in a height-capped container clips rather than shrinking past the floor.
 
 ### Built-in icons

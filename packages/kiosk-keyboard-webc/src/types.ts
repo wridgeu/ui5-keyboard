@@ -140,6 +140,9 @@ export interface KeyDefinition {
    * (covering German ä/ö/ü/ß and more) to a layout; an explicit `variants` here
    * always overrides the default.
    *
+   * This is the concept other keyboard systems call `longPress` (CLDR LDML
+   * Part 7), `moreKeys` (Android) or `sk` (Keyman).
+   *
    * @example { value: "a", variants: ["ä", "à", "á", "â"] }
    * @since 0.1.0
    */

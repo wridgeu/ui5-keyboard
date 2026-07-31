@@ -564,7 +564,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(false);
   });
 
-  it("instanceVariants replaces the built-in table and drives the popup", async () => {
+  it("instanceVariants extends the built-in table and drives the popup", async () => {
     const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
     kb.accentVariants = true;
     kb.instanceVariants = { spike: { b: ["ḃ", "ƀ"] } };
@@ -575,11 +575,22 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     );
     expect(
       requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants),
-      "'a' dropped: an instance table replaces, not merges",
-    ).to.equal(false);
+      "'a' retained: an instance table merges, not replaces",
+    ).to.equal(true);
 
     await holdOpen(requireKey(kb, "b"));
     expect(optionGlyphs(kb)).to.deep.equal(["ḃ", "ƀ"]);
+    pointerUp();
+  });
+
+  it("an instanceVariants entry overrides one built-in letter's popup glyphs", async () => {
+    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
+    kb.accentVariants = true;
+    kb.instanceVariants = { spike: { a: ["ā"] } };
+    await renderFinished();
+
+    await holdOpen(requireKey(kb, "a"));
+    expect(optionGlyphs(kb), "the named letter takes the entry's glyphs").to.deep.equal(["ā"]);
     pointerUp();
   });
 

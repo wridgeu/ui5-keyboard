@@ -134,10 +134,40 @@ QUnit.test("normalizes the layout name (case and surrounding space)", (assert) =
   assert.strictEqual(resolveVariantTable("QWERTY"), LATIN_DIACRITIC_VARIANTS, "uppercase resolves the Latin table");
 });
 
-QUnit.test("an instance entry wins over the built-in table", (assert) => {
+QUnit.test("an instance entry extends the built-in table rather than replacing it", (assert) => {
   const custom: VariantTable = { b: ["ḃ"] };
   const map = new Map<string, VariantTable | null>([["qwerty", custom]]);
-  assert.strictEqual(resolveVariantTable("qwerty", map), custom, "instance entry beats the built-in");
+  const table = resolveVariantTable("qwerty", map)!;
+  assert.deepEqual(table.b, ["ḃ"], "the entry's own letter is added");
+  assert.deepEqual(table.a, [...LATIN_DIACRITIC_VARIANTS.a], "an untouched built-in letter survives");
+});
+
+QUnit.test("an entry replaces the built-in list for the letters it names", (assert) => {
+  const map = new Map<string, VariantTable | null>([["qwerty", { s: ["ś"] }]]);
+  assert.deepEqual(resolveVariantTable("qwerty", map)!.s, ["ś"], "the named letter takes the entry's list");
+});
+
+QUnit.test("a letter mapped to an empty list is suppressed without touching its siblings", (assert) => {
+  const map = new Map<string, VariantTable | null>([["qwerty", { s: [] }]]);
+  const table = resolveVariantTable("qwerty", map)!;
+  assert.notOk(Object.hasOwn(table, "s"), "the suppressed letter is gone");
+  assert.deepEqual(table.a, [...LATIN_DIACRITIC_VARIANTS.a], "its siblings are untouched");
+});
+
+QUnit.test("does not mutate the built-in table", (assert) => {
+  const map = new Map<string, VariantTable | null>([["qwerty", { a: ["ā"], s: [] }]]);
+  resolveVariantTable("qwerty", map);
+  assert.ok(LATIN_DIACRITIC_VARIANTS.a.includes("ä"), "an overridden built-in letter is intact");
+  assert.ok(LATIN_DIACRITIC_VARIANTS.s.includes("ß"), "a suppressed built-in letter is intact");
+});
+
+QUnit.test("a table keyed __proto__ contributes an own entry, not a prototype", (assert) => {
+  const polluted = JSON.parse('{"__proto__":["x"]}') as VariantTable;
+  const map = new Map<string, VariantTable | null>([["qwerty", polluted]]);
+  const table = resolveVariantTable("qwerty", map)!;
+  assert.strictEqual(Object.getPrototypeOf(table), null, "the merged table has a null prototype");
+  assert.ok(Object.hasOwn(table, "__proto__"), "the key lands as an own property");
+  assert.strictEqual(({} as Record<string, unknown>).x, undefined, "Object.prototype is unpolluted");
 });
 
 QUnit.test("an explicit null instance entry opts the layout out", (assert) => {
@@ -148,8 +178,15 @@ QUnit.test("an explicit null instance entry opts the layout out", (assert) => {
 QUnit.test("the '*' wildcard applies to layouts without their own entry, even non-Latin ones", (assert) => {
   const custom: VariantTable = { b: ["ḃ"] };
   const map = new Map<string, VariantTable | null>([[WILDCARD_LAYOUT, custom]]);
-  assert.strictEqual(resolveVariantTable("qwerty", map), custom, "wildcard covers a Latin layout");
-  assert.strictEqual(resolveVariantTable("arabic", map), custom, "wildcard re-enables a non-Latin layout");
+  assert.deepEqual(resolveVariantTable("qwerty", map)!.b, ["ḃ"], "wildcard covers a Latin layout");
+  // The non-Latin built-in tier is null, so a wildcard entry stands alone there.
+  assert.deepEqual(resolveVariantTable("arabic", map), { b: ["ḃ"] }, "wildcard re-enables a non-Latin layout");
+  assert.strictEqual(resolveVariantTable("arabic", map)!.a, undefined, "without inheriting the Latin table");
+});
+
+QUnit.test("returns the built-in table itself when no entry matches", (assert) => {
+  const map = new Map<string, VariantTable | null>([["azerty-fr", { b: ["ḃ"] }]]);
+  assert.strictEqual(resolveVariantTable("qwerty", map), LATIN_DIACRITIC_VARIANTS, "no copy is made");
 });
 
 QUnit.test("an explicit entry beats the wildcard", (assert) => {

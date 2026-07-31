@@ -470,6 +470,72 @@ QUnit.test(
   },
 );
 
+QUnit.test("Table-shaped impostors are rejected rather than read as an empty table", async (assert) => {
+  // Each of these has no own enumerable values, so a validator that only inspects
+  // Object.values would accept it, shadow the built-in table and arm nothing.
+  const impostors: Record<string, unknown> = {
+    array: [],
+    map: new Map([["a", ["ä"]]]),
+    date: new Date(),
+    empty: {},
+  };
+
+  for (const [label, table] of Object.entries(impostors)) {
+    const warn = sandbox.stub(Log, "warning");
+    const input = new Input({ value: "" });
+    input.placeAt("qunit-fixture");
+    const kb = new KioskKeyboard({
+      controls: [input.getId()],
+      accentVariants: true,
+      layout: "qwerty",
+      instanceVariants: { qwerty: table },
+    });
+    await placeAndWait(kb);
+
+    assert.ok(warn.called, `${label} is logged as invalid`);
+    assert.strictEqual(
+      getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+      true,
+      `${label} is skipped, so 'a' keeps the built-in table`,
+    );
+
+    input.destroy();
+    kb.destroy();
+    warn.restore();
+  }
+});
+
+QUnit.test("Base letters that are not lowercase are rejected rather than silently normalized", async (assert) => {
+  // The table is matched against key.value.toLowerCase(), so an uppercased or padded
+  // base letter would arm nothing while shadowing the built-in for that layout.
+  for (const base of ["A", "a "]) {
+    const warn = sandbox.stub(Log, "warning");
+    const input = new Input({ value: "" });
+    input.placeAt("qunit-fixture");
+    const kb = new KioskKeyboard({
+      controls: [input.getId()],
+      accentVariants: true,
+      layout: "qwerty",
+      instanceVariants: { qwerty: { [base]: ["ä"] } },
+    });
+    await placeAndWait(kb);
+
+    assert.ok(
+      warn.getCalls().some((call) => String(call.args[0]).includes("lowercase base letters")),
+      `"${base}" is logged as invalid`,
+    );
+    assert.strictEqual(
+      getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+      true,
+      `"${base}" is skipped, so 'a' keeps the built-in table`,
+    );
+
+    input.destroy();
+    kb.destroy();
+    warn.restore();
+  }
+});
+
 QUnit.test("Mixed-case instanceVariants layout names resolve through lowercase lookup", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
@@ -485,13 +551,71 @@ QUnit.test("Mixed-case instanceVariants layout names resolve through lowercase l
   assert.strictEqual(
     getRequiredKeyElement(kb, "b").hasAttribute(DOM.attributes.hasVariants),
     true,
-    "mixed-case 'QWERTY' shadows built-in 'qwerty'",
+    "mixed-case 'QWERTY' resolves the entry onto built-in 'qwerty'",
   );
   assert.strictEqual(
     getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
-    false,
-    "the replacing table drops built-in 'a'",
+    true,
+    "the entry merges, so built-in 'a' survives",
   );
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("An instanceVariants entry suppresses one built-in letter with an empty list", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    accentVariants: true,
+    layout: "qwerty",
+    instanceVariants: { qwerty: { a: [] } },
+  });
+  await placeAndWait(kb);
+
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    false,
+    "the letter mapped to an empty list loses its popup",
+  );
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "o").hasAttribute(DOM.attributes.hasVariants),
+    true,
+    "every other built-in letter is untouched",
+  );
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("instanceVariants without accentVariants warns once and applies nothing", async (assert) => {
+  const warn = sandbox.stub(Log, "warning");
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    layout: "qwerty",
+    instanceVariants: { qwerty: { b: ["ḃ"] } },
+  });
+  await placeAndWait(kb);
+
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "b").hasAttribute(DOM.attributes.hasVariants),
+    false,
+    "the disarmed gate applies no table",
+  );
+  const countDisarmedWarnings = (): number =>
+    warn
+      .getCalls()
+      .filter((call) => String(call.args[0]).includes("instanceVariants is set but accentVariants is false")).length;
+  assert.strictEqual(countDisarmedWarnings(), 1, "the diagnostic is emitted exactly once");
+
+  kb.invalidate();
+  await placeAndWait(kb);
+  assert.strictEqual(countDisarmedWarnings(), 1, "and is not repeated on re-render");
 
   input.destroy();
   kb.destroy();
