@@ -54,8 +54,18 @@ Custom oxlint JS plugin that detects low-quality AI-generated comments via focus
 | `comment-quality/no-section-divider`     | warn     | Flags decorative `// --- Helpers ---` banner comments. Box-drawing dividers (`// -- Label --` with U+2500) are the house convention and are deliberately not matched |
 | `comment-quality/no-placeholder-comment` | warn     | Flags "Replace this with your actual implementation" stub comments                                                                                                   |
 | `comment-quality/no-hedging-comment`     | warn     | Flags "hopefully", "probably fine", "quick hack" uncertainty markers                                                                                                 |
+| `comment-quality/no-obvious-comment`     | warn     | Flags a line comment whose every word is already named by the statement below it (`// Get the user name` over `const name = user.name;`)                             |
 
 All rules are warn-only (no auto-fix) so the developer decides whether to rewrite or remove the comment. Comments containing keeper directives (`TODO`, `FIXME`, `eslint-disable`, JSDoc tags, etc.) are always skipped.
+
+`no-obvious-comment` is the one rule that reads the AST rather than the comment text alone. It resolves the
+statement starting on the line below the comment (`getNodeByRangeIndex`, then a climb to the outermost node at
+that offset) and requires every content word of the comment to appear among that statement's identifier and
+keyword tokens. Literal tokens are excluded, so a comment annotating data (a codepoint decoded beside its
+escape, or one echoing an assertion message) does not count as a restatement. Doc-blocks are not inspected at
+all: a JSDoc block restating its symbol is the contract this repo wants, and the narrating preamble form is
+`no-narrator-comment`'s job. Only `VariableDeclaration`, `ExpressionStatement` and `ReturnStatement` are
+compared, and only against comments that survive both `KEEPER_RE` and `EXPLAINS_WHY_RE`.
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
 

@@ -71,6 +71,39 @@ ruleTester.run("no-edit-narration", rule("no-edit-narration"), {
   ],
 });
 
+ruleTester.run("no-obvious-comment", rule("no-obvious-comment"), {
+  valid: [
+    "// TODO: the todo item label\nconst label = todo.item.label;",
+    "// Legacy layout rows\nconst rows = legacyLayout.rows;",
+    "/** The active locale segmenter. */\nconst segmenter = new Intl.Segmenter(activeLocale);",
+    "// Falls back to the base layout.\nconst name = user.name;",
+    // A blank line separates the comment from the statement, so it is not
+    // describing it.
+    "// Get the user name\n\nconst name = user.name;",
+    // Trailing comment: only own-line comments are compared.
+    "noop(); // the user name\nconst name = user.name;",
+    '// Push the editor scope\nmanager.pushScope("editor");',
+    // Declarations are out of scope; a doc-style summary over one is the
+    // contract, not a restatement.
+    "// Focus the first key\nfunction focusFirstKey(key) {}",
+  ],
+  invalid: [
+    {
+      code: "// Get the user name\nconst name = user.name;",
+      errors: [{ messageId: "noObviousComment", line: 1, column: 0, endLine: 1, endColumn: 20 }],
+    },
+    {
+      code: "// Set the shift state on the layout\nlayout.shiftState = shift;",
+      errors: [{ messageId: "noObviousComment" }],
+    },
+    {
+      // Pins ReturnStatement and the indented path.
+      code: "function f(shiftState) {\n  // Return the shift state\n  return shiftState;\n}",
+      errors: [{ messageId: "noObviousComment" }],
+    },
+  ],
+});
+
 ruleTester.run("no-issue-reference-comment", rule("no-issue-reference-comment"), {
   valid: [
     "// oxlint-disable-next-line no-console -- see #187\nconst a = 1;",

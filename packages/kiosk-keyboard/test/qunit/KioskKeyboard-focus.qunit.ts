@@ -358,7 +358,6 @@ QUnit.test("controls prefers view-local over global when IDs collide", async (as
   const kb = view.byId("kb") as KioskKeyboard;
   const viewLocalInput = view.byId("collisionInput") as Input;
 
-  // Focus the view-local input
   const dom = viewLocalInput.getFocusDomRef() as HTMLElement;
   dom.focus();
   await nextUIUpdate();

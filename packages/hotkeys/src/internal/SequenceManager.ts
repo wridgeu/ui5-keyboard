@@ -177,7 +177,6 @@ export default class SequenceManager {
         const reg = this._registrations.get(id);
         if (reg) this._deindexRegistration(reg);
         this._registrations.delete(id);
-        // Clear any active matches for this registration
         this._activeMatches = this._activeMatches.filter((m) => {
           if (m.registration.id === id) {
             clearTimeout(m.timerId);

@@ -152,13 +152,11 @@ export function validateHotkey(hotkey: string, platform?: Platform): HotkeyValid
     warnings.push(`Unknown key "${parsed.key}" - may not match keyboard events correctly`);
   }
 
-  // Check browser conflicts
   const browserConflict = BROWSER_SHORTCUTS.get(normalized);
   if (browserConflict) {
     warnings.push(`Conflicts with browser shortcut: ${browserConflict} (${normalized})`);
   }
 
-  // Check SAP conflicts
   const sapConflict = SAP_SHORTCUTS.get(normalized);
   if (sapConflict) {
     warnings.push(`Conflicts with SAP shortcut: ${sapConflict} (${normalized})`);

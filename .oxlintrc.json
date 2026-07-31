@@ -40,7 +40,8 @@
     "comment-quality/no-placeholder-comment": "warn",
     "comment-quality/no-hedging-comment": "warn",
     "comment-quality/no-edit-narration": "warn",
-    "comment-quality/no-issue-reference-comment": "warn"
+    "comment-quality/no-issue-reference-comment": "warn",
+    "comment-quality/no-obvious-comment": "warn"
   },
   "overrides": [
     {
