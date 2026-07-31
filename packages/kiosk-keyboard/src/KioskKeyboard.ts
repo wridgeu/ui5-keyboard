@@ -29,6 +29,7 @@ import {
   getRegisteredLayoutNames as registryGetLayoutNames,
   isBuiltInLayout as registryIsBuiltIn,
   getLocaleLayout as registryGetLocaleLayout,
+  resolveLayoutName as registryResolveLayoutName,
   type InstanceLayouts,
   type InstanceLocaleLayouts,
 } from "./internal/layout-registry";
@@ -1770,16 +1771,20 @@ export default class KioskKeyboard extends Control {
 
   /**
    * The effective layout NAME for the current state, shared by the renderer
-   * (`_getResolvedLayout`) and the composition-middleware lookup
-   * (`_tryCompositionMiddleware`) so the rendered surface and the active
-   * middleware never resolve to different layouts. A user-driven `{layout:X}`
-   * switch wins (it overrides the keyboardType constraint), then the
-   * keyboardType constraint (Numpad/Numeric force their layout), then the
-   * `layout` property. Mirrors the webc twin's `_resolvedLayoutName`.
+   * (`_getResolvedLayout`), the accent-variant table and the composition-middleware
+   * lookup (`_tryCompositionMiddleware`) so none of them resolve to a different
+   * layout than the one rendered. A user-driven `{layout:X}` switch wins (it
+   * overrides the keyboardType constraint), then the keyboardType constraint
+   * (Numpad/Numeric force their layout), then the `layout` property. The result is
+   * run through the registry, so an unregistered name reports the default layout it
+   * actually falls back to. Mirrors the webc twin's `_resolvedLayoutName`.
    */
   private _resolvedLayoutName(): string {
-    if (this._layoutSource === "user") return this.getLayout();
-    return constrainedLayoutName(this.getKeyboardType()) ?? this.getLayout();
+    const requested =
+      this._layoutSource === "user"
+        ? this.getLayout()
+        : (constrainedLayoutName(this.getKeyboardType()) ?? this.getLayout());
+    return registryResolveLayoutName(requested, this._instanceLayoutsMap);
   }
 
   /** Resolve the effective layout used by the renderer. */

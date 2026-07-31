@@ -61,8 +61,10 @@ Custom oxlint JS plugin that detects low-quality AI-generated comments via focus
 All rules are warn-only (no auto-fix) so the developer decides whether to rewrite or remove the comment. Comments containing keeper directives (`TODO`, `FIXME`, `eslint-disable`, JSDoc tags, etc.) are always skipped.
 
 `no-obvious-comment` is the one rule that reads the AST rather than the comment text alone: it compares the
-comment's content words against the identifier and keyword tokens of the statement below it. Literal tokens are
-excluded, so a comment annotating data (a codepoint decoded beside its escape) is not a restatement. Doc-blocks
+comment's content words against the identifier and keyword tokens of the statement below it. That statement has
+to occupy a single line, since a multi-line one carries the tokens of everything nested inside it and would
+match words the comment never restated. Literal tokens are excluded too, so a comment annotating data (a
+codepoint decoded beside its escape) is not a restatement. Doc-blocks
 are not inspected at all, since a JSDoc block restating its symbol is the contract this repo wants; the
 narrating preamble form is `no-narrator-comment`'s job.
 

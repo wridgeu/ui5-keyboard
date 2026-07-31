@@ -166,6 +166,30 @@ describe("kiosk-keyboard - instance overrides", () => {
     expect(firstFactoryCalls).to.equal(1);
   });
 
+  it("an unregistered layout name resolves the middleware against the layout actually rendered", async () => {
+    let qwertyCalls = 0;
+    let pinpadCalls = 0;
+    const factory = (count: () => void): (() => CompositionMiddleware) => {
+      return () => {
+        count();
+        return { handleKey: () => false, commit: () => null, reset: () => {} };
+      };
+    };
+
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="pinpad"></kiosk-keyboard> `);
+    // "pinpad" is not registered, so the rendered surface falls back to qwerty and
+    // the middleware has to follow it, not the name that was asked for.
+    el.instanceMiddleware = {
+      qwerty: factory(() => (qwertyCalls += 1)),
+      pinpad: factory(() => (pinpadCalls += 1)),
+    };
+    await nextRender();
+
+    el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!.click();
+    expect(qwertyCalls, "the rendered layout's factory runs").to.equal(1);
+    expect(pinpadCalls, "the unresolved name's factory does not").to.equal(0);
+  });
+
   it("invalid instanceVariants entries warn and are skipped, falling through to the built-in table", async () => {
     await withCapturedWarnings(async (messages) => {
       const el = await fixture<KioskKeyboard>(html`

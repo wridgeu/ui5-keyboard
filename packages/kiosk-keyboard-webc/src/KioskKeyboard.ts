@@ -1174,25 +1174,24 @@ class KioskKeyboard extends UI5Element {
    * The effective layout name for the current state: an explicit user switch
    * (via a {layout:...} key) takes precedence, then the keyboardType
    * constraint (Numpad/Numeric force their layout), then the
-   * current/base/property/locale fallback chain. Rendering
-   * (_getResolvedLayout) and composition-middleware resolution
-   * (_ensureMiddleware) must agree on this name so the rendered surface and
-   * the active middleware never diverge.
+   * current/base/property/locale fallback chain. The result is run through the
+   * registry, so an unregistered name reports the default layout it actually
+   * falls back to. Rendering (_getResolvedLayout), the accent-variant table and
+   * composition-middleware resolution (_ensureMiddleware) all read this name, so
+   * none of them can key off a layout other than the one rendered.
    */
   private _resolvedLayoutName(): string {
-    if (this._layoutSource === "user") return this._currentLayout;
-    return (
-      constrainedLayoutName(this.keyboardType) ??
-      (this._currentLayout || this._baseLayout || this.layout || this._localeLayout())
-    );
+    const requested =
+      this._layoutSource === "user"
+        ? this._currentLayout
+        : (constrainedLayoutName(this.keyboardType) ??
+          (this._currentLayout || this._baseLayout || this.layout || this._localeLayout()));
+    return resolveLayoutName(requested, this._layoutsView.get(this.instanceLayouts));
   }
 
   _getResolvedLayout(): LayoutDefinition {
     const layoutsMap = this._layoutsView.get(this.instanceLayouts);
-    // The effective name, not the requested one: an unregistered name falls back to the
-    // default layout, and everything keyed by layout name below has to agree with the
-    // surface actually rendered.
-    const layoutName = resolveLayoutName(this._resolvedLayoutName(), layoutsMap);
+    const layoutName = this._resolvedLayoutName();
     const resolved = getLayoutOrDefault(layoutName, layoutsMap);
     const constrainedName = constrainedLayoutName(this.keyboardType);
     const base =

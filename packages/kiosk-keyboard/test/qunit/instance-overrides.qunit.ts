@@ -436,6 +436,48 @@ QUnit.test("setInstanceMiddleware after first key resets the cached middleware",
   kb.destroy();
 });
 
+QUnit.test(
+  "A layout name that stopped being registered resolves the middleware against the surface",
+  async (assert) => {
+    let qwertyCalls = 0;
+    let pinpadCalls = 0;
+
+    const input = new Input({ value: "" });
+    input.placeAt("qunit-fixture");
+
+    // setLayout refuses an unregistered name, so the only way the property outlives its
+    // registration is to drop the instance map it came from. The surface then falls back
+    // to qwerty and the middleware has to follow it, not the name still on the property.
+    const kb = new KioskKeyboard({
+      controls: [input.getId()],
+      instanceLayouts: { pinpad: makeLayout("p") },
+      layout: "pinpad",
+      instanceMiddleware: {
+        qwerty: (): CompositionMiddleware => {
+          qwertyCalls += 1;
+          return noopFactory();
+        },
+        pinpad: (): CompositionMiddleware => {
+          pinpadCalls += 1;
+          return noopFactory();
+        },
+      },
+    });
+    await placeAndWait(kb);
+    assert.strictEqual(kb.getLayout(), "pinpad", "precondition: the instance layout is the active one");
+
+    kb.setInstanceLayouts(null as unknown as object);
+    await placeAndWait(kb);
+
+    tapKey(kb, "a");
+    assert.strictEqual(qwertyCalls, 1, "the rendered layout's factory runs");
+    assert.strictEqual(pinpadCalls, 0, "the unresolved name's factory does not");
+
+    input.destroy();
+    kb.destroy();
+  },
+);
+
 // ───────────────────────────────────────────────────
 // Accent-variant tables: instanceVariants merges onto (or opts out of) the
 // built-in Latin-diacritic table per layout, keyed lowercase, invalid entries
@@ -585,6 +627,42 @@ QUnit.test("An instanceVariants entry suppresses one built-in letter with an emp
     getRequiredKeyElement(kb, "o").hasAttribute(DOM.attributes.hasVariants),
     true,
     "every other built-in letter is untouched",
+  );
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("A layout name that stopped being registered resolves the table against the surface", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  // setLayout refuses an unregistered name, so the only way the property outlives its
+  // registration is to drop the instance map it came from. The surface then falls back
+  // to qwerty and the variant table has to follow it, not the name still on the property.
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    accentVariants: true,
+    instanceLayouts: { pinpad: makeLayout("p") },
+    layout: "pinpad",
+    instanceVariants: { pinpad: { a: [] }, qwerty: { b: ["ḃ"] } },
+  });
+  await placeAndWait(kb);
+  assert.strictEqual(kb.getLayout(), "pinpad", "precondition: the instance layout is the active one");
+
+  kb.setInstanceLayouts(null as unknown as object);
+  await placeAndWait(kb);
+  assert.strictEqual(kb.getLayout(), "pinpad", "precondition: the property keeps the now-unregistered name");
+
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "b").hasAttribute(DOM.attributes.hasVariants),
+    true,
+    "the rendered layout's own entry applies",
+  );
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
+    true,
+    "the unresolved name's entry does not",
   );
 
   input.destroy();
