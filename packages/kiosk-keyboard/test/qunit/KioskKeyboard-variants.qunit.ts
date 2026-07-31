@@ -163,7 +163,7 @@ QUnit.test("no data-has-variants when accentVariants is off", async (assert) => 
   cleanup(kb, input);
 });
 
-QUnit.test("instanceVariants replaces the built-in table and drives the popup", async (assert) => {
+QUnit.test("instanceVariants extends the built-in table and drives the popup", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({
@@ -180,12 +180,32 @@ QUnit.test("instanceVariants replaces the built-in table and drives the popup", 
   assert.strictEqual(bKey.hasAttribute(DOM.attributes.hasVariants), true, "'b' gains the instance table's variants");
   assert.strictEqual(
     getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
-    false,
-    "'a' loses its built-in variants: an instance table replaces rather than merges",
+    true,
+    "'a' keeps its built-in variants: an instance table merges rather than replaces",
   );
   await holdOpen(kb, bKey);
   assert.deepEqual(getOptions().map(glyphOf), ["ḃ", "ƀ"], "the popup offers the instance table's 'b' glyphs");
   release(kb, bKey);
+  cleanup(kb, input);
+});
+
+QUnit.test("an instanceVariants entry overrides one built-in letter's popup glyphs", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    accentVariants: true,
+    layout: "qwerty",
+    instanceVariants: { qwerty: { a: ["ā"] } },
+  });
+  await placeAndWait(kb);
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(0, 0);
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  assert.deepEqual(getOptions().map(glyphOf), ["ā"], "the named letter takes the entry's glyphs, not the built-in's");
+  release(kb, aKey);
   cleanup(kb, input);
 });
 

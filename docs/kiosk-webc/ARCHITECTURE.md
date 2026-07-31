@@ -40,7 +40,7 @@ core/
   native-inputmode-suppression.ts  NativeInputModeSuppression: ref-counted inputmode="none" on the target, shared across instances
   physical-key-highlight-controller.ts  PhysicalKeyHighlightController: lights up the matching virtual key on physical keydown and mirrors Shift/CapsLock
   responsive-sizing-controller.ts  ResponsiveSizingController: ResizeObserver-driven height-responsive host cq-tier attribute (short/tiny)
-  latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping (merged onto layouts when accent-variants is enabled)
+  latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping; resolveVariantTable resolves the table per layout (instance entry or the WILDCARD_LAYOUT "*" entry merged per base letter onto the built-in tier, null for the non-Latin layouts)
   variant-popup-controller.ts  VariantPopupController: long-press/right-click accent-variant popup orchestration (open, option sizing, commit through the composition path)
 middleware/
   kana-dakuten.ts         Japanese dakuten/handakuten composition middleware (ja-kana layout)
@@ -534,6 +534,7 @@ See [Build Pipeline](./BUILD-PIPELINE.md) for the generate/compile/bundle/CEM st
   "./Assets": "dist/Assets.js", // theme + i18n registration only
   "./layouts/*": "dist/layouts/*.js", // layout-definition modules for custom composition
   "./middleware/*": "dist/middleware/*.js", // middleware-factory modules for custom composition
+  "./variants": "dist/core/latin-variants.js", // built-in Latin variant table + VariantTable type
   "./customElements": "dist/custom-elements.json", // CEM for IDE/tooling integration
   "./dist/*": "dist/*", // identity export (avoids dist/dist double-resolution)
   "./*": "dist/*" // catch-all: unmatched subpaths resolve into dist/

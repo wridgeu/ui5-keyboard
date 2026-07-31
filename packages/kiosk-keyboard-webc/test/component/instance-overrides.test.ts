@@ -1,6 +1,8 @@
 import { fixture, html, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
+// VariantTable through the element module, the re-export consumers get.
+import type { VariantTable } from "../../src/KioskKeyboard.js";
 import type { CompositionMiddleware, LayoutDefinition } from "../../src/types.js";
 
 const DOM = KioskKeyboard.DOM;
@@ -179,10 +181,122 @@ describe("kiosk-keyboard - instance overrides", () => {
     await nextRender();
     const aKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!;
     const bKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("b"))!;
-    expect(bKey.hasAttribute(DOM.attributes.hasVariants), "mixed-case 'QWERTY' shadows built-in 'qwerty'").to.equal(
-      true,
-    );
-    expect(aKey.hasAttribute(DOM.attributes.hasVariants), "the replacing table drops built-in 'a'").to.equal(false);
+    expect(
+      bKey.hasAttribute(DOM.attributes.hasVariants),
+      "mixed-case 'QWERTY' resolves the entry onto built-in 'qwerty'",
+    ).to.equal(true);
+    expect(aKey.hasAttribute(DOM.attributes.hasVariants), "the entry merges, so built-in 'a' survives").to.equal(true);
+  });
+
+  it("an entry suppresses one built-in letter with an empty list", async () => {
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" accent-variants></kiosk-keyboard> `);
+    el.instanceVariants = { qwerty: { a: [] } };
+    await nextRender();
+    const aKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!;
+    const oKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("o"))!;
+    expect(aKey.hasAttribute(DOM.attributes.hasVariants), "the suppressed letter loses its popup").to.equal(false);
+    expect(oKey.hasAttribute(DOM.attributes.hasVariants), "every other built-in letter is untouched").to.equal(true);
+  });
+
+  it("table-shaped impostors are rejected rather than read as an empty table", async () => {
+    // Each has no own enumerable values, so a validator that only inspects
+    // Object.values would accept it, shadow the built-in table and arm nothing.
+    const impostors: Record<string, unknown> = { array: [], map: new Map([["a", ["ä"]]]), date: new Date(), empty: {} };
+    for (const [label, table] of Object.entries(impostors)) {
+      const originalWarn = console.warn;
+      let warned = false;
+      console.warn = (): void => {
+        warned = true;
+      };
+      try {
+        const el = await fixture<KioskKeyboard>(html`
+          <kiosk-keyboard layout="qwerty" accent-variants></kiosk-keyboard>
+        `);
+        el.instanceVariants = { qwerty: table } as Record<string, VariantTable>;
+        await nextRender();
+        const aKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!;
+        expect(warned, `${label} is logged as invalid`).to.equal(true);
+        expect(
+          aKey.hasAttribute(DOM.attributes.hasVariants),
+          `${label} is skipped, so 'a' keeps the built-in table`,
+        ).to.equal(true);
+      } finally {
+        console.warn = originalWarn;
+      }
+    }
+  });
+
+  it("base letters that are not lowercase are rejected rather than silently normalized", async () => {
+    // The table is matched against key.value.toLowerCase(), so an uppercased or padded
+    // base letter would arm nothing while shadowing the built-in for that layout.
+    for (const base of ["A", "a "]) {
+      const originalWarn = console.warn;
+      const messages: string[] = [];
+      console.warn = (message: string): void => {
+        messages.push(String(message));
+      };
+      try {
+        const el = await fixture<KioskKeyboard>(html`
+          <kiosk-keyboard layout="qwerty" accent-variants></kiosk-keyboard>
+        `);
+        el.instanceVariants = { qwerty: { [base]: ["ä"] } };
+        await nextRender();
+        const aKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!;
+        expect(
+          messages.some((message) => message.includes("lowercase base letters")),
+          `"${base}" is logged as invalid`,
+        ).to.equal(true);
+        expect(
+          aKey.hasAttribute(DOM.attributes.hasVariants),
+          `"${base}" is skipped, so 'a' keeps the built-in table`,
+        ).to.equal(true);
+      } finally {
+        console.warn = originalWarn;
+      }
+    }
+  });
+
+  it("instanceVariants without accent-variants warns once and applies nothing", async () => {
+    const originalWarn = console.warn;
+    const messages: string[] = [];
+    console.warn = (message: string): void => {
+      messages.push(String(message));
+    };
+    try {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      el.instanceVariants = { qwerty: { b: ["ḃ"] } };
+      await nextRender();
+      const bKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("b"))!;
+      const disarmed = (): number =>
+        messages.filter((message) => message.includes("instanceVariants is set but accentVariants is false")).length;
+      expect(bKey.hasAttribute(DOM.attributes.hasVariants), "the disarmed gate applies no table").to.equal(false);
+      expect(disarmed(), "the diagnostic is emitted exactly once").to.equal(1);
+
+      el.layout = "qwertz-de";
+      await nextRender();
+      expect(disarmed(), "and is not repeated on re-render").to.equal(1);
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
+
+  it("an unregistered layout name resolves the variant table against the layout actually rendered", async () => {
+    const originalWarn = console.warn;
+    console.warn = (): void => {};
+    try {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard accent-variants></kiosk-keyboard> `);
+      // "pinpad" is not registered, so the rendered surface falls back to qwerty. The
+      // table has to follow the fallback, not the name that was asked for.
+      el.instanceVariants = { pinpad: { a: [] }, qwerty: { b: ["ḃ"] } };
+      el.layout = "pinpad";
+      await nextRender();
+      const aKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!;
+      const bKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("b"))!;
+      expect(bKey.hasAttribute(DOM.attributes.hasVariants), "the rendered layout's own entry applies").to.equal(true);
+      expect(aKey.hasAttribute(DOM.attributes.hasVariants), "the unresolved name's entry does not").to.equal(true);
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 
   it("reassigning instanceVariants re-resolves on next render", async () => {

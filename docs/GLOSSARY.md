@@ -146,6 +146,7 @@ The `kiosk-keyboard-webc` package exposes subpath imports for different consumpt
 | `kiosk-keyboard-webc/bundle`       | Everything: component, Assets, all built-in layouts, all middleware |
 | `kiosk-keyboard-webc/layouts/*`    | Individual layout-definition modules (data for custom composition)  |
 | `kiosk-keyboard-webc/middleware/*` | Individual middleware-factory modules (data for custom composition) |
+| `kiosk-keyboard-webc/variants`     | Built-in LATIN_DIACRITIC_VARIANTS table and the VariantTable type   |
 | `kiosk-keyboard-webc/Assets`       | Theme and i18n registration                                         |
 
 ### Usage

@@ -151,6 +151,8 @@ export default class KioskKeyboard extends Control {
   private _instanceMiddlewareMap!: InstanceMiddleware | undefined;
   /** Per-instance accent-variant table overrides, derived from the `instanceVariants` property. */
   private _instanceVariantsMap!: InstanceVariants | undefined;
+  /** Caps the disarmed-`instanceVariants` diagnostic at one emission per control. */
+  private _warnedDisarmedVariants!: boolean;
   /** Owns the ResizeObserver-driven height-responsive class application. */
   private _responsiveSizing!: ResponsiveSizingController;
   /** Owns `fKeyMode`-driven F-key dispatch (native keydown + caret navigation). */
@@ -377,6 +379,10 @@ export default class KioskKeyboard extends Control {
        * a plain `Record<string, LayoutDefinition>`; the control stores
        * it as a `Map` internally.
        *
+       * Read by object identity: assign a new object to change the layouts.
+       * Mutating the object already assigned is not observed until the next
+       * render triggered by something else.
+       *
        * @since 0.1.0
        */
       instanceLayouts: {
@@ -416,12 +422,18 @@ export default class KioskKeyboard extends Control {
       },
       /**
        * Per-instance accent-variant table overrides, keyed by layout name
-       * (or `"*"` for every layout). Resolution order is
-       * **instance entry -> instance `"*"` wildcard -> built-in table**. A
-       * `null` entry opts a layout out of the built-in Latin table. Effective
-       * only while `accentVariants` is set. Accepts a plain
+       * (or `"*"` for every layout). The entry for a layout wins, else the
+       * `"*"` wildcard; either is merged onto the built-in table per base
+       * letter, so it extends the defaults rather than replacing them. A base
+       * letter mapped to `[]` drops that letter, and a `null` entry opts the
+       * layout out entirely. Base letters must be lowercase. Effective only
+       * while `accentVariants` is set. Accepts a plain
        * `Record<string, Record<string, string[]> | null>`; the control stores
        * it as a `Map` internally.
+       *
+       * Read by object identity: assign a new object to change the tables.
+       * Mutating the object already assigned is not observed until the next
+       * render triggered by something else.
        *
        * @since 0.1.0
        */
@@ -793,6 +805,7 @@ export default class KioskKeyboard extends Control {
     this._instanceLocaleLayoutsMap = undefined;
     this._instanceMiddlewareMap = undefined;
     this._instanceVariantsMap = undefined;
+    this._warnedDisarmedVariants = false;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
     this._rendererApi = null;
@@ -1144,7 +1157,7 @@ export default class KioskKeyboard extends Control {
       // `null` is a meaningful entry: it opts the layout out of the built-in table.
       if (table !== null && !KioskKeyboard._isValidVariantTable(table)) {
         Log.warning(
-          `Invalid instanceVariants entry "${name}": must be null or an object mapping base letters to non-empty arrays of non-empty strings.`,
+          `Invalid instanceVariants entry "${name}": must be null, or a non-empty object mapping lowercase base letters to arrays of non-empty glyph strings (an empty array suppresses that letter).`,
           undefined,
           "ui5.kiosk.KioskKeyboard",
         );
@@ -1157,12 +1170,23 @@ export default class KioskKeyboard extends Control {
     return entries.length === 0 ? undefined : new Map(entries);
   }
 
+  /**
+   * A variant table is a non-empty plain object mapping lowercase base letters to glyph
+   * lists. Arrays and exotic objects (`Map`, `Date`) are rejected rather than read as an
+   * empty table, and an uppercased or padded base letter is rejected rather than
+   * normalized: the letters are matched against `key.value.toLowerCase()`, so a mis-keyed
+   * table would arm nothing while shadowing the built-in.
+   */
   private static _isValidVariantTable(table: unknown): table is VariantTable {
+    if (typeof table !== "object" || table === null || Array.isArray(table)) return false;
+    const entries = Object.entries(table);
     return (
-      typeof table === "object" &&
-      table !== null &&
-      Object.values(table).every(
-        (list) => Array.isArray(list) && list.length > 0 && list.every((glyph) => typeof glyph === "string" && glyph),
+      entries.length > 0 &&
+      entries.every(
+        ([base, glyphs]) =>
+          base === base.trim().toLowerCase() &&
+          Array.isArray(glyphs) &&
+          glyphs.every((glyph) => typeof glyph === "string" && glyph),
       )
     );
   }
@@ -1774,9 +1798,26 @@ export default class KioskKeyboard extends Control {
     // base keys so umlauts/accents are reachable without editing layout data;
     // a layout the table resolution excludes keeps its keys unchanged. Author-declared
     // `variants` always win (applyVariantDefaults guarantees this).
-    if (!this.getAccentVariants()) return base;
+    if (!this.getAccentVariants()) {
+      this._warnDisarmedVariants();
+      return base;
+    }
     const table = resolveVariantTable(layoutName, this._instanceVariantsMap);
     return table ? applyVariantDefaults(base, table) : base;
+  }
+
+  /**
+   * Warns once when `instanceVariants` carries usable entries while `accentVariants` is
+   * off, the combination in which the tables resolve but nothing applies them.
+   */
+  private _warnDisarmedVariants(): void {
+    if (this._warnedDisarmedVariants || !this._instanceVariantsMap) return;
+    this._warnedDisarmedVariants = true;
+    Log.warning(
+      "instanceVariants is set but accentVariants is false, so no variant table is applied. Set accentVariants to arm the long-press popups.",
+      undefined,
+      "ui5.kiosk.KioskKeyboard",
+    );
   }
 
   /**

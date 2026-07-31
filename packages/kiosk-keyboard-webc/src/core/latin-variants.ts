@@ -73,18 +73,39 @@ export type InstanceVariants = ReadonlyMap<string, VariantTable | null>;
 const NON_LATIN_VARIANT_LAYOUTS: ReadonlySet<string> = new Set(["ja-romaji", "ja-kana", "arabic", "ko-hangul"]);
 
 /**
- * The variant table in effect for `layoutName`: an instance entry for the layout
- * (an explicit `null` opts it out), else the instance `*` wildcard, else the built-in
- * Latin table (`null` for the non-Latin built-ins). A `null` result fills no variants,
- * so the keys carry no long-press affordance.
+ * Merges `overrides` onto `base` per base letter. A letter mapped to an empty list is
+ * dropped, so one built-in entry can be suppressed without restating the rest. The
+ * result has a null prototype, so a table keyed `__proto__` contributes an own property
+ * rather than reassigning the prototype.
+ */
+function mergeVariantTables(base: VariantTable | null, overrides: VariantTable): VariantTable {
+  const merged: Record<string, readonly string[]> = Object.create(null);
+  Object.assign(merged, base);
+  for (const [letter, glyphs] of Object.entries(overrides)) {
+    if (glyphs.length === 0) delete merged[letter];
+    else merged[letter] = glyphs;
+  }
+  return merged;
+}
+
+/**
+ * The variant table in effect for `layoutName`. An instance entry for the layout wins,
+ * else the instance `*` wildcard; either is merged onto the built-in tier per base
+ * letter, so an entry extends the defaults rather than replacing them and a letter
+ * mapped to `[]` drops that letter. An entry of `null` opts the layout out. With no
+ * entry the built-in tier stands: the Latin table, or `null` for the non-Latin
+ * built-ins. A `null` result fills no variants, so the keys carry no long-press
+ * affordance.
  */
 export function resolveVariantTable(layoutName: string, instanceVariants?: InstanceVariants): VariantTable | null {
   const name = layoutName.trim().toLowerCase();
-  if (instanceVariants) {
-    if (instanceVariants.has(name)) return instanceVariants.get(name) ?? null;
-    if (instanceVariants.has(WILDCARD_LAYOUT)) return instanceVariants.get(WILDCARD_LAYOUT) ?? null;
-  }
-  return NON_LATIN_VARIANT_LAYOUTS.has(name) ? null : LATIN_DIACRITIC_VARIANTS;
+  const builtIn = NON_LATIN_VARIANT_LAYOUTS.has(name) ? null : LATIN_DIACRITIC_VARIANTS;
+  if (!instanceVariants) return builtIn;
+  let entry: VariantTable | null | undefined;
+  if (instanceVariants.has(name)) entry = instanceVariants.get(name) ?? null;
+  else if (instanceVariants.has(WILDCARD_LAYOUT)) entry = instanceVariants.get(WILDCARD_LAYOUT) ?? null;
+  if (entry === undefined) return builtIn;
+  return entry === null ? null : mergeVariantTables(builtIn, entry);
 }
 
 /**

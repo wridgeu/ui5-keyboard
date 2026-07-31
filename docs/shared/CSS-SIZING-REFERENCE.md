@@ -40,6 +40,41 @@ These use `min()` to cap but never inflate: a consumer who sets font-size to 0.7
 
 The 0.875rem narrow cap matches SAP Fiori's base font-size (`--sapFontSize`), which is the smallest size used in standard UI5 controls.
 
+## Width-Responsive Row Gap
+
+```css
+@container keyboard (max-width: 22rem) {
+  .kiosk-row {
+    gap: min(base, 0.25rem);
+  }
+}
+@container keyboard (max-width: 20rem) {
+  .kiosk-row {
+    gap: min(base, 0.125rem);
+  }
+}
+```
+
+| Breakpoint   | Threshold     | Gap            | Matching height tier |
+| ------------ | ------------- | -------------- | -------------------- |
+| Narrow       | 22rem (352px) | 0.25rem (4px)  | Short                |
+| Extra narrow | 20rem (320px) | 0.125rem (2px) | Tiny                 |
+
+Narrow keyboards recover room for a full row of floored keys from the inter-key gap rather than from the keys. Like the font caps, `min()` caps but never inflates, so a consumer's tighter gap and an already-tighter height tier both survive. The gap is set on the row because a container element cannot be targeted from its own `@container` query, and numpad keyboards are excluded (`:not(.kiosk-keyboard--numpad)` on webc, `:not(.ui5KioskKeyboard--numpad)` on kiosk).
+
+### Target size floor
+
+```css
+.kiosk-key {
+  min-inline-size: max(1.5rem, 24px);
+  min-block-size: max(1.5rem, 24px);
+}
+```
+
+Keys hold a 24 CSS px floor on both axes for WCAG 2.5.8 (AA). The `max()` grows the floor with the root font-size while keeping it at the criterion's absolute pixel value on a page that shrinks the root.
+
+Below the 20rem container tier, `min-inline-size` is lifted to 0 on non-numpad keys and the keys shrink to fit. At a 320px viewport the keyboard root is 280px wide and the 0.75rem container padding on each side leaves 256px of content, while the default QWERTY digit row is 12 width units (ten digits plus a double-width Backspace) and the criterion's Spacing exception requires 24px centre to centre, so the row needs 288px. That exceeds the content width and also the full 280px root at zero padding, so no combination of key width and gap makes it conform. A center-justified row that overflows is clipped at both edges and loses its outermost keys, so reachability takes precedence: every key stays on screen and SC 2.5.8 is not met below that tier.
+
 ## Width-Responsive Key Padding
 
 ```css
@@ -289,6 +324,31 @@ Below the 7rem per-key threshold described under [Dual Icon + Label Keys](#dual-
 
 At narrow widths (<=35rem / 560px), a `@container` query targets `[data-row-kind="fkey"]` rows and splits them into two rows of six via `flex-wrap`. Each F-key gets `flex: 1 0 calc((100% - 5 * gap) / 6)`, ensuring exactly six keys per row. Above 35rem, all 12 keys fit on a single row. In the UI5 variant, navigation rows (`[data-row-kind="nav"]`) wrap into a 2x4 grid at <=20rem via CSS `order` reordering. In the web component variant, navigation rows do not wrap. The `data-row-kind` attribute is set automatically by `classifyRow()` based on row content.
 
+## Accent-Variant Hint and Popup
+
+```css
+--kiosk-keyboard-variant-hint-inset: 0.1875rem;
+--kiosk-keyboard-variant-hint-size: 0.3125rem;
+--kiosk-keyboard-variant-popup-gap: 0.25rem;
+--kiosk-keyboard-variant-popup-padding: 0.25rem;
+--kiosk-keyboard-variant-popup-max-width: 92vw;
+```
+
+A key carrying long-press accent variants paints a folded-corner triangle in its top inline-end corner.
+
+| Property        | Default         | Rationale                                                                           |
+| --------------- | --------------- | ----------------------------------------------------------------------------------- |
+| Hint inset      | 0.1875rem (3px) | Distance from the key's top and inline-end edges, clear of the centered glyph       |
+| Hint size       | 0.3125rem (5px) | Legible at every width; the corner stays free even when the key narrows             |
+| Hint color      | not declared    | The default is state-dependent, so it cannot be declared on `:host`                 |
+| Popup gap       | 0.25rem (4px)   | Spacing between option buttons in the wrapping row                                  |
+| Popup padding   | 0.25rem (4px)   | Inset around the option row, flattening the framework popover's own content padding |
+| Popup max-width | 92vw            | Keeps a long variant list inside the viewport on phones, wrapping to a second line  |
+
+The hint color default is a neutral grey (`--sapContent_LabelColor` at 71%) on the resting fill, which clears WCAG SC 1.4.11 (3:1), and the key's own text color on the emphasized and active fills, where the grey would not. Setting the property pins one color across every state. It is ignored under forced colors, which uses system colors.
+
+The three popup properties are WebC only: they tune the layout of the option row slotted into a `ui5-popover`. The UI5 variant renders the popup as a themed `sap.m.Popover` of `sap.m.Button`s in the static area, where the framework theme owns the chrome and option styling.
+
 ## Structural Properties
 
 ```css
@@ -364,42 +424,48 @@ Browser support: Chrome 133+, Edge 133+, Safari 18.2+. Non-supporting browsers k
 
 All public CSS custom properties defined on `:host`, listed with their default values.
 
-| Variable                                 | Default                                         | Section                                                                         |
-| ---------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- |
-| `--kiosk-keyboard-padding`               | `0.75rem`                                       | [Height-Responsive Breakpoints](#height-responsive-breakpoints)                 |
-| `--kiosk-keyboard-key-gap`               | `0.375rem`                                      | [Height-Responsive Breakpoints](#height-responsive-breakpoints)                 |
-| `--kiosk-keyboard-key-height`            | `3rem`                                          | [Height-Responsive Breakpoints](#height-responsive-breakpoints)                 |
-| `--kiosk-keyboard-key-font-size`         | `calc(key-height * 0.375)`                      | [Key Font-Size Ratio](#key-font-size-ratio-0375)                                |
-| `--kiosk-keyboard-key-padding-inline`    | `0.25rem`                                       | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
-| `--kiosk-keyboard-key-padding`           | `0 key-padding-inline`                          | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
-| `--kiosk-keyboard-key-padding-inline-xs` | `min(key-padding-inline, 0.125rem)`             | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
-| `--kiosk-keyboard-key-padding-xs`        | `0 key-padding-inline-xs`                       | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
-| `--kiosk-keyboard-key-shadow`            | `0 1px 2px rgba(34,53,72,0.1)`                  | [Shadow Opacities](#shadow-opacities)                                           |
-| `--kiosk-keyboard-key-shadow-hover`      | `0 2px 4px rgba(34,53,72,0.15)`                 | [Shadow Opacities](#shadow-opacities)                                           |
-| `--kiosk-keyboard-modifier-shadow`       | `0 1px 2px rgba(34,53,72,0.14)`                 | [Shadow Opacities](#shadow-opacities)                                           |
-| `--kiosk-keyboard-modifier-shadow-hover` | `0 2px 4px rgba(34,53,72,0.18)`                 | [Shadow Opacities](#shadow-opacities)                                           |
-| `--kiosk-keyboard-docked-shadow`         | `0 -4px 20px rgba(34,53,72,0.2)`                | [Shadow Opacities](#shadow-opacities)                                           |
-| `--kiosk-keyboard-modifier-font-size`    | `var(--sapFontSize, 0.875rem)`                  | [Modifier and Action Key Font-Scale](#modifier-and-action-key-font-scale-08)    |
-| `--kiosk-keyboard-modifier-font-scale`   | `0.8`                                           | [Modifier and Action Key Font-Scale](#modifier-and-action-key-font-scale-08)    |
-| `--kiosk-keyboard-max-width`             | `100%`                                          | [Structural Properties](#structural-properties)                                 |
-| `--kiosk-keyboard-docked-max-width`      | `1024px`                                        | [Structural Properties](#structural-properties)                                 |
-| `--kiosk-keyboard-docked-z-index`        | `100`                                           | [Structural Properties](#structural-properties)                                 |
-| `--kiosk-keyboard-border`                | `1px solid --sapGroup_TitleBorderColor`         | [Structural Properties](#structural-properties)                                 |
-| `--kiosk-keyboard-border-radius`         | `var(--sapElement_BorderCornerRadius, 0.75rem)` | [Structural Properties](#structural-properties)                                 |
-| `--kiosk-keyboard-key-border-color`      | not declared                                    | [Structural Properties](#structural-properties)                                 |
-| `--kiosk-keyboard-numpad-max-width`      | `20rem`                                         | [Numpad Mode](#numpad-mode)                                                     |
-| `--kiosk-keyboard-numpad-key-min-width`  | `4rem`                                          | [Numpad Mode](#numpad-mode)                                                     |
-| `--kiosk-keyboard-dual-direction`        | `row`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
-| `--kiosk-keyboard-dual-icon-size`        | `1em`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
-| `--kiosk-keyboard-dual-label-size`       | `1em`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
-| `--kiosk-keyboard-dual-gap`              | `0.3em`                                         | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
-| `--kiosk-keyboard-fkey-direction`        | `column`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
-| `--kiosk-keyboard-fkey-icon-size`        | `clamp(1em, 15cqi, 1.6em)`                      | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
-| `--kiosk-keyboard-fkey-label-size`       | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`     | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
-| `--kiosk-keyboard-fkey-gap`              | `0.05em`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
-| `--kiosk-keyboard-cq-short-threshold`    | `16rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
-| `--kiosk-keyboard-cq-tiny-threshold`     | `12rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
-| `--kiosk-keyboard-cjk-font-family`       | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
-| `--kiosk-keyboard-hangul-font-family`    | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
-| `--kiosk-keyboard-indic-font-family`     | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
-| `--kiosk-keyboard-arabic-font-family`    | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| Variable                                   | Default                                         | Section                                                                         |
+| ------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| `--kiosk-keyboard-padding`                 | `0.75rem`                                       | [Height-Responsive Breakpoints](#height-responsive-breakpoints)                 |
+| `--kiosk-keyboard-key-gap`                 | `0.375rem`                                      | [Height-Responsive Breakpoints](#height-responsive-breakpoints)                 |
+| `--kiosk-keyboard-key-height`              | `3rem`                                          | [Height-Responsive Breakpoints](#height-responsive-breakpoints)                 |
+| `--kiosk-keyboard-key-font-size`           | `calc(key-height * 0.375)`                      | [Key Font-Size Ratio](#key-font-size-ratio-0375)                                |
+| `--kiosk-keyboard-key-padding-inline`      | `0.25rem`                                       | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
+| `--kiosk-keyboard-key-padding`             | `0 key-padding-inline`                          | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
+| `--kiosk-keyboard-key-padding-inline-xs`   | `min(key-padding-inline, 0.125rem)`             | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
+| `--kiosk-keyboard-key-padding-xs`          | `0 key-padding-inline-xs`                       | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
+| `--kiosk-keyboard-key-shadow`              | `0 1px 2px rgba(34,53,72,0.1)`                  | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-key-shadow-hover`        | `0 2px 4px rgba(34,53,72,0.15)`                 | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-modifier-shadow`         | `0 1px 2px rgba(34,53,72,0.14)`                 | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-modifier-shadow-hover`   | `0 2px 4px rgba(34,53,72,0.18)`                 | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-docked-shadow`           | `0 -4px 20px rgba(34,53,72,0.2)`                | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-modifier-font-size`      | `var(--sapFontSize, 0.875rem)`                  | [Modifier and Action Key Font-Scale](#modifier-and-action-key-font-scale-08)    |
+| `--kiosk-keyboard-modifier-font-scale`     | `0.8`                                           | [Modifier and Action Key Font-Scale](#modifier-and-action-key-font-scale-08)    |
+| `--kiosk-keyboard-max-width`               | `100%`                                          | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-docked-max-width`        | `1024px`                                        | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-docked-z-index`          | `100`                                           | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-border`                  | `1px solid --sapGroup_TitleBorderColor`         | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-border-radius`           | `var(--sapElement_BorderCornerRadius, 0.75rem)` | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-key-border-color`        | not declared                                    | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-numpad-max-width`        | `20rem`                                         | [Numpad Mode](#numpad-mode)                                                     |
+| `--kiosk-keyboard-numpad-key-min-width`    | `4rem`                                          | [Numpad Mode](#numpad-mode)                                                     |
+| `--kiosk-keyboard-dual-direction`          | `row`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
+| `--kiosk-keyboard-dual-icon-size`          | `1em`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
+| `--kiosk-keyboard-dual-label-size`         | `1em`                                           | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
+| `--kiosk-keyboard-dual-gap`                | `0.3em`                                         | [Dual Icon + Label Keys](#dual-icon--label-keys)                                |
+| `--kiosk-keyboard-fkey-direction`          | `column`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
+| `--kiosk-keyboard-fkey-icon-size`          | `clamp(1em, 15cqi, 1.6em)`                      | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
+| `--kiosk-keyboard-fkey-label-size`         | `clamp(0.5rem, calc(100cqi * 0.35), 0.7em)`     | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
+| `--kiosk-keyboard-fkey-gap`                | `0.05em`                                        | [Navigation / Function Key Styling](#navigation--function-key-styling)          |
+| `--kiosk-keyboard-variant-hint-inset`      | `0.1875rem`                                     | [Accent-Variant Hint and Popup](#accent-variant-hint-and-popup)                 |
+| `--kiosk-keyboard-variant-hint-size`       | `0.3125rem`                                     | [Accent-Variant Hint and Popup](#accent-variant-hint-and-popup)                 |
+| `--kiosk-keyboard-variant-hint-color`      | not declared                                    | [Accent-Variant Hint and Popup](#accent-variant-hint-and-popup)                 |
+| `--kiosk-keyboard-variant-popup-gap`       | `0.25rem`                                       | [Accent-Variant Hint and Popup](#accent-variant-hint-and-popup)                 |
+| `--kiosk-keyboard-variant-popup-padding`   | `0.25rem`                                       | [Accent-Variant Hint and Popup](#accent-variant-hint-and-popup)                 |
+| `--kiosk-keyboard-variant-popup-max-width` | `92vw`                                          | [Accent-Variant Hint and Popup](#accent-variant-hint-and-popup)                 |
+| `--kiosk-keyboard-cq-short-threshold`      | `16rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
+| `--kiosk-keyboard-cq-tiny-threshold`       | `12rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
+| `--kiosk-keyboard-cjk-font-family`         | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| `--kiosk-keyboard-hangul-font-family`      | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| `--kiosk-keyboard-indic-font-family`       | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
+| `--kiosk-keyboard-arabic-font-family`      | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |

@@ -108,6 +108,19 @@ export function getRegisteredLayout(rawName: string, instanceLayouts?: InstanceL
 }
 
 /**
+ * Returns the normalized name of the layout that `rawName` actually resolves to: the
+ * name itself when it is registered (instance map or built-in), else the default layout.
+ * A caller that needs both the layout data and something else keyed by layout name
+ * resolves the name once through this, so the two cannot disagree on an unregistered name.
+ * @internal
+ */
+export function resolveLayoutName(rawName: string, instanceLayouts?: InstanceLayouts): string {
+  const name = normalizeLowerString(rawName, "layout name");
+  if (!name) return DEFAULT_LAYOUT;
+  return instanceLayouts?.has(name) || layouts.has(name) ? name : DEFAULT_LAYOUT;
+}
+
+/**
  * Returns the layout for the given name, falling back to
  * the default layout when the name is not registered.
  *
@@ -115,11 +128,10 @@ export function getRegisteredLayout(rawName: string, instanceLayouts?: InstanceL
  * @internal
  */
 export function getLayoutOrDefault(rawName: string, instanceLayouts?: InstanceLayouts): LayoutDefinition {
-  const fallback = instanceLayouts?.get(DEFAULT_LAYOUT) ?? layouts.get(DEFAULT_LAYOUT);
-  if (!fallback) throw new Error(`Built-in default layout "${DEFAULT_LAYOUT}" is missing`);
-  const name = normalizeLowerString(rawName, "layout name");
-  if (!name) return fallback;
-  return instanceLayouts?.get(name) ?? layouts.get(name) ?? fallback;
+  const name = resolveLayoutName(rawName, instanceLayouts);
+  const def = instanceLayouts?.get(name) ?? layouts.get(name);
+  if (!def) throw new Error(`Built-in default layout "${DEFAULT_LAYOUT}" is missing`);
+  return def;
 }
 
 /**
