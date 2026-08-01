@@ -1451,7 +1451,7 @@ Override these on `.ui5KioskKeyboard` to fine-tune layout without `!important`:
 | `--ui5KioskKeyboard-keyShadow`           | _(theme)_                                                                                                                      | Key resting shadow                                                                                               |
 | `--ui5KioskKeyboard-keyShadowHover`      | _(theme)_                                                                                                                      | Key hover shadow                                                                                                 |
 | `--ui5KioskKeyboard-maxWidth`            | `100%`                                                                                                                         | Max width for the default inline keyboard                                                                        |
-| `--ui5KioskKeyboard-dockedMaxWidth`      | `1024px`                                                                                                                       | Max width when docked                                                                                            |
+| `--ui5KioskKeyboard-dockedMaxWidth`      | `64rem`                                                                                                                        | Max width when docked                                                                                            |
 | `--ui5KioskKeyboard-dockedShadow`        | _(theme)_                                                                                                                      | Shadow when docked                                                                                               |
 | `--ui5KioskKeyboard-dockedZIndex`        | `100`                                                                                                                          | Z-index for the docked keyboard                                                                                  |
 | `--ui5KioskKeyboard-modifierFontSize`    | `@sapUiFontSize`                                                                                                               | Modifier / action key font size                                                                                  |
@@ -1483,7 +1483,7 @@ By default, the inline keyboard takes the full width of its container (`100%`). 
 }
 ```
 
-Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
+Docked keyboards default to `64rem` (1024px at the default root font-size) max-width and center automatically via `margin-inline: auto`.
 
 Responsive font scaling uses CSS `@container` queries on the keyboard's rendered width, so embedded keyboards react to the width of their actual host container instead of only the viewport. For the scaling factors, the narrow-width font caps and `min()` override behavior, the padding swap, and height-responsive sizing, see the [CSS Sizing Reference](../../docs/shared/CSS-SIZING-REFERENCE.md) and [Responsive Layout Patterns](../../docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md).
 
