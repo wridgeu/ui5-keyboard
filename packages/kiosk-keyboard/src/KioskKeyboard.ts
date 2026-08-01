@@ -1123,7 +1123,13 @@ export default class KioskKeyboard extends Control {
    * `Object.entries` cost on every render.
    */
   setInstanceLayouts(value: Record<string, LayoutInput> | null): this {
-    this._readInstanceLayouts(value);
+    for (const name of this._readInstanceLayouts(value)) {
+      Log.warning(
+        `Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value", or an object with such an array as "rows".`,
+        undefined,
+        "ui5.kiosk.KioskKeyboard",
+      );
+    }
     return this.setProperty("instanceLayouts", value) as this;
   }
 
@@ -1162,19 +1168,21 @@ export default class KioskKeyboard extends Control {
    * Splits the `instanceLayouts` property into the two caches the lookup paths
    * read: the rows keyed by layout name, and the attributes declared by the
    * descriptor entries. Both are built in one pass over the entries.
+   *
+   * Returns the names it rejected rather than logging them. Construction warms
+   * these caches twice, once here from `applySettings` and once from the setter
+   * that `super.applySettings` then invokes, so reporting from inside would
+   * announce a single bad entry twice; only the setter owns the diagnostic.
    */
-  private _readInstanceLayouts(value: unknown): void {
+  private _readInstanceLayouts(value: unknown): string[] {
     const rows: [string, LayoutDefinition][] = [];
     const meta: [string, LayoutMeta][] = [];
+    const rejected: string[] = [];
     if (value && typeof value === "object") {
       for (const [name, entry] of Object.entries(value as Record<string, unknown>)) {
         const spec = KioskKeyboard._readLayoutInput(entry);
         if (!spec) {
-          Log.warning(
-            `Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value", or an object with such an array as "rows".`,
-            undefined,
-            "ui5.kiosk.KioskKeyboard",
-          );
+          rejected.push(name);
           continue;
         }
         // Lookup paths normalize names via trim+lowercase; mirror that at
@@ -1187,6 +1195,7 @@ export default class KioskKeyboard extends Control {
     }
     this._instanceLayoutsMap = rows.length === 0 ? undefined : new Map(rows);
     this._instanceLayoutMetaMap = meta.length === 0 ? undefined : new Map(meta);
+    return rejected;
   }
 
   /**
