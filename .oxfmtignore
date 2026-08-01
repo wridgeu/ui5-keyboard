@@ -11,5 +11,5 @@ dist/
 # ui5-tooling-modules cache output (generated during serve/build)
 .ui5-tooling-modules/
 
-# ui5-test-runner output
-report/
+# ui5-test-runner output (--report-dir is free-form; see .gitignore)
+report*/

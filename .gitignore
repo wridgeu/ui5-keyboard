@@ -14,8 +14,11 @@ test-results/
 playwright-report/
 .last-run.json
 
-# ui5-test-runner output
-report/
+# ui5-test-runner output. Globbed because --report-dir is a free-form CLI
+# argument: the npm scripts pass "report", but an ad-hoc run picks its own name
+# (report-p6 from a --parallel benchmark), and a bare "report/" leaves that
+# sitting in git status and failing fmt:check.
+report*/
 .nyc_output/
 
 # @ui5/linter coverage report (written to cwd by `ui5lint --coverage`)
