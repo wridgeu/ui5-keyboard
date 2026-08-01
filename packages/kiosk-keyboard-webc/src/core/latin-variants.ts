@@ -12,6 +12,7 @@
  * (enforced by tools/check-twin-drift.mjs).
  */
 import type { LayoutDefinition } from "../types.js";
+import { BUILTIN_LAYOUT_META } from "./layout-meta.js";
 
 /** A variant table: ordered long-press glyphs keyed by lowercase base letter. */
 export type VariantTable = Readonly<Record<string, readonly string[]>>;
@@ -67,12 +68,6 @@ export const WILDCARD_LAYOUT = "*";
 export type InstanceVariants = ReadonlyMap<string, VariantTable | null>;
 
 /**
- * Built-in layouts whose scripts have no Latin-diacritic long-press variants, so the
- * built-in tier resolves to `null` for them rather than arming meaningless popups.
- */
-const NON_LATIN_VARIANT_LAYOUTS: ReadonlySet<string> = new Set(["ja-romaji", "ja-kana", "arabic", "ko-hangul"]);
-
-/**
  * Merges `overrides` onto `base` per base letter. A letter mapped to an empty list is
  * dropped, so one built-in entry can be suppressed without restating the rest. The
  * result has a null prototype, so a table keyed `__proto__` contributes an own property
@@ -93,13 +88,16 @@ function mergeVariantTables(base: VariantTable | null, overrides: VariantTable):
  * else the instance `*` wildcard; either is merged onto the built-in tier per base
  * letter, so an entry extends the defaults rather than replacing them and a letter
  * mapped to `[]` drops that letter. An entry of `null` opts the layout out. With no
- * entry the built-in tier stands: the Latin table, or `null` for the non-Latin
- * built-ins. A `null` result fills no variants, so the keys carry no long-press
- * affordance.
+ * entry the built-in tier stands: the layout's own declared table, or the Latin
+ * table when it declares none. A `null` result fills no variants, so the keys carry
+ * no long-press affordance.
  */
 export function resolveVariantTable(layoutName: string, instanceVariants?: InstanceVariants): VariantTable | null {
   const name = layoutName.trim().toLowerCase();
-  const builtIn = NON_LATIN_VARIANT_LAYOUTS.has(name) ? null : LATIN_DIACRITIC_VARIANTS;
+  // A declared `null` opts the layout out; an absent declaration is distinct from
+  // it and leaves the Latin table in force.
+  const declared = BUILTIN_LAYOUT_META.get(name)?.variants;
+  const builtIn = declared === undefined ? LATIN_DIACRITIC_VARIANTS : declared;
   if (!instanceVariants) return builtIn;
   let entry: VariantTable | null | undefined;
   if (instanceVariants.has(name)) entry = instanceVariants.get(name) ?? null;

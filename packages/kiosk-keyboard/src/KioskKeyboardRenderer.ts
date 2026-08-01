@@ -323,8 +323,22 @@ const KioskKeyboardRenderer = {
   },
 
   /** Render the label element inside a key. */
-  renderKeyLabel(rm: RenderManager, _oControl: KioskKeyboard, _key: KeyDefinition, label: string): void {
+  renderKeyLabel(rm: RenderManager, oControl: KioskKeyboard, key: KeyDefinition, label: string): void {
+    const { _getLayoutLang } = oControl._getRendererApi();
     rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
+
+    // Language of the keycap, when the layout writes its keys in a script other
+    // than the UI language (WCAG 2.2 SC 3.1.2 Language of Parts). Scoped to the
+    // label span: the key's own `title` / `aria-label` and the keyboard's live
+    // region are UI-language text, so the declaration must not reach them.
+    // Action, modifier, and space keys are excluded for the same reason - their
+    // labels resolve through i18n, not from the layout's script. Multi-glyph
+    // labels carry the script too, so this sits outside the single-glyph branch.
+    const lang = _getLayoutLang();
+    if (lang && key.type !== "action" && key.type !== "modifier" && key.type !== "space") {
+      rm.attr("lang", lang);
+    }
+
     if (isSingleGlyph(label)) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
       // Hangul uses strict \p{Script=Hangul} so shared CJK punctuation

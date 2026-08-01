@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import type Popover from "@ui5/webcomponents/dist/Popover.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-import type { LayoutDefinition } from "../../src/types.js";
+import type { LayoutDefinition, LayoutSpec } from "../../src/types.js";
 import { requireKey, setupWithLayout } from "../helpers/fixtures.js";
 import { getText, setI18nResolver } from "../../src/core/i18n.js";
 import { LATIN_DIACRITIC_VARIANTS } from "../../src/core/latin-variants.js";
@@ -28,6 +28,12 @@ const VARIANT_LAYOUT: LayoutDefinition = [
 ];
 
 /** A key whose shifted glyph is an explicit `shiftValue`, not the uppercased value. */
+/** A layout whose keycaps are Arabic, declared through the descriptor form. */
+const LANG_VARIANT_LAYOUT: LayoutSpec = {
+  rows: [[{ value: "ا", variants: ["أ", "إ", "آ"] }]],
+  lang: "ar",
+};
+
 const SHIFT_VALUE_LAYOUT: LayoutDefinition = [
   [{ value: "1", shiftValue: "!", variants: ["¹", "½"] }],
   [{ value: "{shift}", type: "modifier" }],
@@ -1002,5 +1008,26 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(liveRegionText(kb), "a real dismissal is still announced").to.equal(
       getText("ARIA_VARIANTS_CLOSED", "Variants closed"),
     );
+  });
+
+  // Language of parts (WCAG 2.2 SC 3.1.2). The popup is a sibling of the keyboard
+  // root rather than a descendant, so it inherits no lang and declares its own.
+
+  it("declares the layout's keycap language on the option toolbar", async () => {
+    const { kb } = await setupWithLayout(LANG_VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "ا"));
+
+    expect(optionGlyphs(kb).length, "the popup opened with options").to.be.above(0);
+    expect(popupEl(kb)!.getAttribute("lang"), "the options are Arabic glyphs").to.equal("ar");
+    pointerUp();
+  });
+
+  it("declares no language when the layout writes its keycaps in the UI language", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "a"));
+
+    expect(optionGlyphs(kb).length, "the popup opened with options").to.be.above(0);
+    expect(popupEl(kb)!.hasAttribute("lang"), "Latin variants stay in the UI language").to.be.false;
+    pointerUp();
   });
 });

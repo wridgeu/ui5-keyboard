@@ -165,6 +165,65 @@ export type KeyRow = KeyDefinition[];
 export type LayoutDefinition = KeyRow[];
 
 /**
+ * A layout together with the attributes that belong to it, for `instanceLayouts`
+ * entries that need more than rows.
+ *
+ * The bare `LayoutDefinition` form stays valid everywhere this is accepted; reach
+ * for the descriptor only to declare an attribute. Attributes resolve one by one:
+ * an attribute the descriptor declares wins, and one it leaves out falls back to
+ * the built-in layout of the same name, so overriding `arabic` with different rows
+ * keeps announcing them as Arabic until the descriptor says otherwise.
+ *
+ * Long-press variants are not declared here. They are the one per-layout attribute
+ * with its own layered property, `instanceVariants`, which merges over the built-in
+ * table per base letter.
+ *
+ * @example An auxiliary Arabic symbol surface
+ * ```ts
+ * import KioskKeyboard from "kiosk-keyboard-webc";
+ *
+ * keyboard.instanceLayouts = {
+ *   "ar-symbols": {
+ *     rows: KioskKeyboard.composeLayout([symbolRow], "arabic"),
+ *     lang: "ar",
+ *     secondary: true,
+ *   },
+ * };
+ * ```
+ *
+ * @public
+ * @since 0.1.0
+ */
+export interface LayoutSpec {
+  /** The layout's rows. Same shape and validation as a bare {@link LayoutDefinition}. */
+  rows: LayoutDefinition;
+  /**
+   * BCP-47 language of the keycaps, emitted as `lang` on the key labels so assistive
+   * tech announces them with the script's own pronunciation rules (WCAG 2.2 SC 3.1.2
+   * Language of Parts). Omit when the keycaps are in the UI language, as Latin
+   * keycaps are: declaring a language they are not written in mis-announces them and
+   * pulls them into that script's font fallback.
+   */
+  lang?: string;
+  /**
+   * Marks an auxiliary view (a symbol or numeric surface) rather than a base
+   * alphabetic layout. A secondary layout is never tracked as the base, so
+   * `{layout:base}` returns to the alphabetic layout it was reached from instead of
+   * stranding the keyboard on the auxiliary surface.
+   */
+  secondary?: boolean;
+}
+
+/**
+ * What an `instanceLayouts` entry accepts: rows on their own, or a
+ * {@link LayoutSpec} carrying the layout's attributes alongside them.
+ *
+ * @public
+ * @since 0.1.0
+ */
+export type LayoutInput = LayoutDefinition | LayoutSpec;
+
+/**
  * Composition middleware intercepts key events for layouts that need
  * script-specific processing (e.g., kana dakuten, Hangul jamo composition).
  *

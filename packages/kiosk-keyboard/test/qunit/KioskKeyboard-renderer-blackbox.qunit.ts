@@ -706,3 +706,71 @@ QUnit.test("icon: '' + capsLockIcon shows icon only during caps lock", async (as
 
   kb.destroy();
 });
+
+// ──────────────────────────────────────────────
+// Keycap language (WCAG 2.2 SC 3.1.2)
+// ──────────────────────────────────────────────
+
+const keycapLangCases: { layout: string; characterKey: string; lang: string }[] = [
+  { layout: "arabic", characterKey: "ض", lang: "ar" },
+  { layout: "ja-kana", characterKey: "ぬ", lang: "ja" },
+  { layout: "ko-hangul", characterKey: "ㅂ", lang: "ko" },
+];
+
+for (const { layout, characterKey, lang } of keycapLangCases) {
+  QUnit.test(`${layout}: character key labels carry lang='${lang}'`, async (assert) => {
+    const kb = new KioskKeyboard({ layout });
+    await placeAndWait(kb);
+
+    const labelOf = (value: string) =>
+      getRequiredKeyElement(kb, value).querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!;
+
+    assert.strictEqual(labelOf(characterKey).getAttribute("lang"), lang, `Character key label is lang='${lang}'`);
+
+    // Special-key labels resolve through i18n, so they stay in the UI language.
+    assert.strictEqual(labelOf("{enter}").getAttribute("lang"), null, "Action key label has no lang");
+    assert.strictEqual(labelOf("{shift}").getAttribute("lang"), null, "Modifier key label has no lang");
+    assert.strictEqual(labelOf(" ").getAttribute("lang"), null, "Space key label has no lang");
+
+    // The declaration is scoped to the label span: the key's title / aria-label
+    // and the keyboard chrome are UI-language text.
+    assert.strictEqual(getRequiredKeyElement(kb, characterKey).getAttribute("lang"), null, "Key div has no lang");
+    assert.strictEqual(getKeyboardDom(kb).getAttribute("lang"), null, "Keyboard root has no lang");
+
+    kb.destroy();
+  });
+}
+
+for (const layout of ["qwerty", "ja-romaji"]) {
+  QUnit.test(`${layout}: no key label carries a lang attribute`, async (assert) => {
+    const kb = new KioskKeyboard({ layout });
+    await placeAndWait(kb);
+
+    const dom = getKeyboardDom(kb);
+    const labels = dom.querySelectorAll(`.${DOM.classes.keyLabel}`);
+    assert.ok(labels.length > 0, "Label elements rendered");
+    assert.strictEqual(dom.querySelectorAll(`.${DOM.classes.keyLabel}[lang]`).length, 0, "No label declares a lang");
+    assert.strictEqual(dom.getAttribute("lang"), null, "Keyboard root has no lang");
+
+    kb.destroy();
+  });
+}
+
+QUnit.test("instanceLayouts descriptor lang lands on the character key labels", async (assert) => {
+  const rows: LayoutDefinition = [
+    [{ value: "א" }, { value: "{enter}", type: "action" }, { value: " ", width: "space", type: "space" }],
+  ];
+  const kb = new KioskKeyboard({ instanceLayouts: { "test-lang": { rows, lang: "he" } }, layout: "test-lang" });
+  await placeAndWait(kb);
+
+  const labelOf = (value: string) =>
+    getRequiredKeyElement(kb, value).querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!;
+
+  assert.strictEqual(labelOf("א").getAttribute("lang"), "he", "Character key label is lang='he'");
+  assert.strictEqual(labelOf("{enter}").getAttribute("lang"), null, "Action key label has no lang");
+  assert.strictEqual(labelOf(" ").getAttribute("lang"), null, "Space key label has no lang");
+  assert.strictEqual(getRequiredKeyElement(kb, "א").getAttribute("lang"), null, "Key div has no lang");
+  assert.strictEqual(getKeyboardDom(kb).getAttribute("lang"), null, "Keyboard root has no lang");
+
+  kb.destroy();
+});

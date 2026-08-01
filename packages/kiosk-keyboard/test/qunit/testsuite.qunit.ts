@@ -79,6 +79,9 @@ sap.ui.define([], () => {
       "latin-variants": {
         title: "QUnit tests for ui5.kiosk - latin-variants long-press table & helpers",
       },
+      "layout-meta": {
+        title: "QUnit tests for ui5.kiosk - layout-meta per-layout attributes",
+      },
       "KioskKeyboard-layout": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Layout Management",
       },

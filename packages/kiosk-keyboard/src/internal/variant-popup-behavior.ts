@@ -84,6 +84,13 @@ export interface VariantPopupHost {
   /** Announce popup dismissal through the live region. */
   announceDismiss(): void;
   /**
+   * BCP-47 language of the active layout's keycaps, or `undefined` when they are
+   * in the UI language. The option glyphs come from that layout, and the popover
+   * renders in the static area where it inherits nothing from the keyboard, so
+   * the popup declares the language itself.
+   */
+  getLayoutLang(): string | undefined;
+  /**
    * The control-owned accent-variant Popover, held in the control's hidden
    * `_variantPopover` aggregation (lazily created on first call, reused across
    * opens, auto-destroyed with the control). Returns it with the control's
@@ -394,6 +401,11 @@ export default class VariantPopupBehavior {
         // The popover inherits no direction from the keyboard, and UI5's arrow
         // remap keys on the page-global RTL config, not a local `dir`.
         dom.style.direction = this._rtl ? "rtl" : "ltr";
+        // Same reason for the keycap language: the options are glyphs of the
+        // layout's script, and the grid is rebuilt per open, so declaring it here
+        // covers every option button without a per-button write.
+        const lang = this._host.getLayoutLang();
+        if (lang) dom.setAttribute("lang", lang);
       },
     });
     popover.addContent(grid);

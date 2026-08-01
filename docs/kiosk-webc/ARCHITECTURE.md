@@ -15,7 +15,7 @@ bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all b
                           middleware (kana/hangul) is bundled and auto-activates by layout
                           name; `kiosk-keyboard-webc/middleware/*` only exposes the factories
                           as data for custom `instanceMiddleware`.
-types.ts                  KeyDefinition, KeyRow, LayoutDefinition, FKeyMode,
+types.ts                  KeyDefinition, KeyRow, LayoutDefinition, LayoutSpec, LayoutInput, FKeyMode,
                           SpecialKeyValue, KeyWidth, KeyType, event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
 core/
@@ -25,6 +25,7 @@ core/
   grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
   key-token.ts            Classifies a key's data-key value into its token kind (shift/backspace/enter/layout/fkey/unknown/char)
   layout-registry.ts      Layout registration/reset + locale-based layout resolution
+  layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins, resolved per attribute against an instanceLayouts descriptor
   input-operations.ts     Target input text operations (insert, backspace, navigation)
   keyboard-type-detector.ts  Auto-type detection (data attributes, inputmode, HTML type)
   fkey-controller.ts      FKeyController: F-key dispatch (Virtual fires key-press + caret nav; Native synthesizes keydown)
@@ -40,7 +41,7 @@ core/
   native-inputmode-suppression.ts  NativeInputModeSuppression: ref-counted inputmode="none" on the target, shared across instances
   physical-key-highlight-controller.ts  PhysicalKeyHighlightController: lights up the matching virtual key on physical keydown and mirrors Shift/CapsLock
   responsive-sizing-controller.ts  ResponsiveSizingController: ResizeObserver-driven height-responsive host cq-tier attribute (short/tiny)
-  latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping; resolveVariantTable resolves the table per layout (instance entry or the WILDCARD_LAYOUT "*" entry merged per base letter onto the built-in tier, null for the non-Latin layouts)
+  latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping; resolveVariantTable resolves the table per layout (instance entry or the WILDCARD_LAYOUT "*" entry merged per base letter onto the built-in tier, null for the layouts whose layout-meta entry declares `variants: null`)
   variant-popup-controller.ts  VariantPopupController: long-press/right-click accent-variant popup orchestration (open, option sizing, commit through the composition path)
 middleware/
   kana-dakuten.ts         Japanese dakuten/handakuten composition middleware (ja-kana layout)
@@ -305,10 +306,8 @@ Composite layouts are composed at consumption time using the shared row modules 
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
-const qwerty = KioskKeyboard.getRegisteredLayout("qwerty")!;
-
 const el = document.createElement("kiosk-keyboard");
-el.instanceLayouts = { "my-qwerty-fk": [fkeyRow, ...qwerty] };
+el.instanceLayouts = { "my-qwerty-fk": KioskKeyboard.composeLayout([fkeyRow], "qwerty") };
 el.layout = "my-qwerty-fk";
 ```
 

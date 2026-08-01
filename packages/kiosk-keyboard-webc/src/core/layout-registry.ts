@@ -38,15 +38,6 @@ const layouts: ReadonlyMap<string, LayoutDefinition> = new Map([
 ]);
 
 /**
- * Layouts that serve as secondary views (not base alphabetic layouts).
- *
- * Keep in sync with `packages/kiosk-keyboard/src/internal/types.ts`. The kiosk
- * package re-declares the same set; sharing is intentionally avoided so each
- * package owns its module graph.
- */
-export const SECONDARY_LAYOUTS: ReadonlySet<string> = new Set(["numeric", "special", "fkeys", "nav"]);
-
-/**
  * Built-in BCP-47 prefix -> layout name. Sealed at module load. Per-app
  * customization is done via the `instanceLocaleLayouts` property.
  */

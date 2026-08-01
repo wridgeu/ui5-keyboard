@@ -1469,3 +1469,53 @@ QUnit.test("a held Backspace that declares variants re-anchors instead of strand
 
   cleanup(kb, input);
 });
+
+// ──────────────────────────────────────────────
+// Keycap language (WCAG 2.2 SC 3.1.2)
+// ──────────────────────────────────────────────
+
+QUnit.test("the popup declares the layout's keycap language on its option grid", async (assert) => {
+  const rows: LayoutDefinition = [[{ value: "\u0627", variants: ["\u0623", "\u0625", "\u0622"] }]];
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    instanceLayouts: { "ar-spike": { rows, lang: "ar" } },
+    layout: "ar-spike",
+  });
+  await placeAndWait(kb);
+  input.focus();
+
+  const key = getRequiredKeyElement(kb, "\u0627");
+  await holdOpen(kb, key);
+
+  // The Popover renders into the static area, where it inherits nothing from the
+  // keyboard, so the grid carries the declaration itself.
+  assert.ok(getOptions().length > 0, "the popup opened with options");
+  assert.strictEqual(getPopup()?.getAttribute("lang"), "ar", "option grid is lang='ar'");
+
+  release(kb, key);
+  cleanup(kb, input);
+});
+
+QUnit.test("the popup declares no language for keycaps in the UI language", async (assert) => {
+  const rows: LayoutDefinition = [[{ value: "a", variants: ["ä", "à"] }]];
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    instanceLayouts: { "latin-spike": rows },
+    layout: "latin-spike",
+  });
+  await placeAndWait(kb);
+  input.focus();
+
+  const key = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, key);
+
+  assert.ok(getOptions().length > 0, "the popup opened with options");
+  assert.strictEqual(getPopup()?.getAttribute("lang"), null, "Latin variants stay in the UI language");
+
+  release(kb, key);
+  cleanup(kb, input);
+});

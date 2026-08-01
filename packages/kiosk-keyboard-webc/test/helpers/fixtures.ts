@@ -1,7 +1,7 @@
 import { fixture, html } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-import type { LayoutDefinition } from "../../src/types.js";
+import type { LayoutInput } from "../../src/types.js";
 
 const DOM = KioskKeyboard.DOM;
 
@@ -21,9 +21,7 @@ export function requireKey(el: KioskKeyboard, value: string): HTMLElement {
  * Renders a keyboard with a per-instance layout (registered as "spike") and
  * a sibling input wired as the target via setTargetElement.
  */
-export async function setupWithLayout(
-  layout: LayoutDefinition,
-): Promise<{ kb: KioskKeyboard; input: HTMLInputElement }> {
+export async function setupWithLayout(layout: LayoutInput): Promise<{ kb: KioskKeyboard; input: HTMLInputElement }> {
   const container = await fixture(html`
     <div>
       <input id="helper-target" type="text" />

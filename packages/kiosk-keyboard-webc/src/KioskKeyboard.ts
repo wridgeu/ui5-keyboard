@@ -19,7 +19,6 @@ import { ShiftState } from "./core/shift-state.js";
 import { resolveWithCustomResolver, KEY_ID_SUFFIX_RE } from "./core/dom-utils.js";
 import { insertText, handleBackspace } from "./core/input-operations.js";
 import {
-  SECONDARY_LAYOUTS,
   getLayoutOrDefault,
   getLocaleLayout,
   getRegisteredLayout,
@@ -27,6 +26,7 @@ import {
   isBuiltInLayout,
   resolveLayoutName,
 } from "./core/layout-registry.js";
+import { getLayoutLang, isSecondaryLayout, type LayoutMeta } from "./core/layout-meta.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
 import {
   applyVariantDefaults,
@@ -55,6 +55,8 @@ import {
   FKeyMode,
   type CompositionMiddleware,
   type LayoutDefinition,
+  type LayoutInput,
+  type LayoutSpec,
   type KeyDefinition,
   type KeyPressEventDetail,
   type LayoutChangeEventDetail,
@@ -258,6 +260,50 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
+   * Build one layout out of several sources, for composing a custom layout from
+   * shared rows and a built-in.
+   *
+   * Each source contributes its rows in order: a string names a built-in layout,
+   * anything else is rows supplied directly. An unregistered name contributes
+   * nothing and warns, so a typo yields a short layout rather than throwing
+   * part-way through composition.
+   *
+   * @param sources Layout names and row arrays, in the order they should appear.
+   * @returns The composed rows, ready to use as an `instanceLayouts` entry.
+   *
+   * @example A navigation row above the built-in German layout
+   * ```ts
+   * import navRow from "kiosk-keyboard-webc/layouts/nav-row";
+   *
+   * keyboard.instanceLayouts = {
+   *   "nav-qwertz": KioskKeyboard.composeLayout([navRow], "qwertz-de"),
+   * };
+   * keyboard.layout = "nav-qwertz";
+   * ```
+   *
+   * @public
+   * @since 0.1.0
+   */
+  static composeLayout(...sources: (string | LayoutDefinition)[]): LayoutDefinition {
+    const rows: LayoutDefinition = [];
+    for (const source of sources) {
+      if (typeof source !== "string") {
+        rows.push(...source);
+        continue;
+      }
+      const registered = getRegisteredLayout(source);
+      if (!registered) {
+        console.warn(
+          `[kiosk-keyboard] composeLayout: layout "${source}" is not a built-in layout and contributed no rows.`,
+        );
+        continue;
+      }
+      rows.push(...registered);
+    }
+    return rows;
+  }
+
+  /**
    * Check whether a layout name belongs to a built-in layout.
    * @param name Layout name.
    * @returns True if the layout is built-in.
@@ -277,7 +323,7 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   static isSecondaryLayout(name: string): boolean {
-    return SECONDARY_LAYOUTS.has(name);
+    return isSecondaryLayout(name);
   }
 
   /**
@@ -473,6 +519,10 @@ class KioskKeyboard extends UI5Element {
    * supply a custom layout, or to override a built-in (e.g. swap
    * the German layout) without affecting other elements.
    *
+   * Each entry is either the layout's rows, or a `LayoutSpec`
+   * (`{ rows, lang, secondary }`) declaring the layout's attributes
+   * alongside them.
+   *
    * Programmatic only: this property accepts a JS object (not a
    * stringifiable attribute), so it cannot be set via HTML markup.
    *
@@ -484,7 +534,7 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   @property({ type: Object })
-  instanceLayouts: Record<string, LayoutDefinition> | null = null;
+  instanceLayouts: Record<string, LayoutInput> | null = null;
 
   /**
    * Per-instance locale-to-layout overrides. Resolution order is
@@ -1180,6 +1230,18 @@ class KioskKeyboard extends UI5Element {
    * composition-middleware resolution (_ensureMiddleware) all read this name, so
    * none of them can key off a layout other than the one rendered.
    */
+  /**
+   * The BCP-47 language of the active layout's keycaps, or `undefined` when they
+   * are in the UI language. The template puts it on the labels that carry the
+   * layout's script so assistive tech announces them with that language's
+   * pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts).
+   *
+   * @internal Read by the template and the variant popup state.
+   */
+  _getLayoutLang(): string | undefined {
+    return getLayoutLang(this._resolvedLayoutName(), this._layoutMetaView.get(this.instanceLayouts));
+  }
+
   private _resolvedLayoutName(): string {
     const requested =
       this._layoutSource === "user"
@@ -1233,15 +1295,23 @@ class KioskKeyboard extends UI5Element {
   // assign a new object (the standard React/Lit pattern) rather than
   // mutating in place. Validators warn on (and skip) invalid entries.
 
-  private readonly _layoutsView = new MemoMapView<LayoutDefinition>((name, def) => {
-    if (!KioskKeyboard._isValidLayoutDefinition(def)) {
+  private readonly _layoutsView = new MemoMapView<LayoutDefinition>((name, entry) => {
+    const spec = KioskKeyboard._readLayoutInput(entry);
+    if (!spec) {
       console.warn(
-        `[kiosk-keyboard] Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
+        `[kiosk-keyboard] Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value", or an object with such an array as "rows".`,
       );
       return undefined;
     }
-    return def;
+    return spec.rows;
   });
+
+  // Second view over the same `instanceLayouts` source, holding the attributes the
+  // descriptor entries declare. Silent: `_layoutsView` owns the rejection warning,
+  // so an invalid entry is reported once rather than once per view.
+  private readonly _layoutMetaView = new MemoMapView<LayoutMeta>(
+    (_name, entry) => KioskKeyboard._readLayoutInput(entry)?.meta,
+  );
 
   private readonly _localeLayoutsView = new MemoMapView<string>((_name, layout) =>
     typeof layout === "string" ? layout.trim().toLowerCase() : undefined,
@@ -1260,6 +1330,26 @@ class KioskKeyboard extends UI5Element {
     );
     return undefined;
   });
+
+  /**
+   * Reads one `instanceLayouts` entry, in either accepted form, into its rows and
+   * the attributes it declares. Returns `undefined` when the entry is neither form.
+   *
+   * Undeclared and mistyped attributes are simply absent from the result rather
+   * than rejecting the layout or overwriting with `undefined`: the rows are the
+   * load-bearing part, and an absent attribute resolves to the built-in value.
+   */
+  private static _readLayoutInput(entry: unknown): { rows: LayoutDefinition; meta: LayoutMeta } | undefined {
+    // Anything that is not a valid row array is read as a descriptor; the `rows`
+    // check below rejects the shapes that are neither, including a bad array.
+    const spec = KioskKeyboard._isValidLayoutDefinition(entry) ? { rows: entry } : (entry as Partial<LayoutSpec>);
+    if (!spec || !KioskKeyboard._isValidLayoutDefinition(spec.rows)) return undefined;
+    const lang = typeof spec.lang === "string" ? spec.lang.trim() : "";
+    return {
+      rows: spec.rows,
+      meta: { ...(lang && { lang }), ...(spec.secondary === true && { secondary: true }) },
+    };
+  }
 
   private static _isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
     return (
@@ -1642,6 +1732,7 @@ class KioskKeyboard extends UI5Element {
       glyphs,
       activeIndex: 0,
       label,
+      lang: this._getLayoutLang(),
     };
   }
 
@@ -1680,7 +1771,7 @@ class KioskKeyboard extends UI5Element {
    * silently flip the constraint-override. Returns whether the layout changed.
    */
   private _applyLayout(currentLayout: string, source: "external" | "user"): boolean {
-    if (!SECONDARY_LAYOUTS.has(currentLayout)) {
+    if (!isSecondaryLayout(currentLayout, this._layoutMetaView.get(this.instanceLayouts))) {
       this._baseLayout = currentLayout;
     }
     const changed = currentLayout !== this._currentLayout;
@@ -1872,5 +1963,5 @@ KioskKeyboard.define();
 
 export default KioskKeyboard;
 
-export type { CompositionMiddleware } from "./types.js";
+export type { CompositionMiddleware, LayoutInput, LayoutSpec } from "./types.js";
 export type { VariantTable } from "./core/latin-variants.js";
