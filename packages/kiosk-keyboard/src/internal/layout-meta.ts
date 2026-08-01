@@ -49,10 +49,8 @@ export const BUILTIN_LAYOUT_META: ReadonlyMap<string, LayoutMeta> = new Map<stri
   ["special", { secondary: true }],
   ["fkeys", { secondary: true }],
   ["nav", { secondary: true }],
-  // `ja-romaji` declares no `lang`: its keycaps are the Latin letters and JIS
-  // punctuation of the UI language, and only the text they compose is Japanese.
-  // The two fields are independent: a script with no Latin diacritics is not the
-  // same fact as keycaps in another language.
+  // No `lang`: the romaji keycaps are Latin letters and JIS punctuation, and only
+  // the text they compose is Japanese.
   ["ja-romaji", { variants: null }],
   ["ja-kana", { lang: "ja", variants: null }],
   ["arabic", { lang: "ar", variants: null }],
@@ -68,15 +66,11 @@ export const BUILTIN_LAYOUT_META: ReadonlyMap<string, LayoutMeta> = new Map<stri
 export type InstanceLayoutMeta = ReadonlyMap<string, LayoutMeta>;
 
 /**
- * The metadata in effect for `name`, per attribute: an instance layout declares the
- * attributes it cares about and the built-in of the same name supplies the rest. A
- * layout registered under a built-in name is understood as a replacement for that
- * layout rather than an unrelated one, so overriding `arabic` with different rows
- * keeps announcing them as Arabic until the descriptor says otherwise.
- *
- * That per-attribute fallback is also what makes the two `instanceLayouts` entry
- * forms agree: bare rows declare nothing, so they resolve exactly as before the
- * descriptor form existed.
+ * The metadata in effect for `name`, resolved per attribute: an instance layout
+ * declares the attributes it cares about and the built-in of the same name supplies
+ * the rest, so overriding `arabic` with different rows keeps announcing them as
+ * Arabic until the descriptor says otherwise. Bare rows declare nothing and so
+ * resolve to the built-in outright.
  *
  * `variants` is not resolved here. Instance layouts declare no variant tier; that
  * tier is `instanceVariants`, which layers over the built-in table by name.
@@ -84,7 +78,8 @@ export type InstanceLayoutMeta = ReadonlyMap<string, LayoutMeta>;
 function resolveLayoutMeta(name: string, instanceMeta?: InstanceLayoutMeta): LayoutMeta | undefined {
   const builtIn = BUILTIN_LAYOUT_META.get(name);
   const instance = instanceMeta?.get(name);
-  if (!instance || !builtIn) return instance ?? builtIn;
+  if (!instance) return builtIn;
+  if (!builtIn) return instance;
   return { ...builtIn, ...instance };
 }
 

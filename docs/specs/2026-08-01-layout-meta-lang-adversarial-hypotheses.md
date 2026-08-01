@@ -27,12 +27,21 @@ with a negative control on a layout or key type that must NOT carry the attribut
   Perturbation: delete the `rm.attr("lang", lang)` block from `renderKeyLabel`
   (`KioskKeyboardRenderer.ts`). **Expected red. Observed:** `KioskKeyboard-renderer-blackbox`
   31/35.
-- **H2 (the key-type exclusion is live).** Action, modifier and space labels come from
-  i18n and must stay in the UI language; a suite that only checks character keys would
-  not notice them being tagged. Perturbation: drop the
-  `key.type !== "action" && ...` guard so every label gets the attribute.
-  **Expected red. Observed:** `KioskKeyboard-renderer-blackbox` 31/35 (the four negative
-  controls, not the positives).
+- **H2 (the exclusion is live).** The action tokens and space take their label from i18n
+  and must stay in the UI language; a suite that only checks character keys would not
+  notice them being tagged. Perturbation: drop the guard so every label gets the
+  attribute. **Expected red. Observed:** `KioskKeyboard-renderer-blackbox` 31/35 (the
+  negative controls, not the positives).
+- **H8 (the exclusion keys on label provenance, not on the visual category).** The first
+  implementation excluded `key.type` of `action` / `modifier` / `space`. `type` is
+  documented as a visual style category (`types.ts`), so it says nothing about where a
+  label came from: ja-kana's dakuten and handakuten keys are typed `modifier` for their
+  weight yet carry no i18n label at all, so their keycaps are raw kana that silently lost
+  the declaration. The test for it must fail against the old rule, or it is not pinning
+  anything. Perturbation: restore the `key.type`-based predicate in the webc template.
+  **Expected red. Observed:** 1 failure, "declares the language on a modifier-typed key
+  whose keycap is kana". The shipped predicate is
+  `parseKeyAction(key.value).kind === "char" && key.value !== " "`.
 - **H3 (the per-attribute fallback is live).** `resolveLayoutMeta` merges the built-in
   under the instance entry; a whole-record replacement would silently drop a built-in's
   `lang` whenever a descriptor declared only `secondary`, and would make the bare-rows and

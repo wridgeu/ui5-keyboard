@@ -530,4 +530,17 @@ describe("icon + label rendering", () => {
     const liveRegion = el.shadowRoot!.querySelector<HTMLElement>(`.${DOM.classes.liveRegion}`)!;
     expect(liveRegion.hasAttribute("lang"), "the live region stays in the UI language").to.be.false;
   });
+
+  it("declares the language on a modifier-typed key whose keycap is kana", async () => {
+    const el = await createBuiltInKeyboard("ja-kana");
+
+    // The dakuten / handakuten keys are typed `modifier` for their visual weight,
+    // but they carry no i18n label: the keycap is the raw kana mark.
+    expect(queryKeyLabel(queryKey(el, "゛"))!.getAttribute("lang"), "dakuten").to.equal("ja");
+    expect(queryKeyLabel(queryKey(el, "゜"))!.getAttribute("lang"), "handakuten").to.equal("ja");
+
+    // A layout-switch key is a control affordance, so its label stays in the UI language.
+    const switchLabel = queryKeyLabel(queryKey(el, "{layout:ja-romaji}"))!;
+    expect(switchLabel.hasAttribute("lang"), "layout-switch key declares none").to.be.false;
+  });
 });

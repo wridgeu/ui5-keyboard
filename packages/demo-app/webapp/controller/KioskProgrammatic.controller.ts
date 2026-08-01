@@ -1,6 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
-import type { LayoutDefinition } from "ui5/kiosk/types";
+import type { LayoutDefinition, LayoutInput } from "ui5/kiosk/types";
 import { KeyboardType } from "ui5/kiosk/library";
 import MessageToast from "sap/m/MessageToast";
 import type { Select$ChangeEvent } from "sap/m/Select";
@@ -104,13 +104,7 @@ export default class KioskProgrammatic extends BaseController {
   onUseQwertyNav(): void {
     const kb = this._getKeyboard();
     if (!this._hasInstanceLayout(kb, "qwerty-nav")) {
-      const base = KioskKeyboard.getRegisteredLayout("qwerty");
-      if (!base) {
-        MessageToast.show("Base layout qwerty is unavailable");
-        return;
-      }
-      const qwertyNav: LayoutDefinition = [navRow, ...base];
-      this._addInstanceLayout(kb, "qwerty-nav", qwertyNav);
+      this._addInstanceLayout(kb, "qwerty-nav", KioskKeyboard.composeLayout([navRow], "qwerty"));
       this._addLayoutOption("qwerty-nav");
     }
 
@@ -142,13 +136,7 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   onRegisterQwertyFkNav(): void {
-    const base = KioskKeyboard.getRegisteredLayout("qwerty");
-    if (!base) {
-      MessageToast.show("Base layout qwerty is unavailable");
-      return;
-    }
-
-    const qwertyFkNav: LayoutDefinition = [fkeyRow, navRow, ...base];
+    const qwertyFkNav = KioskKeyboard.composeLayout([fkeyRow, navRow], "qwerty");
     this._addInstanceLayout(this._getKeyboard(), "qwerty-fk-nav-demo", qwertyFkNav);
     this._addLayoutOption("qwerty-fk-nav-demo");
 
@@ -184,12 +172,12 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   private _hasInstanceLayout(kb: KioskKeyboard, name: string): boolean {
-    const map = kb.getInstanceLayouts() as Record<string, LayoutDefinition> | null;
+    const map = kb.getInstanceLayouts() as Record<string, LayoutInput> | null;
     return map !== null && Object.hasOwn(map, name);
   }
 
-  private _addInstanceLayout(kb: KioskKeyboard, name: string, def: LayoutDefinition): void {
-    const current = (kb.getInstanceLayouts() as Record<string, LayoutDefinition> | null) ?? {};
+  private _addInstanceLayout(kb: KioskKeyboard, name: string, def: LayoutInput): void {
+    const current = (kb.getInstanceLayouts() as Record<string, LayoutInput> | null) ?? {};
     kb.setInstanceLayouts({ ...current, [name]: def });
   }
 

@@ -328,14 +328,14 @@ const KioskKeyboardRenderer = {
     rm.openStart("span").class(KIOSK_KEYBOARD_DOM.classes.keyLabel);
 
     // Language of the keycap, when the layout writes its keys in a script other
-    // than the UI language (WCAG 2.2 SC 3.1.2 Language of Parts). Scoped to the
-    // label span: the key's own `title` / `aria-label` and the keyboard's live
-    // region are UI-language text, so the declaration must not reach them.
-    // Action, modifier, and space keys are excluded for the same reason - their
-    // labels resolve through i18n, not from the layout's script. Multi-glyph
-    // labels carry the script too, so this sits outside the single-glyph branch.
+    // than the UI language (WCAG 2.2 SC 3.1.2 Language of Parts). Only a key that
+    // types a character carries it: space and the action tokens take their label
+    // from i18n, and a layout-switch key is a control affordance rather than keycap
+    // content. Scoped to the label span, since the keyboard's own label and its
+    // live region are UI-language text; multi-glyph labels carry the script too, so
+    // this sits outside the single-glyph branch.
     const lang = _getLayoutLang();
-    if (lang && key.type !== "action" && key.type !== "modifier" && key.type !== "space") {
+    if (lang && parseKeyAction(key.value).kind === "char" && key.value !== " ") {
       rm.attr("lang", lang);
     }
 
