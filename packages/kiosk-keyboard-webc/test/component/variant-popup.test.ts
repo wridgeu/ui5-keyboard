@@ -737,10 +737,6 @@ describe("kiosk-keyboard - accent-variant popup", () => {
       expect(box.right, `key '${key}' overflows the trailing edge`).to.be.at.most(rootBox.right + EDGE_EPSILON);
     }
 
-    // Without the floor the eight single-span keys land well under 24px, so at
-    // least one key resting exactly on it is what proves the floor is load
-    // bearing here. Drop this and the test passes on any layout that happens to
-    // be wide enough.
     // Prove the fixture actually exercises the floor rather than merely being
     // wide enough: drop the floor and the same row must fall under 24px. Without
     // this the test would keep passing on any layout that happens to fit.
