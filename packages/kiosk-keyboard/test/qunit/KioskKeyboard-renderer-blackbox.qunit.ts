@@ -774,3 +774,21 @@ QUnit.test("instanceLayouts descriptor lang lands on the character key labels", 
 
   kb.destroy();
 });
+
+QUnit.test("ja-kana: a modifier-typed key whose keycap is kana still declares the language", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "ja-kana" });
+  await placeAndWait(kb);
+
+  const labelOf = (value: string) =>
+    getRequiredKeyElement(kb, value).querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!;
+
+  // The dakuten / handakuten keys are typed `modifier` for their visual weight,
+  // but they carry no i18n label: the keycap is the raw kana mark.
+  assert.strictEqual(labelOf("゛").getAttribute("lang"), "ja", "dakuten keycap is lang='ja'");
+  assert.strictEqual(labelOf("゜").getAttribute("lang"), "ja", "handakuten keycap is lang='ja'");
+
+  // A layout-switch key is a control affordance, so its label stays in the UI language.
+  assert.strictEqual(labelOf("{layout:ja-romaji}").getAttribute("lang"), null, "layout-switch key declares none");
+
+  kb.destroy();
+});

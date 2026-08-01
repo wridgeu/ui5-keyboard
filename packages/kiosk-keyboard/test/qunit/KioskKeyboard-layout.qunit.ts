@@ -1446,3 +1446,68 @@ QUnit.test("Programmatic setLayout commits in-progress composition (no leak acro
   input.destroy();
   kb.destroy();
 });
+
+// ──────────────────────────────────────────────
+// Consumer-declared layout attributes (instanceLayouts descriptors)
+// ──────────────────────────────────────────────
+
+/** An auxiliary surface a consumer registers, reachable only through instanceLayouts. */
+const SYMBOL_SURFACE: LayoutDefinition = [
+  [{ value: "\u00A7" }, { value: "\u00B6" }, { value: "{layout:base}", label: "ABC", type: "modifier" }],
+];
+
+QUnit.test("a custom layout marked secondary is never tracked as the base", async (assert) => {
+  const kb = new KioskKeyboard({
+    instanceLayouts: { "my-symbols": { rows: SYMBOL_SURFACE, secondary: true } },
+    layout: "qwertz-de",
+  });
+  await placeAndWait(kb);
+  assert.strictEqual(kb.getBaseLayout(), "qwertz-de", "the alphabetic layout is the base to start with");
+
+  kb.setLayout("my-symbols");
+  await waitForRender();
+
+  assert.strictEqual(kb.getLayout(), "my-symbols", "the auxiliary surface is active");
+  assert.strictEqual(kb.getBaseLayout(), "qwertz-de", "it does not displace the base layout");
+
+  tapKey(kb, "{layout:base}");
+  await waitForRender();
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "{layout:base} returns to the alphabetic layout");
+
+  kb.destroy();
+});
+
+QUnit.test("without the secondary flag the same layout does become the base", async (assert) => {
+  // The negative control for the test above: bare rows declare no attributes, so
+  // the surface is read as an alphabetic layout and strands {layout:base} on itself.
+  const kb = new KioskKeyboard({
+    instanceLayouts: { "my-symbols": SYMBOL_SURFACE },
+    layout: "qwertz-de",
+  });
+  await placeAndWait(kb);
+
+  kb.setLayout("my-symbols");
+  await waitForRender();
+  assert.strictEqual(kb.getBaseLayout(), "my-symbols", "an undeclared layout is tracked as the base");
+
+  kb.resetLayout();
+  assert.strictEqual(kb.getLayout(), "my-symbols", "so there is no way back to the alphabetic layout");
+
+  kb.destroy();
+});
+
+QUnit.test("a descriptor shadowing a built-in keeps the attributes it does not declare", async (assert) => {
+  const kb = new KioskKeyboard({
+    instanceLayouts: { numeric: { rows: SYMBOL_SURFACE } },
+    layout: "qwertz-de",
+  });
+  await placeAndWait(kb);
+
+  kb.setLayout("numeric");
+  await waitForRender();
+
+  assert.strictEqual(kb.getLayout(), "numeric", "the shadowed name is active");
+  assert.strictEqual(kb.getBaseLayout(), "qwertz-de", "the built-in secondary flag still applies");
+
+  kb.destroy();
+});

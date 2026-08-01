@@ -362,6 +362,10 @@ export interface LayoutSpec {
    * Language of Parts). Omit when the keycaps are in the UI language, as Latin
    * keycaps are: declaring a language they are not written in mis-announces them and
    * pulls them into that script's font fallback.
+   *
+   * One exception to that advice: under a name that shadows a built-in layout,
+   * omitting this inherits the built-in's language rather than clearing it, so an
+   * entry that replaces `arabic` with Latin rows should name its own language.
    */
   lang?: string;
   /**

@@ -1161,7 +1161,7 @@ export default class KioskKeyboard extends Control {
   /**
    * Splits the `instanceLayouts` property into the two caches the lookup paths
    * read: the rows keyed by layout name, and the attributes declared by the
-   * descriptor entries. One pass, so a rejected entry warns once.
+   * descriptor entries. Both are built in one pass over the entries.
    */
   private _readInstanceLayouts(value: unknown): void {
     const rows: [string, LayoutDefinition][] = [];

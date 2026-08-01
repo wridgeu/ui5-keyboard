@@ -772,3 +772,72 @@ QUnit.test("setInstanceVariants after construction re-resolves on next render", 
   input.destroy();
   kb.destroy();
 });
+
+// ───────────────────────────────────────────────────
+// Layout composition and descriptor entries
+// ───────────────────────────────────────────────────
+
+QUnit.module("instance-overrides - composeLayout", { afterEach: commonAfterEach });
+
+QUnit.test("a string source contributes the named built-in's rows", (assert) => {
+  const numeric = KioskKeyboard.getRegisteredLayout("numeric")!;
+  assert.ok(numeric.length > 0, "the built-in has rows to contribute");
+  assert.deepEqual(KioskKeyboard.composeLayout("numeric"), [...numeric], "composed from the registry");
+});
+
+QUnit.test("sources are spliced in the order they are listed", (assert) => {
+  const extra = makeLayout("x");
+  const numeric = KioskKeyboard.getRegisteredLayout("numeric")!;
+  assert.deepEqual(KioskKeyboard.composeLayout(extra, "numeric"), [...extra, ...numeric], "rows first");
+  assert.deepEqual(KioskKeyboard.composeLayout("numeric", extra), [...numeric, ...extra], "built-in first");
+});
+
+QUnit.test("an unregistered name warns and contributes nothing", (assert) => {
+  const warn = sandbox.stub(Log, "warning");
+  const extra = makeLayout("x");
+
+  assert.deepEqual(KioskKeyboard.composeLayout(extra, "nope"), [...extra], "the other sources survive the typo");
+  assert.ok(warn.called, "the dropped source is logged");
+});
+
+QUnit.test("composing nothing yields an empty layout", (assert) => {
+  assert.deepEqual(KioskKeyboard.composeLayout(), [], "no sources, no rows");
+});
+
+QUnit.module("instance-overrides - layout descriptors", { afterEach: commonAfterEach });
+
+QUnit.test("a descriptor with mistyped attributes keeps its rows and warns about neither", async (assert) => {
+  const warn = sandbox.stub(Log, "warning");
+  const kb = new KioskKeyboard({
+    // A mistyped attribute degrades to the default; it must not cost the rows.
+    instanceLayouts: {
+      bogus: { rows: makeLayout("z"), lang: 42, secondary: "true" } as unknown as LayoutDefinition,
+    },
+    layout: "bogus",
+  });
+  await placeAndWait(kb);
+
+  assert.deepEqual(getRenderedLayoutKeys(kb), [["z"]], "the rows still render");
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "z").querySelector(`.${DOM.classes.keyLabel}`)?.getAttribute("lang"),
+    null,
+    "the mistyped language is dropped rather than emitted",
+  );
+  assert.notOk(warn.called, "a usable entry does not warn");
+
+  kb.destroy();
+});
+
+QUnit.test("an entry that is neither rows nor a descriptor is rejected once", async (assert) => {
+  const warn = sandbox.stub(Log, "warning");
+  const kb = new KioskKeyboard({
+    instanceLayouts: { bogus: { lang: "he" } as unknown as LayoutDefinition },
+    layout: "qwerty",
+  });
+  await placeAndWait(kb);
+
+  assert.ok(warn.called, "the unusable entry is logged");
+  assert.ok(String(warn.firstCall.args[0]).includes("bogus"), "the warning names the entry");
+
+  kb.destroy();
+});

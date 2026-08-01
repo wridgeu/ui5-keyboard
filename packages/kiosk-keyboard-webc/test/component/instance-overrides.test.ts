@@ -318,3 +318,80 @@ describe("kiosk-keyboard - instance overrides", () => {
     expect(aKey().hasAttribute(DOM.attributes.hasVariants), "built-in restored after clearing").to.equal(true);
   });
 });
+
+describe("layout attributes declared on an instanceLayouts entry", () => {
+  /** An auxiliary surface a consumer registers, reachable only through instanceLayouts. */
+  const symbolSurface: LayoutDefinition = [
+    [{ value: "§" }, { value: "{layout:base}", label: "ABC", type: "modifier" }],
+  ];
+
+  function tapKey(el: KioskKeyboard, value: string): void {
+    el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue(value))!.click();
+  }
+
+  it("does not track a layout marked secondary as the base", async () => {
+    const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwertz-de"></kiosk-keyboard>`);
+    el.instanceLayouts = { "my-symbols": { rows: symbolSurface, secondary: true } };
+    el.layout = "my-symbols";
+    await nextRender();
+
+    tapKey(el, "{layout:base}");
+    await nextRender();
+
+    expect(readDataKeys(el).flat(), "{layout:base} returns to the alphabetic layout").to.include("q");
+  });
+
+  it("does track the same layout as the base when it declares nothing", async () => {
+    // The negative control: bare rows declare no attributes, so the surface reads
+    // as an alphabetic layout and strands {layout:base} on itself.
+    const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwertz-de"></kiosk-keyboard>`);
+    el.instanceLayouts = { "my-symbols": symbolSurface };
+    el.layout = "my-symbols";
+    await nextRender();
+
+    tapKey(el, "{layout:base}");
+    await nextRender();
+
+    expect(readDataKeys(el).flat(), "there is no way back to the alphabetic layout").to.include("§");
+  });
+
+  it("keeps the built-in attributes a descriptor does not declare", async () => {
+    const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwertz-de"></kiosk-keyboard>`);
+    el.instanceLayouts = { numeric: { rows: symbolSurface } };
+    el.layout = "numeric";
+    await nextRender();
+
+    tapKey(el, "{layout:base}");
+    await nextRender();
+
+    expect(readDataKeys(el).flat(), "the built-in secondary flag still applies to the shadowed name").to.include("q");
+  });
+
+  it("keeps a layout whose declared attributes are the wrong type", async () => {
+    await withCapturedWarnings(async (messages) => {
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard></kiosk-keyboard>`);
+      // A mistyped attribute degrades to the default; it must not cost the rows.
+      el.instanceLayouts = {
+        bogus: { rows: layoutB, lang: 42, secondary: "true" } as unknown as LayoutDefinition,
+      };
+      el.layout = "bogus";
+      await nextRender();
+
+      expect(readDataKeys(el), "the rows still render").to.deep.equal([["two"]]);
+      const label = el.shadowRoot!.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!;
+      expect(label.hasAttribute("lang"), "the mistyped language is dropped").to.be.false;
+      expect(messages, "a usable entry does not warn").to.deep.equal([]);
+    });
+  });
+
+  it("rejects an entry that is neither rows nor a descriptor, warning once", async () => {
+    await withCapturedWarnings(async (messages) => {
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard></kiosk-keyboard>`);
+      el.instanceLayouts = { bogus: { lang: "he" } as unknown as LayoutDefinition };
+      await nextRender();
+
+      expect(messages.length, "warned exactly once for the one bad entry").to.equal(1);
+      expect(messages[0]).to.contain("bogus");
+    });
+  });
+});

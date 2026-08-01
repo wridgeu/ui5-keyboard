@@ -61,7 +61,12 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
               const id = keyElementId(this._componentId, rowIndex, colIndex);
               const isFocusTarget = rowIndex === focusPos.row && colIndex === focusPos.col;
               const isShift = key.value === "{shift}";
-              const isFkey = parseKeyAction(key.value).kind === "fkey";
+              const keyKind = parseKeyAction(key.value).kind;
+              const isFkey = keyKind === "fkey";
+              // Only a key that types a character carries the layout's script:
+              // space and the action tokens take their label from i18n, and a
+              // layout-switch key is a control affordance rather than keycap content.
+              const isKeycapContent = keyKind === "char" && key.value !== " ";
               const resolved = this._resolveKeyIcon(key);
               const label = this._getKeyLabel(key);
               const hasIcon = resolved !== null;
@@ -136,11 +141,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                         [KIOSK_KEYBOARD_DOM.classes.keyLabelMulti]: !isSingleGlyphLabel,
                       }}
                       data-glyph-script={glyphScript}
-                      lang={
-                        key.type === "action" || key.type === "modifier" || key.type === "space"
-                          ? undefined
-                          : layoutLang
-                      }
+                      lang={isKeycapContent ? layoutLang : undefined}
                       part="key-label"
                     >
                       {label}
