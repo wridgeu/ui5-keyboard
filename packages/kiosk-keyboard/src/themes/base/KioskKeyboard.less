@@ -769,18 +769,24 @@
 
   /* RTL support */
 
-  /* OpenUI5 signals RTL by setting `dir` on the document element (see
-     sap/ui/core/boot/initDOM.js); `sapUiRtl` is a configuration parameter name, not
-     a class the framework applies anywhere. */
-  html[dir="rtl"] .ui5KioskKeyboard {
+  /* `:dir()` resolves the element's own directionality, so it matches whether the
+     `dir` attribute sits on the document element (where OpenUI5 puts it, see
+     sap/ui/core/boot/initDOM.js) or on a container a host page scoped RTL to. That
+     is also how the control's JS decides RTL, and how UI5 Web Components define
+     `effectiveDir`, so the stylesheet and the key-grid navigation cannot disagree.
+     `sapUiRtl` is a configuration parameter name, not a class the framework
+     applies anywhere. */
+  .ui5KioskKeyboard:dir(rtl) {
     direction: rtl;
   }
 
   /* clip-path coordinates are physical and do not flip with `direction`, so the
      corner triangle is mirrored for RTL; inset-inline-end already carries the
      hint to the key's other top corner. less-openui5 mirrors physical properties
-     into library-RTL.css but leaves clip-path values untouched. */
-  html[dir="rtl"] .ui5KioskKey[data-has-variants]::after {
+     into library-RTL.css but leaves clip-path values untouched. Written at (0,3,0)
+     to outrank the base hint rule (0,2,0) on specificity rather than source
+     order. */
+  .ui5KioskKey[data-has-variants]:dir(rtl)::after {
     clip-path: polygon(0 0, 100% 0, 0 100%);
   }
 
