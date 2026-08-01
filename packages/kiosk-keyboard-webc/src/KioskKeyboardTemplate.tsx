@@ -16,6 +16,10 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
   const focusPos = this._getFocusPosition(layout);
   const kbType = this.keyboardType;
   const variantPopup = this._variantPopup;
+  // Language of the keycaps, when the layout writes its keys in a script other
+  // than the UI language (WCAG 2.2 SC 3.1.2 Language of Parts). Resolved once per
+  // render and applied per label span below, never to the root or the live region.
+  const layoutLang = this._getLayoutLang();
 
   return (
     <>
@@ -132,6 +136,11 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                         [KIOSK_KEYBOARD_DOM.classes.keyLabelMulti]: !isSingleGlyphLabel,
                       }}
                       data-glyph-script={glyphScript}
+                      lang={
+                        key.type === "action" || key.type === "modifier" || key.type === "space"
+                          ? undefined
+                          : layoutLang
+                      }
                       part="key-label"
                     >
                       {label}
@@ -159,6 +168,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             class={KIOSK_KEYBOARD_DOM.classes.variantPopup}
             part="variant-popup"
             role="toolbar"
+            lang={variantPopup.lang}
             style={`--kiosk-keyboard-variant-option-width: ${variantPopup.anchorKeyWidth}px`}
             onClick={this._boundOnVariantClick}
             onKeyDown={this._boundOnVariantKeyDown}

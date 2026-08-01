@@ -40,6 +40,7 @@ Use these imports for application code:
 Customization is per control via the `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` properties, assigned directly on the control. The static surface is read-only:
 
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
+- `composeLayout` - splices built-in layouts (by name) and row arrays into one layout, for `instanceLayouts` entries
 - `getLocaleLayout`
 - `setI18nResolver`
 
@@ -67,11 +68,12 @@ Stable exports from the bundle entry:
 
 - `KioskKeyboard` class (custom element, tag `<kiosk-keyboard>`)
 - Enum exports: `FKeyMode`, `KeyboardType`, `MobileKeyboard`
-- Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
+- Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `LayoutSpec`, `LayoutInput`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
 
 Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` properties, assigned directly on the element. The static surface is read-only:
 
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
+- `composeLayout` - splices built-in layouts (by name) and row arrays into one layout, for `instanceLayouts` entries
 - `getLocaleLayout`
 - `setI18nResolver`
 
@@ -96,7 +98,7 @@ For `ui5.kiosk`, `layouts/*` and `middleware/*` are stable consumer imports (lis
 
 ### `kiosk-keyboard-webc`
 
-Modules under `core/*` (`shift-state`, `dom-utils`, `dom-contract`, `input-operations`, `keyboard-type-detector`, `layout-registry`, `middleware-registry`, `composition-utils`, `grapheme`, `i18n`) are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation.
+Modules under `core/*` (`shift-state`, `dom-utils`, `dom-contract`, `input-operations`, `keyboard-type-detector`, `layout-registry`, `layout-meta`, `middleware-registry`, `composition-utils`, `grapheme`, `i18n`) are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation.
 
 For `kiosk-keyboard-webc`, `layouts/*` and `middleware/*` are stable consumer imports (listed under Stable Consumer API above); the internal composition helpers `layouts/symbol-common` and `layouts/default-layout` are not part of the stable surface.
 

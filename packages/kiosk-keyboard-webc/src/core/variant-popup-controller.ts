@@ -16,6 +16,12 @@ export interface VariantPopupState {
   glyphs: string[];
   activeIndex: number;
   label: string;
+  /**
+   * BCP-47 language of the option glyphs, or `undefined` when the layout writes
+   * its keycaps in the UI language. The popup is a sibling of the keyboard root
+   * rather than a descendant, so it inherits no `lang` and declares its own.
+   */
+  lang?: string;
 }
 
 /** The slice of the host element the controller reads/drives at event time. */

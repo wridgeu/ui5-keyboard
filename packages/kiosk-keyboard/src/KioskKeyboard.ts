@@ -4,8 +4,13 @@ import type { MetadataOptions } from "sap/ui/core/Element";
 import syncStyleClass from "sap/ui/core/syncStyleClass";
 import Popover from "sap/m/Popover";
 import { PlacementType } from "sap/m/library";
-import { SECONDARY_LAYOUTS } from "./internal/types";
-import type { LayoutDefinition, CompositionMiddleware } from "./types";
+import {
+  getLayoutLang as metaGetLayoutLang,
+  isSecondaryLayout as metaIsSecondaryLayout,
+  type InstanceLayoutMeta,
+  type LayoutMeta,
+} from "./internal/layout-meta";
+import type { LayoutDefinition, LayoutInput, LayoutSpec, CompositionMiddleware } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
@@ -146,6 +151,8 @@ export default class KioskKeyboard extends Control {
   private _targetResolverInstance!: TargetResolverFn | null;
   /** Per-instance layout overrides, derived from the `instanceLayouts` property. */
   private _instanceLayoutsMap!: InstanceLayouts | undefined;
+  /** Per-instance layout attributes, derived from the descriptor entries of `instanceLayouts`. */
+  private _instanceLayoutMetaMap!: InstanceLayoutMeta | undefined;
   /** Per-instance locale-to-layout overrides, derived from the `instanceLocaleLayouts` property. */
   private _instanceLocaleLayoutsMap!: InstanceLocaleLayouts | undefined;
   /** Per-instance middleware factory overrides, derived from the `instanceMiddleware` property. */
@@ -377,8 +384,10 @@ export default class KioskKeyboard extends Control {
        * built-in of the same name for this control only. Use this to
        * supply a custom layout, or to override a built-in (e.g. swap
        * the German layout) without affecting other controls. Accepts
-       * a plain `Record<string, LayoutDefinition>`; the control stores
-       * it as a `Map` internally.
+       * a plain `Record<string, LayoutInput>`: each entry is either the
+       * layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`)
+       * declaring the layout's attributes alongside them. The control
+       * stores the rows and the attributes as `Map`s internally.
        *
        * Read by object identity: assign a new object to change the layouts.
        * Mutating the object already assigned is not observed until the next
@@ -641,6 +650,53 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Build one layout out of several sources, for composing a custom layout from
+   * shared rows and a built-in.
+   *
+   * Each source contributes its rows in order: a string names a built-in layout,
+   * anything else is rows supplied directly. An unregistered name contributes
+   * nothing and warns, so a typo yields a short layout rather than throwing
+   * part-way through composition.
+   *
+   * @param aSources Layout names and row arrays, in the order they should appear.
+   * @returns The composed rows, ready to use as an `instanceLayouts` entry.
+   *
+   * @example <caption>A navigation row above the built-in German layout</caption>
+   * ```ts
+   * import navRow from "ui5/kiosk/layouts/nav-row";
+   *
+   * new KioskKeyboard({
+   *   layout: "nav-qwertz",
+   *   instanceLayouts: { "nav-qwertz": KioskKeyboard.composeLayout([navRow], "qwertz-de") },
+   * });
+   * ```
+   *
+   * @public
+   * @static
+   * @since 0.1.0
+   */
+  static composeLayout(...aSources: (string | LayoutDefinition)[]): LayoutDefinition {
+    const rows: LayoutDefinition = [];
+    for (const source of aSources) {
+      if (typeof source !== "string") {
+        rows.push(...source);
+        continue;
+      }
+      const registered = registryGetLayout(source);
+      if (!registered) {
+        Log.warning(
+          `composeLayout: layout "${source}" is not a built-in layout and contributed no rows.`,
+          undefined,
+          "ui5.kiosk.KioskKeyboard",
+        );
+        continue;
+      }
+      rows.push(...registered);
+    }
+    return rows;
+  }
+
+  /**
    * Check whether a layout name belongs to a built-in layout.
    *
    * @param sName Layout identifier.
@@ -660,13 +716,18 @@ export default class KioskKeyboard extends Control {
    * become the base layout - the keyboard tracks the last non-secondary
    * layout as the base and returns to it when `{layout:base}` is pressed.
    *
+   * Reports on the built-ins only, like every static inspector here. A layout
+   * marked `secondary` through an `instanceLayouts` descriptor is scoped to the
+   * control that declared it, which this static takes no reference to; the
+   * keyboard itself honors it.
+   *
    * @param sName Layout identifier.
    * @public
    * @static
    * @since 0.1.0
    */
   static isSecondaryLayout(sName: string): boolean {
-    return SECONDARY_LAYOUTS.has(sName);
+    return metaIsSecondaryLayout(sName);
   }
 
   /**
@@ -734,7 +795,7 @@ export default class KioskKeyboard extends Control {
     // Pre-populate the internal Map caches before super.applySettings
     // runs so layout validation in setLayout() can honor instance
     // overrides regardless of property iteration order.
-    this._instanceLayoutsMap = KioskKeyboard._toLayoutMap(mSettings?.instanceLayouts);
+    this._readInstanceLayouts(mSettings?.instanceLayouts);
     this._instanceLocaleLayoutsMap = KioskKeyboard._toStringMap(mSettings?.instanceLocaleLayouts);
     this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(mSettings?.instanceMiddleware);
     // Spread before super so callers' settings object is never mutated;
@@ -786,6 +847,7 @@ export default class KioskKeyboard extends Control {
       announceDismiss: () => {
         this._announceLiveRegion(getText("ARIA_VARIANTS_CLOSED", "Variants closed"));
       },
+      getLayoutLang: () => this._getLayoutLang(),
       getVariantPopover: () => this._getVariantPopover(),
     });
     this._keyboardTypeSource = "unset";
@@ -803,6 +865,7 @@ export default class KioskKeyboard extends Control {
     );
     this._targetResolverInstance = null;
     this._instanceLayoutsMap = undefined;
+    this._instanceLayoutMetaMap = undefined;
     this._instanceLocaleLayoutsMap = undefined;
     this._instanceMiddlewareMap = undefined;
     this._instanceVariantsMap = undefined;
@@ -1025,7 +1088,7 @@ export default class KioskKeyboard extends Control {
    * so a no-op re-selection can't silently flip the constraint-override.
    */
   private _applyLayout(name: string, source: "external" | "user"): boolean {
-    if (!SECONDARY_LAYOUTS.has(name)) {
+    if (!metaIsSecondaryLayout(name, this._instanceLayoutMetaMap)) {
       this._baseLayout = name;
     }
     const changed = name !== this.getLayout();
@@ -1059,8 +1122,8 @@ export default class KioskKeyboard extends Control {
    * cache in sync with the property value so callers do not pay the
    * `Object.entries` cost on every render.
    */
-  setInstanceLayouts(value: Record<string, LayoutDefinition> | null): this {
-    this._instanceLayoutsMap = KioskKeyboard._toLayoutMap(value);
+  setInstanceLayouts(value: Record<string, LayoutInput> | null): this {
+    this._readInstanceLayouts(value);
     return this.setProperty("instanceLayouts", value) as this;
   }
 
@@ -1095,25 +1158,55 @@ export default class KioskKeyboard extends Control {
     return this.setProperty("instanceVariants", value) as this;
   }
 
-  private static _toLayoutMap(value: unknown): InstanceLayouts | undefined {
-    if (!value || typeof value !== "object") return undefined;
-    const entries: [string, LayoutDefinition][] = [];
-    for (const [name, def] of Object.entries(value as Record<string, unknown>)) {
-      if (!KioskKeyboard._isValidLayoutDefinition(def)) {
-        Log.warning(
-          `Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value".`,
-          undefined,
-          "ui5.kiosk.KioskKeyboard",
-        );
-        continue;
+  /**
+   * Splits the `instanceLayouts` property into the two caches the lookup paths
+   * read: the rows keyed by layout name, and the attributes declared by the
+   * descriptor entries. One pass, so a rejected entry warns once.
+   */
+  private _readInstanceLayouts(value: unknown): void {
+    const rows: [string, LayoutDefinition][] = [];
+    const meta: [string, LayoutMeta][] = [];
+    if (value && typeof value === "object") {
+      for (const [name, entry] of Object.entries(value as Record<string, unknown>)) {
+        const spec = KioskKeyboard._readLayoutInput(entry);
+        if (!spec) {
+          Log.warning(
+            `Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value", or an object with such an array as "rows".`,
+            undefined,
+            "ui5.kiosk.KioskKeyboard",
+          );
+          continue;
+        }
+        // Lookup paths normalize names via trim+lowercase; mirror that at
+        // storage so mixed-case keys do not silently fall through.
+        const key = name.trim().toLowerCase();
+        if (!key) continue;
+        rows.push([key, spec.rows]);
+        meta.push([key, spec.meta]);
       }
-      // Lookup paths normalize names via trim+lowercase; mirror that at
-      // storage so mixed-case keys do not silently fall through.
-      const key = name.trim().toLowerCase();
-      if (!key) continue;
-      entries.push([key, def]);
     }
-    return entries.length === 0 ? undefined : new Map(entries);
+    this._instanceLayoutsMap = rows.length === 0 ? undefined : new Map(rows);
+    this._instanceLayoutMetaMap = meta.length === 0 ? undefined : new Map(meta);
+  }
+
+  /**
+   * Reads one `instanceLayouts` entry, in either accepted form, into its rows and
+   * the attributes it declares. Returns `undefined` when the entry is neither form.
+   *
+   * Undeclared and mistyped attributes are simply absent from the result rather
+   * than rejecting the layout or overwriting with `undefined`: the rows are the
+   * load-bearing part, and an absent attribute resolves to the built-in value.
+   */
+  private static _readLayoutInput(entry: unknown): { rows: LayoutDefinition; meta: LayoutMeta } | undefined {
+    // Anything that is not a valid row array is read as a descriptor; the `rows`
+    // check below rejects the shapes that are neither, including a bad array.
+    const spec = KioskKeyboard._isValidLayoutDefinition(entry) ? { rows: entry } : (entry as Partial<LayoutSpec>);
+    if (!spec || !KioskKeyboard._isValidLayoutDefinition(spec.rows)) return undefined;
+    const lang = typeof spec.lang === "string" ? spec.lang.trim() : "";
+    return {
+      rows: spec.rows,
+      meta: { ...(lang && { lang }), ...(spec.secondary === true && { secondary: true }) },
+    };
   }
 
   private static _isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
@@ -1737,7 +1830,7 @@ export default class KioskKeyboard extends Control {
   /**
    * Returns the internal renderer API object.
    *
-   * Exposes the five private helpers the renderer needs, without an unsafe
+   * Exposes the six private helpers the renderer needs, without an unsafe
    * `as unknown as` cast. TypeScript structurally checks the returned object
    * literal against {@link RendererInternalApi} - if any method is renamed or
    * its signature changes, this line produces a compile error.
@@ -1752,6 +1845,7 @@ export default class KioskKeyboard extends Control {
         _isShiftActive: () => this._isShiftActive(),
         _isCapsLock: () => this._isCapsLock(),
         _getResolvedLayout: () => this._getResolvedLayout(),
+        _getLayoutLang: () => this._getLayoutLang(),
         _getKeyLabel: (key) => getKeyLabel(key, this._isShiftActive(), this._isCapsLock()),
         _getKeyAriaLabel: (key) => getKeyAriaLabel(key, this._isShiftActive(), this._isCapsLock()),
       };
@@ -1785,6 +1879,16 @@ export default class KioskKeyboard extends Control {
         ? this.getLayout()
         : (constrainedLayoutName(this.getKeyboardType()) ?? this.getLayout());
     return registryResolveLayoutName(requested, this._instanceLayoutsMap);
+  }
+
+  /**
+   * The BCP-47 language of the active layout's keycaps, or `undefined` when they
+   * are in the UI language. The renderer puts it on the labels that carry the
+   * layout's script so assistive tech announces them with that language's
+   * pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts).
+   */
+  private _getLayoutLang(): string | undefined {
+    return metaGetLayoutLang(this._resolvedLayoutName(), this._instanceLayoutMetaMap);
   }
 
   /** Resolve the effective layout used by the renderer. */

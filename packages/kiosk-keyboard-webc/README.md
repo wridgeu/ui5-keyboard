@@ -296,7 +296,7 @@ Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operati
 | `mobile-keyboard`     | `mobileKeyboard`        | `string`                                              | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                                                                                                                                                                                                                             |
 | `f-key-mode`          | `fKeyMode`              | `string`                                              | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                                                                                                                                                                                            |
 | `accent-variants`     | `accentVariants`        | `boolean`                                             | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The four non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts).                             |
-| _(programmatic only)_ | `instanceLayouts`       | `Record<string, LayoutDefinition> \| null`            | `null`      | Per-instance layout overrides; shadow the built-in registry. See [Per-Instance Customization](#per-instance-customization).                                                                                                                                                                 |
+| _(programmatic only)_ | `instanceLayouts`       | `Record<string, LayoutInput> \| null`                 | `null`      | Per-instance layout overrides; shadow the built-in registry. Each entry is the layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`) declaring its attributes too. See [Per-Instance Customization](#per-instance-customization).                                                  |
 | _(programmatic only)_ | `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the built-in locale map.                                                                                                                                                                                                                     |
 | _(programmatic only)_ | `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                                                                                                                                                                                         |
 | _(programmatic only)_ | `instanceVariants`      | `Record<string, VariantTable \| null> \| null`        | `null`      | Per-instance accent-variant tables keyed by layout name (or `"*"`). Effective only with `accent-variants`. The entry, else the `"*"` wildcard, is merged onto the built-in table per base letter; a `null` entry opts a layout out. See [Accent variants](#accent-variants-german-umlauts). |
@@ -616,13 +616,27 @@ compositions consumers can build:
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
-const qwerty = KioskKeyboard.getRegisteredLayout("qwerty")!;
-
 const el = document.createElement("kiosk-keyboard");
-el.instanceLayouts = { "my-qwerty-fk": [fkeyRow, ...qwerty] };
+el.instanceLayouts = { "my-qwerty-fk": KioskKeyboard.composeLayout([fkeyRow], "qwerty") };
 el.layout = "my-qwerty-fk";
 document.body.appendChild(el);
 ```
+
+`composeLayout` splices its sources in order: a string names a built-in layout and contributes its rows, anything else contributes rows directly.
+
+An entry can also declare the layout's own attributes instead of just its rows, which is how a custom layout marks itself an auxiliary surface or states the language of its keycaps:
+
+```ts
+el.instanceLayouts = {
+  "ar-symbols": {
+    rows: KioskKeyboard.composeLayout([symbolRow], "arabic"),
+    lang: "ar",
+    secondary: true,
+  },
+};
+```
+
+An attribute the descriptor leaves out falls back to the built-in layout of the same name, so overriding a built-in keeps its attributes until the descriptor says otherwise.
 
 ## Composition Middleware
 
@@ -766,6 +780,7 @@ This behavior is driven by a CSS `@container` query on individual keys (`contain
 - **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
 - **Icons** always have `aria-hidden="true"`. They are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.
 - **Accent-variant keys.** A key carrying variants advertises them with `aria-haspopup="dialog"`. Keyboard users open the popup with the context-menu gesture (the Menu key, or Shift+F10) on the focused key, arrow/Home/End to choose, Enter or Space to insert, and Escape to dismiss and return focus to the key. The key carries no `aria-expanded`: its own Enter/Space types the base character rather than toggling the popup.
+- **Language of keycaps.** Keycaps written in a script other than the UI language carry a `lang` attribute on their label, so a screen reader announces them with that language's pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts). The built-in `arabic`, `ja-kana` and `ko-hangul` layouts declare `ar` / `ja` / `ko`; `ja-romaji` declares none, because its keycaps are Latin letters and JIS punctuation and only the text they compose is Japanese. The attribute sits on the key label alone: a key's `aria-label` and `title`, the keyboard's own label, and the live region are all UI-language text. Action, modifier, and space keys are excluded for the same reason, since their labels come from i18n. A custom layout declares its own with the `lang` field of an `instanceLayouts` descriptor.
 - **Target size.** Keys hold a 24x24 CSS px floor on both axes, meeting the WCAG 2.5.8 minimum touch target size, and grow with the root font size. The inline half is lifted below a 20rem-wide keyboard, where the densest rows cannot fit a full set of floored keys: keys shrink to fit there so that every key stays reachable rather than being clipped off the edge of a center-justified row. Below that width the 24x24 minimum is therefore not met. The block half holds at every width, so a `--kiosk-keyboard-key-height` set below 24px is raised to it, and a keyboard in a height-capped container clips rather than shrinking past the floor.
 
 ### Built-in icons

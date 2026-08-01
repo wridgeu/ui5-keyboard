@@ -154,8 +154,10 @@ declare module "./KioskKeyboard" {
         built-in of the same name for this control only. Use this to
         supply a custom layout, or to override a built-in (e.g. swap
         the German layout) without affecting other controls. Accepts
-        a plain `Record<string, LayoutDefinition>`; the control stores
-        it as a `Map` internally.
+        a plain `Record<string, LayoutInput>`: each entry is either the
+        layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`)
+        declaring the layout's attributes alongside them. The control
+        stores the rows and the attributes as `Map`s internally.
         
         Read by object identity: assign a new object to change the layouts.
         Mutating the object already assigned is not observed until the next
@@ -683,8 +685,10 @@ declare module "./KioskKeyboard" {
         built-in of the same name for this control only. Use this to
         supply a custom layout, or to override a built-in (e.g. swap
         the German layout) without affecting other controls. Accepts
-        a plain `Record<string, LayoutDefinition>`; the control stores
-        it as a `Map` internally.
+        a plain `Record<string, LayoutInput>`: each entry is either the
+        layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`)
+        declaring the layout's attributes alongside them. The control
+        stores the rows and the attributes as `Map`s internally.
         
         Read by object identity: assign a new object to change the layouts.
         Mutating the object already assigned is not observed until the next
@@ -704,8 +708,10 @@ declare module "./KioskKeyboard" {
         built-in of the same name for this control only. Use this to
         supply a custom layout, or to override a built-in (e.g. swap
         the German layout) without affecting other controls. Accepts
-        a plain `Record<string, LayoutDefinition>`; the control stores
-        it as a `Map` internally.
+        a plain `Record<string, LayoutInput>`: each entry is either the
+        layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`)
+        declaring the layout's attributes alongside them. The control
+        stores the rows and the attributes as `Map`s internally.
         
         Read by object identity: assign a new object to change the layouts.
         Mutating the object already assigned is not observed until the next

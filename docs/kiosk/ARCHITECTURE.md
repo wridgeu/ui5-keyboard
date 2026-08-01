@@ -281,7 +281,7 @@ The locale → layout map is extensible per control via the `instanceLocaleLayou
 
 ### Impact on \_baseLayout
 
-Works correctly: `setLayout("qwertz-de")` sets `_baseLayout = "qwertz-de"` (not in `SECONDARY_LAYOUTS`), so `{layout:base}` roundtrips back to it.
+Works correctly: `setLayout("qwertz-de")` sets `_baseLayout = "qwertz-de"` (not marked `secondary` in `internal/layout-meta.ts`), so `{layout:base}` roundtrips back to it. A layout registered through `instanceLayouts` can mark itself `secondary` in its descriptor and is then tracked the same way.
 
 ## Auto-Type Detection
 
@@ -560,10 +560,12 @@ packages/kiosk-keyboard/
     KioskKeyboardRenderer.ts  Renderer (apiVersion 4, flat DOM)
     library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode enums,
                                plus KeyName constants and the LATIN_DIACRITIC_VARIANTS / VariantTable re-exports
-    types.ts                  KeyDefinition, KeyRow, LayoutDefinition, I18nResolver
+    types.ts                  KeyDefinition, KeyRow, LayoutDefinition, LayoutSpec, LayoutInput, I18nResolver
     internal/layout-registry.ts  Layout registration and locale resolution
     internal/
-      types.ts                Internal contracts (TargetElement, SECONDARY_LAYOUTS)
+      types.ts                Internal contracts (TargetElement)
+      layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins,
+                               resolved per attribute against an instanceLayouts descriptor
       dom.ts                  DOM/key ID utilities + input resolver
       dom-contract.ts         Zero-dep CSS class / data attribute / selector contract
       i18n-registry.ts        i18n resolution: base bundle + optional I18nResolver callback

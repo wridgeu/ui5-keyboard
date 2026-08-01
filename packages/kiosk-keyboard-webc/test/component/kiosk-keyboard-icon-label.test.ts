@@ -25,6 +25,12 @@ async function createKeyboard(layout: LayoutDefinition): Promise<KioskKeyboard> 
   return el;
 }
 
+async function createBuiltInKeyboard(layout: string): Promise<KioskKeyboard> {
+  const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="${layout}"></kiosk-keyboard> `);
+  await nextRender();
+  return el;
+}
+
 describe("icon + label rendering", () => {
   // Permutation matrix
 
@@ -475,5 +481,53 @@ describe("icon + label rendering", () => {
       iconEl.scrollHeight,
       `the glyph is not cropped vertically (${iconEl.scrollHeight} > ${iconEl.clientHeight})`,
     ).to.be.at.most(iconEl.clientHeight + 1);
+  });
+
+  // Language of parts (WCAG 2.2 SC 3.1.2)
+
+  const layoutLangCases: { layout: string; lang: string; charKey: string }[] = [
+    { layout: "arabic", lang: "ar", charKey: "ا" },
+    { layout: "ja-kana", lang: "ja", charKey: "わ" },
+    { layout: "ko-hangul", lang: "ko", charKey: "ㅁ" },
+  ];
+
+  for (const { layout, lang, charKey } of layoutLangCases) {
+    it(`${layout} keycaps are labelled lang="${lang}", its command keys are not`, async () => {
+      const el = await createBuiltInKeyboard(layout);
+      expect(queryKeyLabel(queryKey(el, charKey))!.getAttribute("lang")).to.equal(lang);
+
+      // The command keys read in the UI language whatever script the keycaps are
+      // in, so their labels must not be pulled into the layout's language.
+      for (const value of ["{shift}", "{enter}", " "]) {
+        const labelEl = queryKeyLabel(queryKey(el, value))!;
+        expect(labelEl.hasAttribute("lang"), `"${value}" keeps the UI language`).to.be.false;
+      }
+    });
+  }
+
+  for (const layout of ["qwerty", "ja-romaji"]) {
+    it(`${layout} writes its keycaps in the UI language, so no label declares one`, async () => {
+      const el = await createBuiltInKeyboard(layout);
+      const labels = [...el.shadowRoot!.querySelectorAll<HTMLElement>(`.${DOM.classes.keyLabel}`)];
+      expect(labels.length, "labels rendered").to.be.above(0);
+      for (const labelEl of labels) {
+        expect(labelEl.hasAttribute("lang"), `"${labelEl.textContent}" carries no language`).to.be.false;
+      }
+    });
+  }
+
+  it("confines the layout language to the keycap labels", async () => {
+    const el = await createBuiltInKeyboard("arabic");
+    const keyEl = queryKey(el, "ا");
+    expect(queryKeyLabel(keyEl)!.getAttribute("lang")).to.equal("ar");
+
+    // Only the keycap text is in the layout's language: a key carries an English
+    // aria-label, the group carries an English name, and the live region
+    // announces in the UI language.
+    expect(keyEl.hasAttribute("lang"), "the key element stays in the UI language").to.be.false;
+    const root = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.root)!;
+    expect(root.hasAttribute("lang"), "the keyboard group stays in the UI language").to.be.false;
+    const liveRegion = el.shadowRoot!.querySelector<HTMLElement>(`.${DOM.classes.liveRegion}`)!;
+    expect(liveRegion.hasAttribute("lang"), "the live region stays in the UI language").to.be.false;
   });
 });

@@ -360,7 +360,7 @@ The `Record` shapes in the property table are the shapes the control validates a
 | `fKeyMode`              | `ui5.kiosk.FKeyMode`                                  | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`), `Native` (dispatch synthetic keydown + native actions), `None` (event only, no native action).                                                                                                                                                |
 | `accentVariants`        | `boolean`                                             | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The four non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts).                            |
 | `controls`              | `string[]`                                            | `[]`        | Input control IDs for targeting. Supports single or multiple inputs. See [controls](#controls).                                                                                                                                                                                            |
-| `instanceLayouts`       | `Record<string, LayoutDefinition> \| null`            | `null`      | Per-instance layout overrides. Resolution order is **instance map → built-in**. See [Per-Instance Customization](#per-instance-customization).                                                                                                                                             |
+| `instanceLayouts`       | `Record<string, LayoutInput> \| null`                 | `null`      | Per-instance layout overrides. Each entry is the layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`) declaring its attributes too. Resolution order is **instance map → built-in**. See [Per-Instance Customization](#per-instance-customization).                              |
 | `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the built-in locale map.                                                                                                                                                                                                                    |
 | `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                                                                                                                                                                                        |
 | `instanceVariants`      | `Record<string, VariantTable \| null> \| null`        | `null`      | Per-instance accent-variant tables keyed by layout name (or `"*"`). Effective only with `accentVariants`. The entry, else the `"*"` wildcard, is merged onto the built-in table per base letter; a `null` entry opts a layout out. See [Accent variants](#accent-variants-german-umlauts). |
@@ -706,13 +706,28 @@ Compose a custom layout with the shared `fkey-row` module to render a full keybo
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 
-const qwertyBase = KioskKeyboard.getRegisteredLayout("qwerty")!;
 const kb = new KioskKeyboard({
-  instanceLayouts: { "qwerty-fk": [fkeyRow, ...qwertyBase] },
+  instanceLayouts: { "qwerty-fk": KioskKeyboard.composeLayout([fkeyRow], "qwerty") },
   layout: "qwerty-fk",
   controls: ["myInput"],
 });
 ```
+
+`composeLayout` splices its sources in order: a string names a built-in layout and contributes its rows, anything else contributes rows directly.
+
+An entry can also declare the layout's own attributes instead of just its rows, which is how a custom layout marks itself an auxiliary surface or states the language of its keycaps:
+
+```ts
+instanceLayouts: {
+  "ar-symbols": {
+    rows: KioskKeyboard.composeLayout([symbolRow], "arabic"),
+    lang: "ar",
+    secondary: true,
+  },
+}
+```
+
+An attribute the descriptor leaves out falls back to the built-in layout of the same name, so overriding a built-in keeps its attributes until the descriptor says otherwise.
 
 For a declarative XML view, supply the same map through a JSON model and bind `instanceLayouts` to it.
 
@@ -1405,6 +1420,7 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 - Disabled state applies `aria-disabled="true"` to both the root and individual keys
 - ARIA live region announces keyboard open/close and shift state changes to screen readers
 - A key carrying accent variants advertises them with `aria-haspopup="dialog"`. Keyboard users open the popup with the context-menu gesture (the Menu key, or Shift+F10) on the focused key, arrow/Home/End to choose, Enter or Space to insert, and Escape to dismiss and return focus to the key. The key carries no `aria-expanded`: its own Enter/Space types the base character rather than toggling the popup
+- Keycaps written in a script other than the UI language carry a `lang` attribute on their label, so a screen reader announces them with that language's pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts). The built-in `arabic`, `ja-kana` and `ko-hangul` layouts declare `ar` / `ja` / `ko`; `ja-romaji` declares none, because its keycaps are Latin letters and JIS punctuation and only the text they compose is Japanese. The attribute sits on the key label alone: a key's `aria-label` and `title`, the keyboard's own label, and the live region are all UI-language text. Action, modifier, and space keys are excluded for the same reason, since their labels come from i18n. A custom layout declares its own with the `lang` field of an `instanceLayouts` descriptor
 - Closing the keyboard or switching targets fires a `change` event on modified single-line inputs (mirrors physical keyboard commit behavior)
 - Keys hold a 24x24 CSS px floor on both axes, meeting the WCAG 2.5.8 minimum touch target size, and grow with the root font size. The inline half is lifted below a 20rem-wide keyboard, where the densest rows cannot fit a full set of floored keys: keys shrink to fit there so that every key stays reachable rather than being clipped off the edge of a center-justified row. Below that width the 24x24 minimum is therefore not met. The block half holds at every width, so a `--ui5KioskKeyboard-keyHeight` set below 24px is raised to it, and a keyboard in a height-capped container clips rather than shrinking past the floor.
 

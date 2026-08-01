@@ -13,6 +13,8 @@ export type {
   KeyDefinition,
   KeyRow,
   LayoutDefinition,
+  LayoutSpec,
+  LayoutInput,
   KeyWidth,
   KeyType,
   SpecialKeyValue,
