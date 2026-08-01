@@ -301,14 +301,14 @@ describe("icon + label rendering", () => {
       expectedTitle: "Custom",
     },
     {
-      name: "single-glyph label does not get title attribute",
+      name: "single-glyph label carries an empty title",
       keyDef: { value: "a" },
-      expectedTitle: null,
+      expectedTitle: "",
     },
     {
-      name: "empty label does not get title attribute",
+      name: "empty label carries an empty title",
       keyDef: { value: "x", label: "" },
-      expectedTitle: null,
+      expectedTitle: "",
     },
     {
       name: "special key with i18n label gets title (e.g. Enter)",
@@ -321,9 +321,9 @@ describe("icon + label rendering", () => {
       expectedTitle: "\u30ED\u30FC\u30DE\u5B57",
     },
     {
-      name: "CJK single glyph does not get title",
+      name: "CJK single glyph carries an empty title",
       keyDef: { value: "x", label: "\u3042" },
-      expectedTitle: null,
+      expectedTitle: "",
     },
   ];
 
@@ -559,5 +559,32 @@ describe("icon + label rendering", () => {
     for (const labelEl of labels) {
       expect(labelEl.hasAttribute("lang"), `"${labelEl.textContent}" carries no language`).to.be.false;
     }
+  });
+
+  it("gives a reused key the same tooltip state as a freshly mounted one", async () => {
+    // Key ids are positional, so a layout switch patches the key div rather than
+    // remounting it. The invariant is that a key reached by switching is
+    // indistinguishable from the same key mounted directly; writing the attribute
+    // unconditionally is what holds it, since this renderer cannot express removal.
+    const fresh = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="plain"></kiosk-keyboard> `);
+    fresh.instanceLayouts = { plain: [[{ value: "y" }]] };
+    await nextRender();
+    const freshTitle = queryKey(fresh, "y").getAttribute("title");
+
+    const switched = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="tooltipped"></kiosk-keyboard> `);
+    switched.instanceLayouts = {
+      tooltipped: [[{ value: "x", label: "Custom" }]],
+      plain: [[{ value: "y" }]],
+    };
+    await nextRender();
+    expect(queryKey(switched, "x").getAttribute("title"), "the first layout sets a tooltip").to.equal("Custom");
+
+    switched.layout = "plain";
+    await nextRender();
+
+    expect(
+      queryKey(switched, "y").getAttribute("title"),
+      "a switched-to key matches the same key mounted directly",
+    ).to.equal(freshTitle);
   });
 });
