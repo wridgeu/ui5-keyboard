@@ -143,6 +143,13 @@ This design was chosen for:
 | `open`            | boolean | `false`     | Opens/closes docked keyboard                                             |
 | `accent-variants` | boolean | `false`     | Built-in Latin-diacritics popup on Latin keys (long-press / right-click) |
 
+Programmatic-only reactive properties (`type: Object`, so no HTML attribute; assign a new object to change one, they are read by identity):
+
+- `instanceLayouts`: per-instance layout overrides, keyed by layout name
+- `instanceLocaleLayouts`: per-instance locale-to-layout mappings, keyed by BCP-47 prefix
+- `instanceMiddleware`: per-instance composition-middleware factories, keyed by layout name
+- `instanceVariants`: per-instance accent-variant tables, keyed by layout name or the `"*"` wildcard
+
 Internal reactive properties (no HTML attribute, trigger re-render):
 
 - `_currentLayout`: currently active layout name
