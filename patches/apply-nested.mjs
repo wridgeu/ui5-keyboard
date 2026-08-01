@@ -21,15 +21,14 @@ if (!existsSync(source)) {
 }
 
 /**
- * @param {string} dir package directory
- * @returns {string | undefined} the package's version, if readable
- */
-/**
  * The version of the LESS fork vendored under `lib/thirdparty/less`, which is
  * what the patch actually rewrites. less-openui5 has carried the same fork
  * across its own releases, so this stays stable where its package version does
  * not: gating on the package version skips a nested copy whose vendored parser
  * is byte-identical, leaving the theme build unpatched.
+ *
+ * @param {string} dir package directory
+ * @returns {string | undefined} the vendored LESS version, if readable
  */
 function readVendoredLessVersion(dir) {
   try {
