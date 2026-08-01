@@ -8,12 +8,15 @@ import { describe, it, expect, vi } from "vitest";
 vi.mock("../../src/Assets.js", () => ({}));
 vi.mock("../../src/KioskKeyboard.js", () => ({ default: function KioskKeyboard() {} }));
 
+// Module-scope import: runs after the hoisted vi.mock calls, and keeps the
+// entry's transform cost out of the per-test timeout.
+const bundle = await import("../../src/bundle.esm.js");
+
 // Regression guard: the bundle entry is the documented consumption surface
 // ("kiosk-keyboard-webc/bundle"), so the public value exports must be
 // reachable from it, not only from the main KioskKeyboard entry.
 describe("bundle.esm public surface", () => {
-  it("re-exports the component class and the public enums", async () => {
-    const bundle = await import("../../src/bundle.esm.js");
+  it("re-exports the component class and the public enums", () => {
     expect(typeof bundle.KioskKeyboard).toBe("function");
     expect(bundle.FKeyMode.Virtual).toBe("Virtual");
     expect(bundle.KeyboardType.Full).toBe("Full");
