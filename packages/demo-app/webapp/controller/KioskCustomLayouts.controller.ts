@@ -1,6 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
-import type { LayoutDefinition } from "ui5/kiosk/types";
+import type { LayoutDefinition, LayoutInput } from "ui5/kiosk/types";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
@@ -91,21 +91,39 @@ const ICON_LABEL_LAYOUT: LayoutDefinition = [
   ],
 ];
 
+/**
+ * Arabic-Indic digits, declared through the descriptor form so the layout carries
+ * its own `lang`. The keycaps are Arabic script while the surrounding UI is not,
+ * so their labels are announced with Arabic pronunciation rules (WCAG 2.2 SC 3.1.2).
+ */
+const ARABIC_DIGITS_LAYOUT: LayoutInput = {
+  rows: [
+    [{ value: "١" }, { value: "٢" }, { value: "٣" }],
+    [{ value: "٤" }, { value: "٥" }, { value: "٦" }],
+    [{ value: "٧" }, { value: "٨" }, { value: "٩" }],
+    [{ value: "٠" }, { value: "٫", label: "٫" }, { value: "{backspace}", width: "1.5", type: "action" }],
+  ],
+  lang: "ar",
+};
+
 const LAYOUT_DESCRIPTIONS: Record<string, string> = {
   emoji:
     "3 rows of emojis (Unicode) + bottom row with Space, Backspace, and Done. Demonstrates Unicode character values.",
   "ip-address": "3x3 digit grid + dot/0/backspace row + full-width Enter. Minimal pad for IP address entry.",
   currency:
     "4x4 grid with digits and currency symbols ($, EUR, GBP, JPY). Shows label overrides and modifier key type.",
+  "arabic-digits":
+    'Arabic-Indic digits supplied as a LayoutSpec descriptor ({ rows, lang }) rather than bare rows. The declared lang="ar" is emitted on each keycap label, so a screen reader announces them with Arabic pronunciation rules instead of the UI language.',
   "icon-label":
     "Icon + label rendering modes: SAP icons, Unicode/emoji icons, icon-only, built-in special keys with dual rendering, and capsLock overrides. Double-tap Shift on row 3 to see capsLockLabel/capsLockIcon.",
 };
 
-const CUSTOM_LAYOUTS: Record<string, LayoutDefinition> = {
+const CUSTOM_LAYOUTS: Record<string, LayoutInput> = {
   emoji: EMOJI_LAYOUT,
   "ip-address": IP_ADDRESS_LAYOUT,
   currency: CURRENCY_LAYOUT,
   "icon-label": ICON_LABEL_LAYOUT,
+  "arabic-digits": ARABIC_DIGITS_LAYOUT,
 };
 
 /**
@@ -141,6 +159,10 @@ export default class KioskCustomLayouts extends BaseController {
 
   onUseIconLabel(): void {
     this._switchLayout("icon-label");
+  }
+
+  onUseArabicDigits(): void {
+    this._switchLayout("arabic-digits");
   }
 
   onNavBack(): void {

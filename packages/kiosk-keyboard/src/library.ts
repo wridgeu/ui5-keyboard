@@ -1,4 +1,5 @@
 import DataType from "sap/ui/base/DataType";
+import type { CompositionMiddleware, LayoutInput } from "./types";
 import Lib from "sap/ui/core/Lib";
 import "sap/m/library"; // resolve dependency before Lib.init()
 
@@ -187,12 +188,40 @@ DataType.registerEnum("ui5.kiosk.KeyboardType", KeyboardType);
 DataType.registerEnum("ui5.kiosk.MobileKeyboard", MobileKeyboard);
 DataType.registerEnum("ui5.kiosk.FKeyMode", FKeyMode);
 
+/**
+ * A plain record, or `null` for "not supplied". The four per-instance override
+ * properties are declared through `DataType.createType` so their generated
+ * accessors are typed as the record they accept rather than as bare `object`.
+ *
+ * Validation here is deliberately coarse: `ManagedObject` throws when a type
+ * rejects a value, which would turn one bad entry into a broken control, so the
+ * per-entry checks stay in the setters where an unusable entry is logged and
+ * skipped.
+ */
+function isOverrideRecord(value: unknown): boolean {
+  return value === null || (typeof value === "object" && !Array.isArray(value));
+}
+
+DataType.createType("ui5.kiosk.InstanceLayoutMap", { defaultValue: null, isValid: isOverrideRecord }, "object");
+DataType.createType("ui5.kiosk.InstanceLocaleLayoutMap", { defaultValue: null, isValid: isOverrideRecord }, "object");
+DataType.createType("ui5.kiosk.InstanceMiddlewareMap", { defaultValue: null, isValid: isOverrideRecord }, "object");
+DataType.createType("ui5.kiosk.InstanceVariantMap", { defaultValue: null, isValid: isOverrideRecord }, "object");
+
 const library = Lib.init({
   apiVersion: 2,
   name: "ui5.kiosk",
   version: "${version}",
   dependencies: ["sap.ui.core", "sap.m"],
-  types: ["ui5.kiosk.KeyboardLayout", "ui5.kiosk.KeyboardType", "ui5.kiosk.MobileKeyboard", "ui5.kiosk.FKeyMode"],
+  types: [
+    "ui5.kiosk.KeyboardLayout",
+    "ui5.kiosk.KeyboardType",
+    "ui5.kiosk.MobileKeyboard",
+    "ui5.kiosk.FKeyMode",
+    "ui5.kiosk.InstanceLayoutMap",
+    "ui5.kiosk.InstanceLocaleLayoutMap",
+    "ui5.kiosk.InstanceMiddlewareMap",
+    "ui5.kiosk.InstanceVariantMap",
+  ],
   interfaces: [],
   controls: ["ui5.kiosk.KioskKeyboard"],
   elements: [],
@@ -213,3 +242,17 @@ export { LATIN_DIACRITIC_VARIANTS } from "./internal/latin-variants";
 // `type` modifier on a re-export, and would assign the type name onto the
 // library object at runtime, publishing an undefined ui5.kiosk member.
 export type { VariantTable } from "./internal/latin-variants";
+import type { VariantTable } from "./internal/latin-variants";
+
+/**
+ * The shapes the four per-instance override properties accept. Each is the record
+ * the property takes, or `null` for "not supplied": the interface generator emits
+ * no `| null` union of its own for a custom type, so the null lives in the alias.
+ *
+ * @public
+ * @since 0.1.0
+ */
+export type InstanceLayoutMap = Record<string, LayoutInput> | null;
+export type InstanceLocaleLayoutMap = Record<string, string> | null;
+export type InstanceMiddlewareMap = Record<string, () => CompositionMiddleware> | null;
+export type InstanceVariantMap = Record<string, VariantTable | null> | null;

@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import type { InstanceVariantMap } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import Log from "sap/base/Log";
 import type { LayoutDefinition, CompositionMiddleware } from "ui5/kiosk/types";
@@ -166,7 +167,7 @@ QUnit.test("setInstanceLayouts after construction re-resolves on next render", a
 
   assert.deepEqual(getRenderedLayoutKeys(kb), [["1", "2"]], "Re-renders with override after setInstanceLayouts");
 
-  kb.setInstanceLayouts(null as unknown as object);
+  kb.setInstanceLayouts(null);
   await placeAndWait(kb);
 
   assert.deepEqual(getRenderedLayoutKeys(kb), builtIn, "Falls back to built-in after clearing override");
@@ -466,7 +467,7 @@ QUnit.test(
     await placeAndWait(kb);
     assert.strictEqual(kb.getLayout(), "pinpad", "precondition: the instance layout is the active one");
 
-    kb.setInstanceLayouts(null as unknown as object);
+    kb.setInstanceLayouts(null);
     await placeAndWait(kb);
 
     tapKey(kb, "a");
@@ -531,7 +532,9 @@ QUnit.test("Table-shaped impostors are rejected rather than read as an empty tab
       controls: [input.getId()],
       accentVariants: true,
       layout: "qwerty",
-      instanceVariants: { qwerty: table },
+      // Deliberately invalid input: the property type rejects these at compile
+      // time, which is the point of the cast, and the runtime must reject them too.
+      instanceVariants: { qwerty: table } as InstanceVariantMap,
     });
     await placeAndWait(kb);
 
@@ -650,7 +653,7 @@ QUnit.test("A layout name that stopped being registered resolves the table again
   await placeAndWait(kb);
   assert.strictEqual(kb.getLayout(), "pinpad", "precondition: the instance layout is the active one");
 
-  kb.setInstanceLayouts(null as unknown as object);
+  kb.setInstanceLayouts(null);
   await placeAndWait(kb);
   assert.strictEqual(kb.getLayout(), "pinpad", "precondition: the property keeps the now-unregistered name");
 

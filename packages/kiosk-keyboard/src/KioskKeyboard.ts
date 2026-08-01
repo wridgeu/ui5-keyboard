@@ -10,7 +10,7 @@ import {
   type InstanceLayoutMeta,
   type LayoutMeta,
 } from "./internal/layout-meta";
-import type { LayoutDefinition, LayoutInput, LayoutSpec, CompositionMiddleware } from "./types";
+import type { LayoutDefinition, LayoutSpec, CompositionMiddleware } from "./types";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
@@ -27,7 +27,13 @@ import {
   type VariantTable,
 } from "./internal/latin-variants";
 import VariantPopupBehavior from "./internal/variant-popup-behavior";
-import { KeyboardType } from "./library"; // side-effect: ensures Lib.init() runs
+import {
+  KeyboardType,
+  type InstanceLayoutMap,
+  type InstanceLocaleLayoutMap,
+  type InstanceMiddlewareMap,
+  type InstanceVariantMap,
+} from "./library"; // side-effect: ensures Lib.init() runs
 import {
   getRegisteredLayout as registryGetLayout,
   getLayoutOrDefault as registryGetLayoutOrDefault,
@@ -396,7 +402,7 @@ export default class KioskKeyboard extends Control {
        * @since 0.1.0
        */
       instanceLayouts: {
-        type: "object",
+        type: "ui5.kiosk.InstanceLayoutMap",
         defaultValue: null,
         group: "Behavior",
       },
@@ -410,7 +416,7 @@ export default class KioskKeyboard extends Control {
        * @since 0.1.0
        */
       instanceLocaleLayouts: {
-        type: "object",
+        type: "ui5.kiosk.InstanceLocaleLayoutMap",
         defaultValue: null,
         group: "Behavior",
       },
@@ -426,7 +432,7 @@ export default class KioskKeyboard extends Control {
        * @since 0.1.0
        */
       instanceMiddleware: {
-        type: "object",
+        type: "ui5.kiosk.InstanceMiddlewareMap",
         defaultValue: null,
         group: "Behavior",
       },
@@ -448,7 +454,7 @@ export default class KioskKeyboard extends Control {
        * @since 0.1.0
        */
       instanceVariants: {
-        type: "object",
+        type: "ui5.kiosk.InstanceVariantMap",
         defaultValue: null,
         group: "Behavior",
       },
@@ -1122,7 +1128,7 @@ export default class KioskKeyboard extends Control {
    * cache in sync with the property value so callers do not pay the
    * `Object.entries` cost on every render.
    */
-  setInstanceLayouts(value: Record<string, LayoutInput> | null): this {
+  setInstanceLayouts(value: InstanceLayoutMap): this {
     for (const name of this._readInstanceLayouts(value)) {
       Log.warning(
         `Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value", or an object with such an array as "rows".`,
@@ -1137,7 +1143,7 @@ export default class KioskKeyboard extends Control {
    * Custom setter for `instanceLocaleLayouts` - keeps the internal
    * `Map` cache in sync with the property value.
    */
-  setInstanceLocaleLayouts(value: Record<string, string> | null): this {
+  setInstanceLocaleLayouts(value: InstanceLocaleLayoutMap): this {
     this._instanceLocaleLayoutsMap = KioskKeyboard._toStringMap(value);
     return this.setProperty("instanceLocaleLayouts", value) as this;
   }
@@ -1146,7 +1152,7 @@ export default class KioskKeyboard extends Control {
    * Custom setter for `instanceMiddleware` - keeps the internal `Map`
    * cache in sync with the property value.
    */
-  setInstanceMiddleware(value: Record<string, () => CompositionMiddleware> | null): this {
+  setInstanceMiddleware(value: InstanceMiddlewareMap): this {
     this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(value);
     if (this._middleware) {
       this._middleware.reset();
@@ -1159,7 +1165,7 @@ export default class KioskKeyboard extends Control {
    * Custom setter for `instanceVariants` - keeps the internal `Map`
    * cache in sync with the property value.
    */
-  setInstanceVariants(value: Record<string, VariantTable | null> | null): this {
+  setInstanceVariants(value: InstanceVariantMap): this {
     this._instanceVariantsMap = KioskKeyboard._toVariantMap(value);
     return this.setProperty("instanceVariants", value) as this;
   }

@@ -71,19 +71,43 @@ with a negative control on a layout or key type that must NOT carry the attribut
   non-zero. Observed:** exit code 1 with two suites marked failing; a clean run exits 0
   even when the `EADDRINUSE` line is printed, so that line is noise rather than signal.
 
-- **H9 (the declaration is cleared, not blanked, on a layout switch).** Every test above
-  mounts one layout per fixture, so none of them exercises a _reused_ label. Key element
-  ids are stable across layouts, so both renderers patch the existing label span rather
-  than replacing it. In webc that is preact, whose `setProperty` takes the IDL-property
-  path for any name in the element (`lang` is) and assigns `dom.lang = value ?? ""`, so an
-  `undefined` value writes `lang=""`. Per HTML that means _unknown language_ and stops
-  inheritance from `<html lang>`, which is worse than the plain Latin label it replaced.
-  Perturbation: none needed, the test was written first and failed. **Observed red:**
-  "drops the language from reused labels when switching to a UI-language layout", one
-  failure in the component suite before the fix (a `key` on the label span that varies
-  with the resolved language, so the span remounts). The kiosk twin passes the equivalent
-  test unchanged: `RenderManager`'s patcher removes an attribute the new pass does not
-  write, so the defect is webc-only.
+- **H9 (the declaration is cleared, not blanked, on a layout switch).** Every other test
+  mounts one layout per fixture, so none exercises a _reused_ label. Key element ids are
+  positional (`core/dom-utils.ts` `keyElementId`), so they are stable across layouts and
+  both renderers patch the existing label span rather than replacing it. The test was
+  written first and **observed red**: "drops the language from reused labels when
+  switching to a UI-language layout". Fixed with a `key` on the label span that varies
+  with the resolved language, so the span remounts. This is not a hypothesis about the
+  renderers; both mechanisms were read from the pinned sources:
+
+  - **webc.** `@ui5/webcomponents-base` 2.22.0 vendors preact **10.25.1**
+    (`src/thirdparty/preact/version.txt`), and `dist/renderer/JsxRenderer.js:1` imports
+    `render` from it directly. Its `setProperty` routes a prop to IDL assignment when the
+    name is not one of exactly eleven exclusions -- `width`, `height`, `href`, `list`,
+    `form`, `tabIndex`, `download`, `rowSpan`, `colSpan`, `role`, `popover` -- **and**
+    `name in element`. `lang` is in neither set, so it takes that branch, which assigns
+    `n[l] = null != t || r ? t : ""` (`r` = target is a custom element). For a plain
+    `<span>` an `undefined` value therefore writes `lang=""`.
+  - **The HTML standard.** WHATWG defines that value, not merely as odd:
+    "Setting the attribute to the empty string indicates that the primary language is
+    unknown", and the language algorithm's second step tests whether the attribute _is
+    set_, not whether it is non-empty -- so `lang=""` terminates it there and never
+    reaches the parent-element step. Blanking is strictly worse than never marking the
+    label, because it also severs inheritance from the document element.
+  - **kiosk, immune by construction.** `RenderManager` routes to `sap/ui/core/Patcher.js`
+    for any `apiVersion != 1`. `Patcher` does not track what the previous render wrote: it
+    snapshots the live attributes on `openStart` (`_getAttributes`), each `attr()` call
+    deletes its name from that snapshot, and `openEnd` removes every name still left. The
+    kiosk renderer omits the `rm.attr("lang", ...)` call rather than passing `undefined`,
+    so removal is automatic and there is no undefined-value path to get wrong. The same
+    test passes there unchanged.
+  - **No renderer-level escape hatch exists.** `ifDefined` is Lit-only
+    (`dist/renderer/LitRenderer.js`); the JSX renderer ships no attribute-vs-property
+    directive, and `dist/thirdparty/preact/jsx.d.ts` types `lang?: string | undefined`, so
+    TypeScript flags nothing. SAP's own 132 templates pass possibly-`undefined` values to
+    `title` throughout without guarding. A varying `key` is the only mechanism inside the
+    renderer that yields a genuinely absent attribute.
+
 - **H10 (one bad entry is reported once).** Construction warms the `instanceLayouts`
   caches twice, from `applySettings` and from the setter `super.applySettings` then
   invokes, so a diagnostic emitted inside the normalizer is announced twice. An
