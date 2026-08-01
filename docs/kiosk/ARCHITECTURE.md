@@ -559,7 +559,7 @@ packages/kiosk-keyboard/
                                locale detection, auto-type, mobile suppression
     KioskKeyboardRenderer.ts  Renderer (apiVersion 4, flat DOM)
     library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode enums,
-                               plus KeyName constants
+                               plus KeyName constants and the LATIN_DIACRITIC_VARIANTS / VariantTable re-exports
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition, I18nResolver
     internal/layout-registry.ts  Layout registration and locale resolution
     internal/
@@ -589,7 +589,9 @@ packages/kiosk-keyboard/
       key-icons.ts            Default special-key icons + URI validation
       grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
       composition-utils.ts    Composition preedit start/update/end helpers
-      latin-variants.ts       Default Latin-diacritic long-press variant table + helpers (CLDR LDML)
+      latin-variants.ts       Default Latin-diacritic long-press variant table + helpers (CLDR LDML);
+                               resolveVariantTable resolves the table per layout (an instanceVariants entry, or
+                               the "*" wildcard, merged per base letter; null for the non-Latin layouts)
       middleware-registry.ts  Built-in composition-middleware factories + instance overrides
       renderer-internal-api.ts  RendererInternalApi bridge type
     middleware/
