@@ -20,6 +20,9 @@ function restoreDocumentDir(): void {
 
 QUnit.module("KioskKeyboard events and RTL", {
   afterEach() {
+    // `dir` is document-level state, so a test that fails before its own cleanup
+    // would otherwise leave every later test running in RTL.
+    restoreDocumentDir();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -168,14 +171,12 @@ QUnit.test("autoType does not fire keyboardTypeChange when type stays Full", asy
 QUnit.test("RTL: renders with direction rtl under a document dir of rtl", async (assert) => {
   const kb = new KioskKeyboard();
   withDocumentRtl();
-  try {
-    await placeAndWait(kb);
-    const computed = window.getComputedStyle(kb.getDomRef() as HTMLElement);
-    assert.strictEqual(computed.direction, "rtl", "Keyboard has direction: rtl in RTL context");
-  } finally {
-    restoreDocumentDir();
-    kb.destroy();
-  }
+  await placeAndWait(kb);
+
+  const computed = window.getComputedStyle(kb.getDomRef() as HTMLElement);
+  assert.strictEqual(computed.direction, "rtl", "Keyboard has direction: rtl in RTL context");
+
+  kb.destroy();
 });
 
 QUnit.test("RTL: renders with direction ltr when not in RTL container", async (assert) => {
@@ -206,7 +207,6 @@ QUnit.test("RTL: ArrowRight moves focus to the visually right (lower-index) key"
     "ArrowRight lands on the neighbour one column lower",
   );
 
-  restoreDocumentDir();
   kb.destroy();
 });
 
@@ -227,7 +227,6 @@ QUnit.test("RTL: ArrowLeft moves focus to the visually left (higher-index) key",
     "ArrowLeft lands on the neighbour one column higher",
   );
 
-  restoreDocumentDir();
   kb.destroy();
 });
 
