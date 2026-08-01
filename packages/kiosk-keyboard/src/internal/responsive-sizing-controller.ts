@@ -33,6 +33,14 @@ interface ResponsiveSizingHost {
  * is externally height-constrained. Width breakpoints are handled by CSS
  * `@container` queries, so no JS width measurement is needed.
  *
+ * The block axis cannot follow suit. A block-axis `@container` query needs
+ * `container-type: size`, which makes the container's own block size independent
+ * of its contents: on this auto-height root that resolves to zero and collapses
+ * the keyboard. And the trigger is not "the box is short" but "the content does
+ * not fit the box it was granted", which is a comparison against intrinsic size
+ * that no size query can express. Hence the observer, and hence the tiers ride a
+ * class rather than a query.
+ *
  * Sizes are compared in untransformed layout pixels (`scrollHeight` vs
  * `clientHeight`), so ancestor transforms do not shift breakpoints and the
  * root border cancels out of the comparison. The webc twin detects the same
