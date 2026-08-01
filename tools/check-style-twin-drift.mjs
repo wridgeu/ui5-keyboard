@@ -54,17 +54,19 @@ const EXPECTED_MIN_PROPERTIES = 35;
 /**
  * Properties that legitimately exist in one twin only, as canonical tokens.
  *
- * The accent-variant popup is the whole asymmetry. webc slots plain
- * `ui5-button`s into a `ui5-popover` and therefore owns - and exposes - the
- * option row's wrapping layout, while kiosk renders the same popup as a themed
- * `sap/m/Popover` of `sap/m/Button`s in the UI5 static area where the framework
- * theme owns the frame; the kiosk header block documents that there is nothing
- * popup-specific to override there. `variantoptionwidth` is the anchor key's
- * rendered width, published by the control when the popup opens: public-prefixed
- * in webc because it is set on the host and has to cross the shadow boundary
- * onto the slotted options, private in kiosk
- * (`--_ui5KioskKeyboard-variantOptionWidth`) because it is set on the option
- * grid inside the control's own popover.
+ * The accent-variant popup is the whole asymmetry, and it follows from where the
+ * popup renders. webc slots plain `ui5-button`s into a `ui5-popover` inside its
+ * own shadow root, so the host's custom properties inherit down to the option row
+ * and a token is how a consumer retunes it. kiosk renders the same popup as a
+ * themed `sap/m/Popover` in the UI5 static area, a sibling subtree of `<body>`
+ * that inherits nothing from `.ui5KioskKeyboard`; a token declared on the control
+ * would never reach it, so those three values are literals on
+ * `.ui5KioskVariantPopup` and a consumer retunes them by overriding that class.
+ * `variantoptionwidth` is the anchor key's rendered width, published by the
+ * control when the popup opens: public-prefixed in webc because it is set on the
+ * host and has to cross the shadow boundary onto the slotted options, private in
+ * kiosk (`--_ui5KioskKeyboard-variantOptionWidth`) because it is set on the
+ * option grid inside the control's own popover.
  *
  * @type {{ kioskOnly: string[]; webcOnly: string[] }}
  */

@@ -54,8 +54,13 @@
  *
  * Accent-variant popup (long-press / right-click):
  *   Rendered by a themed sap/m/Popover of sap/m/Buttons in the UI5 static area.
- *   The framework theme owns its overlay chrome, z-index, and option styling;
- *   there are no popup-specific CSS custom properties to override here.
+ *   The framework theme owns its overlay chrome, z-index, and option styling.
+ *   The static area is a sibling subtree of <body> and inherits nothing from
+ *   .ui5KioskKeyboard, so a custom property declared on the control could never
+ *   reach it; the popup's own wrap width, gap and inset are literals on
+ *   .ui5KioskVariantPopup, which a consumer restyles by overriding that class
+ *   (the webc twin exposes the same three as --kiosk-keyboard-variant-popup-*,
+ *   because there the popup lives inside the component's own shadow root).
  *
  * Numpad mode:
  *   --ui5KioskKeyboard-numpadMaxWidth      Numpad container max-width (default: 20rem)

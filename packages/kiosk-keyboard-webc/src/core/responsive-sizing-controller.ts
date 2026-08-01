@@ -34,6 +34,14 @@ export type ResponsiveSizingHost = HTMLElement & {
  * DOM) so consumer overrides win; an attribute rather than a class so framework
  * `className` reconciliation cannot clobber it. Width breakpoints are handled
  * by CSS `@container` queries, so no JS width measurement is needed.
+ *
+ * The block axis cannot follow suit. A block-axis `@container` query needs
+ * `container-type: size`, which makes the container's own block size independent
+ * of its contents: on this auto-height root that resolves to zero and collapses
+ * the keyboard. And the trigger is not "the box is short" but "the content does
+ * not fit the box it was granted", which is a comparison against intrinsic size
+ * that no size query can express. Hence the observer, and hence the tiers ride a
+ * host attribute rather than a query.
  */
 export class ResponsiveSizingController {
   /** ResizeObserver for height-responsive class updates. */
