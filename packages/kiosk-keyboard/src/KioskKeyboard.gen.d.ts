@@ -2,6 +2,10 @@ import { KeyboardType } from "ui5/kiosk/library";
 import Event from "sap/ui/base/Event";
 import { MobileKeyboard } from "ui5/kiosk/library";
 import { FKeyMode } from "ui5/kiosk/library";
+import { InstanceLayoutMap } from "ui5/kiosk/library";
+import { InstanceLocaleLayoutMap } from "ui5/kiosk/library";
+import { InstanceMiddlewareMap } from "ui5/kiosk/library";
+import { InstanceVariantMap } from "ui5/kiosk/library";
 import Control from "sap/ui/core/Control";
 import { PropertyBindingInfo } from "sap/ui/base/ManagedObject";
 import { $ControlSettings } from "sap/ui/core/Control";
@@ -165,7 +169,7 @@ declare module "./KioskKeyboard" {
          *
          * @since 0.1.0
          */
-        instanceLayouts?: (object | null) | PropertyBindingInfo | `{${string}}`;
+        instanceLayouts?: InstanceLayoutMap | PropertyBindingInfo | `{${string}}`;
 
         /**
          * Per-instance locale-to-layout overrides. Resolution order is
@@ -176,7 +180,7 @@ declare module "./KioskKeyboard" {
          *
          * @since 0.1.0
          */
-        instanceLocaleLayouts?: (object | null) | PropertyBindingInfo | `{${string}}`;
+        instanceLocaleLayouts?: InstanceLocaleLayoutMap | PropertyBindingInfo | `{${string}}`;
 
         /**
          * Per-instance composition middleware overrides, keyed by layout
@@ -189,7 +193,7 @@ declare module "./KioskKeyboard" {
          *
          * @since 0.1.0
          */
-        instanceMiddleware?: (object | null) | PropertyBindingInfo | `{${string}}`;
+        instanceMiddleware?: InstanceMiddlewareMap | PropertyBindingInfo | `{${string}}`;
 
         /**
          * Per-instance accent-variant table overrides, keyed by layout name
@@ -208,7 +212,7 @@ declare module "./KioskKeyboard" {
          *
          * @since 0.1.0
          */
-        instanceVariants?: (object | null) | PropertyBindingInfo | `{${string}}`;
+        instanceVariants?: InstanceVariantMap | PropertyBindingInfo | `{${string}}`;
         _activeTarget?: Control | string;
         ariaLabelledBy?: Control | string | (Control | string)[];
         ariaDescribedBy?: Control | string | (Control | string)[];
@@ -698,7 +702,7 @@ declare module "./KioskKeyboard" {
          *
          * @returns Value of property "instanceLayouts"
          */
-        getInstanceLayouts(): object | null;
+        getInstanceLayouts(): InstanceLayoutMap;
 
         /**
          * Sets a new value for property "instanceLayouts".
@@ -723,7 +727,7 @@ declare module "./KioskKeyboard" {
          * @param instanceLayouts New value for property "instanceLayouts"
          * @returns Reference to "this" in order to allow method chaining
          */
-        setInstanceLayouts(instanceLayouts: object | null): this;
+        setInstanceLayouts(instanceLayouts: InstanceLayoutMap): this;
 
         // property: instanceLocaleLayouts
 
@@ -740,7 +744,7 @@ declare module "./KioskKeyboard" {
          *
          * @returns Value of property "instanceLocaleLayouts"
          */
-        getInstanceLocaleLayouts(): object | null;
+        getInstanceLocaleLayouts(): InstanceLocaleLayoutMap;
 
         /**
          * Sets a new value for property "instanceLocaleLayouts".
@@ -757,7 +761,7 @@ declare module "./KioskKeyboard" {
          * @param instanceLocaleLayouts New value for property "instanceLocaleLayouts"
          * @returns Reference to "this" in order to allow method chaining
          */
-        setInstanceLocaleLayouts(instanceLocaleLayouts: object | null): this;
+        setInstanceLocaleLayouts(instanceLocaleLayouts: InstanceLocaleLayoutMap): this;
 
         // property: instanceMiddleware
 
@@ -776,7 +780,7 @@ declare module "./KioskKeyboard" {
          *
          * @returns Value of property "instanceMiddleware"
          */
-        getInstanceMiddleware(): object | null;
+        getInstanceMiddleware(): InstanceMiddlewareMap;
 
         /**
          * Sets a new value for property "instanceMiddleware".
@@ -795,7 +799,7 @@ declare module "./KioskKeyboard" {
          * @param instanceMiddleware New value for property "instanceMiddleware"
          * @returns Reference to "this" in order to allow method chaining
          */
-        setInstanceMiddleware(instanceMiddleware: object | null): this;
+        setInstanceMiddleware(instanceMiddleware: InstanceMiddlewareMap): this;
 
         // property: instanceVariants
 
@@ -820,7 +824,7 @@ declare module "./KioskKeyboard" {
          *
          * @returns Value of property "instanceVariants"
          */
-        getInstanceVariants(): object | null;
+        getInstanceVariants(): InstanceVariantMap;
 
         /**
          * Sets a new value for property "instanceVariants".
@@ -845,7 +849,7 @@ declare module "./KioskKeyboard" {
          * @param instanceVariants New value for property "instanceVariants"
          * @returns Reference to "this" in order to allow method chaining
          */
-        setInstanceVariants(instanceVariants: object | null): this;
+        setInstanceVariants(instanceVariants: InstanceVariantMap): this;
 
         // association: _activeTarget
 

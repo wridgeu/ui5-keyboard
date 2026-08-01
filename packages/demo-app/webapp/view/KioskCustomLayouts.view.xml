@@ -31,7 +31,12 @@
                             <Button
                                 text="Icon + Label"
                                 press=".onUseIconLabel"
-                                type="{= ${state>/customActiveLayout} === 'icon-label' ? 'Emphasized' : 'Default'}" />
+                                type="{= ${state>/customActiveLayout} === 'icon-label' ? 'Emphasized' : 'Default'}"
+                                class="sapUiSmallMarginEnd" />
+                            <Button
+                                text="Arabic Digits"
+                                press=".onUseArabicDigits"
+                                type="{= ${state>/customActiveLayout} === 'arabic-digits' ? 'Emphasized' : 'Default'}" />
                         </HBox>
                     </VBox>
                 </Panel>

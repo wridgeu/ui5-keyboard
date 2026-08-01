@@ -177,6 +177,10 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             class={KIOSK_KEYBOARD_DOM.classes.variantPopup}
             part="variant-popup"
             role="toolbar"
+            // Keyed for the same reason as the key label: a re-anchor that keeps
+            // the popup open across two differently-languaged keys would otherwise
+            // reuse this node, and an undefined `lang` blanks rather than removes.
+            key={`variant-popup-${variantPopup.lang ?? ""}`}
             lang={variantPopup.lang}
             style={`--kiosk-keyboard-variant-option-width: ${variantPopup.anchorKeyWidth}px`}
             onClick={this._boundOnVariantClick}

@@ -172,12 +172,12 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   private _hasInstanceLayout(kb: KioskKeyboard, name: string): boolean {
-    const map = kb.getInstanceLayouts() as Record<string, LayoutInput> | null;
+    const map = kb.getInstanceLayouts();
     return map !== null && Object.hasOwn(map, name);
   }
 
   private _addInstanceLayout(kb: KioskKeyboard, name: string, def: LayoutInput): void {
-    const current = (kb.getInstanceLayouts() as Record<string, LayoutInput> | null) ?? {};
+    const current = kb.getInstanceLayouts() ?? {};
     kb.setInstanceLayouts({ ...current, [name]: def });
   }
 
