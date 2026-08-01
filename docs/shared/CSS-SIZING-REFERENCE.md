@@ -355,7 +355,7 @@ The three popup properties are WebC only: they tune the layout of the option row
 --kiosk-keyboard-border: 1px solid var(--sapGroup_TitleBorderColor, #d9d9d9);
 --kiosk-keyboard-border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
 --kiosk-keyboard-max-width: 100%;
---kiosk-keyboard-docked-max-width: 1024px;
+--kiosk-keyboard-docked-max-width: 64rem;
 --kiosk-keyboard-docked-z-index: 100;
 ```
 
@@ -364,7 +364,7 @@ The three popup properties are WebC only: they tune the layout of the option row
 | Border           | 1px solid | Uses `--sapGroup_TitleBorderColor` for consistent SAP Fiori group styling     |
 | Border radius    | 0.75rem   | Uses `--sapElement_BorderCornerRadius`; docked mode zeroes bottom corners     |
 | Max width        | 100%      | Inline keyboard fills its container                                           |
-| Docked max width | 1024px    | Prevents the docked keyboard from stretching across ultra-wide displays       |
+| Docked max width | 64rem     | Prevents the docked keyboard from stretching across ultra-wide displays       |
 | Docked z-index   | 100       | Sits above page content but below modal dialogs (SAP Fiori modals use higher) |
 
 ### Key Border Color
@@ -442,7 +442,7 @@ All public CSS custom properties defined on `:host`, listed with their default v
 | `--kiosk-keyboard-modifier-font-size`      | `var(--sapFontSize, 0.875rem)`                  | [Modifier and Action Key Font-Scale](#modifier-and-action-key-font-scale-08)    |
 | `--kiosk-keyboard-modifier-font-scale`     | `0.8`                                           | [Modifier and Action Key Font-Scale](#modifier-and-action-key-font-scale-08)    |
 | `--kiosk-keyboard-max-width`               | `100%`                                          | [Structural Properties](#structural-properties)                                 |
-| `--kiosk-keyboard-docked-max-width`        | `1024px`                                        | [Structural Properties](#structural-properties)                                 |
+| `--kiosk-keyboard-docked-max-width`        | `64rem`                                         | [Structural Properties](#structural-properties)                                 |
 | `--kiosk-keyboard-docked-z-index`          | `100`                                           | [Structural Properties](#structural-properties)                                 |
 | `--kiosk-keyboard-border`                  | `1px solid --sapGroup_TitleBorderColor`         | [Structural Properties](#structural-properties)                                 |
 | `--kiosk-keyboard-border-radius`           | `var(--sapElement_BorderCornerRadius, 0.75rem)` | [Structural Properties](#structural-properties)                                 |

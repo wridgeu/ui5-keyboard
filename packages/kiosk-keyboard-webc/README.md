@@ -1004,7 +1004,7 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-variant-hint-size`       | `0.3125rem`                                                                                                                         | Accent-variant corner hint size                                                                                  |
 | `--kiosk-keyboard-variant-hint-color`      | `var(--sapContent_LabelColor)` at 71% alpha on the resting fill, the key's own text color at 71% on the emphasized and active fills | Accent-variant corner hint color. Setting it pins one color across every key state (ignored under forced colors) |
 | `--kiosk-keyboard-max-width`               | `100%`                                                                                                                              | Max width for the default inline keyboard                                                                        |
-| `--kiosk-keyboard-docked-max-width`        | `1024px`                                                                                                                            | Max width in docked mode                                                                                         |
+| `--kiosk-keyboard-docked-max-width`        | `64rem`                                                                                                                             | Max width in docked mode                                                                                         |
 | `--kiosk-keyboard-docked-shadow`           | _(subtle)_                                                                                                                          | Box shadow for the docked container                                                                              |
 | `--kiosk-keyboard-docked-z-index`          | `100`                                                                                                                               | Z-index for the docked keyboard                                                                                  |
 | `--kiosk-keyboard-modifier-font-size`      | `var(--sapFontSize, 0.875rem)`                                                                                                      | Modifier / action key font size                                                                                  |
@@ -1041,7 +1041,7 @@ kiosk-keyboard {
 }
 ```
 
-Docked keyboards default to `1024px` max-width and center automatically via `margin-inline: auto`.
+Docked keyboards default to `64rem` (1024px at the default root font-size) max-width and center automatically via `margin-inline: auto`.
 
 ### Responsive Sizing
 

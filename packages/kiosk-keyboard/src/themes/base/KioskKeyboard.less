@@ -48,7 +48,7 @@
  *   --ui5KioskKeyboard-modifierShadowHover   Modifier key hover shadow
  *
  * Docked mode:
- *   --ui5KioskKeyboard-dockedMaxWidth   Max width when docked (default: 1024px)
+ *   --ui5KioskKeyboard-dockedMaxWidth   Max width when docked (default: 64rem)
  *   --ui5KioskKeyboard-dockedShadow     Shadow when docked
  *   --ui5KioskKeyboard-dockedZIndex     Z-index when docked (default: 100)
  *
@@ -125,7 +125,10 @@
     --ui5KioskKeyboard-keyFontSize: ~"calc(var(--ui5KioskKeyboard-keyHeight) * 0.375)";
     --ui5KioskKeyboard-keyShadow: 0 1px 2px fade(@sapUiContentShadowColor, 10%);
     --ui5KioskKeyboard-keyShadowHover: 0 2px 4px fade(@sapUiContentShadowColor, 15%);
-    --ui5KioskKeyboard-dockedMaxWidth: 1024px;
+    /* rem, not px: the cap has to grow with a root font-size the user scaled up,
+       or the keys inside it are squeezed instead. 64rem is 1024px at the default
+       root. */
+    --ui5KioskKeyboard-dockedMaxWidth: 64rem;
     --ui5KioskKeyboard-dockedShadow: 0 -4px 20px fade(@sapUiContentShadowColor, 20%);
     --ui5KioskKeyboard-dockedZIndex: 100;
     --ui5KioskKeyboard-maxWidth: 100%;

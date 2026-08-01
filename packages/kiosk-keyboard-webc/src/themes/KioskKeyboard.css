@@ -32,7 +32,10 @@
     color-mix(in srgb, var(--sapContent_ShadowColor, #223548) 18%, transparent);
 
   --kiosk-keyboard-max-width: 100%;
-  --kiosk-keyboard-docked-max-width: 1024px;
+  /* rem, not px: the cap has to grow with a root font-size the user scaled up,
+     or the keys inside it are squeezed instead. 64rem is 1024px at the default
+     root. */
+  --kiosk-keyboard-docked-max-width: 64rem;
   --kiosk-keyboard-docked-z-index: 100;
   --kiosk-keyboard-modifier-font-size: var(--sapFontSize, 0.875rem);
   --kiosk-keyboard-modifier-font-scale: 0.8;
@@ -257,8 +260,7 @@
 .kiosk-keyboard--docked {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  inset-inline: 0;
   z-index: var(--_kiosk-keyboard-docked-z-index);
   max-width: var(--_kiosk-keyboard-docked-max-width);
   margin-inline: auto;
