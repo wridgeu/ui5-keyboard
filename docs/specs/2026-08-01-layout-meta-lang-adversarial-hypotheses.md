@@ -116,6 +116,30 @@ with a negative control on a layout or key type that must NOT carry the attribut
   1 for the webc twin. Fixed by returning the rejected names and letting the setter own
   the message, with the count asserted in both twins (issue #218).
 
+- **H11 (a reused key's tooltip state matches a freshly mounted one).** `title` sits on the
+  key div and hits the same preact IDL-property branch as `lang`, so `title={undefined}`
+  wrote `title=""`. The observable defect was not a stale tooltip -- the previous layout's
+  text does not survive -- but an inconsistency: a freshly mounted key had no attribute
+  while a switched-to key had an empty one. The first attempt at a test asserted the
+  absence of the old text and **passed against the bug**, which is the vacuity trap this
+  document exists for; it was rewritten to compare a switched key against the same key
+  mounted directly. Perturbation: restore `: undefined`. **Observed red:** "a switched-to
+  key matches the same key mounted directly: expected '' to equal null".
+
+  Removal is not expressible here. Keying the key div would remount it, and
+  `onAfterRendering` performs no focus restoration, so a layout switch would drop DOM
+  focus; `popover.opener` also holds a live element reference, and `variant-popup.test.ts`
+  asserts node identity across renders. Moving the attribute to the already-keyed label
+  span fails because the dual label is reduced to 1x1 px under a narrow container query,
+  which would make the tooltip unreachable. The attribute is therefore written on every
+  render, and an empty `title` states truthfully that the key carries no advisory
+  information -- unlike `lang=""`, which asserted a falsehood.
+
+  **Accepted twin divergence:** kiosk omits the attribute, webc writes it empty. Both state
+  the same thing, and mirroring `rm.attr("title", "")` into kiosk would suppress
+  inheritance from the control's `tooltip` aggregation to accommodate the other twin's
+  renderer. No drift tool covers `title`, so this is recorded here rather than enforced.
+
 ## Visual baselines: checked, deliberately not regenerated
 
 Setting `lang` changes browser font fallback, so the 70 committed non-Latin baseline PNGs

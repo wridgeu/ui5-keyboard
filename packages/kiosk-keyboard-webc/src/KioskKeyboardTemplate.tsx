@@ -119,7 +119,16 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   aria-haspopup={hasVariants ? "dialog" : undefined}
                   aria-pressed={isShift ? this._shifted : undefined}
                   aria-disabled={this.disabled ? "true" : undefined}
-                  title={hasLabel && !isSingleGlyphLabel ? label : undefined}
+                  // Native tooltip for labels that text-overflow: ellipsis can
+                  // truncate; single-glyph labels clip instead, and an empty title
+                  // states that the key carries no advisory information. Written on
+                  // every render rather than omitted: key ids are stable across
+                  // layouts, so a key is patched rather than remounted, and the
+                  // renderer assigns through the `title` IDL property, where a
+                  // nullish value writes "" instead of removing the attribute. The
+                  // kiosk twin omits the attribute entirely, which its patcher can
+                  // express and this renderer cannot; both state the same thing.
+                  title={hasLabel && !isSingleGlyphLabel ? label : ""}
                   aria-label={hasLabel ? undefined : this._getKeyAriaLabel(key)}
                 >
                   {hasIcon && resolved.sap ? (
