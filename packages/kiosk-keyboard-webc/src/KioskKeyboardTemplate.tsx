@@ -67,6 +67,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
               // space and the action tokens take their label from i18n, and a
               // layout-switch key is a control affordance rather than keycap content.
               const isKeycapContent = keyKind === "char" && key.value !== " ";
+              const labelLang = isKeycapContent ? layoutLang : undefined;
               const resolved = this._resolveKeyIcon(key);
               const label = this._getKeyLabel(key);
               const hasIcon = resolved !== null;
@@ -140,8 +141,15 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                         [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph]: isSingleGlyphLabel,
                         [KIOSK_KEYBOARD_DOM.classes.keyLabelMulti]: !isSingleGlyphLabel,
                       }}
+                      // Keyed on the language so a switch to a layout that declares
+                      // none remounts the span. Key ids are stable across layouts,
+                      // so the span is otherwise reused, and the renderer assigns
+                      // through the `lang` IDL property: an undefined value writes
+                      // `lang=""`, which means "unknown language" and stops
+                      // inheritance rather than clearing the declaration.
+                      key={`label-${labelLang ?? ""}`}
                       data-glyph-script={glyphScript}
-                      lang={isKeycapContent ? layoutLang : undefined}
+                      lang={labelLang}
                       part="key-label"
                     >
                       {label}

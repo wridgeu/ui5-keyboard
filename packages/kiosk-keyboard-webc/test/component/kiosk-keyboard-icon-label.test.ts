@@ -543,4 +543,21 @@ describe("icon + label rendering", () => {
     const switchLabel = queryKeyLabel(queryKey(el, "{layout:ja-romaji}"))!;
     expect(switchLabel.hasAttribute("lang"), "layout-switch key declares none").to.be.false;
   });
+
+  it("drops the language from reused labels when switching to a UI-language layout", async () => {
+    // The key element id is stable across layouts, so the label span is reused
+    // rather than remounted: an attribute left behind here would read as
+    // lang="" (unknown language), which stops inheritance from <html lang>.
+    const el = await createBuiltInKeyboard("arabic");
+    expect(queryKeyLabel(queryKey(el, "ا"))!.getAttribute("lang"), "arabic keycap").to.equal("ar");
+
+    el.layout = "qwerty";
+    await nextRender();
+
+    const labels = [...el.shadowRoot!.querySelectorAll<HTMLElement>(`.${DOM.classes.keyLabel}`)];
+    expect(labels.length, "labels rendered after the switch").to.be.above(0);
+    for (const labelEl of labels) {
+      expect(labelEl.hasAttribute("lang"), `"${labelEl.textContent}" carries no language`).to.be.false;
+    }
+  });
 });

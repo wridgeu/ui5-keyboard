@@ -792,3 +792,29 @@ QUnit.test("ja-kana: a modifier-typed key whose keycap is kana still declares th
 
   kb.destroy();
 });
+
+QUnit.test("switching to a UI-language layout clears the language from reused labels", async (assert) => {
+  // Key ids are stable across layouts, so the semantic renderer patches the
+  // existing label spans rather than replacing them. A left-behind lang=""
+  // would read as "unknown language" and stop inheritance from <html lang>.
+  const kb = new KioskKeyboard({ layout: "arabic" });
+  await placeAndWait(kb);
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "ض").querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`)!.getAttribute("lang"),
+    "ar",
+    "arabic keycap declares its language",
+  );
+
+  kb.setLayout("qwerty");
+  await waitForRender();
+
+  const labels = getKeyboardDom(kb).querySelectorAll(`.${DOM.classes.keyLabel}`);
+  assert.ok(labels.length > 0, "labels rendered after the switch");
+  assert.strictEqual(
+    getKeyboardDom(kb).querySelectorAll(`.${DOM.classes.keyLabel}[lang]`).length,
+    0,
+    "no reused label kept a lang attribute",
+  );
+
+  kb.destroy();
+});

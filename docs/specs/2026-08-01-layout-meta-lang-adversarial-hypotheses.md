@@ -71,6 +71,27 @@ with a negative control on a layout or key type that must NOT carry the attribut
   non-zero. Observed:** exit code 1 with two suites marked failing; a clean run exits 0
   even when the `EADDRINUSE` line is printed, so that line is noise rather than signal.
 
+- **H9 (the declaration is cleared, not blanked, on a layout switch).** Every test above
+  mounts one layout per fixture, so none of them exercises a _reused_ label. Key element
+  ids are stable across layouts, so both renderers patch the existing label span rather
+  than replacing it. In webc that is preact, whose `setProperty` takes the IDL-property
+  path for any name in the element (`lang` is) and assigns `dom.lang = value ?? ""`, so an
+  `undefined` value writes `lang=""`. Per HTML that means _unknown language_ and stops
+  inheritance from `<html lang>`, which is worse than the plain Latin label it replaced.
+  Perturbation: none needed, the test was written first and failed. **Observed red:**
+  "drops the language from reused labels when switching to a UI-language layout", one
+  failure in the component suite before the fix (a `key` on the label span that varies
+  with the resolved language, so the span remounts). The kiosk twin passes the equivalent
+  test unchanged: `RenderManager`'s patcher removes an attribute the new pass does not
+  write, so the defect is webc-only.
+- **H10 (one bad entry is reported once).** Construction warms the `instanceLayouts`
+  caches twice, from `applySettings` and from the setter `super.applySettings` then
+  invokes, so a diagnostic emitted inside the normalizer is announced twice. An
+  `assert.ok(warn.called)` cannot see that; only a count can. Perturbation: assert
+  `callCount` where the code reported from inside the normalizer. **Observed:** 2, against
+  1 for the webc twin. Fixed by returning the rejected names and letting the setter own
+  the message, with the count asserted in both twins (issue #218).
+
 ## Visual baselines: checked, deliberately not regenerated
 
 Setting `lang` changes browser font fallback, so the 70 committed non-Latin baseline PNGs

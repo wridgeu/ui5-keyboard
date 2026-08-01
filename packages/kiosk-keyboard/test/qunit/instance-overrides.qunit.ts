@@ -836,8 +836,22 @@ QUnit.test("an entry that is neither rows nor a descriptor is rejected once", as
   });
   await placeAndWait(kb);
 
-  assert.ok(warn.called, "the unusable entry is logged");
+  // Construction warms the caches twice (applySettings, then the setter it
+  // invokes), so a count is the only thing that catches a double report.
+  assert.strictEqual(warn.callCount, 1, "warned exactly once for the one bad entry");
   assert.ok(String(warn.firstCall.args[0]).includes("bogus"), "the warning names the entry");
+
+  kb.destroy();
+});
+
+QUnit.test("an entry rejected by a later assignment is reported once too", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwerty" });
+  await placeAndWait(kb);
+
+  const warn = sandbox.stub(Log, "warning");
+  kb.setInstanceLayouts({ bogus: { lang: "he" } as unknown as LayoutDefinition });
+
+  assert.strictEqual(warn.callCount, 1, "the setter reports each rejected entry once");
 
   kb.destroy();
 });
