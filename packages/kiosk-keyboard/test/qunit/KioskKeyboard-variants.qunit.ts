@@ -337,6 +337,29 @@ QUnit.test("the corner hint pseudo-element renders only on variant keys", async 
   cleanup(kb, input);
 });
 
+QUnit.test("the corner hint mirrors for RTL scoped to a container, not just the document", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  const ltrClip = getComputedStyle(aKey, "::after").clipPath;
+
+  // `dir` on an ancestor rather than on <html>: OpenUI5 puts it on the document
+  // element, but a host page may scope RTL to one region, and the clip-path has
+  // to follow the direction the keys actually render in.
+  const region = kb.getDomRef()!.parentElement!;
+  region.setAttribute("dir", "rtl");
+  try {
+    assert.strictEqual(getComputedStyle(aKey).direction, "rtl", "the keys render RTL under the scoped dir");
+    assert.notStrictEqual(
+      getComputedStyle(aKey, "::after").clipPath,
+      ltrClip,
+      "the folded corner is mirrored, so it still points into the key",
+    );
+  } finally {
+    region.removeAttribute("dir");
+  }
+  cleanup(kb, input);
+});
+
 QUnit.test("the corner hint stays painted on a narrow key", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const root = kb.getDomRef() as HTMLElement;
