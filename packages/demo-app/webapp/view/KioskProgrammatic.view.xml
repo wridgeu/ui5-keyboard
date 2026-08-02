@@ -37,7 +37,8 @@
                         <HBox class="sapUiSmallMarginTop">
                             <Button text="Use FKeys" press=".onUseFKeys" class="sapUiSmallMarginEnd" />
                             <Button text="Use Nav" press=".onUseNav" class="sapUiSmallMarginEnd" />
-                            <Button text="Use Qwerty Nav" press=".onUseQwertyNav" />
+                            <Button text="Use Qwerty Nav" press=".onUseQwertyNav" class="sapUiSmallMarginEnd" />
+                            <Button text="Use Qwerty Nav (compact)" press=".onUseQwertyNavCompact" />
                         </HBox>
                         <HBox class="sapUiSmallMarginTop">
                             <Button text="Register Qwerty FK+Nav" press=".onRegisterQwertyFkNav" class="sapUiSmallMarginEnd" />
