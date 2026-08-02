@@ -114,8 +114,6 @@ export default class KioskProgrammatic extends BaseController {
     this._updateStatus();
   }
 
-  // `navRowCompact` is already a LayoutDefinition (two rows), so it is passed
-  // unwrapped where the single-row `navRow` above needs `[navRow]`.
   onUseQwertyNavCompact(): void {
     const kb = this._getKeyboard();
     if (!this._hasInstanceLayout(kb, "qwerty-nav-compact")) {

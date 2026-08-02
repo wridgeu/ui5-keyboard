@@ -7,9 +7,7 @@ import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 // with no joining neighbours. Shaping an Arabic keycap as running text lets the
 // font apply a positional substitution - Segoe UI turns U+0647 HEH into a
 // two-lobed form - so the keycap depicts a letter shape the key does not type.
-// The stylesheet turns the `isol` feature off on Arabic glyph labels. These pin
-// that it works, that it stays narrow, and that it costs nothing in the
-// accessibility contract the language tag exists for.
+// The stylesheet turns the `isol` feature off on Arabic glyph labels.
 
 const HEH = "ه";
 /** ARABIC LETTER HEH ISOLATED FORM: the specimen shape, by Unicode definition. */

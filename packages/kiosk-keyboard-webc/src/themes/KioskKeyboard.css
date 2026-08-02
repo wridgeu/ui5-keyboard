@@ -297,14 +297,6 @@
   justify-content: center;
 }
 
-/* No breakpoint reflows a row. Arrow-key grid navigation moves on the resolved
-   layout's coordinates, so a row wrapped in CSS stays one logical row however
-   it looks: Down from the first key would leave the row entirely rather than
-   reach the key rendered beneath it. Narrow-width arrangements are therefore
-   layout data, `layouts/fkey-row-compact` (2x6) and `layouts/nav-row-compact`
-   (2x4), which keeps DOM order, visual order and navigation order the same
-   thing. `data-row-kind` stays on the row for consumer styling. */
-
 /* Key */
 
 .kiosk-key {
@@ -824,18 +816,11 @@
     sans-serif
   );
 
-  /* A keycap is a specimen: it shows the letter the key types, with no
-     joining neighbours. `lang` (WCAG 3.1.2, per-layout metadata) makes the
-     shaper apply the font's Arabic language system, and Segoe UI's `isol`
-     lookup there substitutes U+0647 HEH with its two-lobed initial-looking
-     form, so the keycap depicts a letter shape the key does not insert.
-     Turning `isol` off leaves the cmap default, which is the isolated form
-     every keycap wants; the joining context is already isolated, so nothing
-     else is shaped differently. Verified across all 77 single-character
-     glyphs of the Arabic layout: only U+0647 changes, and all 77 then match
-     the untagged rendering. Inert on every other font in the stack above.
-     Do not reach for `locl`, `init`, `calt` or `font-language-override` -
-     none of them suppress this. */
+  /* A keycap is a specimen: it shows the letter the key types, standing alone
+     with no joining neighbours. The `lang` tag on the label makes the shaper
+     apply the font's Arabic language system, where Segoe UI's `isol` lookup
+     substitutes U+0647 HEH with a two-lobed form the key does not insert.
+     Turning `isol` off leaves the cmap default, which is the isolated form. */
   font-feature-settings: "isol" 0;
 }
 
