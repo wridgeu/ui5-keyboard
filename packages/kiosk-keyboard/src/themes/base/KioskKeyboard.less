@@ -282,24 +282,14 @@
     justify-content: center;
   }
 
-  /* F-key row wrap: 12 F-keys split into 2×6 at narrow widths (<=35rem).
-     Targets [data-row-kind="fkey"] set by classifyRow(). Visual order stays
-     source order, so the wrapped row remains one logical row of twelve.
-
-     Nav rows ([data-row-kind="nav"]) have no counterpart rule: their narrow-width
-     2×4 form is layout data (layouts/nav-row-compact), not a reflow, because it
-     regroups the keys and a CSS `order` regroup would leave arrow-key grid
-     navigation - which follows the resolved layout - moving between keys the
-     user does not see as adjacent. */
-  @container keyboard (max-width: 35rem) {
-    .ui5KioskRow[data-row-kind="fkey"] {
-      flex-wrap: wrap;
-    }
-
-    .ui5KioskRow[data-row-kind="fkey"] > .ui5KioskKey {
-      flex: 1 0 ~"calc((100% - 5 * var(--_ui5KioskKeyboard-keyGap)) / 6)";
-    }
-  }
+  /* No breakpoint reflows a row. Arrow-key grid navigation moves on the
+     resolved layout's coordinates, so a row wrapped in CSS stays one logical
+     row however it looks: Down from the first key would leave the row entirely
+     rather than reach the key rendered beneath it. Narrow-width arrangements
+     are therefore layout data, `layouts/fkey-row-compact` (2×6) and
+     `layouts/nav-row-compact` (2×4), which keeps DOM order, visual order and
+     navigation order the same thing. `data-row-kind` stays on the row for
+     consumer styling. */
 
   /* Key */
 

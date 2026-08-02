@@ -1,7 +1,14 @@
 // Plain JS: not processed by ui5-tooling-transpile (test files outside src/)
 sap.ui.define(
-  ["ui5/kiosk/KioskKeyboard", "sap/m/Input", "ui5/kiosk/layouts/nav-row", "ui5/kiosk/layouts/nav-row-compact"],
-  function (KioskKeyboard, Input, navRow, navRowCompact) {
+  [
+    "ui5/kiosk/KioskKeyboard",
+    "sap/m/Input",
+    "ui5/kiosk/layouts/nav-row",
+    "ui5/kiosk/layouts/nav-row-compact",
+    "ui5/kiosk/layouts/fkey-row",
+    "ui5/kiosk/layouts/fkey-row-compact",
+  ],
+  function (KioskKeyboard, Input, navRow, navRowCompact, fkeyRow, fkeyRowCompact) {
     "use strict";
 
     // Glyph stress layout: exercises single-glyph rendering with characters
@@ -119,6 +126,17 @@ sap.ui.define(
       layout: "qwerty-nav-compact",
       instanceLayouts: { "qwerty-nav-compact": [...navRowCompact, ...qwertyLayout] },
     }).placeAt("kb-qwerty-nav-compact");
+
+    // 14d/14e. QWERTY + F-key row: the single 12-key row and the 2x6 form
+    new KioskKeyboard({
+      layout: "qwerty-fk",
+      instanceLayouts: { "qwerty-fk": [fkeyRow, ...qwertyLayout] },
+    }).placeAt("kb-qwerty-fk");
+
+    new KioskKeyboard({
+      layout: "qwerty-fk-compact",
+      instanceLayouts: { "qwerty-fk-compact": [...fkeyRowCompact, ...qwertyLayout] },
+    }).placeAt("kb-qwerty-fk-compact");
 
     // 15. Glyph stress layout
     new KioskKeyboard({

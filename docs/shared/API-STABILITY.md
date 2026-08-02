@@ -32,6 +32,7 @@ Use these imports for application code:
 - type-only helper export `KioskKeyboardDomContract` from `ui5/kiosk/KioskKeyboard`
 - `ui5/kiosk/layouts/*` - individual layout-definition modules (e.g. `layouts/qwerty`, `layouts/ja-kana`); import the data to compose custom layouts and pass via `instanceLayouts` (built-ins are already bundled)
 - `ui5/kiosk/layouts/fkey-row` - stable shared row for custom layout composition
+- `ui5/kiosk/layouts/fkey-row-compact` - the same twelve function keys as two rows of six, for keyboards too narrow to seat them on one line
 - `ui5/kiosk/layouts/nav-row` - stable shared row for custom layout composition
 - `ui5/kiosk/layouts/nav-row-compact` - the same eight nav keys as two rows of four, for keyboards too narrow to seat them on one line
 - `ui5/kiosk/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware via `instanceMiddleware` (built-ins are already bundled)
@@ -59,6 +60,7 @@ The stable consumer surface consists of the package entry points and the `<kiosk
 - `kiosk-keyboard-webc/Assets` - supported companion entry for theme and i18n registration when consuming the bare class
 - `kiosk-keyboard-webc/layouts/*` - individual layout-definition modules (e.g. `layouts/qwerty`, `layouts/ja-kana`); import the data to compose custom layouts and pass via `instanceLayouts` (built-ins are already bundled)
 - `kiosk-keyboard-webc/layouts/fkey-row` - stable shared row for custom layout composition
+- `kiosk-keyboard-webc/layouts/fkey-row-compact` - the same twelve function keys as two rows of six, for keyboards too narrow to seat them on one line
 - `kiosk-keyboard-webc/layouts/nav-row` - stable shared row for custom layout composition
 - `kiosk-keyboard-webc/layouts/nav-row-compact` - the same eight nav keys as two rows of four, for keyboards too narrow to seat them on one line
 - `kiosk-keyboard-webc/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware via `instanceMiddleware` (built-ins are already bundled)

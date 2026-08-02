@@ -3,6 +3,8 @@
 import "../../src/bundle.esm.ts";
 import navRow from "../../src/layouts/nav-row.ts";
 import navRowCompact from "../../src/layouts/nav-row-compact.ts";
+import fkeyRow from "../../src/layouts/fkey-row.ts";
+import fkeyRowCompact from "../../src/layouts/fkey-row-compact.ts";
 
 // Glyph stress layout: exercises single-glyph rendering with characters
 // that push vertical metrics, horizontal width, and text-box-trim edges.
@@ -110,6 +112,9 @@ customElements.whenDefined("kiosk-keyboard").then(() => {
     // row, and the 2x4 arrangement for keyboards too narrow to seat it.
     "qwerty-nav": [navRow, ...qwerty],
     "qwerty-nav-compact": [...navRowCompact, ...qwerty],
+    // The same two composition forms for the function-key row.
+    "qwerty-fk": [fkeyRow, ...qwerty],
+    "qwerty-fk-compact": [...fkeyRowCompact, ...qwerty],
   };
   document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
     kb.instanceLayouts = overrides;

@@ -297,28 +297,13 @@
   justify-content: center;
 }
 
-/* F-key row wrap
-   12 F-keys on one row cannot fit readable labels at narrow widths.
-   At <=35rem (560px), flex-wrap splits the row into 2×6 with each key
-   taking exactly 1/6 of the row. Above that threshold, all 12 fit on
-   one line with the default flex: 1 1 0.
-   Targets [data-row-kind="fkey"] set by the template's classifyRow(). Visual
-   order stays source order, so the wrapped row remains one logical row of twelve.
-
-   Nav rows ([data-row-kind="nav"]) have no counterpart rule: their narrow-width
-   2x4 form is layout data (layouts/nav-row-compact), not a reflow, because it
-   regroups the keys and a CSS `order` regroup would leave arrow-key grid
-   navigation - which follows the resolved layout - moving between keys the
-   user does not see as adjacent. */
-@container keyboard (max-width: 35rem) {
-  .kiosk-row[data-row-kind="fkey"] {
-    flex-wrap: wrap;
-  }
-
-  .kiosk-row[data-row-kind="fkey"] > .kiosk-key {
-    flex: 1 0 calc((100% - 5 * var(--_kiosk-keyboard-key-gap)) / 6);
-  }
-}
+/* No breakpoint reflows a row. Arrow-key grid navigation moves on the resolved
+   layout's coordinates, so a row wrapped in CSS stays one logical row however
+   it looks: Down from the first key would leave the row entirely rather than
+   reach the key rendered beneath it. Narrow-width arrangements are therefore
+   layout data, `layouts/fkey-row-compact` (2x6) and `layouts/nav-row-compact`
+   (2x4), which keeps DOM order, visual order and navigation order the same
+   thing. `data-row-kind` stays on the row for consumer styling. */
 
 /* Key */
 
