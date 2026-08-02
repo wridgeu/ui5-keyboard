@@ -6,8 +6,8 @@
  * long-press variants its script takes) lives here, so adding an attribute adds a
  * field rather than another name-keyed map parallel to the registry.
  *
- * Names are matched verbatim. Every caller resolves the layout name through the
- * registry first, so no normalization happens here.
+ * Names are matched verbatim; nothing is normalized here. Normalization (trim,
+ * lowercase) belongs to the caller, and an unnormalized name matches no entry.
  *
  * This module is framework-agnostic and duplicated into the sibling
  * `kiosk-keyboard` package (`src/internal/layout-meta.ts`); the two copies

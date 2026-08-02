@@ -1220,7 +1220,7 @@ export default class KioskKeyboard extends Control {
     const lang = typeof spec.lang === "string" ? spec.lang.trim() : "";
     return {
       rows: spec.rows,
-      meta: { ...(lang && { lang }), ...(spec.secondary === true && { secondary: true }) },
+      meta: { ...(lang && { lang }), ...(typeof spec.secondary === "boolean" && { secondary: spec.secondary }) },
     };
   }
 
@@ -1421,7 +1421,7 @@ export default class KioskKeyboard extends Control {
         this._physicalKeyHighlight.attach(next, newId);
 
         // Dev-time check: warn if the control won't work as a target
-        const focusRef = next.getFocusDomRef?.();
+        const focusRef = next.getFocusDomRef();
         if (focusRef && !resolveWithCustomResolver(focusRef, this._getEffectiveResolver())) {
           Log.warning(
             `KioskKeyboard: active target "${newId}" does not have a textual input DOM ref - ` +

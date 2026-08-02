@@ -367,6 +367,18 @@ describe("layout attributes declared on an instanceLayouts entry", () => {
     expect(readDataKeys(el).flat(), "the built-in secondary flag still applies to the shadowed name").to.include("q");
   });
 
+  it("un-marks a built-in secondary flag the descriptor declares false", async () => {
+    const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwertz-de"></kiosk-keyboard>`);
+    el.instanceLayouts = { numeric: { rows: symbolSurface, secondary: false } };
+    el.layout = "numeric";
+    await nextRender();
+
+    tapKey(el, "{layout:base}");
+    await nextRender();
+
+    expect(readDataKeys(el).flat(), "a declared false makes the shadowed name the base").to.include("§");
+  });
+
   it("keeps a layout whose declared attributes are the wrong type", async () => {
     await withCapturedWarnings(async (messages) => {
       const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard></kiosk-keyboard>`);

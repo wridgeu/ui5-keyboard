@@ -124,9 +124,8 @@ export class ResponsiveSizingController {
    * Height: applied in all browsers. Detects external height constraints
    * (host height < natural content height) and applies compact layout.
    *
-   * Called from scheduleClassUpdate() (coalesced from ResizeObserver via rAF)
-   * and from the host's refreshResponsiveState() (invoked by onAfterRendering
-   * and public callers) to recompute after intrinsic size changes.
+   * Runs from scheduleClassUpdate(), which coalesces the ResizeObserver
+   * callback and the host's refreshResponsiveState() into one animation frame.
    */
   private _applyClasses(): void {
     const root = this._host.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root);

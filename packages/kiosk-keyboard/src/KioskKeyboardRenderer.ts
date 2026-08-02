@@ -332,8 +332,7 @@ const KioskKeyboardRenderer = {
     // types a character carries it: space and the action tokens take their label
     // from i18n, and a layout-switch key is a control affordance rather than keycap
     // content. Scoped to the label span, since the keyboard's own label and its
-    // live region are UI-language text; multi-glyph labels carry the script too, so
-    // this sits outside the single-glyph branch.
+    // live region are UI-language text.
     const lang = _getLayoutLang();
     if (lang && parseKeyAction(key.value).kind === "char" && key.value !== " ") {
       rm.attr("lang", lang);

@@ -27,13 +27,13 @@ const VARIANT_LAYOUT: LayoutDefinition = [
   [{ value: "{shift}", type: "modifier" }],
 ];
 
-/** A key whose shifted glyph is an explicit `shiftValue`, not the uppercased value. */
 /** A layout whose keycaps are Arabic, declared through the descriptor form. */
 const LANG_VARIANT_LAYOUT: LayoutSpec = {
   rows: [[{ value: "ا", variants: ["أ", "إ", "آ"] }]],
   lang: "ar",
 };
 
+/** A key whose shifted glyph is an explicit `shiftValue`, not the uppercased value. */
 const SHIFT_VALUE_LAYOUT: LayoutDefinition = [
   [{ value: "1", shiftValue: "!", variants: ["¹", "½"] }],
   [{ value: "{shift}", type: "modifier" }],
