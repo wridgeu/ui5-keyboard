@@ -9,10 +9,8 @@ import navRow from "./nav-row";
  * Row 1 holds the position cluster, row 2 the arrows with Page Down trailing,
  * so Up sits directly above Down with Left and Right flanking it. Both rows are
  * sliced from `navRow`, so the two forms carry identical key definitions.
- *
- * Because the arrangement is layout data rather than a CSS reflow of `navRow`,
- * DOM order matches visual order: arrow-key grid navigation, which follows the
- * resolved layout, moves between the keys a user sees adjacent.
+ * Arrow-key grid navigation follows the resolved layout, so focus moves between
+ * the keys a user sees adjacent.
  *
  * @example <caption>A compact navigation row above the built-in QWERTY layout</caption>
  * ```ts

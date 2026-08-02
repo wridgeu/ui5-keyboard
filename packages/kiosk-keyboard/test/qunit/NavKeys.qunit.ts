@@ -61,8 +61,7 @@ QUnit.test("nav-row-compact arranges the eight nav keys as a position row over a
 });
 
 // Arrow-key navigation moves on layout coordinates, so a column shared between
-// the two rows is what makes Up and Down reachable from one another. This is
-// the property a CSS `order` regroup of a single eight-key row cannot provide.
+// the two rows is what makes Up and Down reachable from one another.
 QUnit.test("nav-row-compact seats Up directly above Down, flanked by Left and Right", (assert) => {
   const position = navRowCompact[0].map((key) => key.value);
   const arrows = navRowCompact[1].map((key) => key.value);

@@ -22,8 +22,7 @@ describe("fkeyRowCompact", () => {
   });
 
   // Arrow-key navigation moves on layout coordinates, so a column shared between
-  // the two rows is what makes F1 and F7 reachable from one another. A single
-  // twelve-key row wrapped in CSS stays one logical row and cannot provide it.
+  // the two rows is what makes F1 and F7 reachable from one another.
   it("seats each second-row key directly below its first-row counterpart", () => {
     const [first, second] = values(fkeyRowCompact);
 

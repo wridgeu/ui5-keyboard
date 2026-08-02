@@ -23,8 +23,7 @@ describe("navRowCompact", () => {
   });
 
   // Arrow-key navigation moves on layout coordinates, so a column shared between
-  // the two rows is what makes Up and Down reachable from one another. This is
-  // the property a CSS `order` regroup of a single eight-key row cannot provide.
+  // the two rows is what makes Up and Down reachable from one another.
   it("seats Up directly above Down, flanked by Left and Right", () => {
     const [position, arrows] = values(navRowCompact);
     const upColumn = position!.indexOf("{fkey:ArrowUp}");
