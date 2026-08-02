@@ -74,6 +74,7 @@ const LAYOUTS = [
   "ja-kana",
   "ja-romaji",
   "ko-hangul",
+  "nav-row-compact",
   "nav-row",
   "nav",
   "numeric",
@@ -128,7 +129,7 @@ const PAIRS = [
 
 // Guard against the manifest silently shrinking (a dropped entry would make
 // the check pass while comparing fewer pairs).
-const EXPECTED_PAIR_COUNT = 25;
+const EXPECTED_PAIR_COUNT = 26;
 
 /**
  * Removes line and block comments, but ONLY outside string literals: a `//` or

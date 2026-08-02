@@ -322,7 +322,9 @@ Below the 7rem per-key threshold described under [Dual Icon + Label Keys](#dual-
 
 ### F-Key Row Wrap
 
-At narrow widths (<=35rem / 560px), a `@container` query targets `[data-row-kind="fkey"]` rows and splits them into two rows of six via `flex-wrap`. Each F-key gets `flex: 1 0 calc((100% - 5 * gap) / 6)`, ensuring exactly six keys per row. Above 35rem, all 12 keys fit on a single row. In the UI5 variant, navigation rows (`[data-row-kind="nav"]`) wrap into a 2x4 grid at <=20rem via CSS `order` reordering. In the web component variant, navigation rows do not wrap. The `data-row-kind` attribute is set automatically by `classifyRow()` based on row content.
+At narrow widths (<=35rem / 560px), a `@container` query targets `[data-row-kind="fkey"]` rows and splits them into two rows of six via `flex-wrap`. Each F-key gets `flex: 1 0 calc((100% - 5 * gap) / 6)`, ensuring exactly six keys per row. Above 35rem, all 12 keys fit on a single row. Both packages ship this rule identically, and both apply it without reordering, so the wrapped row keeps source order and stays one logical row of twelve.
+
+Navigation rows (`[data-row-kind="nav"]`) have no counterpart rule in either package. Their narrow-width 2x4 form is a second layout (`layouts/nav-row-compact`) rather than a reflow, because that arrangement regroups the keys and arrow-key navigation moves on layout coordinates; see [Responsive Layout Patterns](../kiosk/RESPONSIVE-LAYOUT-PATTERNS.md#nav-rows-choose-the-arrangement-dont-reflow-it). The `data-row-kind` attribute is set automatically by `classifyRow()` based on row content.
 
 ## Accent-Variant Hint and Popup
 

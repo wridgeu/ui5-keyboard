@@ -1,6 +1,6 @@
 # Feature: Nav Row Wrapping & Responsive Layout Patterns Documentation
 
-> Status: Implemented
+> Status: Superseded (2026-08-02, #212). The `@container` nav-row wrap described below shipped and was later removed: arrow-key grid navigation moves on the resolved layout's coordinates, so wrapping one 8-key row into two visual rows - and regrouping it with CSS `order` - left focus moving between keys the user does not see as adjacent. The 2x4 arrangement is now layout data (`layouts/nav-row-compact`) in both packages. Section 4's assessment of `order` and accessibility, which considered only screen-reader reading order, is what this reverses. The responsive-patterns documentation this proposal also introduced was implemented and remains.
 
 ## Problem
 

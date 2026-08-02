@@ -2,6 +2,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { FKeyMode } from "ui5/kiosk/library";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import navRow from "ui5/kiosk/layouts/nav-row";
+import navRowCompact from "ui5/kiosk/layouts/nav-row-compact";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
@@ -44,6 +45,58 @@ QUnit.test("nav-row exports 8 navigation key definitions", (assert) => {
   assert.strictEqual(navRow[0].value, "{fkey:Home}", "First key is Home");
   assert.strictEqual(navRow[7].value, "{fkey:ArrowRight}", "Last key is ArrowRight");
   assert.strictEqual(navRow[0].type, "modifier", "Nav-row uses modifier key styling");
+});
+
+// Pins the slice boundaries against navRow's source order: reordering navRow
+// without revisiting the slices would silently rearrange the compact form.
+QUnit.test("nav-row-compact arranges the eight nav keys as a position row over an arrow row", (assert) => {
+  assert.deepEqual(
+    navRowCompact.map((row) => row.map((key) => key.value)),
+    [
+      ["{fkey:Home}", "{fkey:ArrowUp}", "{fkey:End}", "{fkey:PageUp}"],
+      ["{fkey:ArrowLeft}", "{fkey:ArrowDown}", "{fkey:ArrowRight}", "{fkey:PageDown}"],
+    ],
+    "Two rows of four, position cluster over arrows",
+  );
+});
+
+// Arrow-key navigation moves on layout coordinates, so a column shared between
+// the two rows is what makes Up and Down reachable from one another. This is
+// the property a CSS `order` regroup of a single eight-key row cannot provide.
+QUnit.test("nav-row-compact seats Up directly above Down, flanked by Left and Right", (assert) => {
+  const position = navRowCompact[0].map((key) => key.value);
+  const arrows = navRowCompact[1].map((key) => key.value);
+  const upColumn = position.indexOf("{fkey:ArrowUp}");
+
+  assert.strictEqual(arrows[upColumn], "{fkey:ArrowDown}", "Down sits in Up's column");
+  assert.strictEqual(arrows[upColumn - 1], "{fkey:ArrowLeft}", "Left flanks Down");
+  assert.strictEqual(arrows[upColumn + 1], "{fkey:ArrowRight}", "Right flanks Down");
+});
+
+QUnit.test("nav-row-compact renders as two rows of four nav keys", async (assert) => {
+  const kb = new KioskKeyboard({
+    layout: "nav-compact",
+    instanceLayouts: { "nav-compact": navRowCompact },
+  });
+  await placeAndWait(kb);
+
+  const rows = getRowElements(kb);
+  assert.strictEqual(rows.length, 2, "Two rows rendered");
+  for (const row of rows) {
+    assert.strictEqual(row.getAttribute(DOM.attributes.rowKind), "nav", "Row classified as nav");
+    assert.strictEqual(row.querySelectorAll(DOM.selectors.key).length, 4, "Four keys in the row");
+  }
+
+  // The logical coordinate arrow-key navigation moves on: Down is one row below
+  // Up in the same column, so ArrowDown from Up reaches it.
+  const up = getRequiredKeyElement(kb, "{fkey:ArrowUp}");
+  const down = getRequiredKeyElement(kb, "{fkey:ArrowDown}");
+  assert.strictEqual(up.getAttribute(DOM.attributes.rowIndex), "0", "Up is on row 0");
+  assert.strictEqual(up.getAttribute(DOM.attributes.keyIndex), "1", "Up is in column 1");
+  assert.strictEqual(down.getAttribute(DOM.attributes.rowIndex), "1", "Down is one row below Up");
+  assert.strictEqual(down.getAttribute(DOM.attributes.keyIndex), "1", "Down is in Up's column");
+
+  kb.destroy();
 });
 
 QUnit.test("Standalone nav layout renders expected keys", async (assert) => {
