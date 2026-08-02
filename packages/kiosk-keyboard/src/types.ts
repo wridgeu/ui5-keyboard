@@ -373,6 +373,9 @@ export interface LayoutSpec {
    * alphabetic layout. A secondary layout is never tracked as the base, so
    * `{layout:base}` returns to the alphabetic layout it was reached from instead of
    * stranding the keyboard on the auxiliary surface.
+   *
+   * Under a name that shadows a built-in layout, declaring `false` un-marks the
+   * built-in's flag; omitting this inherits it.
    */
   secondary?: boolean;
 }

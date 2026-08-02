@@ -1,5 +1,6 @@
 import DataType from "sap/ui/base/DataType";
 import type { CompositionMiddleware, LayoutInput } from "./types";
+import type { VariantTable } from "./internal/latin-variants";
 import Lib from "sap/ui/core/Lib";
 import "sap/m/library"; // resolve dependency before Lib.init()
 
@@ -199,7 +200,7 @@ DataType.registerEnum("ui5.kiosk.FKeyMode", FKeyMode);
  * skipped.
  */
 function isOverrideRecord(value: unknown): boolean {
-  return value === null || (typeof value === "object" && !Array.isArray(value));
+  return typeof value === "object" && !Array.isArray(value);
 }
 
 DataType.createType("ui5.kiosk.InstanceLayoutMap", { defaultValue: null, isValid: isOverrideRecord }, "object");
@@ -242,7 +243,6 @@ export { LATIN_DIACRITIC_VARIANTS } from "./internal/latin-variants";
 // `type` modifier on a re-export, and would assign the type name onto the
 // library object at runtime, publishing an undefined ui5.kiosk member.
 export type { VariantTable } from "./internal/latin-variants";
-import type { VariantTable } from "./internal/latin-variants";
 
 /**
  * The shapes the four per-instance override properties accept. Each is the record

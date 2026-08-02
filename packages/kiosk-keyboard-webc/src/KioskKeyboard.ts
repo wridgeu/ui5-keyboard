@@ -1230,6 +1230,15 @@ class KioskKeyboard extends UI5Element {
    * composition-middleware resolution (_ensureMiddleware) all read this name, so
    * none of them can key off a layout other than the one rendered.
    */
+  private _resolvedLayoutName(): string {
+    const requested =
+      this._layoutSource === "user"
+        ? this._currentLayout
+        : (constrainedLayoutName(this.keyboardType) ??
+          (this._currentLayout || this._baseLayout || this.layout || this._localeLayout()));
+    return resolveLayoutName(requested, this._layoutsView.get(this.instanceLayouts));
+  }
+
   /**
    * The BCP-47 language of the active layout's keycaps, or `undefined` when they
    * are in the UI language. The template puts it on the labels that carry the
@@ -1240,15 +1249,6 @@ class KioskKeyboard extends UI5Element {
    */
   _getLayoutLang(): string | undefined {
     return getLayoutLang(this._resolvedLayoutName(), this._layoutMetaView.get(this.instanceLayouts));
-  }
-
-  private _resolvedLayoutName(): string {
-    const requested =
-      this._layoutSource === "user"
-        ? this._currentLayout
-        : (constrainedLayoutName(this.keyboardType) ??
-          (this._currentLayout || this._baseLayout || this.layout || this._localeLayout()));
-    return resolveLayoutName(requested, this._layoutsView.get(this.instanceLayouts));
   }
 
   _getResolvedLayout(): LayoutDefinition {
@@ -1347,7 +1347,7 @@ class KioskKeyboard extends UI5Element {
     const lang = typeof spec.lang === "string" ? spec.lang.trim() : "";
     return {
       rows: spec.rows,
-      meta: { ...(lang && { lang }), ...(spec.secondary === true && { secondary: true }) },
+      meta: { ...(lang && { lang }), ...(typeof spec.secondary === "boolean" && { secondary: spec.secondary }) },
     };
   }
 

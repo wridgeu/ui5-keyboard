@@ -1511,3 +1511,18 @@ QUnit.test("a descriptor shadowing a built-in keeps the attributes it does not d
 
   kb.destroy();
 });
+
+QUnit.test("a descriptor shadowing a built-in can un-mark its secondary flag", async (assert) => {
+  const kb = new KioskKeyboard({
+    instanceLayouts: { numeric: { rows: SYMBOL_SURFACE, secondary: false } },
+    layout: "qwertz-de",
+  });
+  await placeAndWait(kb);
+
+  kb.setLayout("numeric");
+  await waitForRender();
+
+  assert.strictEqual(kb.getBaseLayout(), "numeric", "a declared false overrides the built-in secondary flag");
+
+  kb.destroy();
+});
