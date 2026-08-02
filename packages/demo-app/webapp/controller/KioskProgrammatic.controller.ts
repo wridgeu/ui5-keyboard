@@ -8,6 +8,7 @@ import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import navRow from "ui5/kiosk/layouts/nav-row";
+import navRowCompact from "ui5/kiosk/layouts/nav-row-compact";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
@@ -110,6 +111,20 @@ export default class KioskProgrammatic extends BaseController {
 
     kb.resetKeyboardType();
     kb.setLayout("qwerty-nav");
+    this._updateStatus();
+  }
+
+  // `navRowCompact` is already a LayoutDefinition (two rows), so it is passed
+  // unwrapped where the single-row `navRow` above needs `[navRow]`.
+  onUseQwertyNavCompact(): void {
+    const kb = this._getKeyboard();
+    if (!this._hasInstanceLayout(kb, "qwerty-nav-compact")) {
+      this._addInstanceLayout(kb, "qwerty-nav-compact", KioskKeyboard.composeLayout(navRowCompact, "qwerty"));
+      this._addLayoutOption("qwerty-nav-compact");
+    }
+
+    kb.resetKeyboardType();
+    kb.setLayout("qwerty-nav-compact");
     this._updateStatus();
   }
 
