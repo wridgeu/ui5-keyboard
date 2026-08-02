@@ -235,3 +235,37 @@ test("key icons paint in their key's color", async ({ page }) => {
     }
   }
 });
+
+// The grid coordinate arrow-key navigation moves on is published per key. A
+// coordinate that disagrees with the key's actual place in the DOM would send
+// consumer CSS and tests to a key the user sees somewhere else.
+test("keys carry the grid coordinate they occupy", async ({ page }) => {
+  await openPage(page, "/test/pages/visual.html");
+
+  for (const id of HOSTS) {
+    const rows = await page.evaluate(
+      ({ hostId, rootSel, rowSel, keySel, rowAttr, colAttr }) => {
+        const root = document.getElementById(hostId)!.shadowRoot!.querySelector(rootSel)!;
+        return [...root.querySelectorAll(rowSel)].map((row) =>
+          [...row.querySelectorAll(keySel)].map((k) => `${k.getAttribute(rowAttr)},${k.getAttribute(colAttr)}`),
+        );
+      },
+      {
+        hostId: id,
+        rootSel: ROOT,
+        rowSel: DOM.selectors.row,
+        keySel: KEY,
+        rowAttr: DOM.attributes.rowIndex,
+        colAttr: DOM.attributes.keyIndex,
+      },
+    );
+
+    // Derived from the rendered shape, so it asserts the attribute values
+    // against where each key actually sits rather than against itself.
+    const occupied = rows.map((row, r) => row.map((_, c) => `${r},${c}`));
+
+    expect(rows.length, `${id} rendered no rows`).toBeGreaterThan(0);
+    expect(rows.flat().length, `${id} rendered no keys`).toBeGreaterThan(0);
+    expect(rows, `${id} grid coordinates drift from DOM position`).toEqual(occupied);
+  }
+});

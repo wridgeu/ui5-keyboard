@@ -242,6 +242,10 @@ const KioskKeyboardRenderer = {
 
     rm.attr(KIOSK_KEYBOARD_DOM.attributes.key, key.value);
 
+    // Logical grid coordinate, the same one arrow-key navigation moves on.
+    rm.attr(KIOSK_KEYBOARD_DOM.attributes.rowIndex, String(ri));
+    rm.attr(KIOSK_KEYBOARD_DOM.attributes.keyIndex, String(ci));
+
     // Function-key flag (`{fkey:*}`), orthogonal to the key category.
     if (parseKeyAction(key.value).kind === "fkey") {
       rm.attr(KIOSK_KEYBOARD_DOM.attributes.fkey, "");

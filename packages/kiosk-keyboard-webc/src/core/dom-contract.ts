@@ -70,6 +70,15 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     /** Marks a key whose effective `variants` list is non-empty (the long-press gate). */
     hasVariants: "data-has-variants",
     /**
+     * Zero-based index of the key's row in the resolved layout. Together with
+     * {@link keyIndex} this is the logical grid coordinate arrow-key navigation
+     * moves on, published as an attribute so consumer CSS and tests can address
+     * a key by position without parsing the element id.
+     */
+    rowIndex: "data-row-index",
+    /** Zero-based index of the key within its row. See {@link rowIndex}. */
+    keyIndex: "data-key-index",
+    /**
      * Height-responsive tier reflected on the HOST (absent when unconstrained,
      * value from `cqTierValues`). An attribute rather than a class: the `class`
      * attribute is consumer-owned and can be clobbered by framework `className`
@@ -90,6 +99,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     focusableKey: '.kiosk-key[tabindex="0"]',
     keyByValue: (value: string) => `[data-key="${CSS.escape(value)}"]`,
     keyByShiftValue: (value: string) => `[data-shift-value="${CSS.escape(value)}"]`,
+    keyByPosition: (row: number, col: number) => `[data-row-index="${row}"][data-key-index="${col}"]`,
     variantPopover: "ui5-popover",
     variantPopup: ".kiosk-keyboard__variant-popup",
     variantOption: "ui5-button",

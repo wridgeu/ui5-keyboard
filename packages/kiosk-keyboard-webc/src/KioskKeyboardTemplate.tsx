@@ -112,6 +112,9 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   role="button"
                   tabindex={!this.disabled && isFocusTarget ? 0 : -1}
                   data-key={key.value}
+                  // Logical grid coordinate, the same one arrow-key navigation moves on.
+                  data-row-index={rowIndex}
+                  data-key-index={colIndex}
                   data-fkey={isFkey ? "" : undefined}
                   data-key-span={key.width || undefined}
                   data-shift-value={key.shiftValue || undefined}

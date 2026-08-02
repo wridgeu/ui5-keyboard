@@ -90,6 +90,7 @@ const KEY_PARITY = {
       "focusableKey",
       "keyByValue",
       "keyByShiftValue",
+      "keyByPosition",
       "variantPopover",
       "variantPopup",
       "variantOption",
@@ -135,7 +136,7 @@ function checkKeyParity(group, spec) {
  * @type {{ core: string[]; kioskOnly: string[]; webcOnly: string[] }}
  */
 const ATTR_PARITY = {
-  core: ["key", "shiftValue", "rowKind", "fkey", "glyphScript", "keySpan", "hasVariants"],
+  core: ["key", "shiftValue", "rowKind", "fkey", "glyphScript", "keySpan", "hasVariants", "rowIndex", "keyIndex"],
   kioskOnly: [],
   webcOnly: ["cqTier"],
 };
