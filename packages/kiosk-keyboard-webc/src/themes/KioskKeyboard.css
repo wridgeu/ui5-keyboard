@@ -823,6 +823,20 @@
     system-ui,
     sans-serif
   );
+
+  /* A keycap is a specimen: it shows the letter the key types, with no
+     joining neighbours. `lang` (WCAG 3.1.2, per-layout metadata) makes the
+     shaper apply the font's Arabic language system, and Segoe UI's `isol`
+     lookup there substitutes U+0647 HEH with its two-lobed initial-looking
+     form, so the keycap depicts a letter shape the key does not insert.
+     Turning `isol` off leaves the cmap default, which is the isolated form
+     every keycap wants; the joining context is already isolated, so nothing
+     else is shaped differently. Verified across all 77 single-character
+     glyphs of the Arabic layout: only U+0647 changes, and all 77 then match
+     the untagged rendering. Inert on every other font in the stack above.
+     Do not reach for `locl`, `init`, `calt` or `font-language-override` -
+     none of them suppress this. */
+  font-feature-settings: "isol" 0;
 }
 
 /* Key icon */
