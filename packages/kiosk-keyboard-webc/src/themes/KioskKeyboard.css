@@ -828,7 +828,7 @@
 
 /* The inherited font stack (72 / Arial / Helvetica / sans-serif) does not
    include the specialized Unicode arrow symbols used by navigation keys
-   (U+21DE-U+21F2).  Without explicit symbol font names the glyphs rely
+   (U+21D1-U+21F2).  Without explicit symbol font names the glyphs rely
    on the browser's last-resort fallback, which may fail on platforms with
    stripped-down font installations (e.g. embedded Android WebView).
    The fonts below cover Windows (Segoe UI Symbol), macOS (Apple Symbols),

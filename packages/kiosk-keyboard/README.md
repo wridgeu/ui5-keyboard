@@ -1221,6 +1221,60 @@ Invalid SAP icon URIs are validated via `IconPool.getIconInfo()`. If an icon is 
 { value: "{fkey:Home}", icon: "\u21F1", label: "Home", type: "modifier" }
 ```
 
+### Custom key icons
+
+There is no icon markup field: `icon` is a plain string, and raw HTML, `<svg>` and `<img>` sources are not accepted. Anything beyond the two built-in value types comes from the UI5 icon registry, which reaches Font Awesome, Material Symbols or any other icon font.
+
+**Third-party icon fonts.** A font registered through `IconPool.registerFont()` (public since UI5 1.56) becomes addressable as `sap-icon://<collectionName>/<iconName>`. Register it once, before the keyboard renders:
+
+```ts
+import IconPool from "sap/ui/core/IconPool";
+
+IconPool.registerFont({
+  fontFamily: "FontAwesome-Solid", // also the file base name
+  collectionName: "fa", // the sap-icon:// host segment
+  fontURI: sap.ui.require.toUrl("my/app/fonts"),
+});
+```
+
+Two files must sit in `fontURI`, both named after `fontFamily`: `FontAwesome-Solid.woff2` (UI5 adds the `@font-face` itself, no CSS import needed) and `FontAwesome-Solid.json`, mapping icon name to hexadecimal code point:
+
+```json
+{ "paste": "e900", "send": "e901" }
+```
+
+Pass `metadata` inline instead to skip the JSON fetch. The metadata loads asynchronously; `IconPool.fontLoaded(collectionName)` resolves once it is available. A registered collection then renders exactly like a built-in SAP icon:
+
+```ts
+{ value: "{paste}", icon: "sap-icon://fa/paste", label: "", ariaLabel: "Paste", type: "action" }
+```
+
+**Emoji and Unicode glyphs** need no registration at all - any value that is not a `sap-icon://` URI is rendered as text at icon size, over the symbol-font fallback stack:
+
+```ts
+{ value: "{enter}", icon: "\uD83D\uDD0D", label: "" }
+```
+
+**Restyling in CSS.** The control renders in the light DOM, so page CSS reaches every icon without touching layout data. SAP icon glyphs come from `content: attr(data-sap-ui-icon-content)` on the core `.sapUiIcon::before` rule, which an author rule overrides without `!important`:
+
+```css
+/* Swap one key's glyph */
+.ui5KioskKey[data-key="{enter}"] .ui5KioskKey__icon::before {
+  content: "\21B5";
+  font-family: "Segoe UI Symbol";
+}
+```
+
+Declare `font-family` on `::before`, not on the icon span: the span carries an inline `font-family` written by the renderer that a class-level rule cannot beat. Icons that mirror in right-to-left mode carry `sapUiIconMirrorInRTL` and a replacement glyph inherits that flip; add `transform: none` to opt out. For a Unicode or emoji icon the glyph is a text node rather than a pseudo-element, so `::before` adds a second glyph instead of replacing it - restyle or hide the span instead.
+
+`data-key` and the key/icon class names are part of the [DOM Contract](#dom-contract). The supported _styling_ API remains the `--ui5KioskKeyboard-*` custom properties, none of which carries a glyph.
+
+**Accessible names.** Icons are always `aria-hidden="true"`, so a key with `label: ""` needs a name of its own. It resolves as `ariaLabel` -> visible label -> the built-in i18n entry for the token -> the raw `value`. A custom icon-only token has no i18n entry, so it would announce its raw value, and the control logs once per key value:
+
+```
+Icon-only key "{paste}" has no accessible name; set ariaLabel on the KeyDefinition.
+```
+
 ### Dual rendering (icon + label)
 
 When both `icon` and a non-empty `label` resolve, the key renders in **dual mode**: icon and label side by side. The layout direction defaults to `row` (inline) and is customizable via CSS custom properties:
