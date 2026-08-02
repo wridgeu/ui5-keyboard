@@ -1,5 +1,5 @@
 import type { LayoutDefinition } from "../types.js";
-import fkeyRow from "./fkey-row.js";
+import fkeyRowCompact from "./fkey-row-compact.js";
 
 /**
  * Standalone function-key layout (F1--F12).
@@ -8,10 +8,8 @@ import fkeyRow from "./fkey-row.js";
  * @since 0.1.0
  */
 const fkeys: LayoutDefinition = [
-  // Row 1: F1-F6
-  fkeyRow.slice(0, 6),
-  // Row 2: F7-F12
-  fkeyRow.slice(6),
+  // Rows 1-2: F1-F6 over F7-F12
+  ...fkeyRowCompact,
   // Row 3: ABC + Nav + Enter
   [
     { value: "{layout:base}", label: "ABC", width: "1.5", type: "modifier" },

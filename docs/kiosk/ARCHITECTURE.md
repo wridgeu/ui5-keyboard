@@ -483,13 +483,12 @@ Keys use `flex: <grow> 1 0` for proportional sizing within rows. The `data-key-s
 
 Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted).
 
-**Width responsiveness** is handled entirely by CSS `@container` queries. The root `.ui5KioskKeyboard` element sets `container-name: keyboard; container-type: inline-size`. Three breakpoints exist:
+**Width responsiveness** is handled entirely by CSS `@container` queries. The root `.ui5KioskKeyboard` element sets `container-name: keyboard; container-type: inline-size`. Two breakpoints exist:
 
-- **35rem:** The F-key row switches to `flex-wrap: wrap` so the twelve function keys reflow into 2×6 instead of overflowing.
 - **30rem (narrow):** Caps `--ui5KioskKeyboard-keyFontSize` via `min(base, 1rem)` so consumer-provided smaller values are preserved while larger values get clamped.
 - **20rem (compact):** Key inline padding is reduced for non-numpad keys, and a tighter font-size cap of `0.875rem` applies.
 
-Rows are never reordered at a breakpoint. Arrow-key grid navigation moves on the resolved layout's coordinates, so a reordered reflow would leave focus moving between keys the user does not see as adjacent; an arrangement that regroups keys is a second layout instead (`layouts/nav-row-compact`).
+Rows are never wrapped or reordered at a breakpoint. Arrow-key grid navigation moves on the resolved layout's coordinates, so a reflow would leave focus moving between keys the user does not see as adjacent; a narrow-width arrangement is a second layout instead (`layouts/fkey-row-compact`, `layouts/nav-row-compact`).
 
 No JavaScript is involved in width responsiveness.
 

@@ -12,13 +12,12 @@ The keyboard uses `container-type: inline-size` on its root element with `contai
 
 | Breakpoint        | What Changes                                                             |
 | ----------------- | ------------------------------------------------------------------------ |
-| `<=35rem` (560px) | F-key rows (12 keys) wrap from 1x12 to 2x6                               |
 | `<=30rem` (480px) | Key font size capped at `1rem`                                           |
 | `<=20rem` (320px) | Key font size capped at `0.875rem`, inline padding reduced to `0.125rem` |
 
-Both packages ship these breakpoints identically.
+Both packages ship these breakpoints identically. No breakpoint reflows a row; see below.
 
-### Nav Rows: Choose the Arrangement, Don't Reflow It
+### Rows: Choose the Arrangement, Don't Reflow It
 
 An 8-key `navRow` composed onto a keyboard narrower than about 20rem leaves each key around 30px wide. The fix is a second arrangement of the same keys, shipped as layout data:
 
@@ -36,7 +35,7 @@ Up therefore sits directly above Down with Left and Right flanking it.
 
 **Why this is data and not a `@container` rule.** Arrow-key grid navigation moves on the resolved layout's row/column coordinates, not on rendered geometry. Wrapping one 8-key row into two visual rows with `flex-wrap` leaves it a single logical row of eight, so ArrowDown from Up skips the whole nav row instead of reaching Down; adding a CSS `order` regroup to place the arrows makes visual and logical order disagree outright, which is also a [WCAG 2.4.3 Focus Order](https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html) problem. Expressing the arrangement as rows keeps DOM order, visual order and navigation order the same thing. `reading-flow: flex-visual` is the CSS-side answer to this class of mismatch, but it is not yet Baseline.
 
-The F-key rows do wrap in CSS (`<=35rem`, 1x12 to 2x6) because that wrap preserves source order: the row stays one logical row of twelve, which is the arrangement [APG's layout-grid guidance](https://www.w3.org/WAI/ARIA/apg/patterns/grid/examples/layout-grids/) permits for a single logical set of cells.
+The same reasoning retires the F-key wrap. Preserving source order is not sufficient: it rescues ArrowLeft/Right and reading order, but vertical moves still step by index into the logical row array, so a 1x12 F-key row wrapped to a visual 2x6 leaves ArrowDown from F1 skipping the function keys entirely instead of reaching the F7 rendered directly beneath it. [APG's layout-grid guidance](https://www.w3.org/WAI/ARIA/apg/patterns/grid/examples/layout-grids/) permits wrapping a single logical set of cells, but it describes the ARIA model rather than the 2D arrow behaviour this control implements. `layouts/fkey-row-compact` is the F-key counterpart to `nav-row-compact`, and the built-in `fkeys` layout is built from it.
 
 **Switching between them.** The keyboard does not swap layout data on its own; the consumer picks the arrangement, which keeps the choice explicit and lets a custom nav row use its own compact form:
 
@@ -183,7 +182,7 @@ At 320px, 6 tool keys in a row are cramped.
 
 ### The Solution
 
-Since all keys in `toolRow` use `{fkey:...}` values, `classifyRow()` marks the row as `data-row-kind="fkey"`. The built-in fkey wrapping rule at `<=35rem` sizes each key to 1/6 width (it is designed to split the 12-key F-row into 2x6), so a 6-key row lays out 1x6 on a single line. To get a 2x3 wrap for a 6-key row, add the custom CSS rule below (1/3 width).
+Since all keys in `toolRow` use `{fkey:...}` values, `classifyRow()` marks the row as `data-row-kind="fkey"`. That attribute is a styling hook only; the component ships no wrapping rule for it, so the row lays out 1x6 on a single line. To wrap it 2x3 at narrow widths, add the custom CSS rule below (1/3 width).
 
 If the row contains a mix of key types (not all fkeys or all nav keys), `classifyRow()` returns `undefined` and no `data-row-kind` is set. In that case, add a custom CSS rule targeting the row by position or a custom `data-*` attribute:
 

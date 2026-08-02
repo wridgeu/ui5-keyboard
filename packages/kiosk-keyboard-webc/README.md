@@ -275,7 +275,7 @@ const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
 KioskKeyboard.setI18nResolver((key) => undefined);
 ```
 
-Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `instanceLayouts` property. The shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/nav-row`, `kiosk-keyboard-webc/layouts/nav-row-compact`) are stable imports for composing custom variant layouts. Their keys are declared as `type: "modifier"` (the transparent Lite button style); override `type` on individual keys if you want the default bordered style instead. `nav-row-compact` seats the same eight nav keys as two rows of four, for keyboards narrower than about 20rem where one row of eight leaves each key around 30px wide.
+Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `instanceLayouts` property. The shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/fkey-row-compact`, `kiosk-keyboard-webc/layouts/nav-row`, `kiosk-keyboard-webc/layouts/nav-row-compact`) are stable imports for composing custom variant layouts. Their keys are declared as `type: "modifier"` (the transparent Lite button style); override `type` on individual keys if you want the default bordered style instead. `nav-row-compact` seats the same eight nav keys as two rows of four, for keyboards narrower than about 20rem where one row of eight leaves each key around 30px wide; `fkey-row-compact` does the same for the twelve function keys, as two rows of six.
 
 > [!NOTE]
 > See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
@@ -608,7 +608,7 @@ The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The pac
 
 ### Layout Composition
 
-The package ships primary layouts and building block rows (`fkey-row`, `nav-row`, `nav-row-compact`).
+The package ships primary layouts and building block rows (`fkey-row`, `fkey-row-compact`, `nav-row`, `nav-row-compact`).
 Combined layouts (e.g., QWERTY + F-key row) are not built-in - they are trivial
 compositions consumers can build:
 
@@ -1159,7 +1159,7 @@ src/
 │   ├── default-layout.ts     # Default layout name constant
 │   ├── qwerty.ts, qwertz-de.ts, ja-romaji.ts, ja-kana.ts, arabic.ts, ko-hangul.ts, qwerty-es.ts, numeric.ts, special.ts, numpad.ts
 │   ├── fkeys.ts, nav.ts      # Standalone F-key/nav layouts
-│   └── fkey-row.ts, nav-row.ts, nav-row-compact.ts  # Shared rows for composite layouts
+│   └── fkey-row{,-compact}.ts, nav-row{,-compact}.ts  # Shared rows for composite layouts
 ├── themes/
 │   ├── KioskKeyboard.css      # Component styles
 │   └── sap_horizon*/          # Theme parameter bundles

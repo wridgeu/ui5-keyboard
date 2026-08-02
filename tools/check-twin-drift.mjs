@@ -69,6 +69,7 @@ const webcRoot = path.join(repoRoot, "packages", "kiosk-keyboard-webc");
 const LAYOUTS = [
   "arabic",
   "default-layout",
+  "fkey-row-compact",
   "fkey-row",
   "fkeys",
   "ja-kana",
@@ -129,7 +130,7 @@ const PAIRS = [
 
 // Guard against the manifest silently shrinking (a dropped entry would make
 // the check pass while comparing fewer pairs).
-const EXPECTED_PAIR_COUNT = 26;
+const EXPECTED_PAIR_COUNT = 27;
 
 /**
  * Removes line and block comments, but ONLY outside string literals: a `//` or

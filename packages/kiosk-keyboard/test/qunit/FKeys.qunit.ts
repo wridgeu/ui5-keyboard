@@ -2,6 +2,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import FKeyController from "ui5/kiosk/internal/fkey-controller";
 import { FKeyMode } from "ui5/kiosk/library";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
+import fkeyRowCompact from "ui5/kiosk/layouts/fkey-row-compact";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
@@ -42,6 +43,24 @@ QUnit.test("fkeys is a registered built-in layout", (assert) => {
 
   const names = KioskKeyboard.getRegisteredLayoutNames();
   assert.ok(names.includes("fkeys"), "fkeys in registered names");
+});
+
+// Pins the slice boundaries against fkeyRow's source order.
+QUnit.test("fkey-row-compact splits the twelve function keys into F1-F6 over F7-F12", (assert) => {
+  assert.deepEqual(
+    fkeyRowCompact.map((row) => row.map((key) => key.value)),
+    [
+      ["{fkey:F1}", "{fkey:F2}", "{fkey:F3}", "{fkey:F4}", "{fkey:F5}", "{fkey:F6}"],
+      ["{fkey:F7}", "{fkey:F8}", "{fkey:F9}", "{fkey:F10}", "{fkey:F11}", "{fkey:F12}"],
+    ],
+    "Two rows of six, F7 directly below F1",
+  );
+});
+
+QUnit.test("fkey-row-compact supplies the first two rows of the built-in fkeys layout", (assert) => {
+  const fkeys = KioskKeyboard.getRegisteredLayout("fkeys")!;
+
+  assert.deepEqual(fkeys.slice(0, 2), fkeyRowCompact, "Built-in fkeys layout is built from the compact rows");
 });
 
 QUnit.test("fkey-row module exports F1-F12 key definitions", (assert) => {

@@ -320,11 +320,11 @@ The `15cqi` ideal value prevents the "icon looks lost" appearance as keys widen,
 
 Below the 7rem per-key threshold described under [Dual Icon + Label Keys](#dual-icon--label-keys) the label is hidden, so the cqi scaling no longer has a label to balance against. Both packages then scale every icon-only dual key, nav keys included, to the key font size, so nav keys match Shift/Enter/Backspace.
 
-### F-Key Row Wrap
+### Row Wrapping
 
-At narrow widths (<=35rem / 560px), a `@container` query targets `[data-row-kind="fkey"]` rows and splits them into two rows of six via `flex-wrap`. Each F-key gets `flex: 1 0 calc((100% - 5 * gap) / 6)`, ensuring exactly six keys per row. Above 35rem, all 12 keys fit on a single row. Both packages ship this rule identically, and both apply it without reordering, so the wrapped row keeps source order and stays one logical row of twelve.
+Neither package reflows a row at a breakpoint. `classifyRow()` still sets `data-row-kind` (`fkey` / `nav`) on the row as a consumer styling hook, but no built-in rule wraps or reorders it.
 
-Navigation rows (`[data-row-kind="nav"]`) have no counterpart rule in either package. Their narrow-width 2x4 form is a second layout (`layouts/nav-row-compact`) rather than a reflow, because that arrangement regroups the keys and arrow-key navigation moves on layout coordinates; see [Responsive Layout Patterns](../kiosk/RESPONSIVE-LAYOUT-PATTERNS.md#nav-rows-choose-the-arrangement-dont-reflow-it). The `data-row-kind` attribute is set automatically by `classifyRow()` based on row content.
+The reason is navigation rather than typography: arrow-key grid navigation steps by index into the resolved layout's row array, so a row wrapped in CSS remains one logical row however it renders, and a vertical move from the first key leaves the row instead of reaching the key drawn beneath it. Narrow-width arrangements are therefore shipped as layout data, `layouts/fkey-row-compact` (F1-F6 over F7-F12) and `layouts/nav-row-compact` (position cluster over arrows); see [Responsive Layout Patterns](../kiosk/RESPONSIVE-LAYOUT-PATTERNS.md#rows-choose-the-arrangement-dont-reflow-it).
 
 ## Accent-Variant Hint and Popup
 
