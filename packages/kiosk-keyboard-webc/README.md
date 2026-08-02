@@ -736,6 +736,51 @@ The `icon` property accepts two value types:
 { value: "search", icon: "\uD83D\uDD0D", label: "Search" }
 ```
 
+### Custom key icons
+
+There is no icon markup field: `icon` is a plain string, and raw HTML, `<svg>` and `<img>` sources are not accepted. Anything beyond the two built-in value types comes from the icon registry.
+
+**SAP icons beyond the built-ins.** The element imports only the five its own keys use - `arrow-top`, `arrow-left`, `accept`, `locked` and `nav-back`. Every other `sap-icon://` name must be registered by the consuming app:
+
+```ts
+import "@ui5/webcomponents-icons/dist/paste.js"; // one icon
+import "@ui5/webcomponents-icons/dist/AllIcons.js"; // or the whole collection
+```
+
+An unregistered name renders no glyph: `<ui5-icon>` logs `Required icon is not registered...` and hides itself, so a missing import shows up as a gap rather than an error.
+
+**Registering a custom glyph.** `registerIcon()` from `@ui5/webcomponents-base` puts an SVG path into the registry under a name, which `icon` then references like any SAP icon:
+
+```ts
+import { registerIcon } from "@ui5/webcomponents-base/dist/asset-registries/Icons.js";
+
+registerIcon("my-search", {
+  pathData: "M11.5 10h-.8l-.3-.3a5.5 5.5 0 1 0-.7.7l.3.3v.8l4 4 1.2-1.2-4-4Z",
+  viewBox: "0 0 16 16",
+  collection: "SAP-icons-v5",
+});
+
+el.instanceLayouts = {
+  "my-layout": [[{ value: "{find}", icon: "sap-icon://my-search", label: "", ariaLabel: "Find" }]],
+};
+```
+
+The registry key is `` `${collection}/${name}` ``, and the effective collection follows the theme family - `SAP-icons-v5` under Horizon, `SAP-icons-v4` under the legacy themes - so register the same name into both if the app can switch families. Registering an existing name replaces that icon application-wide, not only inside the keyboard. `unsafeRegisterIcon()` (since 2.14.0) takes a raw SVG string via `customTemplateAsString` instead; per its own documentation that string is not sanitized, and improperly sanitized SVG can lead to XSS.
+
+**Emoji and Unicode glyphs** need no registration and no icon module - any value that is not a `sap-icon://` URI is rendered as text at icon size, over the symbol-font fallback stack.
+
+**Restyling with `::part(key-icon)`.** The part matches both branches - the `<ui5-icon>` and the Unicode span - and restyles them without touching layout data. The SVG paints with `currentColor`, so `color` reaches the glyph:
+
+```css
+kiosk-keyboard::part(key-icon) {
+  color: var(--sapNegativeColor);
+}
+```
+
+`::part()` cannot be qualified by an attribute on the shadow-internal element, so there is no per-key selector from outside: the rule hits every icon in the keyboard. To change what a single key shows, set that key's `icon` in the layout data or register a different glyph under the name it uses. See [CSS Parts](#css-parts) for the full part list and [Public CSS Custom Properties](#public-css-custom-properties) for the `--kiosk-keyboard-dual-icon-size` / `--kiosk-keyboard-fkey-icon-size` sizing hooks.
+
+**Accessible names.** Icons are always decorative, so a key with `label: ""` needs `ariaLabel` unless it is a built-in special key with an i18n name. Without one the element logs `Icon-only key "<value>" has no accessible name; set ariaLabel on the KeyDefinition.` and falls back to `value`.
+
 ### Dual rendering (icon + label)
 
 When both `icon` and a non-empty `label` resolve, the key renders in **dual mode**: icon and label side by side. The layout direction defaults to `row` (inline) and is customizable via CSS custom properties:

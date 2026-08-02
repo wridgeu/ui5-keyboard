@@ -276,7 +276,7 @@ The space bar takes 6x the flex-grow of a standard key. In a typical bottom row 
 
 Icons are sized at 125% of the current font-size (`1.25em`). This makes icons slightly larger than adjacent text so they appear visually balanced at the same optical weight.
 
-The icon font stack appends symbol fonts (`Segoe UI Symbol`, `Apple Symbols`, `Noto Sans Symbols 2`) after the SAP font family. Navigation key icons use Unicode arrow symbols (U+21DE-U+21F2) that are absent from the 72 font and may fail on stripped-down platforms (embedded Android WebView) without these explicit fallbacks.
+The icon font stack appends symbol fonts (`Segoe UI Symbol`, `Apple Symbols`, `Noto Sans Symbols 2`) after the SAP font family. Navigation key icons use Unicode arrow symbols (U+21D1-U+21F2) that are absent from the 72 font and may fail on stripped-down platforms (embedded Android WebView) without these explicit fallbacks.
 
 ## Dual Icon + Label Keys
 
