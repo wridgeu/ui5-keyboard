@@ -1,6 +1,8 @@
 // Import the source ESM entry so Vite transpiles TS on the fly and
 // deduplicates the UI5 WC framework. No tsc pre-build needed.
 import "../../src/bundle.esm.ts";
+import navRow from "../../src/layouts/nav-row.ts";
+import navRowCompact from "../../src/layouts/nav-row-compact.ts";
 
 // Glyph stress layout: exercises single-glyph rendering with characters
 // that push vertical metrics, horizontal width, and text-box-trim edges.
@@ -99,10 +101,15 @@ const indicStressLayout = [
 // kiosk-keyboard rendered on the page. Pages are mounted before this script
 // runs in the bundle.esm.ts entry, so simply iterate the existing elements.
 customElements.whenDefined("kiosk-keyboard").then(() => {
+  const qwerty = customElements.get("kiosk-keyboard").getRegisteredLayout("qwerty");
   const overrides = {
     "glyph-stress": glyphStressLayout,
     "icon-label-variations": iconLabelVariationsLayout,
     "indic-stress": indicStressLayout,
+    // The two composition forms of the shared nav row, side by side: one 8-key
+    // row, and the 2x4 arrangement for keyboards too narrow to seat it.
+    "qwerty-nav": [navRow, ...qwerty],
+    "qwerty-nav-compact": [...navRowCompact, ...qwerty],
   };
   document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
     kb.instanceLayouts = overrides;

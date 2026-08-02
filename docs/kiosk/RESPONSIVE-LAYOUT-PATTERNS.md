@@ -2,28 +2,58 @@
 
 The KioskKeyboard adapts to its container size automatically via CSS container queries and height-responsive classes. This guide documents the built-in responsive behavior, shows how to customize visual properties per breakpoint, and provides a pattern for switching entire layouts at different device sizes.
 
+> **Scope:** selectors and custom-property names below are the `kiosk-keyboard` (UI5 control) spelling. The `kiosk-keyboard-webc` twin implements the same breakpoints and the same layout data with kebab-case names (`.kiosk-row`, `--kiosk-keyboard-key-gap`); the [CSS sizing reference](../shared/CSS-SIZING-REFERENCE.md) maps the two. Where behavior differs between the packages, this guide says so.
+
 ## Built-In Responsive Behavior
 
 The keyboard uses `container-type: inline-size` on its root element with `container-name: keyboard`. All width-responsive behavior is pure CSS with no JavaScript involved.
 
 ### Width Breakpoints
 
-| Breakpoint        | What Changes                                                                                                     |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `<=35rem` (560px) | F-key rows (12 keys) wrap from 1x12 to 2x6                                                                       |
-| `<=30rem` (480px) | Key font size capped at `1rem`                                                                                   |
-| `<=20rem` (320px) | Key font size capped at `0.875rem`, inline padding reduced to `0.125rem`, nav rows (8 keys) wrap from 1x8 to 2x4 |
+| Breakpoint        | What Changes                                                             |
+| ----------------- | ------------------------------------------------------------------------ |
+| `<=35rem` (560px) | F-key rows (12 keys) wrap from 1x12 to 2x6                               |
+| `<=30rem` (480px) | Key font size capped at `1rem`                                           |
+| `<=20rem` (320px) | Key font size capped at `0.875rem`, inline padding reduced to `0.125rem` |
 
-### Nav Row Wrapping Detail
+Both packages ship these breakpoints identically.
 
-At `<=20rem`, the inline nav row (8 navigation keys) wraps into two rows of four. CSS `order` regroups the keys so that directional arrows stay together:
+### Nav Rows: Choose the Arrangement, Don't Reflow It
 
-- **Row 1:** Home, Up, End, PgUp (position/page-up cluster)
-- **Row 2:** Left, Down, Right, PgDn (arrows + page-down)
+An 8-key `navRow` composed onto a keyboard narrower than about 20rem leaves each key around 30px wide. The fix is a second arrangement of the same keys, shipped as layout data:
 
-The source order in `nav-row.ts` is unchanged. The reordering is purely visual, scoped to the container query, and has no effect at wider widths. Screen readers follow the DOM order, so accessibility is unaffected.
+```ts
+import navRow from "ui5/kiosk/layouts/nav-row"; // 1 row of 8
+import navRowCompact from "ui5/kiosk/layouts/nav-row-compact"; // 2 rows of 4
+```
 
-This pattern (CSS `order` + `flex-wrap` inside `@container`) is reusable for custom row compositions. See [Worked Example: Custom Row Wrapping](#worked-example-custom-row-wrapping) below.
+`navRowCompact` slices the same key definitions into:
+
+- **Row 1:** Home, Up, End, PgUp (position cluster)
+- **Row 2:** Left, Down, Right, PgDn (arrows, Page Down trailing)
+
+Up therefore sits directly above Down with Left and Right flanking it.
+
+**Why this is data and not a `@container` rule.** Arrow-key grid navigation moves on the resolved layout's row/column coordinates, not on rendered geometry. Wrapping one 8-key row into two visual rows with `flex-wrap` leaves it a single logical row of eight, so ArrowDown from Up skips the whole nav row instead of reaching Down; adding a CSS `order` regroup to place the arrows makes visual and logical order disagree outright, which is also a [WCAG 2.4.3 Focus Order](https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html) problem. Expressing the arrangement as rows keeps DOM order, visual order and navigation order the same thing. `reading-flow: flex-visual` is the CSS-side answer to this class of mismatch, but it is not yet Baseline.
+
+The F-key rows do wrap in CSS (`<=35rem`, 1x12 to 2x6) because that wrap preserves source order: the row stays one logical row of twelve, which is the arrangement [APG's layout-grid guidance](https://www.w3.org/WAI/ARIA/apg/patterns/grid/examples/layout-grids/) permits for a single logical set of cells.
+
+**Switching between them.** The keyboard does not swap layout data on its own; the consumer picks the arrangement, which keeps the choice explicit and lets a custom nav row use its own compact form:
+
+```ts
+const narrow = window.matchMedia("(max-width: 20rem)");
+
+function applyNavRow(kb: KioskKeyboard): void {
+  const rows = narrow.matches ? navRowCompact : [navRow];
+  kb.setInstanceLayouts({ "qwerty-nav": KioskKeyboard.composeLayout(rows, "qwerty") });
+  kb.setLayout("qwerty-nav");
+}
+
+applyNavRow(kb);
+narrow.addEventListener("change", () => applyNavRow(kb));
+```
+
+See [Worked Example: Custom Row Wrapping](#worked-example-custom-row-wrapping) below for the CSS-side pattern, which remains appropriate for rows whose source order already matches the wrapped arrangement.
 
 ### Height-Responsive Classes
 
@@ -123,11 +153,14 @@ applyLayout(mq);
 | Hide labels, change icon size            | CSS custom properties (`--ui5KioskKeyboard-dualDirection`, etc.) |
 | Change which keys exist                  | `instanceLayouts` + `setLayout()`                                |
 | Change row structure (key count per row) | `instanceLayouts` + `setLayout()`                                |
-| Wrap existing rows at narrow widths      | CSS `flex-wrap` on `data-row-kind` (if applicable)               |
+| Wrap a row at narrow widths, same order  | CSS `flex-wrap` on `data-row-kind` (if applicable)               |
+| Regroup a row's keys at narrow widths    | A second layout + `instanceLayouts` + `setLayout()`              |
 
 ## Worked Example: Custom Row Wrapping
 
-The nav row wrapping demonstrates a reusable CSS pattern for adapting row density at narrow widths. Consumers composing custom rows can apply the same technique.
+Wrapping a row in CSS is the right tool when the wrapped arrangement is the row's own order, read left to right and top to bottom. The row stays one logical row, and the keys a user sees adjacent stay adjacent to arrow-key navigation.
+
+Reach for a second layout instead, as [`nav-row-compact`](#nav-rows-choose-the-arrangement-dont-reflow-it) does, when the arrangement you want moves keys past one another. `order` inside a `@container` query would achieve it visually, but navigation follows the resolved layout, so focus would jump against the visual order.
 
 ### The Problem
 
@@ -167,4 +200,6 @@ If the row contains a mix of key types (not all fkeys or all nav keys), `classif
 }
 ```
 
-To reorder keys during wrapping, use CSS `order` on `:nth-child()` selectors inside the same `@container` block. The order values only take effect when `flex-wrap` activates, so they have no impact at wider widths.
+This wraps `toolRow` into Cut/Copy/Paste over Undo/Redo/Find - the row's own order, so nothing moves past anything else and arrow-key navigation still walks the keys in the order they appear.
+
+If you want a different grouping in the wrapped form, express it as a second layout rather than adding `order` here. `order` would place the keys visually, but arrow-key navigation moves on the resolved layout's coordinates and would keep walking the source order, so focus and sight would disagree.

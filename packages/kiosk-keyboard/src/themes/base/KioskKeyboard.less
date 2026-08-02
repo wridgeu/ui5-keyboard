@@ -283,7 +283,14 @@
   }
 
   /* F-key row wrap: 12 F-keys split into 2×6 at narrow widths (<=35rem).
-     Targets [data-row-kind="fkey"] set by classifyRow(). Nav rows unaffected. */
+     Targets [data-row-kind="fkey"] set by classifyRow(). Visual order stays
+     source order, so the wrapped row remains one logical row of twelve.
+
+     Nav rows ([data-row-kind="nav"]) have no counterpart rule: their narrow-width
+     2×4 form is layout data (layouts/nav-row-compact), not a reflow, because it
+     regroups the keys and a CSS `order` regroup would leave arrow-key grid
+     navigation - which follows the resolved layout - moving between keys the
+     user does not see as adjacent. */
   @container keyboard (max-width: 35rem) {
     .ui5KioskRow[data-row-kind="fkey"] {
       flex-wrap: wrap;
@@ -291,31 +298,6 @@
 
     .ui5KioskRow[data-row-kind="fkey"] > .ui5KioskKey {
       flex: 1 0 ~"calc((100% - 5 * var(--_ui5KioskKeyboard-keyGap)) / 6)";
-    }
-  }
-
-  /* Nav row wrap: 8 nav keys split into 2×4 at extra-narrow widths (<=20rem).
-     Source order in nav-row.ts is Home/Up/End/PgUp/PgDn/Left/Down/Right.
-     CSS order regroups into: Home/Up/End/PgUp (row 1) then Left/Down/Right/PgDn
-     (row 2) so arrow keys stay together. See the responsive layout patterns
-     guide in docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md for the design rationale
-     and a reusable pattern for custom row compositions. */
-  @container keyboard (max-width: 20rem) {
-    .ui5KioskRow[data-row-kind="nav"] {
-      flex-wrap: wrap;
-    }
-
-    .ui5KioskRow[data-row-kind="nav"] > .ui5KioskKey {
-      flex: 1 0 ~"calc((100% - 3 * var(--_ui5KioskKeyboard-keyGap)) / 4)";
-    }
-
-    /* Reorder: move arrows (children 6-8) before PgDn (child 5) */
-    .ui5KioskRow[data-row-kind="nav"] > :nth-child(n + 6) {
-      order: 1;
-    }
-
-    .ui5KioskRow[data-row-kind="nav"] > :nth-child(5) {
-      order: 2;
     }
   }
 

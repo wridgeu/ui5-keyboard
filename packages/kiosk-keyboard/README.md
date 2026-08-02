@@ -318,7 +318,7 @@ import type { KeyDefinition, LayoutDefinition } from "ui5/kiosk/types";
 const DOM: KioskKeyboardDomContract = KioskKeyboard.DOM;
 ```
 
-Advanced/internal modules are available but should not be treated as a semver-stable API surface. In particular, anything under `ui5/kiosk/internal/*` is internal-only. This includes renderer internals and helper modules such as input operations and low-level DOM utilities. Under `ui5/kiosk/layouts/*`, the built-in layout definitions (e.g. `qwerty`, `numeric`, `ja-kana`) and the shared row fragments `ui5/kiosk/layouts/fkey-row` and `ui5/kiosk/layouts/nav-row` are supported as stable consumer imports - for use as a base layout or for composing custom variants. Both row fragments set `type: "modifier"` on every key (transparent Lite button style); override `type` per key only if you want bordered/regular key styling instead.
+Advanced/internal modules are available but should not be treated as a semver-stable API surface. In particular, anything under `ui5/kiosk/internal/*` is internal-only. This includes renderer internals and helper modules such as input operations and low-level DOM utilities. Under `ui5/kiosk/layouts/*`, the built-in layout definitions (e.g. `qwerty`, `numeric`, `ja-kana`) and the shared row fragments `ui5/kiosk/layouts/fkey-row`, `ui5/kiosk/layouts/nav-row` and `ui5/kiosk/layouts/nav-row-compact` are supported as stable consumer imports - for use as a base layout or for composing custom variants. All three row fragments set `type: "modifier"` on every key (transparent Lite button style); override `type` per key only if you want bordered/regular key styling instead.
 
 `KioskKeyboard.DOM` is also a supported read-only DOM hook contract for tests and DOM assertions. Prefer it over hard-coded class names or selectors. Styling customizations should still use the public `--ui5KioskKeyboard-*` CSS variables rather than DOM classes.
 
@@ -836,6 +836,7 @@ Import the shared `fkey-row` module to compose custom layouts with an F-key row 
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import navRow from "ui5/kiosk/layouts/nav-row";
+import navRowCompact from "ui5/kiosk/layouts/nav-row-compact";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 
 // Define your custom base layout
@@ -846,12 +847,18 @@ const azertyFrFk: LayoutDefinition = [fkeyRow, ...azertyFr];
 const azertyFrNav: LayoutDefinition = [navRow, ...azertyFr];
 const azertyFrFkNav: LayoutDefinition = [fkeyRow, navRow, ...azertyFr];
 
+// `nav-row-compact` seats the same eight nav keys as two rows of four, for
+// keyboards narrower than about 20rem where one row of eight leaves each key
+// around 30px wide. See docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md for switching.
+const azertyFrNavCompact: LayoutDefinition = [...navRowCompact, ...azertyFr];
+
 const kb = new KioskKeyboard({
   instanceLayouts: {
     "azerty-fr": azertyFr,
     "azerty-fr-fk": azertyFrFk,
     "azerty-fr-nav": azertyFrNav,
     "azerty-fr-fk-nav": azertyFrFkNav,
+    "azerty-fr-nav-compact": azertyFrNavCompact,
   },
   layout: "azerty-fr-fk",
 });

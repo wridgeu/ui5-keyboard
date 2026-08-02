@@ -1,7 +1,7 @@
 // Plain JS: not processed by ui5-tooling-transpile (test files outside src/)
 sap.ui.define(
-  ["ui5/kiosk/KioskKeyboard", "sap/m/Input", "ui5/kiosk/layouts/nav-row"],
-  function (KioskKeyboard, Input, navRow) {
+  ["ui5/kiosk/KioskKeyboard", "sap/m/Input", "ui5/kiosk/layouts/nav-row", "ui5/kiosk/layouts/nav-row-compact"],
+  function (KioskKeyboard, Input, navRow, navRowCompact) {
     "use strict";
 
     // Glyph stress layout: exercises single-glyph rendering with characters
@@ -107,12 +107,18 @@ sap.ui.define(
     // 14. Navigation Keys
     new KioskKeyboard({ layout: "nav" }).placeAt("kb-nav");
 
-    // 14b. QWERTY + Nav Row (combined): tests nav row wrapping at narrow widths
+    // 14b. QWERTY + Nav Row (combined): the single 8-key nav row
     var qwertyLayout = KioskKeyboard.getRegisteredLayout("qwerty");
     new KioskKeyboard({
       layout: "qwerty-nav",
       instanceLayouts: { "qwerty-nav": [navRow, ...qwertyLayout] },
     }).placeAt("kb-qwerty-nav");
+
+    // 14c. QWERTY + Compact Nav Rows: the 2x4 form for narrow keyboards
+    new KioskKeyboard({
+      layout: "qwerty-nav-compact",
+      instanceLayouts: { "qwerty-nav-compact": [...navRowCompact, ...qwertyLayout] },
+    }).placeAt("kb-qwerty-nav-compact");
 
     // 15. Glyph stress layout
     new KioskKeyboard({

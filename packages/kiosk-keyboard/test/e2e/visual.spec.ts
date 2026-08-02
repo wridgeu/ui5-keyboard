@@ -26,6 +26,7 @@ const LAYOUTS = [
   "kb-fkeys",
   "kb-nav",
   "kb-qwerty-nav",
+  "kb-qwerty-nav-compact",
   "kb-glyph-stress",
   "kb-ja-romaji",
   "kb-ja-kana",
