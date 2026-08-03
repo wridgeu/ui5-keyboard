@@ -24,6 +24,7 @@ import {
   shiftedGlyph,
   toShiftVariants,
   type InstanceVariants,
+  type VariantOverlay,
   type VariantTable,
 } from "./internal/latin-variants";
 import VariantPopupBehavior from "./internal/variant-popup-behavior";
@@ -163,8 +164,10 @@ export default class KioskKeyboard extends Control {
   private _instanceLocaleLayoutsMap!: InstanceLocaleLayouts | undefined;
   /** Per-instance middleware factory overrides, derived from the `instanceMiddleware` property. */
   private _instanceMiddlewareMap!: InstanceMiddleware | undefined;
-  /** Per-instance accent-variant table overrides, derived from the `instanceVariants` property. */
+  /** Per-instance accent-variant overlays, derived from the named `instanceVariants` entries. */
   private _instanceVariantsMap!: InstanceVariants | undefined;
+  /** The variant tier applied under every layout, derived from the `instanceVariants` `*` entry. */
+  private _defaultVariantsTable!: VariantTable | null;
   /** Caps the disarmed-`instanceVariants` diagnostic at one emission per control. */
   private _warnedDisarmedVariants!: boolean;
   /** Owns the ResizeObserver-driven height-responsive class application. */
@@ -875,6 +878,7 @@ export default class KioskKeyboard extends Control {
     this._instanceLocaleLayoutsMap = undefined;
     this._instanceMiddlewareMap = undefined;
     this._instanceVariantsMap = undefined;
+    this._defaultVariantsTable = null;
     this._warnedDisarmedVariants = false;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
@@ -1178,7 +1182,9 @@ export default class KioskKeyboard extends Control {
    * cache in sync with the property value.
    */
   setInstanceVariants(value: InstanceVariantMap): this {
-    this._instanceVariantsMap = KioskKeyboard._toVariantMap(value);
+    const { named, defaults } = KioskKeyboard._toVariantMap(value);
+    this._instanceVariantsMap = named;
+    this._defaultVariantsTable = defaults;
     return this.setProperty("instanceVariants", value) as this;
   }
 
@@ -1271,9 +1277,19 @@ export default class KioskKeyboard extends Control {
     return entries.length === 0 ? undefined : new Map(entries);
   }
 
-  private static _toVariantMap(value: unknown): InstanceVariants | undefined {
-    if (!value || typeof value !== "object") return undefined;
-    const entries: [string, VariantTable | null][] = [];
+  /**
+   * Splits `instanceVariants` into the named per-layout overlays and the `*` entry,
+   * which is the tier applied under every layout. The named tier can suppress, so it
+   * carries the `{replace, table}` overlay shape; the defaults tier only ever adds, so
+   * a `*` entry of `null` is transparent rather than a global opt-out.
+   */
+  private static _toVariantMap(value: unknown): {
+    named: InstanceVariants | undefined;
+    defaults: VariantTable | null;
+  } {
+    if (!value || typeof value !== "object") return { named: undefined, defaults: null };
+    const entries: [string, VariantOverlay][] = [];
+    let defaults: VariantTable | null = null;
     for (const [name, table] of Object.entries(value as Record<string, unknown>)) {
       // `null` is a meaningful entry: it opts the layout out of the built-in table.
       if (table !== null && !KioskKeyboard._isValidVariantTable(table)) {
@@ -1286,9 +1302,10 @@ export default class KioskKeyboard extends Control {
       }
       const key = name.trim().toLowerCase();
       if (!key) continue;
-      entries.push([key, table]);
+      if (key === "*") defaults = table;
+      else entries.push([key, { replace: table === null, table }]);
     }
-    return entries.length === 0 ? undefined : new Map(entries);
+    return { named: entries.length === 0 ? undefined : new Map(entries), defaults };
   }
 
   /**
@@ -1938,7 +1955,7 @@ export default class KioskKeyboard extends Control {
       this._warnDisarmedVariants();
       return base;
     }
-    const table = resolveVariantTable(layoutName, this._instanceVariantsMap);
+    const table = resolveVariantTable(layoutName, this._instanceVariantsMap, this._defaultVariantsTable);
     return table ? applyVariantDefaults(base, table) : base;
   }
 
@@ -1947,7 +1964,7 @@ export default class KioskKeyboard extends Control {
    * off, the combination in which the tables resolve but nothing applies them.
    */
   private _warnDisarmedVariants(): void {
-    if (this._warnedDisarmedVariants || !this._instanceVariantsMap) return;
+    if (this._warnedDisarmedVariants || (!this._instanceVariantsMap && this._defaultVariantsTable === null)) return;
     this._warnedDisarmedVariants = true;
     Log.warning(
       "instanceVariants is set but accentVariants is false, so no variant table is applied. Set accentVariants to arm the long-press popups.",

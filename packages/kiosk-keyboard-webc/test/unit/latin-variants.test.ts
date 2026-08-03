@@ -2,12 +2,12 @@ import { describe, it, expect } from "vitest";
 import type { LayoutDefinition } from "../../src/types.js";
 import {
   LATIN_DIACRITIC_VARIANTS,
-  WILDCARD_LAYOUT,
   applyVariantDefaults,
   resolveVariantTable,
   shiftedGlyph,
   toShiftVariant,
   toShiftVariants,
+  type InstanceVariants,
   type VariantTable,
 } from "../../src/core/latin-variants.js";
 
@@ -102,9 +102,16 @@ describe("applyVariantDefaults", () => {
   });
 });
 
-describe("resolveVariantTable", () => {
-  const custom: VariantTable = { b: ["ḃ"] };
+/** The named tier for one layout, in the overlay shape the custom-layout fold produces. */
+const named = (layout: string, table: VariantTable | null, replace = false): InstanceVariants =>
+  new Map([[layout, { replace, table }]]);
 
+/** A house accent set, the shape a `defaultVariants` table has. */
+const DEFAULTS: VariantTable = { z: ["ź"], q: ["ǫ"] };
+/** One layout's own table, the shape a custom layout's `variants` has. */
+const NAMED: VariantTable = { a: ["ą"] };
+
+describe("resolveVariantTable", () => {
   it("falls back to the built-in Latin table for a layout with no instance entry", () => {
     expect(resolveVariantTable("qwerty")).toBe(LATIN_DIACRITIC_VARIANTS);
   });
@@ -120,64 +127,81 @@ describe("resolveVariantTable", () => {
     expect(resolveVariantTable("QWERTY")).toBe(LATIN_DIACRITIC_VARIANTS);
   });
 
-  it("an instance entry extends the built-in table rather than replacing it", () => {
-    const map = new Map<string, VariantTable | null>([["qwerty", custom]]);
-    const table = resolveVariantTable("qwerty", map)!;
+  it("a named entry extends the built-in table rather than replacing it", () => {
+    const table = resolveVariantTable("qwerty", named("qwerty", { b: ["ḃ"] }))!;
     expect(table.b, "the entry's own letter is added").toEqual(["ḃ"]);
     expect(table.a, "an untouched built-in letter survives").toEqual([...LATIN_DIACRITIC_VARIANTS.a]);
   });
 
   it("an entry replaces the built-in list for the letters it names", () => {
-    const map = new Map<string, VariantTable | null>([["qwerty", { s: ["ś"] }]]);
-    expect(resolveVariantTable("qwerty", map)!.s).toEqual(["ś"]);
+    expect(resolveVariantTable("qwerty", named("qwerty", { s: ["ś"] }))!.s).toEqual(["ś"]);
   });
 
   it("a letter mapped to an empty list is suppressed without touching its siblings", () => {
-    const map = new Map<string, VariantTable | null>([["qwerty", { s: [] }]]);
-    const table = resolveVariantTable("qwerty", map)!;
+    const table = resolveVariantTable("qwerty", named("qwerty", { s: [] }))!;
     expect(Object.hasOwn(table, "s"), "the suppressed letter is gone").toBe(false);
     expect(table.a).toEqual([...LATIN_DIACRITIC_VARIANTS.a]);
   });
 
   it("does not mutate the built-in table", () => {
-    const map = new Map<string, VariantTable | null>([["qwerty", { a: ["ā"], s: [] }]]);
-    resolveVariantTable("qwerty", map);
+    resolveVariantTable("qwerty", named("qwerty", { a: ["ā"], s: [] }));
     expect(LATIN_DIACRITIC_VARIANTS.a).toContain("ä");
     expect(LATIN_DIACRITIC_VARIANTS.s).toContain("ß");
   });
 
   it("a table keyed __proto__ contributes an own entry, not a prototype", () => {
-    const map = new Map<string, VariantTable | null>([["qwerty", JSON.parse('{"__proto__":["x"]}') as VariantTable]]);
-    const table = resolveVariantTable("qwerty", map)!;
+    const polluted = JSON.parse('{"__proto__":["x"]}') as VariantTable;
+    const table = resolveVariantTable("qwerty", named("qwerty", polluted))!;
     expect(Object.getPrototypeOf(table)).toBeNull();
     expect(Object.hasOwn(table, "__proto__")).toBe(true);
     expect(({} as Record<string, unknown>).x).toBeUndefined();
   });
 
-  it("an explicit null instance entry opts the layout out", () => {
-    const map = new Map<string, VariantTable | null>([["qwerty", null]]);
-    expect(resolveVariantTable("qwerty", map)).toBeNull();
+  it("a suppressing named entry with no table of its own opts the layout out", () => {
+    expect(resolveVariantTable("qwerty", named("qwerty", null, true))).toBeNull();
   });
 
-  it("the '*' wildcard applies to layouts without their own entry, even non-Latin ones", () => {
-    const map = new Map<string, VariantTable | null>([[WILDCARD_LAYOUT, custom]]);
-    expect(resolveVariantTable("qwerty", map)!.b).toEqual(["ḃ"]);
-    // The non-Latin built-in tier is null, so a wildcard entry stands alone there.
-    expect(resolveVariantTable("arabic", map)).toEqual({ b: ["ḃ"] });
-    expect(resolveVariantTable("arabic", map)!.a).toBeUndefined();
+  it("returns the built-in table itself when no tier applies", () => {
+    expect(resolveVariantTable("qwerty", named("azerty-fr", { b: ["ḃ"] }))).toBe(LATIN_DIACRITIC_VARIANTS);
+    expect(resolveVariantTable("qwerty", undefined, null)).toBe(LATIN_DIACRITIC_VARIANTS);
+  });
+});
+
+describe("resolveVariantTable - the defaults tier", () => {
+  it("applies to every layout, even non-Latin ones", () => {
+    const table = resolveVariantTable("qwerty", undefined, DEFAULTS)!;
+    expect(table.q, "the defaults letter is added to a Latin layout").toEqual(["ǫ"]);
+    expect(table.a, "the built-in tier below it survives").toEqual([...LATIN_DIACRITIC_VARIANTS.a]);
+    // The non-Latin built-in tier is null, so the defaults tier stands alone there.
+    expect(resolveVariantTable("arabic", undefined, DEFAULTS)).toEqual(DEFAULTS);
+    expect(resolveVariantTable("arabic", undefined, DEFAULTS)!.a).toBeUndefined();
   });
 
-  it("an explicit entry beats the wildcard", () => {
-    const map = new Map<string, VariantTable | null>([
-      [WILDCARD_LAYOUT, custom],
-      ["qwerty", null],
-    ]);
-    expect(resolveVariantTable("qwerty", map)).toBeNull();
+  it("composes with a named entry rather than being discarded by it", () => {
+    const table = resolveVariantTable("qwerty", named("qwerty", NAMED), DEFAULTS)!;
+    expect(table.a, "the named tier wins for the letter it declares").toEqual(["ą"]);
+    expect(table.q, "a defaults letter the named tier leaves alone survives").toEqual(["ǫ"]);
+    expect(table.z, "and so does the one it overlaps with the built-in").toEqual(["ź"]);
   });
 
-  it("returns the built-in table itself when no entry matches", () => {
-    const map = new Map<string, VariantTable | null>([["azerty-fr", custom]]);
-    expect(resolveVariantTable("qwerty", map)).toBe(LATIN_DIACRITIC_VARIANTS);
+  it("composes with a named entry on a non-Latin layout", () => {
+    const table = resolveVariantTable("arabic", named("arabic", NAMED), DEFAULTS)!;
+    expect(table).toEqual({ z: ["ź"], q: ["ǫ"], a: ["ą"] });
+  });
+
+  it("a letter it drops stays dropped when a named entry declares others", () => {
+    const table = resolveVariantTable("qwerty", named("qwerty", NAMED), { s: [] })!;
+    expect(Object.hasOwn(table, "s"), "the letter the defaults tier drops is gone").toBe(false);
+    expect(table.a, "and the named tier still applies").toEqual(["ą"]);
+  });
+
+  it("a named entry that suppresses discards it", () => {
+    expect(resolveVariantTable("qwerty", named("qwerty", null, true), DEFAULTS)).toBeNull();
+  });
+
+  it("a named entry that suppresses and then declares a table stands that table alone", () => {
+    const table = resolveVariantTable("qwerty", named("qwerty", NAMED, true), DEFAULTS)!;
+    expect(table, "neither the built-in nor the defaults tier contributes").toEqual({ a: ["ą"] });
   });
 });
 
