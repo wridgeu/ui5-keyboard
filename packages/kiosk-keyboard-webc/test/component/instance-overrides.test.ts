@@ -18,6 +18,13 @@ function readDataKeys(el: KioskKeyboard): string[][] {
 const layoutA: LayoutDefinition = [[{ value: "ax" }, { value: "bx" }]];
 const layoutB: LayoutDefinition = [[{ value: "two" }]];
 
+/** An unrelated factory, used where a swap only needs a different identity. */
+const otherFactory = (): CompositionMiddleware => ({
+  handleKey: () => false,
+  commit: () => null,
+  reset: () => {},
+});
+
 /** Runs `body` with `console.warn` captured into the array it receives, restoring it afterwards. */
 async function withCapturedWarnings(body: (messages: string[]) => Promise<void>): Promise<void> {
   const original = console.warn;
@@ -164,6 +171,67 @@ describe("kiosk-keyboard - instance overrides", () => {
     cKey.click();
     expect(secondFactoryCalls).to.equal(1);
     expect(firstFactoryCalls).to.equal(1);
+  });
+
+  it("a middleware swap commits the in-progress composition instead of discarding it", async () => {
+    const calls = { commits: 0, resets: 0 };
+    const factory = (): CompositionMiddleware => ({
+      handleKey: () => true,
+      commit: () => {
+        calls.commits += 1;
+        return null;
+      },
+      reset: () => {
+        calls.resets += 1;
+      },
+    });
+
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+    el.instanceMiddleware = { qwerty: factory };
+    await nextRender();
+
+    el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!.click();
+
+    el.instanceMiddleware = { qwerty: otherFactory };
+    await nextRender();
+
+    expect(calls.commits, "the half-typed syllable reaches the target").to.equal(1);
+    expect(calls.resets, "the composition is flushed, not dropped").to.equal(0);
+  });
+
+  it("a middleware swap that leaves the resolved layout's factory alone keeps the composition", async () => {
+    const calls = { created: 0, commits: 0, resets: 0 };
+    const factory = (): CompositionMiddleware => {
+      calls.created += 1;
+      return {
+        handleKey: () => true,
+        commit: () => {
+          calls.commits += 1;
+          return null;
+        },
+        reset: () => {
+          calls.resets += 1;
+        },
+      };
+    };
+
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+    el.instanceMiddleware = { qwerty: factory };
+    await nextRender();
+
+    el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("a"))!.click();
+    expect(calls.created).to.equal(1);
+
+    // A new property value, but the entry the resolved layout reads is the same
+    // factory, so nothing about the running composition changed.
+    el.instanceMiddleware = { qwerty: factory, "ko-hangul": otherFactory };
+    await nextRender();
+
+    expect(calls.commits, "the composition is left in progress").to.equal(0);
+    expect(calls.resets, "the composition is not dropped").to.equal(0);
+
+    el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue("b"))!.click();
+    expect(calls.created, "the cached middleware is reused, not rebuilt").to.equal(1);
   });
 
   it("an unregistered layout name resolves the middleware against the layout actually rendered", async () => {

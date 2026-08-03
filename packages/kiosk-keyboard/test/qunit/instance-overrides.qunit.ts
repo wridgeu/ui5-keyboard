@@ -27,6 +27,33 @@ function noopFactory(): CompositionMiddleware {
   };
 }
 
+/**
+ * Middleware factory recording the lifecycle calls the keyboard makes on it.
+ * `handleKey` consumes every key, so the middleware is mid-composition from the
+ * first tap onwards and a `commit` / `reset` is observable as the difference
+ * between flushing the buffered syllable and dropping it.
+ */
+function recordingFactory(): {
+  calls: { created: number; commits: number; resets: number };
+  factory: () => CompositionMiddleware;
+} {
+  const calls = { created: 0, commits: 0, resets: 0 };
+  const factory = (): CompositionMiddleware => {
+    calls.created++;
+    return {
+      handleKey: () => true,
+      commit: () => {
+        calls.commits++;
+        return null;
+      },
+      reset: () => {
+        calls.resets++;
+      },
+    };
+  };
+  return { calls, factory };
+}
+
 const sandbox = sinon.createSandbox();
 
 function commonAfterEach(): void {
@@ -436,6 +463,64 @@ QUnit.test("setInstanceMiddleware after first key resets the cached middleware",
   input.destroy();
   kb.destroy();
 });
+
+QUnit.test("A middleware swap commits the in-progress composition instead of discarding it", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const first = recordingFactory();
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    instanceMiddleware: { qwerty: first.factory },
+    layout: "qwerty",
+  });
+  await placeAndWait(kb);
+  input.focus();
+
+  tapKey(kb, "a");
+  assert.strictEqual(first.calls.created, 1, "Middleware instantiated on the first key press");
+
+  kb.setInstanceMiddleware({ qwerty: recordingFactory().factory });
+
+  assert.strictEqual(first.calls.commits, 1, "The half-typed syllable reaches the target");
+  assert.strictEqual(first.calls.resets, 0, "The composition is flushed, not dropped");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test(
+  "A middleware swap that leaves the resolved layout's factory alone keeps the composition",
+  async (assert) => {
+    const input = new Input({ value: "" });
+    input.placeAt("qunit-fixture");
+
+    const qwerty = recordingFactory();
+    const kb = new KioskKeyboard({
+      controls: [input.getId()],
+      instanceMiddleware: { qwerty: qwerty.factory },
+      layout: "qwerty",
+    });
+    await placeAndWait(kb);
+    input.focus();
+
+    tapKey(kb, "a");
+    assert.strictEqual(qwerty.calls.created, 1, "Middleware instantiated on the first key press");
+
+    // A new property value, but the entry the resolved layout reads is the same
+    // factory, so nothing about the running composition changed.
+    kb.setInstanceMiddleware({ qwerty: qwerty.factory, "ko-hangul": recordingFactory().factory });
+
+    assert.strictEqual(qwerty.calls.commits, 0, "The composition is left in progress");
+    assert.strictEqual(qwerty.calls.resets, 0, "The composition is not dropped");
+
+    tapKey(kb, "b");
+    assert.strictEqual(qwerty.calls.created, 1, "The cached middleware is reused, not rebuilt");
+
+    input.destroy();
+    kb.destroy();
+  },
+);
 
 QUnit.test(
   "A layout name that stopped being registered resolves the middleware against the surface",

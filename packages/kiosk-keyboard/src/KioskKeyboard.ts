@@ -793,9 +793,9 @@ export default class KioskKeyboard extends Control {
    * `setLayout`'s validation honors instance overrides regardless of
    * the order in which the framework iterates the settings.
    *
-   * When no settings are provided at all (e.g. `new KioskKeyboard()`),
-   * ManagedObject does not call `applySettings`. The locale default is
-   * therefore also set in `init()`.
+   * `init()` runs before this, so it seeds the same default from the
+   * global locale map; the resolution here refines it through the
+   * instance maps, which `init()` cannot see.
    */
   override applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
     // Pre-populate the internal Map caches before super.applySettings
@@ -887,9 +887,9 @@ export default class KioskKeyboard extends Control {
       handleNavigationKey: (fkeyName) => this._targetSession.handleNavigationKey(fkeyName),
     });
 
-    // Detect locale-appropriate default layout. This covers the case
-    // where no settings are passed (applySettings is not called by
-    // ManagedObject when settings are undefined).
+    // Detect locale-appropriate default layout. This runs before
+    // applySettings, so it resolves against the built-in locale map alone;
+    // applySettings re-resolves once the instance maps are known.
     const localeLayout = registryGetLocaleLayout();
     this._baseLayout = localeLayout;
     if (localeLayout !== DEFAULT_LAYOUT) {
@@ -1151,11 +1151,23 @@ export default class KioskKeyboard extends Control {
   /**
    * Custom setter for `instanceMiddleware` - keeps the internal `Map`
    * cache in sync with the property value.
+   *
+   * A composition in progress survives the swap unless the active layout's
+   * factory itself changed, in which case it is committed to the target the
+   * way a layout or target switch commits it.
    */
   setInstanceMiddleware(value: InstanceMiddlewareMap): this {
+    // The cached middleware only outlives the resolution it came from: every
+    // layout, target and keyboardType switch ends the composition first. So the
+    // factory the resolved layout reads before the swap is the one that built
+    // it, and comparing across the swap tells a real change from an edit to an
+    // entry this layout never reads.
+    const previous = registryGetMiddlewareFactory(this._resolvedLayoutName(), this._instanceMiddlewareMap);
     this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(value);
-    if (this._middleware) {
-      this._middleware.reset();
+    const next = registryGetMiddlewareFactory(this._resolvedLayoutName(), this._instanceMiddlewareMap);
+    if (this._middleware && next !== previous) {
+      // Flush rather than discard: the characters already typed are the user's.
+      this._middleware.commit();
       this._middleware = null;
     }
     return this.setProperty("instanceMiddleware", value) as this;

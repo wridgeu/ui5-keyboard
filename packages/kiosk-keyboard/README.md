@@ -341,7 +341,7 @@ The same maps can be set later via `setInstanceLayouts()`, `setInstanceLocaleLay
 
 All four are read by object identity: assign a new object to change a map. Mutating the object already assigned is not observed until the next render triggered by something else.
 
-The `Record` shapes in the property table are the shapes the control validates at runtime, and invalid entries are logged and skipped. They are not enforced by TypeScript: all four are declared as UI5 `object` properties, so the generated `KioskKeyboard.gen.d.ts` types their getters and setters as `object | null`.
+The `Record` shapes in the property table are the shapes the control validates at runtime, and invalid entries are logged and skipped. Each map is declared as its own registered UI5 type (`ui5.kiosk.InstanceLayoutMap`, `InstanceLocaleLayoutMap`, `InstanceMiddlewareMap`, `InstanceVariantMap`), so the generated `KioskKeyboard.gen.d.ts` types the getters and setters with the `Record` shape rather than a bare `object`. The registered validator only checks that the value is a non-array object; the per-entry shape is the runtime check above.
 
 ## KioskKeyboard Control
 

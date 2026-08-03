@@ -1017,11 +1017,21 @@ class KioskKeyboard extends UI5Element {
       }
     }
     if (name === "instanceMiddleware") {
-      // The active middleware is cached lazily on first key press; without
-      // this reset, a runtime swap of `instanceMiddleware` would be ignored
-      // until the next layout switch.
-      if (this._middleware) {
-        this._middleware.reset();
+      // The active middleware is cached lazily on first key press, so a runtime
+      // swap has to drop it or it would be ignored until the next layout switch.
+      // It only outlives the resolution it came from - every layout, target and
+      // keyboardType switch ends the composition first - so the factory the old
+      // value resolved to is the one that built it, and comparing the two tells
+      // a real change from an edit to an entry this layout never reads.
+      const layout = this._resolvedLayoutName();
+      const previous = getMiddlewareFactory(
+        layout,
+        this._middlewareView.get(changeInfo.oldValue as Record<string, unknown> | null),
+      );
+      const next = getMiddlewareFactory(layout, this._middlewareView.get(this.instanceMiddleware));
+      if (this._middleware && next !== previous) {
+        // Flush rather than discard: the characters already typed are the user's.
+        this._middleware.commit();
         this._middleware = null;
       }
     }
