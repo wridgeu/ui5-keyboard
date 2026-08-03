@@ -1,3 +1,4 @@
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import {
   graphemeLengthAfter,
   graphemeLengthBefore,
@@ -128,7 +129,7 @@ QUnit.test("Backspace deletes entire surrogate-pair emoji in one press", async (
   const kb = new KioskKeyboard({
     layout: "test-emoji-bs",
     controls: [input.getId()],
-    instanceLayouts: { "test-emoji-bs": emojiLayout },
+    customLayouts: [new CustomLayout({ name: "test-emoji-bs", rows: emojiLayout })],
   });
   await placeAndWait(kb);
 
@@ -158,7 +159,7 @@ QUnit.test("Backspace deletes ZWJ sequence in one press", async (assert) => {
   const kb = new KioskKeyboard({
     layout: "test-zwj-bs",
     controls: [input.getId()],
-    instanceLayouts: { "test-zwj-bs": layout },
+    customLayouts: [new CustomLayout({ name: "test-zwj-bs", rows: layout })],
   });
   await placeAndWait(kb);
 
@@ -185,7 +186,7 @@ QUnit.test("Backspace after mixed ASCII+emoji only removes last grapheme", async
   const kb = new KioskKeyboard({
     layout: "test-mixed-bs",
     controls: [input.getId()],
-    instanceLayouts: { "test-mixed-bs": layout },
+    customLayouts: [new CustomLayout({ name: "test-mixed-bs", rows: layout })],
   });
   await placeAndWait(kb);
 
@@ -217,7 +218,7 @@ QUnit.test("ArrowLeft and ArrowRight step over emoji as one unit", async (assert
   const kb = new KioskKeyboard({
     layout: "test-emoji-nav",
     controls: [input.getId()],
-    instanceLayouts: { "test-emoji-nav": layout },
+    customLayouts: [new CustomLayout({ name: "test-emoji-nav", rows: layout })],
   });
   await placeAndWait(kb);
 

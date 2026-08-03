@@ -1,3 +1,4 @@
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import {
   getRegisteredLayout,
   getLayoutOrDefault,
@@ -349,7 +350,7 @@ QUnit.test("Instance layout renders correctly when configured at construction", 
 
   const kb = new KioskKeyboard({
     controls: [input.getId()],
-    instanceLayouts: { "xyz-layout": customLayout },
+    customLayouts: [new CustomLayout({ name: "xyz-layout", rows: customLayout })],
     layout: "xyz-layout",
   });
   await placeAndWait(kb);

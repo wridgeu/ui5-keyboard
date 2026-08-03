@@ -2,7 +2,8 @@
     controllerName="demo.hotkeys.controller.KioskCustomLayouts"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:kiosk="ui5.kiosk">
+    xmlns:kiosk="ui5.kiosk"
+    xmlns:demo="demo.hotkeys.customlayout">
     <Page titleAlignment="Center" title="Custom Layouts Gallery" showNavButton="true" navButtonPress=".onNavBack" class="sapUiContentPadding">
         <landmarkInfo>
             <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
@@ -11,7 +12,7 @@
             <HBox class="sapUiSmallMarginBottom" gap="1rem">
                 <Panel headerText="Layout Switcher">
                     <VBox class="sapUiSmallMargin">
-                        <Text text="Four custom LayoutDefinitions are supplied to the keyboard via the instanceLayouts property. They demonstrate KeyDefinition options such as width, type, icon, unicode values, label overrides, and dual icon+label rendering." />
+                        <Text text="Five layouts are declared on the keyboard as &lt;kiosk:CustomLayout&gt; child elements, with no controller code configuring them. They demonstrate KeyDefinition options such as width, type, icon, unicode values, label overrides, and dual icon+label rendering. The Arabic pad ships as its own element, &lt;demo:ArabicDigitsCustomLayout&gt;, carrying its rows and keycap language together." />
                         <HBox class="sapUiSmallMarginTop">
                             <Button
                                 text="Emoji Picker"
@@ -71,7 +72,15 @@
                         id="customKeyboard"
                         controls="customInput"
                         keyPress=".onKeyPress"
-                        ariaLabel="Custom Layout Keyboard" />
+                        ariaLabel="Custom Layout Keyboard">
+                        <kiosk:customLayouts>
+                            <kiosk:CustomLayout name="emoji" rows="{layouts>/emoji}" />
+                            <kiosk:CustomLayout name="ip-address" rows="{layouts>/ipAddress}" />
+                            <kiosk:CustomLayout name="currency" rows="{layouts>/currency}" />
+                            <kiosk:CustomLayout name="icon-label" rows="{layouts>/iconLabel}" />
+                            <demo:ArabicDigitsCustomLayout />
+                        </kiosk:customLayouts>
+                    </kiosk:KioskKeyboard>
                 </VBox>
             </Panel>
         </content>

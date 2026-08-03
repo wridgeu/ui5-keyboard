@@ -1,5 +1,6 @@
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import { MobileKeyboard, LATIN_DIACRITIC_VARIANTS } from "ui5/kiosk/library";
+import { LayoutFacet, MobileKeyboard, LATIN_DIACRITIC_VARIANTS } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import Popover from "sap/m/Popover";
 import { placeAndWait, getRequiredKeyElement, simulateTap, tapKey, waitForRender } from "./test-helpers";
@@ -163,14 +164,14 @@ QUnit.test("no data-has-variants when accentVariants is off", async (assert) => 
   cleanup(kb, input);
 });
 
-QUnit.test("instanceVariants extends the built-in table and drives the popup", async (assert) => {
+QUnit.test("a custom layout's variants extend the built-in table and drive the popup", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({
     controls: [input.getId()],
     accentVariants: true,
     layout: "qwerty",
-    instanceVariants: { qwerty: { b: ["ḃ", "ƀ"] } },
+    customLayouts: [new CustomLayout({ name: "qwerty", variants: { b: ["ḃ", "ƀ"] } })],
   });
   await placeAndWait(kb);
   input.focus();
@@ -189,14 +190,14 @@ QUnit.test("instanceVariants extends the built-in table and drives the popup", a
   cleanup(kb, input);
 });
 
-QUnit.test("an instanceVariants entry overrides one built-in letter's popup glyphs", async (assert) => {
+QUnit.test("a custom layout's variants override one built-in letter's popup glyphs", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({
     controls: [input.getId()],
     accentVariants: true,
     layout: "qwerty",
-    instanceVariants: { qwerty: { a: ["ā"] } },
+    customLayouts: [new CustomLayout({ name: "qwerty", variants: { a: ["ā"] } })],
   });
   await placeAndWait(kb);
   input.focus();
@@ -219,7 +220,9 @@ QUnit.test("a full-size table restating the built-in entries validates and appli
     controls: [input.getId()],
     accentVariants: true,
     layout: "qwerty",
-    instanceVariants: { qwerty: { ...LATIN_DIACRITIC_VARIANTS, a: ["ā"], b: ["ḃ"] } },
+    customLayouts: [
+      new CustomLayout({ name: "qwerty", variants: { ...LATIN_DIACRITIC_VARIANTS, a: ["ā"], b: ["ḃ"] } }),
+    ],
   });
   await placeAndWait(kb);
   input.focus();
@@ -243,14 +246,14 @@ QUnit.test("a full-size table restating the built-in entries validates and appli
   cleanup(kb, input);
 });
 
-QUnit.test("a null instanceVariants entry opts the layout out of the built-in table", async (assert) => {
+QUnit.test('suppress="Variants" opts the layout out of the built-in table', async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({
     controls: [input.getId()],
     accentVariants: true,
     layout: "qwerty",
-    instanceVariants: { qwerty: null },
+    customLayouts: [new CustomLayout({ name: "qwerty", suppress: [LayoutFacet.Variants] })],
   });
   await placeAndWait(kb);
   assert.strictEqual(
@@ -274,20 +277,20 @@ QUnit.test("the built-in non-Latin layouts carry no accent variants", async (ass
   cleanup(kb, input);
 });
 
-QUnit.test("the '*' wildcard re-enables variants on an excluded non-Latin layout", async (assert) => {
+QUnit.test("defaultVariants re-enables variants on an excluded non-Latin layout", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({
     controls: [input.getId()],
     accentVariants: true,
     layout: "ja-romaji",
-    instanceVariants: { "*": { a: ["ä"] } },
+    defaultVariants: { a: ["ä"] },
   });
   await placeAndWait(kb);
   assert.strictEqual(
     getRequiredKeyElement(kb, "a").hasAttribute(DOM.attributes.hasVariants),
     true,
-    "the wildcard table arms romaji 'a'",
+    "the defaults tier arms romaji 'a'",
   );
   cleanup(kb, input);
 });
@@ -384,23 +387,26 @@ QUnit.test("keys hold the WCAG 2.5.8 24x24px minimum target size above the narro
   const kb = new KioskKeyboard({
     accentVariants: true,
     controls: [input.getId()],
-    instanceLayouts: {
-      floortest: [
-        [
-          { value: "q" },
-          { value: "w" },
-          { value: "e" },
-          { value: "r" },
-          { value: "t" },
-          { value: "y" },
-          { value: "u" },
-          { value: "i" },
-          { value: "o" },
-          { value: "p" },
-          { value: " ", width: "space", type: "space" },
+    customLayouts: [
+      new CustomLayout({
+        name: "floortest",
+        rows: [
+          [
+            { value: "q" },
+            { value: "w" },
+            { value: "e" },
+            { value: "r" },
+            { value: "t" },
+            { value: "y" },
+            { value: "u" },
+            { value: "i" },
+            { value: "o" },
+            { value: "p" },
+            { value: " ", width: "space", type: "space" },
+          ],
         ],
-      ],
-    },
+      }),
+    ],
     layout: "floortest",
   });
   await placeAndWait(kb);
@@ -584,7 +590,11 @@ QUnit.test("the open announcement names the key's explicit shiftValue under Shif
   const layout: LayoutDefinition = [[{ value: "1", shiftValue: "!", variants: ["¹", "½"] }, { value: "{shift}" }]];
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ controls: [input.getId()], instanceLayouts: { qwerty: layout }, layout: "qwerty" });
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    customLayouts: [new CustomLayout({ name: "qwerty", rows: layout })],
+    layout: "qwerty",
+  });
   await placeAndWait(kb);
   input.focus();
 
@@ -604,7 +614,11 @@ QUnit.test("the open announcement names the base under CapsLock, not the shiftVa
   const layout: LayoutDefinition = [[{ value: "1", shiftValue: "!", variants: ["¹", "½"] }, { value: "{shift}" }]];
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ controls: [input.getId()], instanceLayouts: { qwerty: layout }, layout: "qwerty" });
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    customLayouts: [new CustomLayout({ name: "qwerty", rows: layout })],
+    layout: "qwerty",
+  });
   await placeAndWait(kb);
   input.focus();
 
@@ -937,7 +951,7 @@ QUnit.test("a committed variant seeds the consumer's composition (Layer 2)", asy
   const kb = new KioskKeyboard({
     controls: [input.getId()],
     layout: "qwerty",
-    instanceMiddleware: { qwerty: createJoinStubMiddleware },
+    customLayouts: [new CustomLayout({ name: "qwerty", middleware: createJoinStubMiddleware })],
   });
   await placeAndWait(kb);
   input.focus();
@@ -1447,7 +1461,11 @@ QUnit.test("a held Backspace that declares variants re-anchors instead of strand
   ];
   const input = new Input({ value: "abc" });
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ controls: [input.getId()], instanceLayouts: { qwerty: layout }, layout: "qwerty" });
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    customLayouts: [new CustomLayout({ name: "qwerty", rows: layout })],
+    layout: "qwerty",
+  });
   await placeAndWait(kb);
   input.focus();
   (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(3, 3);
@@ -1480,7 +1498,7 @@ QUnit.test("the popup declares the layout's keycap language on its option grid",
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({
     controls: [input.getId()],
-    instanceLayouts: { "ar-spike": { rows, lang: "ar" } },
+    customLayouts: [new CustomLayout({ name: "ar-spike", rows, keycapLang: "ar" })],
     layout: "ar-spike",
   });
   await placeAndWait(kb);
@@ -1504,7 +1522,7 @@ QUnit.test("the popup declares no language for keycaps in the UI language", asyn
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({
     controls: [input.getId()],
-    instanceLayouts: { "latin-spike": rows },
+    customLayouts: [new CustomLayout({ name: "latin-spike", rows })],
     layout: "latin-spike",
   });
   await placeAndWait(kb);

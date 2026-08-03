@@ -121,8 +121,14 @@ sap.ui.define([], () => {
       "native-keyboard-suppression": {
         title: "QUnit tests for ui5.kiosk - NativeKeyboardSuppression",
       },
-      "instance-overrides": {
-        title: "QUnit tests for ui5.kiosk - per-instance layout/middleware/locale overrides",
+      "custom-layouts": {
+        title: "QUnit tests for ui5.kiosk - customLayouts aggregation",
+      },
+      "compose-layout": {
+        title: "QUnit tests for ui5.kiosk - composeLayout splice helper",
+      },
+      "customLayouts-xml": {
+        title: "QUnit tests for ui5.kiosk - customLayouts declared in an XML view",
       },
       "unknown-token": {
         title: "QUnit tests for ui5.kiosk - unrecognized {token} keys are no-ops",

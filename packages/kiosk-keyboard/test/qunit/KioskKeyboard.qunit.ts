@@ -1,3 +1,4 @@
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
 import Control from "sap/ui/core/Control";
@@ -162,7 +163,9 @@ QUnit.test("Disabled state renders correctly", async (assert) => {
 QUnit.test("Rendered key shows its label or value", async (assert) => {
   const kb = new KioskKeyboard({
     layout: "test-labels",
-    instanceLayouts: { "test-labels": [[{ value: "x" }, { value: "y", label: "Custom" }]] },
+    customLayouts: [
+      new CustomLayout({ name: "test-labels", rows: [[{ value: "x" }, { value: "y", label: "Custom" }]] }),
+    ],
   });
   await placeAndWait(kb);
 

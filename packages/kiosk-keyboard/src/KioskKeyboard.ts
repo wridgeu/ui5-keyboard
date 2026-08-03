@@ -1,16 +1,21 @@
 import Control from "sap/ui/core/Control";
+import type ManagedObject from "sap/ui/base/ManagedObject";
 import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
 import syncStyleClass from "sap/ui/core/syncStyleClass";
 import Popover from "sap/m/Popover";
 import { PlacementType } from "sap/m/library";
+import { getLayoutLang as metaGetLayoutLang, isSecondaryLayout as metaIsSecondaryLayout } from "./internal/layout-meta";
+import type { LayoutDefinition, CompositionMiddleware } from "./types";
+import CustomLayout from "./CustomLayout";
 import {
-  getLayoutLang as metaGetLayoutLang,
-  isSecondaryLayout as metaIsSecondaryLayout,
-  type InstanceLayoutMeta,
-  type LayoutMeta,
-} from "./internal/layout-meta";
-import type { LayoutDefinition, LayoutSpec, CompositionMiddleware } from "./types";
+  describeDiagnostic,
+  foldCustomLayouts,
+  isValidVariantTable,
+  type CustomLayoutFold,
+  type DiagnosticVocabulary,
+  type LayoutDiagnostic,
+} from "./internal/custom-layout-fold";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
@@ -23,18 +28,10 @@ import {
   resolveVariantTable,
   shiftedGlyph,
   toShiftVariants,
-  type InstanceVariants,
-  type VariantOverlay,
   type VariantTable,
 } from "./internal/latin-variants";
 import VariantPopupBehavior from "./internal/variant-popup-behavior";
-import {
-  KeyboardType,
-  type InstanceLayoutMap,
-  type InstanceLocaleLayoutMap,
-  type InstanceMiddlewareMap,
-  type InstanceVariantMap,
-} from "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   getRegisteredLayout as registryGetLayout,
   getLayoutOrDefault as registryGetLayoutOrDefault,
@@ -42,13 +39,8 @@ import {
   isBuiltInLayout as registryIsBuiltIn,
   getLocaleLayout as registryGetLocaleLayout,
   resolveLayoutName as registryResolveLayoutName,
-  type InstanceLayouts,
-  type InstanceLocaleLayouts,
 } from "./internal/layout-registry";
-import {
-  getMiddlewareFactory as registryGetMiddlewareFactory,
-  type InstanceMiddleware,
-} from "./internal/middleware-registry";
+import { getMiddlewareFactory as registryGetMiddlewareFactory } from "./internal/middleware-registry";
 import {
   SPECIAL_KEY_ICONS as DEFAULT_SPECIAL_KEY_ICONS,
   LAYOUT_RETURN_ICON,
@@ -73,6 +65,15 @@ import { parseKeyAction, assertNever, LAYOUT_BASE } from "./internal/key-token";
 import { constrainedLayoutName, reconcileBaseSwitch } from "./internal/layout-constraint";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
+
+/** How this twin spells the surface names a fold diagnostic has to quote. */
+const KIOSK_DIAGNOSTIC_VOCABULARY: DiagnosticVocabulary = {
+  customLayouts: "customLayouts aggregation",
+  customLayout: "<kiosk:CustomLayout>",
+  get builtInLayouts() {
+    return registryGetLayoutNames();
+  },
+};
 
 /**
  * Whether a simulated touch event stands for a non-primary mouse button.
@@ -156,19 +157,23 @@ export default class KioskKeyboard extends Control {
   private _targetSession!: TargetInputSession;
   private _rendererApi!: RendererInternalApi | null;
   private _targetResolverInstance!: TargetResolverFn | null;
-  /** Per-instance layout overrides, derived from the `instanceLayouts` property. */
-  private _instanceLayoutsMap!: InstanceLayouts | undefined;
-  /** Per-instance layout attributes, derived from the descriptor entries of `instanceLayouts`. */
-  private _instanceLayoutMetaMap!: InstanceLayoutMeta | undefined;
-  /** Per-instance locale-to-layout overrides, derived from the `instanceLocaleLayouts` property. */
-  private _instanceLocaleLayoutsMap!: InstanceLocaleLayouts | undefined;
-  /** Per-instance middleware factory overrides, derived from the `instanceMiddleware` property. */
-  private _instanceMiddlewareMap!: InstanceMiddleware | undefined;
-  /** Per-instance accent-variant overlays, derived from the named `instanceVariants` entries. */
-  private _instanceVariantsMap!: InstanceVariants | undefined;
-  /** The variant tier applied under every layout, derived from the `instanceVariants` `*` entry. */
-  private _defaultVariantsTable!: VariantTable | null;
-  /** Caps the disarmed-`instanceVariants` diagnostic at one emission per control. */
+  /**
+   * Custom layouts folded into the lookup maps; `null` while the cache is cold or stale.
+   *
+   * Declared without an initialiser on purpose. `tsconfig` targets ES2022 and leaves
+   * `useDefineForClassFields` at its default `true`, while `ManagedObject` calls `init()`
+   * and `applySettings()` from inside `super()` - so a field initialiser here would run
+   * *after* both and silently discard the single fold built between the two
+   * `applySettings` phases. Every field above follows the same form.
+   */
+  private _fold!: CustomLayoutFold | null;
+  /** The elements the cached fold was built from, compared element-wise on read. */
+  private _foldChildren!: CustomLayout[];
+  /** Diagnostics already reported for the current configuration, keyed by content. */
+  private _reportedDiagnostics!: Set<string>;
+  /** The factory that produced `_middleware`, so a re-resolve onto the same factory is a no-op. */
+  private _middlewareFactory!: (() => CompositionMiddleware) | null;
+  /** Caps the disarmed-variants diagnostic at one emission per control. */
   private _warnedDisarmedVariants!: boolean;
   /** Owns the ResizeObserver-driven height-responsive class application. */
   private _responsiveSizing!: ResponsiveSizingController;
@@ -388,81 +393,44 @@ export default class KioskKeyboard extends Control {
         group: "Behavior",
       },
       /**
-       * Per-instance layout overrides. Resolution order is
-       * **instance map -> built-in**, so an entry here shadows the
-       * built-in of the same name for this control only. Use this to
-       * supply a custom layout, or to override a built-in (e.g. swap
-       * the German layout) without affecting other controls. Accepts
-       * a plain `Record<string, LayoutInput>`: each entry is either the
-       * layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`)
-       * declaring the layout's attributes alongside them. The control
-       * stores the rows and the attributes as `Map`s internally.
+       * Long-press variants applied under every layout, merged per base letter beneath
+       * anything a `customLayouts` entry declares for that layout, so a house accent set
+       * extends the built-in table rather than replacing it and a base letter mapped to
+       * `[]` drops that letter everywhere. Base letters must be lowercase. Effective only
+       * while `accentVariants` is set.
        *
-       * Read by object identity: assign a new object to change the layouts.
-       * Mutating the object already assigned is not observed until the next
-       * render triggered by something else.
+       * This tier only ever adds; it has no suppression spelling. To take one layout out
+       * of variants entirely use `suppress="Variants"` on its `CustomLayout`, and to take
+       * the whole affordance out leave `accentVariants` off, which is the default.
+       *
+       * Read by object identity: assign a new object to change the table.
        *
        * @since 0.1.0
        */
-      instanceLayouts: {
-        type: "ui5.kiosk.InstanceLayoutMap",
-        defaultValue: null,
-        group: "Behavior",
-      },
-      /**
-       * Per-instance locale-to-layout overrides. Resolution order is
-       * **instance map -> built-in locale map -> default layout**.
-       * Keys are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are
-       * layout names. Accepts a plain `Record<string, string>`; the
-       * control stores it as a `Map` internally.
-       *
-       * @since 0.1.0
-       */
-      instanceLocaleLayouts: {
-        type: "ui5.kiosk.InstanceLocaleLayoutMap",
-        defaultValue: null,
-        group: "Behavior",
-      },
-      /**
-       * Per-instance composition middleware overrides, keyed by layout
-       * name. Resolution order is **instance map -> built-in**. Use
-       * this to attach a layout-specific middleware factory for a
-       * custom layout, or to swap the built-in middleware for one
-       * control only. Accepts a plain
-       * `Record<string, () => CompositionMiddleware>`; the control
-       * stores it as a `Map` internally.
-       *
-       * @since 0.1.0
-       */
-      instanceMiddleware: {
-        type: "ui5.kiosk.InstanceMiddlewareMap",
-        defaultValue: null,
-        group: "Behavior",
-      },
-      /**
-       * Per-instance accent-variant table overrides, keyed by layout name
-       * (or `"*"` for every layout). The entry for a layout wins, else the
-       * `"*"` wildcard; either is merged onto the built-in table per base
-       * letter, so it extends the defaults rather than replacing them. A base
-       * letter mapped to `[]` drops that letter, and a `null` entry opts the
-       * layout out entirely. Base letters must be lowercase. Effective only
-       * while `accentVariants` is set. Accepts a plain
-       * `Record<string, Record<string, string[]> | null>`; the control stores
-       * it as a `Map` internally.
-       *
-       * Read by object identity: assign a new object to change the tables.
-       * Mutating the object already assigned is not observed until the next
-       * render triggered by something else.
-       *
-       * @since 0.1.0
-       */
-      instanceVariants: {
-        type: "ui5.kiosk.InstanceVariantMap",
+      defaultVariants: {
+        type: "ui5.kiosk.VariantOverrideTable",
         defaultValue: null,
         group: "Behavior",
       },
     },
     aggregations: {
+      /**
+       * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+       * `name` already resolves to. Applied in aggregation order: for rows, locales,
+       * metadata and middleware the last declaration wins; long-press variants
+       * accumulate per base letter.
+       *
+       * @since 0.1.0
+       */
+      customLayouts: {
+        type: "ui5.kiosk.CustomLayout",
+        multiple: true,
+        singularName: "customLayout",
+        bindable: "bindable",
+        // Lets a plain JS caller pass an object literal where a `CustomLayout` is
+        // expected; it is also what the first `applySettings` phase constructs through.
+        defaultClass: CustomLayout,
+      },
       /**
        * Internal accent-variant popover, owned by the control and driven by
        * `VariantPopupBehavior`. Hidden so consumers can neither inject nor clone
@@ -787,33 +755,36 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Pre-populates the internal `Map` caches for `instanceLayouts`,
-   * `instanceLocaleLayouts`, and `instanceMiddleware`, then injects the
-   * locale-detected layout (resolved through any instance locale map)
-   * when no explicit `layout` is provided.
+   * Applies `customLayouts` in its own pass before everything else, then injects the
+   * locale-detected layout when the caller named none.
    *
-   * The pre-population happens before `super.applySettings`, so that
-   * `setLayout`'s validation honors instance overrides regardless of
-   * the order in which the framework iterates the settings.
+   * The custom layouts go through `super.applySettings` rather than being read out of
+   * `mSettings`: that is what makes an object literal and a `CustomLayout` instance the
+   * same input. A literal is constructed through the aggregation's `defaultClass` and
+   * each value passes `validateProperty` exactly once, so `locales: "pl"` widens to
+   * `["pl"]` whichever form the caller wrote. By the time `layout` is applied,
+   * `setLayout`'s registry validation and the locale default below both resolve through
+   * the complete set of custom layouts - which also matters for `clone()`, where
+   * `ManagedObject` emits properties before aggregations.
    *
-   * `init()` runs before this, so it seeds the same default from the
-   * global locale map; the resolution here refines it through the
-   * instance maps, which `init()` cannot see.
+   * A `customLayouts` bound to a model populates asynchronously and therefore does not
+   * contribute to the layout chosen here.
    */
   override applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
-    // Pre-populate the internal Map caches before super.applySettings
-    // runs so layout validation in setLayout() can honor instance
-    // overrides regardless of property iteration order.
-    this._readInstanceLayouts(mSettings?.instanceLayouts);
-    this._instanceLocaleLayoutsMap = KioskKeyboard._toStringMap(mSettings?.instanceLocaleLayouts);
-    this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(mSettings?.instanceMiddleware);
-    // Spread before super so callers' settings object is never mutated;
-    // any explicit `layout` in `mSettings` overrides the locale default.
-    const merged: Record<string, unknown> = {
-      layout: registryGetLocaleLayout(this._instanceLocaleLayoutsMap, this._instanceLayoutsMap),
-      ...mSettings,
+    // Destructure rather than `delete`: the caller's settings object is never mutated.
+    const { customLayouts, ...rest } = mSettings ?? {};
+    if (customLayouts !== undefined) {
+      const first: Record<string, unknown> = { customLayouts };
+      super.applySettings(first, oScope);
+    }
+    const fold = this._getFold();
+    // `layout` first so the locale default is the first setting applied; the spread
+    // overwrites its value, not its position, when the caller named a layout.
+    const second: Record<string, unknown> = {
+      layout: registryGetLocaleLayout(fold.localeLayouts, fold.layouts),
+      ...rest,
     };
-    return super.applySettings(merged, oScope);
+    return super.applySettings(second, oScope);
   }
 
   override init(): void {
@@ -873,12 +844,10 @@ export default class KioskKeyboard extends Control {
       (id) => this._isTargetOfOther(id),
     );
     this._targetResolverInstance = null;
-    this._instanceLayoutsMap = undefined;
-    this._instanceLayoutMetaMap = undefined;
-    this._instanceLocaleLayoutsMap = undefined;
-    this._instanceMiddlewareMap = undefined;
-    this._instanceVariantsMap = undefined;
-    this._defaultVariantsTable = null;
+    this._fold = null;
+    this._foldChildren = [];
+    this._reportedDiagnostics = new Set();
+    this._middlewareFactory = null;
     this._warnedDisarmedVariants = false;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
@@ -941,6 +910,7 @@ export default class KioskKeyboard extends Control {
     if (this._middleware) {
       this._middleware.reset();
       this._middleware = null;
+      this._middlewareFactory = null;
     }
     KioskKeyboard._instances.delete(this);
     const wasLastInstance = KioskKeyboard._instances.size === 0;
@@ -1072,9 +1042,9 @@ export default class KioskKeyboard extends Control {
    */
   private _performLayoutSwitch(rawName: string, source: "external" | "user", origin: string): boolean {
     const name = rawName.trim().toLowerCase();
-    if (!registryGetLayout(name, this._instanceLayoutsMap)) {
+    if (!registryGetLayout(name, this._getFold().layouts)) {
       Log.warning(
-        `Layout "${name}" ${origin} is not registered. Pass it through the instanceLayouts setting.`,
+        `Layout "${name}" ${origin} is not registered. Declare it as a <kiosk:CustomLayout> in the customLayouts aggregation.`,
         undefined,
         "ui5.kiosk.KioskKeyboard",
       );
@@ -1098,7 +1068,7 @@ export default class KioskKeyboard extends Control {
    * so a no-op re-selection can't silently flip the constraint-override.
    */
   private _applyLayout(name: string, source: "external" | "user"): boolean {
-    if (!metaIsSecondaryLayout(name, this._instanceLayoutMetaMap)) {
+    if (!metaIsSecondaryLayout(name, this._getFold().layoutMeta)) {
       this._baseLayout = name;
     }
     const changed = name !== this.getLayout();
@@ -1124,209 +1094,84 @@ export default class KioskKeyboard extends Control {
     if (this._middleware) {
       this._middleware.commit();
       this._middleware = null;
+      this._middlewareFactory = null;
     }
   }
 
   /**
-   * Custom setter for `instanceLayouts` - keeps the internal `Map`
-   * cache in sync with the property value so callers do not pay the
-   * `Object.entries` cost on every render.
-   */
-  setInstanceLayouts(value: InstanceLayoutMap): this {
-    for (const name of this._readInstanceLayouts(value)) {
-      Log.warning(
-        `Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value", or an object with such an array as "rows".`,
-        undefined,
-        "ui5.kiosk.KioskKeyboard",
-      );
-    }
-    return this.setProperty("instanceLayouts", value) as this;
-  }
-
-  /**
-   * Custom setter for `instanceLocaleLayouts` - keeps the internal
-   * `Map` cache in sync with the property value.
-   */
-  setInstanceLocaleLayouts(value: InstanceLocaleLayoutMap): this {
-    this._instanceLocaleLayoutsMap = KioskKeyboard._toStringMap(value);
-    return this.setProperty("instanceLocaleLayouts", value) as this;
-  }
-
-  /**
-   * Custom setter for `instanceMiddleware` - keeps the internal `Map`
-   * cache in sync with the property value.
+   * The folded view of `customLayouts`: the lookup maps every resolution path reads,
+   * rebuilt only when the aggregation or one of its custom layouts actually changed.
    *
-   * A composition in progress survives the swap unless the active layout's
-   * factory itself changed, in which case it is committed to the target the
-   * way a layout or target switch commits it.
-   */
-  setInstanceMiddleware(value: InstanceMiddlewareMap): this {
-    // The cached middleware only outlives the resolution it came from: every
-    // layout, target and keyboardType switch ends the composition first. So the
-    // factory the resolved layout reads before the swap is the one that built
-    // it, and comparing across the swap tells a real change from an edit to an
-    // entry this layout never reads.
-    const previous = registryGetMiddlewareFactory(this._resolvedLayoutName(), this._instanceMiddlewareMap);
-    this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(value);
-    const next = registryGetMiddlewareFactory(this._resolvedLayoutName(), this._instanceMiddlewareMap);
-    if (this._middleware && next !== previous) {
-      // Flush rather than discard: the characters already typed are the user's.
-      this._middleware.commit();
-      this._middleware = null;
-    }
-    return this.setProperty("instanceMiddleware", value) as this;
-  }
-
-  /**
-   * Custom setter for `instanceVariants` - keeps the internal `Map`
-   * cache in sync with the property value.
-   */
-  setInstanceVariants(value: InstanceVariantMap): this {
-    const { named, defaults } = KioskKeyboard._toVariantMap(value);
-    this._instanceVariantsMap = named;
-    this._defaultVariantsTable = defaults;
-    return this.setProperty("instanceVariants", value) as this;
-  }
-
-  /**
-   * Splits the `instanceLayouts` property into the two caches the lookup paths
-   * read: the rows keyed by layout name, and the attributes declared by the
-   * descriptor entries. Both are built in one pass over the entries.
+   * Two signals, one per axis. Structure - adds, inserts, removals, reorders - is read
+   * off the element list here, because `removeAggregation`, `removeAllAggregation` and
+   * `destroyAggregation` invalidate without naming a child. Content - a property write
+   * inside a parented custom layout - arrives as `invalidate(customLayout)` and drops
+   * the cache there.
    *
-   * Returns the names it rejected rather than logging them. Construction warms
-   * these caches twice, once here from `applySettings` and once from the setter
-   * that `super.applySettings` then invokes, so reporting from inside would
-   * announce a single bad entry twice; only the setter owns the diagnostic.
+   * Never call this from `invalidate`: it reports diagnostics, and a re-fold driven by
+   * an invalidation would run during rendering.
    */
-  private _readInstanceLayouts(value: unknown): string[] {
-    const rows: [string, LayoutDefinition][] = [];
-    const meta: [string, LayoutMeta][] = [];
-    const rejected: string[] = [];
-    if (value && typeof value === "object") {
-      for (const [name, entry] of Object.entries(value as Record<string, unknown>)) {
-        const spec = KioskKeyboard._readLayoutInput(entry);
-        if (!spec) {
-          rejected.push(name);
-          continue;
-        }
-        // Lookup paths normalize names via trim+lowercase; mirror that at
-        // storage so mixed-case keys do not silently fall through.
-        const key = name.trim().toLowerCase();
-        if (!key) continue;
-        rows.push([key, spec.rows]);
-        meta.push([key, spec.meta]);
-      }
-    }
-    this._instanceLayoutsMap = rows.length === 0 ? undefined : new Map(rows);
-    this._instanceLayoutMetaMap = meta.length === 0 ? undefined : new Map(meta);
-    return rejected;
-  }
-
-  /**
-   * Reads one `instanceLayouts` entry, in either accepted form, into its rows and
-   * the attributes it declares. Returns `undefined` when the entry is neither form.
-   *
-   * Undeclared and mistyped attributes are simply absent from the result rather
-   * than rejecting the layout or overwriting with `undefined`: the rows are the
-   * load-bearing part, and an absent attribute resolves to the built-in value.
-   */
-  private static _readLayoutInput(entry: unknown): { rows: LayoutDefinition; meta: LayoutMeta } | undefined {
-    // Anything that is not a valid row array is read as a descriptor; the `rows`
-    // check below rejects the shapes that are neither, including a bad array.
-    const spec = KioskKeyboard._isValidLayoutDefinition(entry) ? { rows: entry } : (entry as Partial<LayoutSpec>);
-    if (!spec || !KioskKeyboard._isValidLayoutDefinition(spec.rows)) return undefined;
-    const lang = typeof spec.lang === "string" ? spec.lang.trim() : "";
-    return {
-      rows: spec.rows,
-      meta: { ...(lang && { lang }), ...(typeof spec.secondary === "boolean" && { secondary: spec.secondary }) },
-    };
-  }
-
-  private static _isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
-    return (
-      Array.isArray(def) &&
-      def.length > 0 &&
-      def.every(
-        (row) =>
-          Array.isArray(row) && row.length > 0 && row.every((key) => typeof key?.value === "string" && key.value),
-      )
+  private _getFold(): CustomLayoutFold {
+    const children = this.getCustomLayouts();
+    if (this._fold && this._sameChildren(children)) return this._fold;
+    // `getAggregation` hands back a fresh array each call, so this needs no copy.
+    this._foldChildren = children;
+    this._fold = foldCustomLayouts(
+      children.map((child: CustomLayout) => child.toSpec()),
+      registryIsBuiltIn,
     );
+    this._reportDiagnostics(this._fold.diagnostics);
+    return this._fold;
   }
 
-  private static _toStringMap(value: unknown): InstanceLocaleLayouts | undefined {
-    if (!value || typeof value !== "object") return undefined;
-    const entries: [string, string][] = [];
-    for (const [tag, layout] of Object.entries(value as Record<string, unknown>)) {
-      if (typeof layout !== "string") continue;
-      const key = tag.trim().toLowerCase();
-      if (!key) continue;
-      entries.push([key, layout.trim().toLowerCase()]);
+  private _sameChildren(children: readonly CustomLayout[]): boolean {
+    const cached = this._foldChildren;
+    if (children.length !== cached.length) return false;
+    for (let i = 0; i < children.length; i++) {
+      if (children[i] !== cached[i]) return false;
     }
-    return entries.length === 0 ? undefined : new Map(entries);
+    return true;
   }
 
-  private static _toMiddlewareMap(value: unknown): InstanceMiddleware | undefined {
-    if (!value || typeof value !== "object") return undefined;
-    const entries: [string, () => CompositionMiddleware][] = [];
-    for (const [name, factory] of Object.entries(value as Record<string, unknown>)) {
-      if (typeof factory !== "function") continue;
-      const key = name.trim().toLowerCase();
-      if (!key) continue;
-      entries.push([key, factory as () => CompositionMiddleware]);
+  /** Logs what the fold rejected, once per distinct complaint per configuration. */
+  private _reportDiagnostics(diagnostics: readonly LayoutDiagnostic[]): void {
+    if (diagnostics.length === 0) {
+      // Everything resolves: a fault re-introduced later is reported again.
+      this._reportedDiagnostics.clear();
+      return;
     }
-    return entries.length === 0 ? undefined : new Map(entries);
+    for (const d of diagnostics) {
+      const key = `${d.code}|${d.layout}|${d.other ?? ""}|${d.value ?? ""}`;
+      if (this._reportedDiagnostics.has(key)) continue;
+      this._reportedDiagnostics.add(key);
+      Log.warning(describeDiagnostic(d, KIOSK_DIAGNOSTIC_VOCABULARY), undefined, "ui5.kiosk.KioskKeyboard");
+    }
   }
 
   /**
-   * Splits `instanceVariants` into the named per-layout overlays and the `*` entry,
-   * which is the tier applied under every layout. The named tier can suppress, so it
-   * carries the `{replace, table}` overlay shape; the defaults tier only ever adds, so
-   * a `*` entry of `null` is transparent rather than a global opt-out.
+   * A property write inside a parented custom layout reaches this control as an
+   * invalidation naming that element. Dropping the cache is the entire reaction; the
+   * fold is rebuilt on the next read, so a composition in progress is never torn down
+   * by an edit to a custom layout the active layout does not read.
+   *
+   * The cache is dropped **before** `super`, because `Control.prototype.invalidate`
+   * returns early while a rendering pass is in flight.
    */
-  private static _toVariantMap(value: unknown): {
-    named: InstanceVariants | undefined;
-    defaults: VariantTable | null;
-  } {
-    if (!value || typeof value !== "object") return { named: undefined, defaults: null };
-    const entries: [string, VariantOverlay][] = [];
-    let defaults: VariantTable | null = null;
-    for (const [name, table] of Object.entries(value as Record<string, unknown>)) {
-      // `null` is a meaningful entry: it opts the layout out of the built-in table.
-      if (table !== null && !KioskKeyboard._isValidVariantTable(table)) {
-        Log.warning(
-          `Invalid instanceVariants entry "${name}": must be null, or a non-empty object mapping lowercase base letters to arrays of non-empty glyph strings (an empty array suppresses that letter).`,
-          undefined,
-          "ui5.kiosk.KioskKeyboard",
-        );
-        continue;
-      }
-      const key = name.trim().toLowerCase();
-      if (!key) continue;
-      if (key === "*") defaults = table;
-      else entries.push([key, { replace: table === null, table }]);
-    }
-    return { named: entries.length === 0 ? undefined : new Map(entries), defaults };
+  override invalidate(oOrigin?: ManagedObject): void {
+    if (oOrigin instanceof CustomLayout) this._fold = null;
+    super.invalidate(oOrigin);
   }
 
   /**
-   * A variant table is a non-empty plain object mapping lowercase base letters to glyph
-   * lists. Arrays and exotic objects (`Map`, `Date`) are rejected rather than read as an
-   * empty table, and an uppercased or padded base letter is rejected rather than
-   * normalized: the letters are matched against `key.value.toLowerCase()`, so a mis-keyed
-   * table would arm nothing while shadowing the built-in.
+   * The table applied under every layout, validated here rather than in the fold
+   * because it never enters the aggregation.
    */
-  private static _isValidVariantTable(table: unknown): table is VariantTable {
-    if (typeof table !== "object" || table === null || Array.isArray(table)) return false;
-    const entries = Object.entries(table);
-    return (
-      entries.length > 0 &&
-      entries.every(
-        ([base, glyphs]) =>
-          base === base.trim().toLowerCase() &&
-          Array.isArray(glyphs) &&
-          glyphs.every((glyph) => typeof glyph === "string" && glyph),
-      )
-    );
+  private _resolvedDefaultVariants(): VariantTable | null {
+    const table = this.getDefaultVariants();
+    if (table === null) return null;
+    if (isValidVariantTable(table)) return table;
+    this._reportDiagnostics([{ code: "invalid-variants", layout: "" }]);
+    return null;
   }
 
   /**
@@ -1372,6 +1217,7 @@ export default class KioskKeyboard extends Control {
     if (this._middleware) {
       this._middleware.reset();
       this._middleware = null;
+      this._middlewareFactory = null;
     }
     this._backspaceRepeat.stop();
     this._variantPopup.stop();
@@ -1922,7 +1768,7 @@ export default class KioskKeyboard extends Control {
       this._layoutSource === "user"
         ? this.getLayout()
         : (constrainedLayoutName(this.getKeyboardType()) ?? this.getLayout());
-    return registryResolveLayoutName(requested, this._instanceLayoutsMap);
+    return registryResolveLayoutName(requested, this._getFold().layouts);
   }
 
   /**
@@ -1932,13 +1778,14 @@ export default class KioskKeyboard extends Control {
    * pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts).
    */
   private _getLayoutLang(): string | undefined {
-    return metaGetLayoutLang(this._resolvedLayoutName(), this._instanceLayoutMetaMap);
+    return metaGetLayoutLang(this._resolvedLayoutName(), this._getFold().layoutMeta);
   }
 
   /** Resolve the effective layout used by the renderer. */
   private _getResolvedLayout(): LayoutDefinition {
     const layoutName = this._resolvedLayoutName();
-    const resolved = registryGetLayoutOrDefault(layoutName, this._instanceLayoutsMap);
+    const fold = this._getFold();
+    const resolved = registryGetLayoutOrDefault(layoutName, fold.layouts);
     const constrainedName = constrainedLayoutName(this.getKeyboardType());
     const base =
       constrainedName === null
@@ -1951,23 +1798,24 @@ export default class KioskKeyboard extends Control {
     // base keys so umlauts/accents are reachable without editing layout data;
     // a layout the table resolution excludes keeps its keys unchanged. Author-declared
     // `variants` always win (applyVariantDefaults guarantees this).
+    const defaults = this._resolvedDefaultVariants();
     if (!this.getAccentVariants()) {
-      this._warnDisarmedVariants();
+      this._warnDisarmedVariants(fold.variants !== undefined || defaults !== null);
       return base;
     }
-    const table = resolveVariantTable(layoutName, this._instanceVariantsMap, this._defaultVariantsTable);
+    const table = resolveVariantTable(layoutName, fold.variants, defaults);
     return table ? applyVariantDefaults(base, table) : base;
   }
 
   /**
-   * Warns once when `instanceVariants` carries usable entries while `accentVariants` is
-   * off, the combination in which the tables resolve but nothing applies them.
+   * Warns once when a variant table is declared while `accentVariants` is off, the
+   * combination in which the tables resolve but nothing applies them.
    */
-  private _warnDisarmedVariants(): void {
-    if (this._warnedDisarmedVariants || (!this._instanceVariantsMap && this._defaultVariantsTable === null)) return;
+  private _warnDisarmedVariants(hasTables: boolean): void {
+    if (this._warnedDisarmedVariants || !hasTables) return;
     this._warnedDisarmedVariants = true;
     Log.warning(
-      "instanceVariants is set but accentVariants is false, so no variant table is applied. Set accentVariants to arm the long-press popups.",
+      "A variant table is declared but accentVariants is false, so no variant table is applied. Set accentVariants to arm the long-press popups.",
       undefined,
       "ui5.kiosk.KioskKeyboard",
     );
@@ -2298,11 +2146,17 @@ export default class KioskKeyboard extends Control {
    * middleware.
    */
   private _tryCompositionMiddleware(keyValue: string): boolean {
-    if (!this._keyAffectsComposition(keyValue)) return false;
-    if (!this._middleware) {
-      const factory = registryGetMiddlewareFactory(this._resolvedLayoutName(), this._instanceMiddlewareMap);
-      if (factory) this._middleware = factory();
+    // The factory check runs before the composition gate: a non-composition key pressed
+    // after a swap must still commit, or a stale buffer stays attached to a middleware
+    // the resolved layout no longer reads.
+    const factory = registryGetMiddlewareFactory(this._resolvedLayoutName(), this._getFold().middleware);
+    if (factory !== this._middlewareFactory) {
+      // Commit rather than reset: the characters already typed are the user's.
+      this._endComposition();
+      this._middlewareFactory = factory;
     }
+    if (!this._keyAffectsComposition(keyValue)) return false;
+    if (!this._middleware && factory) this._middleware = factory();
     if (this._middleware) {
       const targetEl = this._getTargetElement();
       const mwTarget = targetEl

@@ -1,3 +1,4 @@
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import { placeAndWait, waitForRender, tapKey, getRenderedKeyLabel } from "./test-helpers";
@@ -20,7 +21,11 @@ const layout: LayoutDefinition = [
 async function makeKeyboard(): Promise<{ kb: KioskKeyboard; input: Input }> {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ controls: [input.getId()], instanceLayouts: { qwerty: layout }, layout: "qwerty" });
+  const kb = new KioskKeyboard({
+    controls: [input.getId()],
+    customLayouts: [new CustomLayout({ name: "qwerty", rows: layout })],
+    layout: "qwerty",
+  });
   await placeAndWait(kb);
   input.focus();
   (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(0, 0);

@@ -1,5 +1,5 @@
 import DataType from "sap/ui/base/DataType";
-import type { CompositionMiddleware, LayoutInput } from "./types";
+import type { LayoutDefinition } from "./types";
 import type { VariantTable } from "./internal/latin-variants";
 import Lib from "sap/ui/core/Lib";
 import "sap/m/library"; // resolve dependency before Lib.init()
@@ -190,23 +190,66 @@ DataType.registerEnum("ui5.kiosk.MobileKeyboard", MobileKeyboard);
 DataType.registerEnum("ui5.kiosk.FKeyMode", FKeyMode);
 
 /**
- * A plain record, or `null` for "not supplied". The four per-instance override
- * properties are declared through `DataType.createType` so their generated
- * accessors are typed as the record they accept rather than as bare `object`.
+ * Whether a layout is an auxiliary surface or a base alphabetic layout. A secondary
+ * layout is never tracked as the base, so `{layout:base}` returns to the alphabetic
+ * layout it was reached from.
  *
- * Validation here is deliberately coarse: `ManagedObject` throws when a type
- * rejects a value, which would turn one bad entry into a broken control, so the
- * per-entry checks stay in the setters where an unusable entry is logged and
- * skipped.
+ * @enum {string}
+ * @public
+ * @since 0.1.0
  */
-function isOverrideRecord(value: unknown): boolean {
-  return typeof value === "object" && !Array.isArray(value);
+export enum LayoutRole {
+  /**
+   * Takes the built-in layout of the same name's role, and the base alphabetic role
+   * when there is no built-in of that name.
+   */
+  Inherit = "Inherit",
+  /** A base alphabetic layout, even when the built-in of the same name is secondary. */
+  Base = "Base",
+  /** An auxiliary surface: numbers, symbols, F-keys, navigation. */
+  Secondary = "Secondary",
 }
 
-DataType.createType("ui5.kiosk.InstanceLayoutMap", { defaultValue: null, isValid: isOverrideRecord }, "object");
-DataType.createType("ui5.kiosk.InstanceLocaleLayoutMap", { defaultValue: null, isValid: isOverrideRecord }, "object");
-DataType.createType("ui5.kiosk.InstanceMiddlewareMap", { defaultValue: null, isValid: isOverrideRecord }, "object");
-DataType.createType("ui5.kiosk.InstanceVariantMap", { defaultValue: null, isValid: isOverrideRecord }, "object");
+/**
+ * A per-layout facet whose inherited value a custom layout discards. A listed facet
+ * resolves to nothing at that custom layout's position: the built-in tier and every
+ * earlier custom layout's contribution are dropped, and only a value the same custom
+ * layout declares survives.
+ *
+ * Rows are not listed: the built-in registry is sealed, so a custom layout shadows rows
+ * and never removes them.
+ *
+ * @enum {string}
+ * @public
+ * @since 0.1.0
+ */
+export enum LayoutFacet {
+  /** Long-press accent variants. Suppressed, the layout's keys carry no long-press affordance. */
+  Variants = "Variants",
+  /** Composition (IME / dead-key) middleware. Suppressed, the layout's keys type directly. */
+  Middleware = "Middleware",
+}
+
+/**
+ * A layout's rows, or `null` for a custom layout that overlays an existing layout.
+ *
+ * Validation here is deliberately coarse: `ManagedObject` throws when a type rejects a
+ * value, which would turn one malformed layout into a broken control. The shape check
+ * that reports and skips lives in the fold.
+ */
+function isLayoutRows(value: unknown): boolean {
+  return value === null || Array.isArray(value);
+}
+
+/** A long-press variant table, or `null` for none. Per-entry validation is the fold's. */
+function isVariantTable(value: unknown): boolean {
+  return value === null || (typeof value === "object" && !Array.isArray(value));
+}
+
+DataType.registerEnum("ui5.kiosk.LayoutRole", LayoutRole);
+DataType.registerEnum("ui5.kiosk.LayoutFacet", LayoutFacet);
+DataType.createType("ui5.kiosk.LayoutRows", { defaultValue: null, isValid: isLayoutRows }, "object");
+DataType.createType("ui5.kiosk.VariantOverrideTable", { defaultValue: null, isValid: isVariantTable }, "object");
 
 const library = Lib.init({
   apiVersion: 2,
@@ -218,14 +261,15 @@ const library = Lib.init({
     "ui5.kiosk.KeyboardType",
     "ui5.kiosk.MobileKeyboard",
     "ui5.kiosk.FKeyMode",
-    "ui5.kiosk.InstanceLayoutMap",
-    "ui5.kiosk.InstanceLocaleLayoutMap",
-    "ui5.kiosk.InstanceMiddlewareMap",
-    "ui5.kiosk.InstanceVariantMap",
+    "ui5.kiosk.LayoutRole",
+    "ui5.kiosk.LayoutFacet",
+    "ui5.kiosk.LayoutRows",
+    "ui5.kiosk.VariantOverrideTable",
   ],
   interfaces: [],
   controls: ["ui5.kiosk.KioskKeyboard"],
-  elements: [],
+  // What lets XMLTemplateProcessor resolve `<kiosk:CustomLayout>` out of the namespace.
+  elements: ["ui5.kiosk.CustomLayout"],
   noLibraryCSS: false,
 });
 
@@ -233,7 +277,7 @@ export default library;
 
 /**
  * The built-in Latin-diacritic accent-variant table and its type, re-exported so
- * consumers can spread it to extend the defaults when supplying `instanceVariants`.
+ * consumers can spread it to extend the defaults when supplying a variant table.
  *
  * @public
  * @since 0.1.0
@@ -245,14 +289,17 @@ export { LATIN_DIACRITIC_VARIANTS } from "./internal/latin-variants";
 export type { VariantTable } from "./internal/latin-variants";
 
 /**
- * The shapes the four per-instance override properties accept. Each is the record
- * the property takes, or `null` for "not supplied": the interface generator emits
- * no `| null` union of its own for a custom type, so the null lives in the alias.
+ * The shapes the row and variant-table properties accept, each `null` for "not
+ * supplied". The interface generator emits no `| null` union of its own for a custom
+ * type, so the null lives in the alias, and a registered `DataType` name with no
+ * exported alias of the same name makes the generator emit an import of a module that
+ * does not exist.
+ *
+ * `VariantOverrideTable` is deliberately not spelled `VariantTable`: that name is
+ * already exported above as the non-nullable table type consumers spread.
  *
  * @public
  * @since 0.1.0
  */
-export type InstanceLayoutMap = Record<string, LayoutInput> | null;
-export type InstanceLocaleLayoutMap = Record<string, string> | null;
-export type InstanceMiddlewareMap = Record<string, () => CompositionMiddleware> | null;
-export type InstanceVariantMap = Record<string, VariantTable | null> | null;
+export type LayoutRows = LayoutDefinition | null;
+export type VariantOverrideTable = VariantTable | null;

@@ -1,3 +1,4 @@
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { KeyboardType } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
@@ -158,7 +159,10 @@ QUnit.test("Shifted visible labels update in DOM", async (assert) => {
       { value: "{shift}", label: "", type: "modifier", width: "1.5" },
     ],
   ];
-  const kb = new KioskKeyboard({ layout: "bb-shift-test", instanceLayouts: { "bb-shift-test": layout } });
+  const kb = new KioskKeyboard({
+    layout: "bb-shift-test",
+    customLayouts: [new CustomLayout({ name: "bb-shift-test", rows: layout })],
+  });
   await placeAndWait(kb);
 
   const getKey = (v: string) => getKeyElement(kb, v)!;
@@ -378,7 +382,10 @@ const iconLabelCases: IconLabelCase[] = [
 for (const { title, keyDef, expectIcon, expectLabel, expectLabelText, expectDual } of iconLabelCases) {
   QUnit.test(title, async (assert) => {
     const layout: LayoutDefinition = [[keyDef]];
-    const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
+    const kb = new KioskKeyboard({
+      customLayouts: [new CustomLayout({ name: "test-icon-label", rows: layout })],
+      layout: "test-icon-label",
+    });
     await placeAndWait(kb);
 
     const keyEl = getRequiredKeyElement(kb, keyDef.value);
@@ -412,7 +419,10 @@ for (const { title, keyDef, expectIcon, expectLabel, expectLabelText, expectDual
 
 QUnit.test("Unicode icon renders as text span with icon class", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", icon: "\u21E7", label: "Shift" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-icon-label", rows: layout })],
+    layout: "test-icon-label",
+  });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
@@ -429,7 +439,10 @@ QUnit.test("Unicode icon renders as text span with icon class", async (assert) =
 
 QUnit.test("emoji icon renders as text span with icon class", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x", icon: "\uD83D\uDD0D", label: "Search" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-icon-label", rows: layout })],
+    layout: "test-icon-label",
+  });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "x");
@@ -444,7 +457,10 @@ QUnit.test("emoji icon renders as text span with icon class", async (assert) => 
 
 QUnit.test("Shift key renders built-in icon + i18n label (dual)", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "{shift}", type: "modifier", width: "2.25" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-icon-label", rows: layout })],
+    layout: "test-icon-label",
+  });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "{shift}");
@@ -461,7 +477,10 @@ QUnit.test("Shift key renders built-in icon + i18n label (dual)", async (assert)
 
 QUnit.test("Space bar renders visible i18n label, no icon", async (assert) => {
   const layout: LayoutDefinition = [[{ value: " ", type: "space", width: "space" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-icon-label", rows: layout })],
+    layout: "test-icon-label",
+  });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, " ");
@@ -477,7 +496,10 @@ QUnit.test("Space bar renders visible i18n label, no icon", async (assert) => {
 
 QUnit.test("Shift with label='' renders icon only (opt-out)", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "{shift}", type: "modifier", width: "2.25", label: "" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-icon-label": layout }, layout: "test-icon-label" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-icon-label", rows: layout })],
+    layout: "test-icon-label",
+  });
   await placeAndWait(kb);
 
   const keyEl = getRequiredKeyElement(kb, "{shift}");
@@ -497,7 +519,10 @@ QUnit.test("capsLockLabel overrides visible label during caps lock", async (asse
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockLabel: "CL" }],
   ];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-capslock": layout }, layout: "test-capslock" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-capslock", rows: layout })],
+    layout: "test-capslock",
+  });
   await placeAndWait(kb);
 
   // Activate caps lock (double-tap shift)
@@ -521,7 +546,10 @@ QUnit.test("capsLockIcon overrides icon during caps lock", async (assert) => {
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockIcon: "\u21E7" }],
   ];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-capslock": layout }, layout: "test-capslock" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-capslock", rows: layout })],
+    layout: "test-capslock",
+  });
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
@@ -541,7 +569,10 @@ QUnit.test("capsLockIcon: '' suppresses icon during caps lock", async (assert) =
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockIcon: "" }],
   ];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-capslock": layout }, layout: "test-capslock" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-capslock", rows: layout })],
+    layout: "test-capslock",
+  });
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
@@ -559,7 +590,10 @@ QUnit.test("capsLockLabel: '' suppresses label, aria-label says Caps Lock", asyn
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", capsLockLabel: "" }],
   ];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-capslock": layout }, layout: "test-capslock" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-capslock", rows: layout })],
+    layout: "test-capslock",
+  });
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
@@ -590,7 +624,10 @@ QUnit.test("title attribute is present only for multi-character labels", async (
   for (const { value, label, title } of titleCases) {
     const keyDef: LayoutDefinition[number][number] = label === undefined ? { value } : { value, label };
     const layout: LayoutDefinition = [[keyDef]];
-    const kb = new KioskKeyboard({ instanceLayouts: { "test-title": layout }, layout: "test-title" });
+    const kb = new KioskKeyboard({
+      customLayouts: [new CustomLayout({ name: "test-title", rows: layout })],
+      layout: "test-title",
+    });
     await placeAndWait(kb);
 
     const keyEl = getRequiredKeyElement(kb, value);
@@ -617,7 +654,10 @@ QUnit.test("multi-character labels shrink responsively whatever the key type", a
       { value: "y", label: "あ" },
     ],
   ];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-multi": layout }, layout: "test-multi" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-multi", rows: layout })],
+    layout: "test-multi",
+  });
   await placeAndWait(kb);
 
   for (const value of ["{layout:numeric}", "{enter}", "x"]) {
@@ -687,7 +727,10 @@ QUnit.test("icon: '' + capsLockIcon shows icon only during caps lock", async (as
   const layout: LayoutDefinition = [
     [{ value: "a" }, { value: "{shift}", type: "modifier", width: "2.25", icon: "", capsLockIcon: "\u{1F512}" }],
   ];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-capslock": layout }, layout: "test-capslock" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-capslock", rows: layout })],
+    layout: "test-capslock",
+  });
   await placeAndWait(kb);
 
   // Normal state: no icon (icon: "" suppresses)
@@ -758,11 +801,14 @@ for (const layout of ["qwerty", "ja-romaji"]) {
   });
 }
 
-QUnit.test("instanceLayouts descriptor lang lands on the character key labels", async (assert) => {
+QUnit.test("a custom layout's keycapLang lands on the character key labels", async (assert) => {
   const rows: LayoutDefinition = [
     [{ value: "א" }, { value: "{enter}", type: "action" }, { value: " ", width: "space", type: "space" }],
   ];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-lang": { rows, lang: "he" } }, layout: "test-lang" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-lang", rows, keycapLang: "he" })],
+    layout: "test-lang",
+  });
   await placeAndWait(kb);
 
   const labelOf = (value: string) =>

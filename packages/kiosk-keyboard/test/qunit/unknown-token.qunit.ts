@@ -1,3 +1,4 @@
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import Log from "sap/base/Log";
@@ -17,7 +18,7 @@ async function setup(layout: LayoutDefinition): Promise<{ kb: KioskKeyboard; inp
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({
     controls: [input.getId()],
-    instanceLayouts: { spike: layout },
+    customLayouts: [new CustomLayout({ name: "spike", rows: layout })],
     layout: "spike",
   });
   await placeAndWait(kb);

@@ -1,3 +1,4 @@
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { FKeyMode } from "ui5/kiosk/library";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
@@ -75,7 +76,7 @@ QUnit.test("nav-row-compact seats Up directly above Down, flanked by Left and Ri
 QUnit.test("nav-row-compact renders as two rows of four nav keys", async (assert) => {
   const kb = new KioskKeyboard({
     layout: "nav-compact",
-    instanceLayouts: { "nav-compact": navRowCompact },
+    customLayouts: [new CustomLayout({ name: "nav-compact", rows: navRowCompact })],
   });
   await placeAndWait(kb);
 
@@ -160,7 +161,10 @@ QUnit.test("Nav/fkey icon scales up yet its label stays within the key on wide k
 });
 
 QUnit.test("Nav/fkey icon takes the icon-only bump like every other dual key", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "qwerty-nav", instanceLayouts: { "qwerty-nav": qwertyNav } });
+  const kb = new KioskKeyboard({
+    layout: "qwerty-nav",
+    customLayouts: [new CustomLayout({ name: "qwerty-nav", rows: qwertyNav })],
+  });
   await placeAndWait(kb);
 
   // Narrow the keyboard until every dual key is under the 7rem threshold where the
@@ -318,7 +322,7 @@ QUnit.test("Consumers can compose fkey-row + nav-row + base layout", async (asse
 
   const kb = new KioskKeyboard({
     layout: "qwerty-fk-nav-test",
-    instanceLayouts: { "qwerty-fk-nav-test": composite },
+    customLayouts: [new CustomLayout({ name: "qwerty-fk-nav-test", rows: composite })],
   });
   await placeAndWait(kb);
 
@@ -421,7 +425,7 @@ QUnit.test("Physical Arrow key highlights matching virtual nav key", async (asse
   const kb = new KioskKeyboard({
     layout: "test-qwerty-nav",
     controls: [input.getId()],
-    instanceLayouts: { "test-qwerty-nav": qwertyNav },
+    customLayouts: [new CustomLayout({ name: "test-qwerty-nav", rows: qwertyNav })],
   });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
