@@ -1924,16 +1924,20 @@ describe("kiosk-keyboard", () => {
       await expect(el).to.be.accessible();
     });
 
-    it("keyboard navigation moves focus between keys", async () => {
+    it("ArrowRight focuses the next key in the same row", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
-      const firstKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.focusableKey)!;
-      firstKey.focus();
+      const rowKeys = queryRows(el)[1]!.querySelectorAll<HTMLElement>(DOM.selectors.key);
+      // Off-diagonal origin and target: navigation parses the key id and rebuilds
+      // it to look the target up, so a row/column transposition cannot satisfy this.
+      const originKey = rowKeys[2]!;
+      const targetKey = rowKeys[3]!;
 
-      firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      originKey.focus();
+      originKey.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
 
-      const nextFocused = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.focusableKey)!;
-      expect(nextFocused).to.not.equal(firstKey);
+      expect(el.shadowRoot!.activeElement, "ArrowRight focuses row 1, column 3").to.equal(targetKey);
+      expect(targetKey.getAttribute("tabindex"), "roving tabindex follows the move").to.equal("0");
     });
 
     it("does not activate a key on Enter/Space with a modifier held", async () => {

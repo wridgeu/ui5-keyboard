@@ -483,6 +483,27 @@ describe("icon + label rendering", () => {
     ).to.be.at.most(iconEl.clientHeight + 1);
   });
 
+  // A keycap is a specimen, so the font's `isol` lookup must not restyle it into a
+  // joining form. `font-feature-settings` inherits, so the declaration has to sit on the
+  // Arabic labels alone: on the label class, the keyboard root or `:host` it would turn
+  // the feature off for every keycap in the layout. The arabic number row renders
+  // Western digits, so the unscoped label that guards against that always exists.
+  it("turns the isol feature off on Arabic keycaps and nowhere else", async () => {
+    const el = await createBuiltInKeyboard("arabic");
+    const arabicLabel = el.shadowRoot!.querySelector<HTMLElement>(
+      `.${DOM.classes.keyLabel}[${DOM.attributes.glyphScript}="arabic"]`,
+    )!;
+    const plainLabel = el.shadowRoot!.querySelector<HTMLElement>(
+      `.${DOM.classes.keyLabel}:not([${DOM.attributes.glyphScript}])`,
+    )!;
+
+    expect(getComputedStyle(arabicLabel).fontFeatureSettings, "an arabic keycap turns isol off").to.equal('"isol" 0');
+    expect(
+      getComputedStyle(plainLabel).fontFeatureSettings,
+      "a label with no glyph script keeps the font default",
+    ).to.equal("normal");
+  });
+
   // Language of parts (WCAG 2.2 SC 3.1.2)
 
   const layoutLangCases: { layout: string; lang: string; charKey: string }[] = [

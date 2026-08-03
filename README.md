@@ -216,7 +216,6 @@ The full per-package catalog (multi-device matrix, FLP lifecycle, smoke checks, 
 
 ```bash
 npm run check              # Full quality gate with smoke checks + sequential multi-device e2e
-npm run check:parallel     # Same gate, but with the concurrent multi-device matrix
 npm run fmt                # Format (oxfmt)
 npm run fmt:check          # Check formatting without fixing
 npm run lint               # Lint (oxlint)

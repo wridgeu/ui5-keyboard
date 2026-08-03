@@ -1090,6 +1090,35 @@ QUnit.test("Glyph font-override is scoped to key labels and does not leak in the
   kb.destroy();
 });
 
+QUnit.test("Arabic keycaps turn the isol feature off and no other label does", async (assert) => {
+  // A keycap is a specimen, so the font's `isol` lookup must not restyle it into a
+  // joining form. `font-feature-settings` inherits, so the declaration has to sit on the
+  // Arabic labels alone: on the label class or the keyboard root it would turn the
+  // feature off for every keycap in the layout. The arabic number row renders Western
+  // digits, so the unscoped label that guards against that always exists.
+  const kb = new KioskKeyboard({ layout: "arabic" });
+  await placeAndWait(kb);
+
+  const dom = getKeyboardDom(kb);
+  const arabicLabel = dom.querySelector<HTMLElement>(
+    `.${DOM.classes.keyLabel}[${DOM.attributes.glyphScript}="arabic"]`,
+  )!;
+  const plainLabel = dom.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}:not([${DOM.attributes.glyphScript}])`)!;
+
+  assert.strictEqual(
+    window.getComputedStyle(arabicLabel).fontFeatureSettings,
+    '"isol" 0',
+    "an arabic keycap turns isol off",
+  );
+  assert.strictEqual(
+    window.getComputedStyle(plainLabel).fontFeatureSettings,
+    "normal",
+    "a label with no glyph script keeps the font default",
+  );
+
+  kb.destroy();
+});
+
 QUnit.test("Shift toggle works via keyboard (Enter key)", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);

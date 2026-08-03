@@ -92,20 +92,28 @@ __baselines__/phone-lg/     430x932,  DPR 3
 __baselines__/tablet/       768x1024, DPR 2
 ```
 
+### What a baseline is evidence for
+
+A baseline is per-package regression evidence: it pins how that package renders against its own previous render. It is not a cross-package parity comparison, and a kiosk baseline is not the counterpart of a webc one - the files are not even named alike (`kb-*.png` vs `webc-*.png`).
+
+The two harnesses wrap the keyboard differently: kiosk fixtures sit inside a padded `.keyboard-container` (`packages/kiosk-keyboard/test/e2e/visual/index.html`), webc fixtures sit directly in an unpadded `.section` (`packages/kiosk-keyboard-webc/test/pages/visual.html`). At the same emulated viewport the kiosk keyboard root is therefore usually the narrower of the two (`qwerty` on `phone-sm`: 240px vs 280px). The gap is not a constant: fixtures pinned to a fixed width in one page and bounded by `max-width` in the other line up at some viewports and not at others (`kb-narrow`/`webc-narrow` match on `phone-sm` and differ by 40px on `desktop`). So a layout that truncates in one package's baseline and not in the other's is a statement about container width, not about the two components disagreeing.
+
+For cross-package parity use the drift checks: `npm run test:style-twin-drift` (`tools/check-style-twin-drift.mjs`, custom-property surface) and `npm run test:dom-contract` (`tools/check-dom-contract-drift.mjs`, class/selector/attribute contract).
+
 ### Running visual tests
 
 ```bash
 # Headless, compare against baselines
 npm run test:e2e -w packages/kiosk-keyboard-webc              # desktop only
 npm run test:e2e:phone-md -w packages/kiosk-keyboard-webc     # single device project
-npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc  # all projects in parallel
+npm run test:e2e:all-devices -w packages/kiosk-keyboard-webc  # this package's device projects, Playwright's default worker pool
 
 # Headed / interactive (debugging)
 npm run test:e2e:open -w packages/kiosk-keyboard-webc         # Playwright UI mode
 
-# All e2e across both packages, all devices
-npm run test:e2e:all-devices                                  # parallel
-npm run test:e2e:all-devices:sequential                       # sequential (lower CPU)
+# All e2e across both packages, all devices (one package after the other)
+npm run test:e2e:all-devices                                  # default worker pool per package
+npm run test:e2e:all-devices:sequential                       # --workers=1 per package (lower CPU)
 ```
 
 ### Inspecting visual diffs locally
@@ -215,14 +223,13 @@ The UI5 QUnit suites are served by `ui5 serve` (via each package's `test:qunit` 
 
 ```bash
 npm test                      # Hotkeys QUnit, kiosk QUnit + desktop e2e, webc unit + component tests
-npm run test:e2e:all-devices  # All E2E across both packages, all devices (parallel)
-npm run test:e2e:all-devices:sequential # Same device matrix, but sequential for lower local CPU/RAM pressure
+npm run test:e2e:all-devices  # All E2E across both packages, all devices (one package after the other)
+npm run test:e2e:all-devices:sequential # Same device matrix, with a single Playwright worker per package
 npm run test:packages:smoke   # Build + npm pack dry-run smoke for publishable packages, plus the demo WebC consumption build
 npm run check                 # Full quality gate with smoke checks + sequential multi-device matrix
-npm run check:parallel        # Same gate, but with the concurrent multi-device matrix
 ```
 
-`npm run check` is exhaustive and uses the sequential device matrix to reduce peak machine load and port/contention flake. Use `npm run check:parallel` or `npm run test:e2e:all-devices` when you explicitly want the higher-pressure concurrent sweep.
+Both packages are always run one after the other: they are CPU-bound Playwright matrices, and running them at the same time oversubscribes the machine and produces nondeterministic failures unrelated to the code under test. `npm run check` goes further and pins each package to a single worker, trading wall-clock time for a stable result.
 
 ### Per-package commands
 
