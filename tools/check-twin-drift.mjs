@@ -98,6 +98,7 @@ const CORE_MODULES = [
   "layout-constraint",
   "latin-variants",
   "layout-meta",
+  "custom-layout-fold",
 ];
 
 // Same-named kiosk internal/ <-> webc core/ helpers that are deliberately NOT
@@ -131,7 +132,7 @@ const PAIRS = [
 
 // Guard against the manifest silently shrinking (a dropped entry would make
 // the check pass while comparing fewer pairs).
-const EXPECTED_PAIR_COUNT = 27;
+const EXPECTED_PAIR_COUNT = 28;
 
 /**
  * Removes line and block comments, but ONLY outside string literals: a `//` or

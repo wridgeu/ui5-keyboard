@@ -39,6 +39,12 @@ describe("middleware-registry", () => {
       expect(factory!().commit()).toBe("instance");
     });
 
+    it("an instance entry of null disables composition for the layout", () => {
+      // Distinct from an absent entry: `??` would collapse the two and hand back the
+      // built-in Hangul composer, leaving the layout unable to type its rows directly.
+      expect(getMiddlewareFactory(BUILT_IN_LAYOUT, new Map([[BUILT_IN_LAYOUT, null]]))).toBeNull();
+    });
+
     it("falls through to built-in when instance map lacks the layout", () => {
       const otherFactory = (): CompositionMiddleware => ({
         handleKey: () => false,

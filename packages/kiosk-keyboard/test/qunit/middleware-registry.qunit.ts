@@ -40,6 +40,13 @@ QUnit.test("Instance map shadows the built-in factory", (assert) => {
   assert.strictEqual(factory!().commit(), "instance", "Instance map shadows built-in factory");
 });
 
+QUnit.test("An instance entry of null disables composition for the layout", (assert) => {
+  // Distinct from an absent entry: `??` would collapse the two and hand back the
+  // built-in Hangul composer, leaving the layout unable to type its rows directly.
+  const factory = getMiddlewareFactory(BUILT_IN_LAYOUT, new Map([[BUILT_IN_LAYOUT, null]]));
+  assert.strictEqual(factory, null, "the built-in factory is not reached");
+});
+
 QUnit.test("Falls through to built-in when instance map lacks the layout", (assert) => {
   const otherFactory = (): CompositionMiddleware => ({
     handleKey: () => false,

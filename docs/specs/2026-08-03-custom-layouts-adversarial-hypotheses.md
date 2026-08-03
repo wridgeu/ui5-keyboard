@@ -31,7 +31,7 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
 
 ## Stage 1 — the defaults-tier re-layering
 
-- **H1 (the wildcard coverage is vacuous).** `open`. _Confirmed live at HEAD, not speculative._
+- **H1 (the wildcard coverage is vacuous).** `red-seen` — cleared 2026-08-03. _Confirmed live at HEAD, not speculative._
   `packages/kiosk-keyboard/test/qunit/latin-variants.qunit.ts:192-199` and
   `packages/kiosk-keyboard-webc/test/unit/latin-variants.test.ts:170-176` are both titled
   "an explicit entry beats the wildcard" and both pass `["qwerty", null]` — traced through the
@@ -41,31 +41,58 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
   watch both suites pass; then add the defaults-plus-named case and confirm it goes red against the
   _old_ resolver. Clearing H1 requires seeing that second red, not the first green.
 
-- **H12 (the twin-drift count guard is inert).** `open`.
+  **Result.** The old resolver was restored inside the new signature (named entry short-circuits,
+  else the defaults tier) and the rewritten webc suite run against it: **3 failed / 30 passed**,
+  and the three reds were exactly the three §4c rows marked CHANGED — "composes with a named entry
+  rather than being discarded by it", "composes with a named entry on a non-Latin layout", "a
+  letter it drops stays dropped when a named entry declares others". Everything else stayed green,
+  including the renamed formerly-vacuous case, which is the confirmation that it was vacuous.
+  Perturbation reverted; 33/33 green.
+
+- **H12 (the twin-drift count guard is inert).** `red-seen` — cleared 2026-08-03.
   **Red proof, both directions:** bump `EXPECTED_PAIR_COUNT` to 28 without adding
   `custom-layout-fold` to `CORE_MODULES` — must fail at `tools/check-twin-drift.mjs:220-223`; then
   add the module without bumping the count — must fail at `:262`. A guard that only fails in one
   direction cannot catch the landing order this change actually risks.
 
-- **H15 (the byte-comparison is not actually comparing).** `open`. Stage 1 edits a `CORE_MODULES`
+  **Result.** Both directions fired, and neither was reachable through the other. Module present,
+  count untouched: _"Unregistered twin module(s) in internal/ <-> core/: custom-layout-fold."_
+  Count bumped, module unregistered: _"Pair manifest has 27 entries, expected 28."_ Registered
+  properly, the checker reports 28 pairs in sync.
+
+- **H15 (the byte-comparison is not actually comparing).** `red-seen` — cleared 2026-08-03. Stage 1 edits a `CORE_MODULES`
   pair and Stage 2 adds one; both rely on the drift checker reading the files it claims to.
   **Red proof:** change one character inside a function body in `latin-variants.ts` on one twin
   only, and confirm `test:twin-drift` goes red. Comments are stripped by `normalize()`, so the
   perturbation must be inside code, not a comment — a comment-only perturbation passing is the
   _expected_ behaviour, not a failure, and must not be mistaken for an inert guard.
 
+  **Result.** `applyVariantOverlay`'s ternary was inverted in the webc copy only
+  (`overlay.replace ? null : base` -> `overlay.replace ? base : null`). The checker printed the
+  two-line diff and _"1 twin pair drifted."_ Reverted; 28 pairs in sync.
+
 ## Stage 2 — the fold
 
-- **H16 (the diagnostics suite asserts codes it never triggers).** `open`. The catalogue is ten
-  codes and the suite claims to cover every one.
+- **H16 (the diagnostics suite asserts codes it never triggers).** `red-seen` — cleared 2026-08-03.
+  The catalogue is ten codes and the suite claims to cover every one.
   **Red proof:** delete one `diagnostics.push` from `foldCustomLayouts` at a time; each deletion
   must turn exactly one test red. A code whose deletion turns nothing red is asserted but not
   exercised.
 
-- **H17 (`unknown-target` and `invalid-rows` double-report).** `open`. `rowsDeclared` records that a
+  **Result.** Automated over all ten codes (each `diagnostics.push({code: "X" …})` replaced with
+  `undefined`, suite run, source restored). Every code turned **its own dedicated test** red, and
+  no code turned zero red. Each deletion also reddened the single `describeDiagnostic` completeness
+  test, which asserts the fixture triggers all ten codes — that is the guard doing its job, not a
+  second accidental assertion.
+
+- **H17 (`unknown-target` and `invalid-rows` double-report).** `red-seen` — cleared 2026-08-03. `rowsDeclared` records that a
   `rows` was _present_, not that it was accepted, specifically so one mistake yields one warning.
   **Red proof:** move `rowsDeclared.add(name)` into the valid branch only; the "a rejected `rows`
   reports `invalid-rows` alone" test must go red with two diagnostics.
+
+  **Result.** `rowsDeclared.add(name)` moved into the `else` branch: 1 failed / 32 passed, with
+  _"expected [ 'invalid-rows', 'unknown-target' ] to deeply equal [ 'invalid-rows' ]"_ — the exact
+  double-report the ordering guards against. Reverted.
 
 ## Stage 3 — kiosk cutover
 

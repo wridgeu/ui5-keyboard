@@ -2,8 +2,12 @@ import type { CompositionMiddleware } from "../types.js";
 import { createKanaDakutenMiddleware } from "../middleware/kana-dakuten.js";
 import { createHangulComposeMiddleware } from "../middleware/hangul-compose.js";
 
-/** Per-instance middleware factory map (optional) for layered resolution. */
-export type InstanceMiddleware = ReadonlyMap<string, () => CompositionMiddleware>;
+/**
+ * Per-instance middleware factory map (optional) for layered resolution. A stored `null`
+ * disables composition for that layout, which is distinct from an absent entry: it is
+ * what a custom layout suppressing the `Middleware` facet folds into.
+ */
+export type InstanceMiddleware = ReadonlyMap<string, (() => CompositionMiddleware) | null>;
 
 /**
  * Built-in composition middleware factories keyed by layout name.
@@ -34,5 +38,8 @@ export function getMiddlewareFactory(
   instanceFactories?: InstanceMiddleware,
 ): (() => CompositionMiddleware) | null {
   const name = layout.trim().toLowerCase();
-  return instanceFactories?.get(name) ?? factories.get(name) ?? null;
+  // A declared `null` disables composition for the layout; an absent entry is distinct
+  // from it and leaves the built-in factory in force. `??` would collapse the two.
+  if (instanceFactories?.has(name)) return instanceFactories.get(name) ?? null;
+  return factories.get(name) ?? null;
 }

@@ -82,6 +82,9 @@ sap.ui.define([], () => {
       "layout-meta": {
         title: "QUnit tests for ui5.kiosk - layout-meta per-layout attributes",
       },
+      "custom-layout-fold": {
+        title: "QUnit tests for ui5.kiosk - custom-layout-fold per-facet merge & diagnostics",
+      },
       "KioskKeyboard-layout": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Layout Management",
       },
