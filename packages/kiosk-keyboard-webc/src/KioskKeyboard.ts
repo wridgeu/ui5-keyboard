@@ -960,8 +960,15 @@ class KioskKeyboard extends UI5Element {
     const { name } = changeInfo;
 
     if (name === "layout") {
+      const requested = this.layout.trim().toLowerCase();
+      if (!getRegisteredLayout(requested, this._layoutsView.get(this.instanceLayouts))) {
+        console.warn(
+          `[kiosk-keyboard] Layout "${requested}" assigned to the layout property is not registered. Pass it through the instanceLayouts setting.`,
+        );
+        return;
+      }
       // A programmatic layout change is external-sourced and re-engages constraints.
-      this._applyLayout(this.layout, "external");
+      this._applyLayout(requested, "external");
     }
     if (name === "keyboardType") {
       if (isInvalidEnumValue("keyboardType", this.keyboardType, VALID_KEYBOARD_TYPES)) {
