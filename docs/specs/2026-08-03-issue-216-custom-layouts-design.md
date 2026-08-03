@@ -333,8 +333,9 @@ import type { VariantTable } from "./core/latin-variants.js";
  * overlays the layout its `name` already resolves to. Applied in DOM order.
  *
  * Renders nothing: no renderer, template or styles, so it never attaches a shadow root
- * and is never projected. Configuration, read by the host - the shape `ui5-table` uses
- * for its `features` slot.
+ * and is never projected. Configuration, read by the host - the shape `ui5-table`'s
+ * `features` children use: `ui5-table-selection-multi` and `ui5-table-selection-single`
+ * are registered with `@customElement({tag})` and no renderer, template or styles.
  *
  * @class
  * @extends UI5Element
@@ -472,7 +473,12 @@ import { isCustomLayout, type ICustomLayout } from "./CustomLayout.js";
   customLayouts!: Slot<ICustomLayout>;
 ```
 
-`slot-strict.js` is present in the installed 2.22.0 tree (verified by listing `node_modules/@ui5/webcomponents-base/dist/decorators/`) and must be imported under the local identifier `slot` — the CEM analyzer detects slots by `findDecorator(member, "slot")` (`custom-elements-manifest.config.mjs:197,212`), which is why upstream writes `import { slotStrict as slot }` (`Table.js:9`). Both keys of `SlotInvalidation` are required (`UI5ElementMetadata.d.ts:2-5`); `{ properties: true }` alone does not compile. `individualSlots` is **not** set — nothing renders into an individual slot, and `_assignIndividualSlotsToChildren` (`UI5Element.js:720-727`) would stamp `slot="customLayouts-1"` onto React/Vue-managed light DOM for no benefit. `KioskKeyboardTemplate.tsx` is unchanged.
+`slot-strict.js` is present in the installed 2.22.0 tree (verified by listing `node_modules/@ui5/webcomponents-base/dist/decorators/`) and must be imported under the local identifier `slot` — the CEM analyzer detects slots by `findDecorator(member, "slot")` (`custom-elements-manifest.config.mjs:197,212`), which is why upstream writes `import { slotStrict as slot }` (`Table.js:9`). Both keys of `SlotInvalidation` are required (`UI5ElementMetadata.d.ts:2-5`); `{ properties: true }` alone does not compile.
+
+**Two deliberate deviations from `ui5-table`, stated because the precedent is cited elsewhere in this document and does not extend this far.** `Table.js:436` declares its `features` slot as `slot({ type: HTMLElement, individualSlots: true })` — no `invalidateOnChildChange`, and `individualSlots` on.
+
+- **`individualSlots` is not set here.** First-party needs it because one of its features renders: `TableGrowing` is declared with `renderer: jsxRenderer`, a template and styles (`TableGrowing.js:229-231`), so it needs a real slot position in the host's shadow DOM. `CustomLayout` renders nothing, and `_assignIndividualSlotsToChildren` (`UI5Element.js:720-727`) would stamp `slot="customLayouts-1"` onto React/Vue-managed light DOM for no benefit. `KioskKeyboardTemplate.tsx` is unchanged.
+- **`invalidateOnChildChange` is set here, and first-party does not use it.** Its config children push upward instead: `TableSelectionBase` holds `this._table`, assigned in `onTableActivate` and otherwise recovered by sniffing `isInstanceOfTable(this.parentElement)` in its own `onBeforeRendering`, then increments `this._table._invalidate++` (`TableSelectionBase.js:43-56, 114-118`). That is the same shape as the `_markFoldDirty` design §A.2 rejects on the kiosk twin — a child duck-typing its way into its parent — and it makes the child's correctness depend on being a direct child. The declarative route keeps the child ignorant of its host, needs no activation protocol, and is symmetric with the kiosk twin's `invalidate(oOrigin)`: in both twins the framework tells the host that a child changed. It is fully supported (`UI5Element.js:385-388` attaches the listener; `_onChildChange` emits `{type:"slot", name, reason:"childchange"}` at `:465-477`), just less trodden.
 
 `KioskKeyboard.ts` **value-imports** `isCustomLayout` from `./CustomLayout.js`. That is load-bearing, not stylistic: `customElements.define` runs synchronously inside `UI5Element.define()` (`:1121-1125`), so the child tag is always defined by the time a `<kiosk-keyboard>` connects and `_processChildren` never enters the `Promise.race([whenDefined, setTimeout(1000)])` at `UI5Element.js:369-379` (measured: 1004 ms to first paint for an undefined child tag).
 
@@ -1277,7 +1283,9 @@ Confirmed in the installed `@ui5/webcomponents-base@2.22.0`: `_invalidate` retur
    * `_processChildren` populates the slot before it (:211-215), so an
    * invalidation-driven fold would be empty for the whole first frame. The slot array
    * itself is populated by then, so reading it here is correct from the first
-   * `onBeforeRendering` onward. The lazy contract `ui5-table` uses for `this.features`.
+   * `onBeforeRendering` onward. This is the lazy read `ui5-table` performs on
+   * `this.features` (Table.js:171, 191, 197, 203, 217), which declares no
+   * `onInvalidation` of its own.
    *
    * Rebuilt only when the slotted elements change identity or one of them reports a
    * property change, so diagnostics are emitted once per real change, not once per read.
@@ -1771,4 +1779,19 @@ No `as any`, no try/catch around trusted paths, no defensive `typeof x !== "unde
 
 ### Modern-web-guidance
 
-Searched for custom-element configuration APIs, slots carrying non-rendered configuration, and property-versus-attribute handling of object and function values. **No applicable guide exists in that corpus** — top similarity 0.41 across two queries, every result CSS or visual-design. The web-component half of this design rests on the installed `@ui5/webcomponents-base` 2.22.0 sources and first-party precedent (`ui5-table`'s `features` slot) instead. Recorded so the search is not repeated expecting a result.
+Searched for custom-element configuration APIs, slots carrying non-rendered configuration, property-versus-attribute handling of object and function values, and duck-typing across bundles. **No applicable guide exists in that corpus** — top similarity 0.41, then 0.449 on a re-run against a later corpus version, every result CSS or performance. Recorded so the search is not repeated expecting a result.
+
+The web-component half of this design therefore rests on the installed `@ui5/webcomponents-base` 2.22.0 sources, the package's own `AGENTS.md`, and first-party precedent — all three re-checked, with the precedent narrowed to what it actually supports:
+
+| claim                                                                                        | first-party evidence                                                                                                                                                          | verdict                               |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| a registered custom element with no renderer/template/styles is the shape for a config child | `TableSelectionMulti.js:288`, `TableSelectionSingle.js:63` — `@customElement({tag})` and nothing else                                                                         | **precedented**, adopt as-is          |
+| the host reads its config slot lazily rather than from `onInvalidation`                      | `Table.js:171,191,197,203,217`; `ui5-table` declares no `onInvalidation`                                                                                                      | **precedented**, adopt as-is          |
+| duck-typing marker instead of `instanceof` / tag comparison                                  | `AGENTS.md` "No `instanceof` checks" + `createInstanceChecker`; `TableSelectionBase` carries `identifier = "TableSelection"` and resolves its host with `isInstanceOfTable()` | **precedented**, adopt as-is          |
+| template-literal enum types, `import type` for enums                                         | `AGENTS.md` "Always Use Template Literal Types for Enums" — `design: \`${ButtonDesign}\` = "Default"`, compared with string literals                                          | **precedented**, already followed     |
+| `invalidateOnChildChange` on the config slot                                                 | **none** — `Table.js:436` sets `slot({type: HTMLElement, individualSlots: true})` and its children push `this._table._invalidate++` instead                                   | **deviation**, reasoned in surface §4 |
+| `individualSlots` omitted                                                                    | **none** — first-party sets it, because `TableGrowing` actually renders (`TableGrowing.js:229-231`)                                                                           | **deviation**, reasoned in surface §4 |
+
+Both deviations are recorded rather than smoothed over. The first-party alternative to `invalidateOnChildChange` is a child that reaches into its parent, which is precisely the shape §A.2 rejects on the kiosk twin; taking it here would have made the twins inconsistent for no gain.
+
+`AGENTS.md` also prescribes `noAttribute: true` for properties not used in CSS selectors. It is not applied to `rows` / `variants` / `middleware`: `hasAttribute` already excludes `Object` (`UI5ElementMetadata.js:64-67`), so no attribute is created either way, and the CEM's phantom-attribute listing ignores `_ui5noAttribute` entirely (§"Generated artifacts"). Adding it would be inert on both paths.
