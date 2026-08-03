@@ -1,3 +1,5 @@
+import type { VariantTable } from "./core/latin-variants.js";
+
 /**
  * Valid width values for keys.
  *
@@ -229,6 +231,32 @@ export interface LayoutSpec {
  * @since 0.1.0
  */
 export type LayoutInput = LayoutDefinition | LayoutSpec;
+
+/**
+ * What one custom layout declares. A custom layout without `rows` overlays the layout its
+ * `name` already resolves to. The tier applied under every layout is the host's
+ * `defaultVariants` property, not a member of this collection.
+ */
+export interface CustomLayoutSpec {
+  readonly name: string;
+  readonly rows?: LayoutDefinition;
+  readonly keycapLang?: string;
+  /**
+   * Whether the layout is an auxiliary surface rather than a base alphabetic layout.
+   * Absent takes the built-in of the same name's value, and the base alphabetic role
+   * when there is no built-in of that name.
+   */
+  readonly secondary?: boolean;
+  readonly locales?: readonly string[];
+  readonly middleware?: () => CompositionMiddleware;
+  readonly variants?: VariantTable;
+  /**
+   * Facets whose inherited value this custom layout discards. A listed facet resolves to
+   * nothing at this custom layout's position; a value this same custom layout declares
+   * still applies. Entries outside `SUPPRESSIBLE_FACETS` are reported and ignored.
+   */
+  readonly suppress?: readonly string[];
+}
 
 /**
  * Composition middleware intercepts key events for layouts that need
