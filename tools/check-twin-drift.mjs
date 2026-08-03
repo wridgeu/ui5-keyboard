@@ -23,10 +23,11 @@
  *   controller files listed below, shrinking this surface.
  * - middleware/kana-dakuten.ts: known semantic divergence between the twins.
  * - middleware/hangul-compose.ts: framework-adapted wiring differs.
- * - internal/layout-registry.ts <-> core/layout-registry.ts: registry is
- *   static-class-based in webc, module-scoped in kiosk.
- * - internal/middleware-registry.ts <-> core/middleware-registry.ts: same
- *   structural split as layout-registry.
+ * - internal/layout-registry.ts <-> core/layout-registry.ts: both are
+ *   module-scoped const Maps, but the twins diverge in their diagnostics --
+ *   kiosk logs through sap/base/Log, webc through console.
+ * - internal/middleware-registry.ts <-> core/middleware-registry.ts: the
+ *   built-in factory tables name framework-adapted middleware modules.
  * - internal/input-operations.ts <-> core/input-operations.ts: kiosk routes
  *   through UI5 setValue/liveChange, webc writes the DOM value directly.
  * - internal/dom-contract.ts <-> core/dom-contract.ts: kiosk targets UI5
