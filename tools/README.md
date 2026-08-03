@@ -121,7 +121,7 @@ Drift check for the deliberately hand-duplicated kiosk twin modules
 
 Adversarial validation record: `docs/specs/2026-06-11-twin-drift-check-adversarial-hypotheses.md`.
 
-Run via `npm run test:twin-drift` (also part of `check`, `check:parallel`, and CI).
+Run via `npm run test:twin-drift` (also part of `check` and CI).
 
 ## `check-style-twin-drift.mjs`
 

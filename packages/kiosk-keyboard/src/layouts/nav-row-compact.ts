@@ -12,6 +12,10 @@ import navRow from "./nav-row";
  * Arrow-key grid navigation follows the resolved layout, so focus moves between
  * the keys a user sees adjacent.
  *
+ * Rows lay out along the document direction, so in RTL the arrangement mirrors:
+ * Up keeps Down's column and the horizontal arrows keep flanking Down, with
+ * ArrowLeft rendering to the right of it. Navigation mirrors with the rendering.
+ *
  * @example <caption>A compact navigation row above the built-in QWERTY layout</caption>
  * ```ts
  * import navRowCompact from "ui5/kiosk/layouts/nav-row-compact";

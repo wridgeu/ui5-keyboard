@@ -83,8 +83,8 @@ npm run test:kiosk:e2e
 npm run test:kiosk-webc:e2e
 
 # Run the full device matrix (desktop + phone-sm/md/lg + tablet)
-npm run test:e2e:all-devices               # both packages, concurrent
-npm run test:e2e:all-devices:sequential    # lower local CPU/RAM pressure
+npm run test:e2e:all-devices               # both packages, one after the other
+npm run test:e2e:all-devices:sequential    # same, with one Playwright worker per package
 
 # Debug interactively in the Playwright UI
 npm run test:kiosk:e2e:open

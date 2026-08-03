@@ -1,12 +1,14 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { KeyboardType } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
+import { keyElementId } from "ui5/kiosk/internal/dom";
 import {
   freezeDoubleClickWindow,
   getKeyboardDom,
   getKeyElement,
   getKeyElements,
   getRequiredKeyElement,
+  getRowElements,
   hasKeyboardClass,
   hasKeyClass,
   placeAndWait,
@@ -817,4 +819,37 @@ QUnit.test("switching to a UI-language layout clears the language from reused la
   );
 
   kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Grid coordinate publication
+// ──────────────────────────────────────────────
+
+// Every key publishes its grid coordinate twice: in the element id, which
+// arrow-key navigation parses to move, and in the two data attributes consumer
+// CSS and tests select on. Either one disagreeing with the key's place in the
+// DOM points at a key the user sees somewhere else, so both are checked.
+QUnit.test("keys carry the grid coordinate they occupy", async (assert) => {
+  for (const layout of KioskKeyboard.getRegisteredLayoutNames()) {
+    const kb = new KioskKeyboard({ layout });
+    await placeAndWait(kb);
+
+    const rows = getRowElements(kb).map((row) => Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)));
+    const published = rows.map((row) =>
+      row.map((k) => `${k.getAttribute(DOM.attributes.rowIndex)},${k.getAttribute(DOM.attributes.keyIndex)}`),
+    );
+    const ids = rows.map((row) => row.map((k) => k.id.slice(kb.getId().length)));
+
+    // Derived from the rendered shape, so each grid is asserted against where
+    // its key actually sits rather than against itself.
+    const occupied = rows.map((row, r) => row.map((_, c) => `${r},${c}`));
+    const occupiedIds = rows.map((row, r) => row.map((_, c) => keyElementId("", r, c)));
+
+    assert.ok(rows.length > 0, `"${layout}" renders rows`);
+    assert.ok(rows.flat().length > 0, `"${layout}" renders keys`);
+    assert.deepEqual(published, occupied, `"${layout}" attribute coordinates match DOM position`);
+    assert.deepEqual(ids, occupiedIds, `"${layout}" key ids match DOM position`);
+
+    kb.destroy();
+  }
 });

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { openPage } from "./helpers.js";
+import { openPage, setDocumentDirection } from "./helpers.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 
 // Structural invariants of the rendered keyboard, measured rather than
@@ -33,6 +33,7 @@ const HOSTS = [
   "kb-nav",
   "kb-narrow",
   "kb-icon-label-variations",
+  "kb-qwerty-nav-compact",
 ];
 
 // Fixtures whose host caps the keyboard's height, directly or through an
@@ -113,6 +114,13 @@ async function readGeometry(page: Page, hostId: string): Promise<Geometry> {
     },
     { id: hostId, rootSel: ROOT, keySel: KEY, keyAttr: KEY_ATTR },
   );
+}
+
+/** A navigation key by the `{fkey:*}` token it carries as its data-key. */
+function navKey(geometry: Geometry, fkey: string): KeyBox {
+  const box = geometry.keys.find((k) => k.key === `{fkey:${fkey}}`);
+  expect(box, `no "${fkey}" key rendered`).toBeDefined();
+  return box!;
 }
 
 test.beforeEach(async ({ page }) => {
@@ -268,4 +276,40 @@ test("keys carry the grid coordinate they occupy", async ({ page }) => {
     expect(rows.flat().length, `${id} rendered no keys`).toBeGreaterThan(0);
     expect(rows, `${id} grid coordinates drift from DOM position`).toEqual(occupied);
   }
+});
+
+// Rows are flex containers, so the compact nav row mirrors with the document
+// direction. The relations the 2x4 arrangement exists for survive the mirroring:
+// Up keeps Down's column, and ArrowLeft/ArrowRight keep flanking Down. Which of
+// the two renders on which side follows the direction, and arrow-key navigation
+// mirrors with it.
+test("the compact nav row mirrors with the document direction", async ({ page }) => {
+  const ltr = await readGeometry(page, "kb-qwerty-nav-compact");
+  await setDocumentDirection(page, "rtl");
+  const rtl = await readGeometry(page, "kb-qwerty-nav-compact");
+
+  const up = navKey(rtl, "ArrowUp");
+  const down = navKey(rtl, "ArrowDown");
+  expect(Math.abs(up.left - down.left), "Up leaves Down's column in RTL").toBeLessThanOrEqual(EPSILON);
+  expect(Math.abs(up.right - down.right), "Up leaves Down's column in RTL").toBeLessThanOrEqual(EPSILON);
+  expect(up.bottom, "Up does not sit above Down in RTL").toBeLessThanOrEqual(down.top + EPSILON);
+
+  const left = navKey(rtl, "ArrowLeft");
+  const right = navKey(rtl, "ArrowRight");
+  expect(Math.abs(left.top - down.top), "ArrowLeft leaves Down's row in RTL").toBeLessThanOrEqual(EPSILON);
+  expect(Math.abs(right.top - down.top), "ArrowRight leaves Down's row in RTL").toBeLessThanOrEqual(EPSILON);
+  // The nearer inner edge of the two sits at or before Down's leading edge and
+  // the farther outer edge at or after its trailing edge, so one arrow is on
+  // each side of Down whichever way the row runs.
+  expect(Math.min(left.right, right.right), "the horizontal arrows do not flank Down in RTL").toBeLessThanOrEqual(
+    down.left + EPSILON,
+  );
+  expect(Math.max(left.left, right.left), "the horizontal arrows do not flank Down in RTL").toBeGreaterThanOrEqual(
+    down.right - EPSILON,
+  );
+
+  expect(navKey(ltr, "ArrowLeft").left, "ArrowLeft does not precede ArrowRight on screen in LTR").toBeLessThan(
+    navKey(ltr, "ArrowRight").left,
+  );
+  expect(left.left, "the horizontal arrow pair does not mirror in RTL").toBeGreaterThan(right.left);
 });
