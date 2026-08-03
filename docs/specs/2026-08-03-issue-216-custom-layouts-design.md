@@ -336,7 +336,8 @@ import type { VariantTable } from "./core/latin-variants.js";
  * and is never projected. Configuration, read by the host - the shape `ui5-table` uses
  * for its `features` slot.
  *
- * @slot customLayouts
+ * @class
+ * @extends UI5Element
  * @public
  * @since 0.1.0
  */
@@ -346,36 +347,76 @@ class CustomLayout extends UI5Element {
    * Identifies this element to the host without `instanceof` or a tag-name check: UI5
    * rewrites tags under scoping (UI5ElementMetadata.js:50-60) and a cross-bundle
    * duplicate defeats `instanceof`.
+   *
+   * @private
    */
   readonly isKioskKeyboardCustomLayout = true;
 
-  /** The layout this custom layout declares or overlays. `*` addresses every layout. */
+  /**
+   * The layout this custom layout declares or overlays.
+   * @default ""
+   * @public
+   * @since 0.1.0
+   */
   @property() name = "";
-  /** BCP-47 language of the keycaps. Empty takes the built-in layout's value. */
+  /**
+   * BCP-47 language of the keycaps. Empty takes the built-in layout's value.
+   * @default ""
+   * @public
+   * @since 0.1.0
+   */
   @property() keycapLang = "";
-  /** BCP-47 prefixes that select this layout, comma- or space-separated. */
+  /**
+   * BCP-47 prefixes that select this layout, comma- or space-separated.
+   * @default ""
+   * @public
+   * @since 0.1.0
+   */
   @property() locales = "";
-  /** Whether the layout is an auxiliary surface or a base alphabetic layout. */
+  /**
+   * Whether the layout is an auxiliary surface or a base alphabetic layout.
+   * @default "Inherit"
+   * @public
+   * @since 0.1.0
+   */
   @property() layoutRole: `${LayoutRole}` = "Inherit";
-  /** Facets whose inherited value this custom layout discards, comma- or space-separated. */
+  /**
+   * Facets whose inherited value this custom layout discards, comma- or space-separated.
+   * @default ""
+   * @public
+   * @since 0.1.0
+   */
   @property() suppress = "";
-  /** The layout's rows, or absent to make this an overlay. Assign a new array to change them. */
-  @property({ type: Object }) rows?: LayoutDefinition;
-  /** Long-press variants, merged per base letter onto the tier below. `null` opts the layout out. */
-  @property({ type: Object }) variants?: VariantTable | null;
-  /** Composition middleware factory. `null` disables the built-in for this layout. */
-  @property({ type: Object }) middleware?: (() => CompositionMiddleware) | null;
+  /**
+   * The layout's rows, or `null` to make this an overlay. Assign a new array to change them.
+   * @default null
+   * @public
+   * @since 0.1.0
+   */
+  @property({ type: Object }) rows: LayoutDefinition | null = null;
+  /**
+   * Long-press variants, merged per base letter onto the tier below. `null` opts the layout out.
+   * @default null
+   * @public
+   * @since 0.1.0
+   */
+  @property({ type: Object }) variants: VariantTable | null = null;
+  /**
+   * Composition middleware factory. `null` disables the built-in for this layout.
+   * @default null
+   * @public
+   * @since 0.1.0
+   */
+  @property({ type: Object }) middleware: (() => CompositionMiddleware) | null = null;
 
   /** The framework-agnostic record this custom layout declares. The host's fold is its only reader. */
   toSpec(): CustomLayoutSpec {
     const suppress = splitTokens(this.suppress);
-    if (this.variants === null && !suppress.includes("Variants")) suppress.push("Variants");
-    if (this.middleware === null && !suppress.includes("Middleware")) suppress.push("Middleware");
     const locales = splitTokens(this.locales);
     return {
       name: this.name,
-      ...(this.rows !== undefined && { rows: this.rows }),
-      ...(this.keycapLang && { lang: this.keycapLang }),
+      ...(this.rows !== null && { rows: this.rows }),
+      ...(this.keycapLang && { keycapLang: this.keycapLang }),
       ...(this.layoutRole !== "Inherit" && { secondary: this.layoutRole === "Secondary" }),
       ...(locales.length > 0 && { locales }),
       ...(this.middleware != null && { middleware: this.middleware }),
@@ -404,7 +445,11 @@ export const isCustomLayout = createInstanceChecker<ICustomLayout>("isKioskKeybo
 
 `locales` and `suppress` are token **strings**, not `type: Array`: `UI5ElementMetadata.hasAttribute` excludes only `Object` (`UI5ElementMetadata.js:66-68`) and `defaultConverter.toAttribute` JSON-stringifies arrays (`UI5Element.js:49-56`), so a public `type: Array` property reflects a live JSON attribute — the trap already documented at `docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md:73`. Both separators are accepted so a `suppress="Variants,Middleware"` copied out of an XML view works verbatim; the reverse throws loudly on kiosk (`createArrayType.parseValue` splits only on `","`, `DataType.js:389-395`, and an unknown member fails `isValid` at `ManagedObject.js:1635-1638` — the same behaviour `mobileKeyboard="Bogus"` already has).
 
-`variants = null` / `middleware = null` are accepted as suppression alongside `suppress`, because `UI5Element`'s generated setter (`UI5Element.js:975-1000`) stores the value verbatim with no null-collapse. `toSpec()` normalizes both spellings to the one `suppress` field, so the byte-compared fold sees exactly one representation.
+**Every public member carries `@default`, `@public` and `@since`, and the class carries `@class` and `@extends`, because the CEM analyzer throws without them.** `displayDocumentationErrors()` (`node_modules/@ui5/webcomponents-tools/lib/cem/utils.mjs:385-399`) throws `Found N errors in the description of the public API.` on: a public field with no `default` and no `@default` tag (`custom-elements-manifest.config.mjs:279-281`); a public boolean field initialised to `true` (`:245-247`); and a class extending something with no `@extends` tag (`:143`). An earlier revision's sketch tripped all three — three optional properties with no initialiser, the `readonly isKioskKeyboardCustomLayout = true` marker, and a class doc-block with neither tag. The shipped house form is `packages/kiosk-keyboard-webc/src/KioskKeyboard.ts:532-537`; every public member in that file already carries all three tags. The marker is annotated `@private`, which takes it out of the public-API check entirely and, per `:196`/`:241`, also keeps it from becoming a phantom `is-kiosk-keyboard-custom-layout` attribute.
+
+This runs in `generateAPI` (`packages/kiosk-keyboard-webc/package-scripts.mjs:31-33`) → `build` → `test:packages:smoke` → `check:base`. **CI omits `test:packages:smoke`**, so a green CI run does not prove the webc package builds; run `check:base` locally before pushing Stage 4.
+
+**Suppression has exactly one spelling: `suppress`.** An earlier revision additionally accepted `variants = null` / `middleware = null` as suppression, relying on `UI5Element`'s generated setter storing the value verbatim. That alias cannot survive the `@default null` the CEM requires — with `null` as the declared default, "not declared" and "declared null" become indistinguishable again, the same collapse `ManagedObject.validateProperty` forces on the kiosk twin. Losing it costs nothing: D7 makes `suppress` the canonical spelling in both twins, and `toSpec()` gets simpler rather than normalising two representations into one.
 
 The slot on `KioskKeyboard.ts`, replacing the four `@property({ type: Object })` blocks at `:514-592`:
 
@@ -438,8 +483,8 @@ import { isCustomLayout, type ICustomLayout } from "./CustomLayout.js";
 ```ts
 /**
  * What one layout custom layout declares. A custom layout without `rows` overlays the layout its
- * `name` already resolves to; the name `*` addresses every layout and carries
- * `variants` only.
+ * `name` already resolves to. The tier applied under every layout is the host's
+ * `defaultVariants` property, not a member of this collection.
  */
 export interface CustomLayoutSpec {
   readonly name: string;
@@ -477,12 +522,14 @@ export interface CustomLayoutSpec {
 <mvc:View controllerName="demo.hotkeys.controller.KioskCustomLayouts"
   xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core" xmlns:kiosk="ui5.kiosk">
 
-  <kiosk:KioskKeyboard id="kb" controls="name,email" accentVariants="true">
+  <!-- `defaultVariants` is the house accent set, merged under every layout. -->
+  <kiosk:KioskKeyboard id="kb" controls="name,email" accentVariants="true"
+    defaultVariants="{layouts>/houseAccents}">
     <kiosk:customLayouts>
 
       <!-- A whole custom layout: rows, locale binding, keycap language, IME, accents. -->
       <kiosk:CustomLayout core:require="{ Warehouse: 'demo/hotkeys/middleware/warehouse' }"
-        name="pl-warehouse" locales="pl,pl-PL" keycap-lang="pl"
+        name="pl-warehouse" locales="pl,pl-PL" keycapLang="pl"
         rows="{layouts>/plWarehouse}"
         middleware="Warehouse.createMiddleware"
         variants="{layouts>/plVariants}" />
@@ -498,9 +545,6 @@ export interface CustomLayoutSpec {
 
       <!-- Promote the built-in secondary `numeric` to a base alphabetic layout. -->
       <kiosk:CustomLayout name="numeric" layoutRole="Base" rows="{layouts>/symbolSurface}" />
-
-      <!-- House accent set for every layout that has none of its own. -->
-      <kiosk:CustomLayout name="*" variants="{layouts>/houseAccents}" />
 
     </kiosk:customLayouts>
   </kiosk:KioskKeyboard>
@@ -543,15 +587,15 @@ The generated interface reads `layoutRole?: LayoutRole | PropertyBindingInfo | \
   import "kiosk-keyboard-webc/bundle";
 </script>
 
-<kiosk-keyboard accent-variants controls="user,pin">
+<kiosk-keyboard id="kb" accent-variants controls="user,pin">
   <kiosk-keyboard-custom-layout slot="customLayouts" name="ja-kana" locales="ja"></kiosk-keyboard-custom-layout>
   <kiosk-keyboard-custom-layout slot="customLayouts" name="numeric" layout-role="Base"></kiosk-keyboard-custom-layout>
   <kiosk-keyboard-custom-layout slot="customLayouts" name="arabic" suppress="Variants"></kiosk-keyboard-custom-layout>
-  <kiosk-keyboard-custom-layout slot="customLayouts" name="*" id="house"></kiosk-keyboard-custom-layout>
 </kiosk-keyboard>
 
 <script type="module">
-  document.getElementById("house").variants = { a: ["ä", "å"], z: ["ź", "ż"] };
+  // The house accent set is a host property, not a slotted element.
+  document.getElementById("kb").defaultVariants = { a: ["ä", "å"], z: ["ź", "ż"] };
 </script>
 ```
 
@@ -641,15 +685,27 @@ const plRows = markRaw(PL_ROWS),
 
 ## 1. The fold — `custom-layout-fold.ts` (new byte-compared pair)
 
-`packages/kiosk-keyboard/src/internal/custom-layout-fold.ts` ↔ `packages/kiosk-keyboard-webc/src/core/custom-layout-fold.ts`. Framework-free leaf: imports `mergeVariantTables` / types from `./latin-variants` and `LayoutMeta` from `./layout-meta`, and **nothing else**. It must not import `layout-registry` (its `normalizeLowerString` logs, `layout-registry.ts:61-71`) or `middleware-registry` (which pulls the 8.9 KB Hangul composer into the leaf tier). `isBuiltIn` is injected by the host for the same reason.
+`packages/kiosk-keyboard/src/internal/custom-layout-fold.ts` ↔ `packages/kiosk-keyboard-webc/src/core/custom-layout-fold.ts`.
+
+**The import list, stated exactly** — an earlier revision said "and nothing else", which its own `CustomLayoutFold` interface contradicted:
+
+```ts
+import { mergeVariantTables } from "./latin-variants";
+import type { InstanceVariants, VariantOverlay, VariantTable } from "./latin-variants";
+import type { InstanceLayoutMeta, LayoutMeta } from "./layout-meta";
+import type { InstanceLayouts, InstanceLocaleLayouts } from "./layout-registry";
+import type { InstanceMiddleware } from "./middleware-registry";
+import type { CompositionMiddleware, CustomLayoutSpec, LayoutDefinition } from "../types";
+```
+
+Only `mergeVariantTables` is a **value** import; everything else is `import type` and is erased at compile time. That distinction is what makes the allow-list coherent. The reasons to keep `layout-registry` and `middleware-registry` out of the leaf tier are both runtime reasons — `normalizeLowerString` logs (`layout-registry.ts:61-71`), and `middleware-registry` pulls the 8.9 KB Hangul composer in through its `BUILTIN_FACTORIES` value bindings — and neither survives type erasure. `isBuiltIn` is still injected by the host, because that one is a genuine value dependency.
+
+The framework-free property is unchanged and still load-bearing: zero `Log.` / `console.` in this module, because all nine current `CORE_MODULES` contain zero logging and `normalize()` in the drift checker cannot reconcile kiosk's `Log.warning` with webc's `console.warn`.
 
 ```ts
 /** The facets a custom layout can discard the inherited value of. */
 export const SUPPRESSIBLE_FACETS = ["Variants", "Middleware"] as const;
 export type SuppressibleFacet = (typeof SUPPRESSIBLE_FACETS)[number];
-
-/** The custom layout name that addresses every layout. */
-export const WILDCARD_LAYOUT = "*";
 
 /** The lookup maps a control resolves through, folded from its custom layouts. */
 export interface CustomLayoutFold {
@@ -658,8 +714,6 @@ export interface CustomLayoutFold {
   readonly localeLayouts?: InstanceLocaleLayouts;
   readonly middleware?: InstanceMiddleware;
   readonly variants?: InstanceVariants;
-  /** The `*` tier, applied below every named entry. */
-  readonly defaultVariants?: VariantOverlay;
   readonly diagnostics: readonly LayoutDiagnostic[];
 }
 
@@ -686,21 +740,11 @@ export function foldCustomLayouts(
   const middlewareDeclared = new Set<string>();
   const localeOwner = new Map<string, string>();
   const addressed = new Set<string>();
-  let defaultVariants: VariantOverlay | undefined;
 
   for (const spec of specs) {
     const name = spec.name.trim().toLowerCase();
     const facets = readSuppress(spec.suppress, name, diagnostics);
 
-    if (name === WILDCARD_LAYOUT) {
-      defaultVariants = foldVariantOverlay(
-        defaultVariants,
-        facets.has("Variants"),
-        readVariants(spec.variants, name, diagnostics),
-      );
-      reportWildcardFields(spec, facets, diagnostics);
-      continue;
-    }
     if (!name) {
       diagnostics.push({ code: "empty-name", layout: "" });
       continue;
@@ -708,12 +752,14 @@ export function foldCustomLayouts(
     addressed.add(name);
 
     if (spec.rows !== undefined) {
+      // `rowsDeclared` records that a `rows` was present, not that it was accepted. A
+      // rejected `rows` therefore reports `invalid-rows` alone: recording only the valid
+      // branch would let the second pass add `unknown-target` for the same fault, two
+      // warnings for one mistake.
+      if (rowsDeclared.has(name)) diagnostics.push({ code: "duplicate-rows", layout: name });
+      rowsDeclared.add(name);
       if (!isValidLayoutDefinition(spec.rows)) diagnostics.push({ code: "invalid-rows", layout: name });
-      else {
-        if (rowsDeclared.has(name)) diagnostics.push({ code: "duplicate-rows", layout: name });
-        rowsDeclared.add(name);
-        layouts.set(name, spec.rows);
-      }
+      else layouts.set(name, spec.rows);
     }
 
     const lang = typeof spec.keycapLang === "string" ? spec.keycapLang.trim() : "";
@@ -764,13 +810,14 @@ export function foldCustomLayouts(
     ...(localeLayouts.size > 0 && { localeLayouts }),
     ...(middleware.size > 0 && { middleware }),
     ...(variants.size > 0 && { variants }),
-    ...(defaultVariants !== undefined && { defaultVariants }),
     diagnostics,
   };
 }
 ```
 
-`isValidLayoutDefinition` and `isValidVariantTable` move here from the two host classes. That is a real drift fix, not tidying: they are semantically identical but **textually different** today — kiosk `KioskKeyboard.ts:1233` `typeof key?.value === "string" && key.value` vs webc `:1362` `key && typeof (key as KeyDefinition).value === "string" && (key as KeyDefinition).value` — two spellings of one predicate in the unguarded host tier.
+The fold knows nothing about a defaults tier. Under D6 the house table is the host property `defaultVariants`, read straight off the control and handed to `resolveVariantTable` as its third argument, so it never enters the aggregation, never needs a reserved name, and never needs a diagnostic to police fields that would be meaningless on it. `foldCustomLayouts` therefore takes and returns only per-layout data.
+
+`isValidLayoutDefinition` and `isValidVariantTable` move here from the two host classes. That is a real drift fix, not tidying: they are semantically identical but **textually different** today — kiosk `KioskKeyboard.ts:1245` `typeof key?.value === "string" && key.value` vs webc `:1372` `key && typeof (key as KeyDefinition).value === "string" && (key as KeyDefinition).value` — two spellings of one predicate in the unguarded host tier. The host still uses `isValidVariantTable` on its own `defaultVariants` before passing it down.
 
 ## 2. Resolution order, per facet
 
@@ -817,20 +864,24 @@ Consequences:
 - Three per-facet mode enums fail D4: a fifth facet costs a fourth enum plus a fourth property.
 - Two booleans (`noVariants` + `noMiddleware`) are what CLAUDE.md §2 argues for at two call sites. **D4 overrides §2 here**, and the tension is reported rather than buried: `suppress` absorbs a third facet as one enum member, two booleans become three properties.
 
-## 4. D3 — the wildcard re-layering
+## 4. D3 — the defaults tier re-layering
 
 ### 4a. What HEAD does, and what breaks
 
-`latin-variants.ts:102-105` (read at HEAD):
+`latin-variants.ts:104-105` (read at HEAD):
 
 ```ts
 if (instanceVariants.has(name)) entry = instanceVariants.get(name) ?? null;
 else if (instanceVariants.has(WILDCARD_LAYOUT)) entry = instanceVariants.get(WILDCARD_LAYOUT) ?? null;
 ```
 
-An either/or: a named entry silently discards the entire `*` tier — its table, its `[]` suppressions and its `null` opt-out. Documented at kiosk `README.md:366,626` and webc `README.md:302,512`.
+An either/or: a named entry silently discards the entire `"*"` tier — its table and its `[]` suppressions. Documented at kiosk `README.md:366,626` and webc `README.md:302,512`.
 
-**The existing coverage is vacuous and must be called out by name.** `latin-variants.qunit.ts:192` and `latin-variants.test.ts:170` are both titled _"an explicit entry beats the wildcard"_ but pass `["qwerty", null]` — the one case the re-layering does **not** change. They stay green through the whole change. Rename them to what they assert and add the four cases that do change.
+Under D6 the tier survives as the host property `defaultVariants` and the reserved name does not. `WILDCARD_LAYOUT` is **deleted outright** rather than relocated: no module needs the constant once the defaults tier is a property, which is the structural point of the re-layering — the resolver stops knowing that a magic layout name exists, and so does the fold.
+
+**One shipped capability is deliberately not carried over.** `instanceVariants: { "*": null }` currently opts every layout without a named entry out of variants entirely. That behaviour is an artefact of the `else if` above, not a designed feature: the README's opt-out ladder (`README.md:618-624`) documents three recipes — one base letter, one layout, one key — and none of them is global. Its meaning could not survive the re-layering wherever the tier lived, since `null` is no longer an either/or short-circuit. Global opt-out remains `accentVariants="false"`, which is the default (`KioskKeyboard.ts:311-315`). Per D7, `defaultVariants` therefore has no suppression spelling at all.
+
+**The existing coverage is vacuous and must be called out by name.** `latin-variants.qunit.ts:192` and `latin-variants.test.ts:170` are both titled _"an explicit entry beats the wildcard"_ but pass `["qwerty", null]` — the one case the re-layering does **not** change. They stay green through the whole change. Rename them to what they assert and add the cases that do change.
 
 ### 4b. The replacement, in `latin-variants.ts` (both twins, one commit — byte-compared)
 
@@ -857,10 +908,10 @@ function applyVariantOverlay(base: VariantTable | null, overlay: VariantOverlay 
 }
 
 /**
- * The variant table in effect for `layoutName`, layered built-in -> `*` -> named. Each
- * tier merges onto the one below per base letter, so a letter mapped to `[]` drops that
- * letter and a table for one layout extends the tier below instead of replacing it. A
- * tier that suppresses discards everything below it; a tier that suppresses and then
+ * The variant table in effect for `layoutName`, layered built-in -> defaults -> named.
+ * Each tier merges onto the one below per base letter, so a letter mapped to `[]` drops
+ * that letter and a table for one layout extends the tier below instead of replacing it.
+ * A named tier that suppresses discards everything below it; one that suppresses and then
  * declares a table stands that table alone. With no tier declared the built-in stands:
  * the layout's own declared table, or the Latin table when it declares none. A `null`
  * result fills no variants, so the keys carry no long-press affordance.
@@ -868,20 +919,24 @@ function applyVariantOverlay(base: VariantTable | null, overlay: VariantOverlay 
 export function resolveVariantTable(
   layoutName: string,
   instanceVariants?: InstanceVariants,
-  defaults?: VariantOverlay,
+  defaults?: VariantTable | null,
 ): VariantTable | null {
   const name = layoutName.trim().toLowerCase();
   // A declared `null` opts the layout out; an absent declaration is distinct from it
   // and leaves the Latin table in force.
   const declared = BUILTIN_LAYOUT_META.get(name)?.variants;
   let table: VariantTable | null = declared === undefined ? LATIN_DIACRITIC_VARIANTS : declared;
-  table = applyVariantOverlay(table, defaults);
+  // The defaults tier only ever adds, so it is a plain table rather than an overlay:
+  // per D7 it cannot suppress, and there is no spelling for it to do so.
+  if (defaults != null) table = mergeVariantTables(table, defaults);
   if (instanceVariants !== undefined) table = applyVariantOverlay(table, instanceVariants.get(name));
   return table;
 }
 ```
 
-`mergeVariantTables` is promoted to `export` (the fold uses it). `WILDCARD_LAYOUT` moves out of `latin-variants.ts:65` into `custom-layout-fold.ts` — the resolver no longer knows the name exists, which is the structural point of the re-layering.
+`mergeVariantTables` is promoted to `export` (the fold uses it). `WILDCARD_LAYOUT` (`latin-variants.ts:65`) is **deleted**, not moved: under D6 no module needs it.
+
+The third parameter is a `VariantTable | null`, not a `VariantOverlay`, and that asymmetry is deliberate. Only the named tier can suppress (D7), so only the named tier needs the `{replace, table}` shape. The identity guarantee survives exactly as before: with no defaults and no named entry, `resolveVariantTable("qwerty")` returns `LATIN_DIACRITIC_VARIANTS` by reference, which `latin-variants.qunit.ts:187` asserts with `strictEqual`.
 
 The child-level accumulator, in `custom-layout-fold.ts`:
 
@@ -902,40 +957,67 @@ function foldVariantOverlay(
 
 ### 4c. Behaviour delta — the exact new test expectations
 
-With `WILD = {z:["ź"], q:["ǫ"]}` and `NAMED = {a:["ą"]}`:
+With `DEF = {z:["ź"], q:["ǫ"]}` supplied as `defaultVariants` and `NAMED = {a:["ą"]}` on a `CustomLayout`. "HEAD" spells the defaults tier `instanceVariants: {"*": DEF}`:
 
 | case                                                | HEAD               | new                               |             |
 | --------------------------------------------------- | ------------------ | --------------------------------- | ----------- |
 | no tier, `qwerty`                                   | `LATIN` (identity) | same                              | —           |
 | no tier, `arabic`/`ja-kana`/`ko-hangul`/`ja-romaji` | `null`             | same                              | —           |
-| `*` only, latin layout                              | latin + q,z        | same                              | —           |
-| `*` only, `arabic`                                  | `{q,z}`            | same                              | —           |
+| defaults only, latin layout                         | latin + q,z        | same                              | —           |
+| defaults only, `arabic`                             | `{q,z}`            | same                              | —           |
 | named only, that layout                             | latin + a          | same                              | —           |
 | named only, another layout                          | `LATIN` (identity) | same                              | —           |
-| **`*` + named, the named layout**                   | wildcard **lost**  | both tiers compose                | **CHANGED** |
-| `*` + named, an unnamed layout                      | latin + q,z        | same                              | —           |
-| `{s: []}` at `*` alone                              | `s` dropped        | same                              | —           |
+| **defaults + named, the named layout**              | defaults **lost**  | both tiers compose                | **CHANGED** |
+| defaults + named, an unnamed layout                 | latin + q,z        | same                              | —           |
+| `{s: []}` in defaults alone                         | `s` dropped        | same                              | —           |
 | `{s: []}` at named alone                            | `s` dropped        | same                              | —           |
-| **`{s: []}` at `*`, table at named**                | `s` **survives**   | `s` dropped **and** named applied | **CHANGED** |
-| `*` suppressed alone                                | `null`             | `null`                            | —           |
-| **`*` suppressed, table at named**                  | latin + a          | `{a}` alone                       | **CHANGED** |
-| table at `*`, named suppressed                      | `null`             | `null`                            | —           |
+| **`{s: []}` in defaults, table at named**           | `s` **survives**   | `s` dropped **and** named applied | **CHANGED** |
+| defaults table, named `suppress="Variants"`         | `null`             | `null`                            | —           |
 | named table on `arabic`                             | `{a}`              | same                              | —           |
-| `*` table on `arabic`                               | `{a}`              | same                              | —           |
-| **`*` + named on `arabic`**                         | `{a}`              | `{a,q,z}`                         | **CHANGED** |
+| defaults table on `arabic`                          | `{a}`              | same                              | —           |
+| **defaults + named on `arabic`**                    | `{a}`              | `{a,q,z}`                         | **CHANGED** |
 | named `suppress="Variants"` + `variants`            | inexpressible      | `{a}` alone                       | **NEW**     |
-| `*` table, named suppress + table                   | inexpressible      | `{a}` alone                       | **NEW**     |
-| `*` suppress + table                                | inexpressible      | `{a}` alone                       | **NEW**     |
+| defaults table, named suppress + table              | inexpressible      | `{a}` alone                       | **NEW**     |
+| **`{"*": null}` (global opt-out)**                  | `null` everywhere  | **retired** — see 4a              | **REMOVED** |
+
+Three rows the earlier revision carried are gone with the reserved name, because the defaults tier can no longer suppress (D7): "`*` suppressed alone", "`*` suppressed, table at named", and "`*` suppress + table". The last row above records the one shipped behaviour that is deliberately not carried over; it needs a line in both READMEs, not just a test.
 
 Invariants preserved: identity when no tier applies (`strictEqual(..., LATIN_DIACRITIC_VARIANTS)`), and the null-prototype guard for a `__proto__`-keyed table.
 
-## 5. Where `*` lives — decision
+## 5. The defaults tier — `defaultVariants`
 
-**`*` stays as a reserved `name` on a `CustomLayout` in the single `customLayouts` collection.** Rejected: the semantics cluster's dedicated `layoutDefaults` 0..1 aggregation/slot carrying the same class.
+Per D6 the tier is a property on the host, not a member of the collection. Kiosk, alongside `accentVariants` in `KioskKeyboard.metadata.properties`:
 
-Deciding reason: D3 names the wildcard tier as an existing published concept being **re-layered**, not renamed; a second aggregation and a second slot is a second public surface name and a second idiom in both twins for what is one tier of one concern. The special-casing the second aggregation removes collapses to exactly **one partition at the top of the fold loop** (the `if (name === WILDCARD_LAYOUT)` branch above, which `continue`s before any named-facet code runs, so a `*` custom layout's rows can never reach `fold.layouts` and `getRegisteredLayout("*")` can never return them) plus one diagnostic. The cluster's two strongest objections are answered rather than dismissed: the _"name lies"_ objection is answered by the branch being the first thing the loop does, and the _"position lies"_ objection is answered by `wildcard-field`, which reports every per-layout facet declared on a `*` custom layout instead of silently ignoring it.
+```ts
+      /**
+       * Long-press variants applied under every layout, merged per base letter beneath
+       * anything a `customLayouts` entry declares for that layout, so a house accent set
+       * extends the built-in table rather than replacing it and a base letter mapped to
+       * `[]` drops that letter everywhere. Base letters must be lowercase. Effective only
+       * while `accentVariants` is set.
+       *
+       * Read by object identity: assign a new object to change the table.
+       */
+      defaultVariants: { type: "ui5.kiosk.VariantOverrideTable", defaultValue: null, group: "Behavior" },
+```
 
-**A `*` custom layout carries `variants` and `suppress="Variants"` only.** `name`, `rows`, `lang`, `layoutRole`, `locales`, `middleware` and `suppress="Middleware"` on a `*` custom layout are reported (`wildcard-field`) and ignored. Deciding reason for excluding middleware: D3 scopes the wildcard to the variants tier, admitting it would add a third parameter to `getMiddlewareFactory` in the hand-synced `UNCHECKED_CORE_TWINS` tier, and nobody asked for it (CLAUDE.md §1).
+webc, on `KioskKeyboard`:
+
+```ts
+  /**
+   * Long-press variants applied under every layout, merged per base letter beneath
+   * anything a slotted `<kiosk-keyboard-custom-layout>` declares.
+   *
+   * @default null
+   * @public
+   * @since 0.1.0
+   */
+  @property({ type: Object }) defaultVariants: VariantTable | null = null;
+```
+
+Read sites pass it straight through: `resolveVariantTable(name, fold.variants, this.getDefaultVariants())` on kiosk and `…, this.defaultVariants)` on webc. It is validated with the same `isValidVariantTable` the fold uses, and an invalid table reports `invalid-variants` with `layout: ""` — the one diagnostic the host raises on its own behalf rather than the fold's.
+
+**What this decision buys, stated against what it costs.** It removes the `if (name === WILDCARD_LAYOUT)` partition from the fold, the `wildcard-field` diagnostic and its six-field rejection list, the `WILDCARD_LAYOUT` constant, the `defaultVariants` field on `CustomLayoutFold`, and the `VariantOverlay` shape from the defaults tier's parameter. It costs one top-level property per twin, and it forfeits the free apply-to-all case a future facet would have inherited from the `*` branch — that facet would need its own property. D3 scopes this tier to variants and the earlier revision had already refused to admit middleware to it, so the forfeited generality was never going to be exercised.
 
 ## 6. `middleware-registry.ts` (both twins, hand-mirrored)
 
@@ -969,7 +1051,7 @@ Say the fifth concern is a per-layout keycap label map. It folds in as a **facet
 3. `custom-layout-fold.ts` — one branch in the loop, one field on `CustomLayoutFold`, and, if it is disableable, one member on `SUPPRESSIBLE_FACETS` **and** one on `library.ts`'s `LayoutFacet` enum.
 4. One resolver consuming it, in the `(name, instanceMap, defaults?)` shape.
 
-Zero new top-level surface on the control, zero new diagnostic codes (`duplicate-*` and `unknown-suppress` fall out of the generic machinery). The apply-to-all case, if wanted, is one more admitted field in the `*` branch.
+Zero new top-level surface on the control for the per-layout case, and zero new diagnostic codes (`duplicate-*` and `unknown-suppress` fall out of the generic machinery). The **apply-to-all** case is the one thing D6 makes non-free: it would need its own host property alongside `defaultVariants`, rather than riding along on a wildcard entry. That is the priced cost of D6, recorded here so a future facet's author meets it in the D4 section rather than discovering it.
 
 ## Lifecycle
 
@@ -1297,9 +1379,9 @@ Delete the `instanceMiddleware` `onInvalidation` branch at `KioskKeyboard.ts:101
 
 Both `CustomLayout.ts` files sit at `src/` top level deliberately: `tools/check-twin-drift.mjs:261-262` reconciles the intersection of `internal/` and `core/` basenames, and the completeness guard fails on any same-named pair not listed in `CORE_MODULES` or `UNCHECKED_CORE_TWINS`. Two framework-specific classes must never be paired.
 
-`custom-layout-fold.ts` contents: `CustomLayoutSpec` re-export surface, `CustomLayoutFold`, `EMPTY_FOLD`, `foldCustomLayouts`, `foldVariantOverlay`, `SUPPRESSIBLE_FACETS` / `SuppressibleFacet`, `WILDCARD_LAYOUT`, `LayoutDiagnostic` + `DiagnosticCode`, `DiagnosticVocabulary`, `describeDiagnostic`, and the two validators `isValidLayoutDefinition` / `isValidVariantTable` moved off the host classes.
+`custom-layout-fold.ts` contents: `CustomLayoutSpec` re-export surface, `CustomLayoutFold`, `EMPTY_FOLD`, `foldCustomLayouts`, `foldVariantOverlay`, `SUPPRESSIBLE_FACETS` / `SuppressibleFacet`, `LayoutDiagnostic` + `DiagnosticCode`, `DiagnosticVocabulary`, `describeDiagnostic`, and the two validators `isValidLayoutDefinition` / `isValidVariantTable` moved off the host classes. No `WILDCARD_LAYOUT`: under D6 the constant is deleted, not relocated.
 
-Import graph, verified framework-free: `custom-layout-fold` → `latin-variants` (value: `mergeVariantTables`; types) → `layout-meta` (value: `BUILTIN_LAYOUT_META`). It must **not** import `layout-registry` (`normalizeLowerString` logs, `:61-71`) or `middleware-registry` (which pulls the 8.9 KB Hangul composer into the leaf tier). Zero `Log.` / `console.` — mandatory, because all nine current `CORE_MODULES` contain zero logging and `normalize()` in the drift checker cannot reconcile kiosk's `Log.warning` with webc's `console.warn`.
+Import graph, verified framework-free — the exact list is in semantics §1. Only `mergeVariantTables` (from `latin-variants`, which itself value-imports `BUILTIN_LAYOUT_META` from `layout-meta`) is a value import; the type imports from `layout-registry`, `middleware-registry` and `types` are erased and carry no runtime edge. That is what keeps `normalizeLowerString`'s logging (`layout-registry.ts:61-71`) and the 8.9 KB Hangul composer behind `middleware-registry`'s `BUILTIN_FACTORIES` out of the leaf tier. Zero `Log.` / `console.` — mandatory, because all nine current `CORE_MODULES` contain zero logging and `normalize()` in the drift checker cannot reconcile kiosk's `Log.warning` with webc's `console.warn`.
 
 ## Deleted modules
 
@@ -1315,13 +1397,13 @@ Import graph, verified framework-free: `custom-layout-fold` → `latin-variants`
 
 ### Byte-compared tier (`CORE_MODULES`) — **must land in both twins in one commit or CI is red**
 
-| module                      | change                                                                                                                                                                                                                                                                                                                                     |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `latin-variants.ts`         | `VariantOverlay` added; `InstanceVariants` retyped to `ReadonlyMap<string, VariantOverlay>`; `mergeVariantTables` exported; `applyVariantOverlay` added; `resolveVariantTable` gains a third `defaults?: VariantOverlay` parameter and becomes a three-tier apply; `WILDCARD_LAYOUT` (`:65`) deleted (it moves to `custom-layout-fold.ts`) |
-| `layout-meta.ts`            | **doc only** — `:61-66` (`InstanceLayoutMeta` provenance names `instanceLayouts`) and `:75-76` (the "`variants` is not resolved here … that tier is `instanceVariants`" sentence). No code change: `resolveLayoutMeta` `:78-84` and `isSecondaryLayout` `:87-89` already carry the (c) tri-state correctly                                 |
-| **`custom-layout-fold.ts`** | new                                                                                                                                                                                                                                                                                                                                        |
+| module                      | change                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `latin-variants.ts`         | `VariantOverlay` added; `InstanceVariants` retyped to `ReadonlyMap<string, VariantOverlay>`; `mergeVariantTables` exported; `applyVariantOverlay` added; `resolveVariantTable` gains a third `defaults?: VariantTable \| null` parameter and becomes a three-tier apply; `WILDCARD_LAYOUT` (`:65`) **deleted outright** — under D6 nothing needs it |
+| `layout-meta.ts`            | **doc only** — `:61-66` (`InstanceLayoutMeta` provenance names `instanceLayouts`) and `:75-76` (the "`variants` is not resolved here … that tier is `instanceVariants`" sentence). No code change: `resolveLayoutMeta` `:78-84` and `isSecondaryLayout` `:87-89` already carry the (c) tri-state correctly                                          |
+| **`custom-layout-fold.ts`** | new                                                                                                                                                                                                                                                                                                                                                 |
 
-`WILDCARD_LAYOUT`'s other usages today are `latin-variants.ts:104` and the four tests (`latin-variants.qunit.ts:4,180,195`; `latin-variants.test.ts:5,163,172`) — nothing else in `src/`.
+`WILDCARD_LAYOUT`'s other usages today are `latin-variants.ts:104` and the four test sites (`latin-variants.qunit.ts:4,180,195`; `latin-variants.test.ts:5,163,172`) — nothing else in `src/`. Deleting it is therefore a Stage 1 edit with no forwarding address; what it did semantically is absorbed by the host lifting its `"*"` entry into the new third argument (see Stage 1).
 
 ### Unchecked tier (`UNCHECKED_CORE_TWINS`, still 7 entries) — hand-mirrored, CI will not catch a one-sided landing
 
@@ -1366,7 +1448,9 @@ Both edits in one commit — the guard at `:220-223` fails if they disagree, and
 
 **There is no DEF-6 analogue on the webc twin** — every generated manifest is gitignored, matching CLAUDE.md's asymmetry rule.
 
-**Do not claim zero phantom attributes.** `custom-elements-manifest.config.mjs:245-260` pushes an `attributes` entry for every member gated only on `member.privacy === "public"`, and `_ui5noAttribute` (recorded at `:238`) is never consulted. The four phantom `instance-*` attributes are replaced by three on the child (`rows`, `variants`, `middleware`): **4 → 3, not 4 → 0**. Either land the generator-side suppression or update `docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md:69-71` to name the new three.
+**Do not claim zero phantom attributes.** `node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs:241-259` pushes an `attributes` entry for every member gated only on `member.privacy === "public"` (`:196`), and `_ui5noAttribute` (recorded at `:238`) is never consulted. The four phantom `instance-*` attributes are replaced by three on the child (`rows`, `variants`, `middleware`): **4 → 3, not 4 → 0**. That count holds only because the `isKioskKeyboardCustomLayout` marker is annotated `@private` (§4); left public it would become a fourth phantom attribute and the change would be 4 → 4. `defaultVariants` on the host adds a fifth — it is `type: Object`, so `hasAttribute` gives it no real attribute, but the CEM lists it anyway.
+
+The config file is **not in this repo** — it ships inside the pinned `@ui5/webcomponents-tools` dependency and is invoked from `package-scripts.mjs:32`. "Land the generator-side suppression" would therefore mean carrying a `patch-package` patch against a dependency, a cost worth naming before choosing it. The cheaper option is to update `docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md:69-71` to name the new set.
 
 ## Diagnostics
 
@@ -1385,12 +1469,11 @@ export type DiagnosticCode =
   | "unknown-suppress"
   | "duplicate-rows"
   | "duplicate-middleware"
-  | "duplicate-locale"
-  | "wildcard-field";
+  | "duplicate-locale";
 
 export interface LayoutDiagnostic {
   readonly code: DiagnosticCode;
-  /** The layout the offending custom layout names; "" for the `*` custom layout or an unnamed one. */
+  /** The layout the offending custom layout names; "" for an unnamed one, or for the host's own `defaultVariants`. */
   readonly layout: string;
   /** The facet involved, for the codes that report one. */
   readonly facet?: string;
@@ -1415,7 +1498,7 @@ export interface DiagnosticVocabulary {
 export function describeDiagnostic(d: LayoutDiagnostic, vocab: DiagnosticVocabulary): string;
 ```
 
-## The catalogue — 11 fold codes
+## The catalogue — 10 fold codes
 
 | code                   | trigger                                                                                                                             | message                                                                                                                     | remediation                                                                                                                                                                                        | today                                                                                                                                 |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1429,19 +1512,20 @@ export function describeDiagnostic(d: LayoutDiagnostic, vocab: DiagnosticVocabul
 | `duplicate-rows`       | two custom layouts declare `rows` for one name                                                                                      | _"Two custom layouts declare `rows` for \"X\"; the later one wins."_                                                        | _"Remove one, or give them different names."_                                                                                                                                                      | unrepresentable                                                                                                                       |
 | `duplicate-middleware` | two custom layouts declare `middleware` for one name                                                                                | same shape                                                                                                                  | same                                                                                                                                                                                               | unrepresentable                                                                                                                       |
 | `duplicate-locale`     | two custom layouts claim one BCP-47 prefix for different layouts                                                                    | _"Both \"X\" and \"Y\" claim the locale \"pl\"; \"Y\" wins."_                                                               | _"Remove the prefix from one of them."_                                                                                                                                                            | unrepresentable (an object literal cannot repeat a key) — **a hazard the N-custom layout fold introduces, so this code is mandatory** |
-| `wildcard-field`       | a `*` custom layout declares `rows`, `lang`, `layoutRole`, `locales` or `middleware`, or `suppress="Middleware"`                    | _"A `\*` custom layout applies to every layout, so it cannot declare `<facet>`."_                                           | _"Move it to a custom layout that names one layout."_                                                                                                                                              | today those fields are silently meaningless under `"*"`                                                                               |
 
 `unknown-target` subsumes and improves on `resolveLocaleMappedLayout` returning `null` without a word (`layout-registry.ts:79-84`): it fires once at authoring time instead of silently on every locale resolution, which is why `layout-registry.ts` needs no code change.
 
-**Three codes from the grafted catalogue are deliberately absent, and each absence is a win:**
+**Four codes from the grafted catalogue are deliberately absent, and each absence is a win:**
 
 - `unknown-field` (and its edit-distance suggester) is **structurally impossible** under child elements: `ManagedObject.applySettings` throws on an unknown setting, and a custom element ignores an unknown attribute.
 - `shadowed-wildcard` existed only to report the D3 defect; the re-layering retires it — the tiers now compose.
+- `wildcard-field` existed only to report per-layout facets declared on a `*` entry. D6 removes the entry, so the fields it policed are unreachable: the defaults tier is a property that carries a table and nothing else, and a `CustomLayout` named `*` is now just a layout named `*` — resolvable or not like any other, and reported by `unknown-target` if not.
 - `variants-reopt` described suppress-then-redeclare, which under `suppress` as an ordered operator is the intended idiom, not an error.
 
 ## Host-side codes (not fold diagnostics)
 
-- **`disarmed-variants`** survives where it is (kiosk `:1937-1945`, webc `:1283-1288`) with its own once-per-instance boolean: its trigger reads `accentVariants`, a host property the fold cannot see. Trigger re-expressed as `fold.variants !== undefined || fold.defaultVariants !== undefined`. It gains the ability to name the offending custom layouts.
+- **`disarmed-variants`** survives where it is (kiosk `:1949-1957`, webc `:1293-1298`) with its own once-per-instance boolean: its trigger reads `accentVariants`, a host property the fold cannot see. Trigger re-expressed as `fold.variants !== undefined || this.getDefaultVariants() !== null`. It gains the ability to name the offending custom layouts.
+- **`invalid-variants` on `defaultVariants`** is raised by the host, not the fold, because the value never enters the aggregation. Same code, same message, `layout: ""`.
 - **`unregistered-layout`** exists on kiosk (`:1071-1077`) and is **missing entirely on webc** (`:962-965` has no registry check). Adding it is Stage 0, independent of this design. The structured vocabulary also fixes an existing divergence: kiosk's message names the remedy, webc's does not.
 
 ## Where diagnostics are logged, and the emission cap
@@ -1463,9 +1547,11 @@ Today's comment explains that the four record types are coarse-validated because
 
 ## Blast radius (re-verified at HEAD `cc34a371`, clean tree)
 
-**67 files / 677 occurrences** of the four names, case-insensitive: kiosk `src` 11/187, kiosk `test` 18/171, webc `src` 8/74, webc `test` 14/77, `demo-app` 3/6, `docs` 11/73, kiosk `README.md` 39, webc `README.md` 50. Under D2's rename **all 677 are rewrites** — the ~76 incidental `instanceLayouts`-only sites that a plain-Record design would have left alone do not survive. Per name: `instanceLayouts` 282/51 files, `instanceVariants` 131/21, `instanceLocaleLayouts` 84/16, `instanceMiddleware` 78/23.
+**67 files / 675 occurrences** of the four names, case-insensitive: kiosk `src` 11/187, kiosk `test` 18/171, webc `src` 8/74, webc `test` 14/77, `demo-app` 3/6, `docs` 11/**71**, kiosk `README.md` 39, webc `README.md` 50. Under D2's rename **all 675 are rewrites** — the ~76 incidental `instanceLayouts`-only sites that a plain-Record design would have left alone do not survive. Per name, **case-sensitive** (these do not sum to the case-insensitive headline): `instanceLayouts` 282/51 files, `instanceVariants` 131/21, `instanceLocaleLayouts` 84/16, `instanceMiddleware` 78/23. The per-area figures and the 67-file total are exact; only `docs` and the headline were off, and the two counting modes were previously presented under one label.
 
 `check:base` = `fmt:check → lint → lint:ui5 → typecheck → test:patches → test:lint-plugins → test:twin-drift → test:style-twin-drift → test:dom-contract → test:qunit → test:kiosk-webc → test:kiosk-webc:component → test:packages:smoke`. It does **not** include e2e or visual. Every stage below must leave it green.
+
+**CI is not `check:base`, and the difference matters twice.** `.github/workflows/ci.yml` re-implements the chain rather than calling it: it uses the stricter `lint:ci --deny-warnings` (`:46`) and **omits `test:packages:smoke` entirely**. Everything that step gates is therefore local-only — the webc `build`, the CEM analyzer that throws (§4), and `check-package-smoke.mjs`'s `requiredFiles` check that Stage 3 extends with `src/CustomLayout.gen.d.ts`. Run `check:base` locally before pushing Stages 3 and 4; a green CI is not evidence.
 
 ---
 
@@ -1500,17 +1586,21 @@ Independently valuable and independently revertable.
 8. Add `src/CustomLayout.gen.d.ts` to `tools/check-package-smoke.mjs`'s kiosk `requiredFiles` (`:25-30`) — do this in Stage 3, when the file exists.
 9. **Do NOT touch `instance-property-types.tsd.ts` here.** Its polarity is correct against HEAD's metadata; it only inverts when the metadata changes.
 
-## Stage 1 — D3: `*` becomes the lower variant tier. Cannot be split across packages.
+## Stage 1 — D3: the defaults tier is re-layered. Cannot be split across packages.
 
-`latin-variants.ts` in **both** twins (byte-compared: a one-sided landing is red). `VariantOverlay`, `InstanceVariants` retyped, `mergeVariantTables` exported, `applyVariantOverlay`, the three-tier `resolveVariantTable`, `WILDCARD_LAYOUT` moved out. Host call sites adapt their existing `_instanceVariantsMap` to build overlays — still entirely on the four-property API.
+`latin-variants.ts` in **both** twins (byte-compared: a one-sided landing is red). `VariantOverlay` added, `InstanceVariants` retyped, `mergeVariantTables` exported, `applyVariantOverlay` added, `resolveVariantTable` gains its third parameter.
 
-Tests: rename `latin-variants.qunit.ts:192` / `latin-variants.test.ts:170` to what they actually assert (a `null` named entry, unchanged by the re-layering) and add the four changed cases plus the three newly-expressible ones. Docs: kiosk `README.md:610,623,626`, webc `README.md:497,509,512`. The doc-only `layout-meta.ts` touch rides here or in Stage 2 — **never** with Stage 3, because it is byte-compared.
+**`WILDCARD_LAYOUT` is deleted in this stage, and the host must absorb what it did.** An earlier revision said the constant "moves to `custom-layout-fold.ts`" — a module Stage 2 creates, which would have left Stage 1 unable to compile. Under D6 it moves nowhere. At HEAD `"*"` is a _payload_ key: kiosk `_toVariantMap` (`KioskKeyboard.ts:1274-1292`) and webc `_variantsView` (`:1334-1342`) copy it verbatim into the map, and the resolver reads it at `latin-variants.ts:104`. Once the resolver stops knowing the name, each host must lift the `"*"` entry out of its own map and pass it as the third argument. That is a real host-side change in Stage 1, still entirely on the four-property API, and it is where the `{"*": null}` retirement (§4a) becomes observable.
+
+**Tests: nine per twin, not two.** Retyping `InstanceVariants` to `ReadonlyMap<string, VariantOverlay>` stops every map-building test compiling: `latin-variants.qunit.ts:139,146,151,158,166,174,180,188,194` and `latin-variants.test.ts:123,130,135,142,149,158,163,171,179` all construct `new Map<string, VariantTable | null>`. Two more import the deleted constant (`latin-variants.qunit.ts:4`, `latin-variants.test.ts:5`). On top of that: rename `latin-variants.qunit.ts:192` / `latin-variants.test.ts:170` to what they actually assert (a `null` named entry, unchanged by the re-layering), and add the three changed cases plus the two newly-expressible ones from §4c.
+
+Docs: kiosk `README.md:610,623,626`, webc `README.md:497,509,512`, including the `{"*": null}` retirement. The doc-only `layout-meta.ts` touch may ride with **any** stage: `normalize()` in the drift checker strips comments before comparing, so a one-sided doc change is invisible to CI. (An earlier revision claimed both that comments are stripped and that this touch must never ride with Stage 3. Only the first is true.)
 
 Run the §7 adversarial pass (H1) before trusting this stage.
 
 ## Stage 2 — `custom-layout-fold.ts` in both packages, unwired. Cannot be split across packages.
 
-New byte-compared pair; `CORE_MODULES` + `EXPECTED_PAIR_COUNT` 27 → 28 in one edit. `CustomLayoutSpec` added to both `types.ts` alongside the still-shipping `LayoutSpec`. Two new unit suites (`custom-layout-fold.qunit.ts`, `custom-layout-fold.test.ts`) covering document order, every per-facet rule, `suppress` at each tier, `*`-field rejection, and **every diagnostic code**. Nothing else changes, so nothing can regress. Adversarial pass required before Stage 3 — the fold is the single point where every semantic is enforced.
+New byte-compared pair; `CORE_MODULES` + `EXPECTED_PAIR_COUNT` 27 → 28 in one edit. `CustomLayoutSpec` added to both `types.ts` alongside the still-shipping `LayoutSpec`. Two new unit suites (`custom-layout-fold.qunit.ts`, `custom-layout-fold.test.ts`) covering document order, every per-facet rule, `suppress` at the named tier, and **every diagnostic code** — including that a rejected `rows` reports `invalid-rows` alone and never also `unknown-target`. Nothing else changes, so nothing can regress. Adversarial pass required before Stage 3 — the fold is the single point where every semantic is enforced.
 
 ## Stage 3 — kiosk cutover. Atomic within the kiosk package; webc untouched and green.
 
@@ -1547,7 +1637,7 @@ Files, exhaustively:
 
 ## Stage 4 — webc cutover. Atomic within the webc package; kiosk green.
 
-`src/CustomLayout.ts`; `src/types.ts` (enums, `CustomLayoutSpec`, delete `LayoutSpec`/`LayoutInput`); `src/KioskKeyboard.ts` (slot, lazy fold, `onInvalidation` branch, `_ensureMiddleware`, eight read sites); `src/core/middleware-registry.ts` (hand-mirror of Stage 3); `src/core/layout-registry.ts` (comments); **delete** `src/core/memo-map-view.ts` + `test/unit/memo-map-view.test.ts`; `bundle.esm.ts`; `package.json` (`exports`, `sideEffects`); `test/component/instance-overrides.test.ts` (2 describes / 24 `it` / 409 lines) → **`custom-layouts.test.ts`**, rewritten, with `:372` → `layout-role="Base"` and `:358` as its negative half; **new** `test/component/custom-layouts-first-paint.test.ts`; the ~10 incidental suites (`variant-popup.test.ts` 8, `kiosk-keyboard.test.ts` 7, `kiosk-keyboard-icon-label.test.ts` 4, `keyboard-type-middleware.test.ts` 3, `variant-composition-seed.test.ts` 2, plus 1 each in `variant-composition-flush.test.ts`, `test/helpers/fixtures.ts:33`, `test/helpers/seed-compose-middleware.ts:21`, `test/pages/visual.js:120`, `test/pages/key-style-demo.js:38`); `test/pages/index.js:73,140,146,155` and `index.html:431,433,533,535,548,550,553` — **simultaneously the deployed public "Raw Web Components Demo" and the `component.spec.ts:8` e2e fixture**; `test/unit/latin-variants.test.ts`, `layout-registry.test.ts`, `layout-meta.test.ts`, `middleware-registry.test.ts`; add `expect(code).toContain("kiosk-keyboard-custom-layout")` to `test/unit/bundle-tree-shaking.test.ts`; rebuild and verify `dist/custom-elements.json`.
+`src/CustomLayout.ts`; `src/types.ts` (enums, `CustomLayoutSpec`, delete `LayoutSpec`/`LayoutInput`); `src/KioskKeyboard.ts` (slot, lazy fold, `onInvalidation` branch, `_ensureMiddleware`, eight read sites); `src/core/middleware-registry.ts` (hand-mirror of Stage 3); `src/core/layout-registry.ts` (comments); **delete** `src/core/memo-map-view.ts` + `test/unit/memo-map-view.test.ts`; `bundle.esm.ts`; `package.json` (`exports`, `sideEffects`); `test/component/instance-overrides.test.ts` (2 describes / 23 `it` / 409 lines) → **`custom-layouts.test.ts`**, rewritten, with `:372` → `layout-role="Base"` and `:358` as its negative half; **new** `test/component/custom-layouts-first-paint.test.ts`; the ~10 incidental suites (`variant-popup.test.ts` 8, `kiosk-keyboard.test.ts` 7, `kiosk-keyboard-icon-label.test.ts` 4, `keyboard-type-middleware.test.ts` 3, `variant-composition-seed.test.ts` 2, plus 1 each in `variant-composition-flush.test.ts`, `test/helpers/fixtures.ts:33`, `test/helpers/seed-compose-middleware.ts:21`, `test/pages/visual.js:120`, `test/pages/key-style-demo.js:38`); `test/pages/index.js:73,140,146,155` and `index.html:431,433,533,535,548,550,553` — **simultaneously the deployed public "Raw Web Components Demo" and the `component.spec.ts:8` e2e fixture**; `test/unit/latin-variants.test.ts`, `layout-registry.test.ts`, `layout-meta.test.ts`, `middleware-registry.test.ts`; add `expect(code).toContain("kiosk-keyboard-custom-layout")` to `test/unit/bundle-tree-shaking.test.ts`; rebuild and verify `dist/custom-elements.json`.
 
 **Why 3 and 4 can genuinely land separately:** `latin-variants.ts` and `layout-meta.ts` are byte-compared, so any edit to them must be a both-package commit — which is exactly why D3 is pulled out into Stage 1 and `custom-layout-fold.ts` into Stage 2. With those pre-landed, Stages 3 and 4 touch only unchecked-tier and package-local files.
 
@@ -1566,16 +1656,16 @@ Files, exhaustively:
 
 ## Guardrails: exactly what breaks
 
-| guardrail                      | breaks?                                                                                                                                                            | action                                                                                                                                                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `check-twin-drift.mjs`         | **yes, twice** — `latin-variants` / `layout-meta` are `CORE_MODULES` (one-sided landing red); `custom-layout-fold` trips `reconcile()` at `:262` unless registered | add `"custom-layout-fold"` and bump `EXPECTED_PAIR_COUNT` 27→28 **in one edit** (`:220-223` fails if they disagree)                                                                |
-| `ci.yml:57-63` generate gate   | **yes** (DEF-6 + the untracked hole)                                                                                                                               | Stage 0                                                                                                                                                                            |
-| `ci.yml:51-52` typecheck       | **yes** — `instance-property-types.tsd.ts` inverted polarity                                                                                                       | rewrite in the same commit as the kiosk metadata                                                                                                                                   |
-| `check-style-twin-drift.mjs`   | no — CSS custom-property names only, zero overlap                                                                                                                  | none                                                                                                                                                                               |
-| `check-dom-contract-drift.mjs` | no — no new DOM key; `CustomLayout` renders nothing                                                                                                                | none                                                                                                                                                                               |
-| `check-package-smoke.mjs`      | no, if the new artifacts land                                                                                                                                      | add `src/CustomLayout.gen.d.ts` to `requiredFiles` (Stage 3)                                                                                                                       |
-| `lint:ui5`                     | possibly — a new `sap.ui.core.Element` subclass and new XML aggregation nodes are new input                                                                        | run it in Stage 3 before pushing                                                                                                                                                   |
-| visual baselines (118 PNGs)    | **no**                                                                                                                                                             | every affected fixture is a constructor-settings rewrite producing identical DOM; no `<slot>` is added to the template. **Do not run `*:update`** — a diff means a real regression |
+| guardrail                      | breaks?                                                                                                                                                            | action                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check-twin-drift.mjs`         | **yes, twice** — `latin-variants` / `layout-meta` are `CORE_MODULES` (one-sided landing red); `custom-layout-fold` trips `reconcile()` at `:262` unless registered | add `"custom-layout-fold"` and bump `EXPECTED_PAIR_COUNT` 27→28 **in one edit** (`:220-223` fails if they disagree)                                                                                                                                                                                                                                                                                                                                                                               |
+| `ci.yml:57-63` generate gate   | **yes** (DEF-6 + the untracked hole)                                                                                                                               | Stage 0                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `ci.yml:51-52` typecheck       | **yes** — `instance-property-types.tsd.ts` inverted polarity                                                                                                       | rewrite in the same commit as the kiosk metadata                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `check-style-twin-drift.mjs`   | no — CSS custom-property names only, zero overlap                                                                                                                  | none                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `check-dom-contract-drift.mjs` | no — no new DOM key; `CustomLayout` renders nothing                                                                                                                | none                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `check-package-smoke.mjs`      | no, if the new artifacts land                                                                                                                                      | add `src/CustomLayout.gen.d.ts` to `requiredFiles` (Stage 3)                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `lint:ui5`                     | possibly — a new `sap.ui.core.Element` subclass and new XML aggregation nodes are new input                                                                        | run it in Stage 3 before pushing                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| visual baselines (553 PNGs)    | **no**                                                                                                                                                             | 270 kiosk + 283 webc across `packages/*/test/e2e/__baselines__/{desktop,phone-lg,phone-md,phone-sm,tablet}` — the "118" an earlier revision gave was desktop-only. Every affected fixture is a settings rewrite producing identical DOM, and no `<slot>` is added to the template, but the risk is **not** kiosk-only: Stage 4 rewrites `packages/kiosk-keyboard-webc/test/pages/visual.js:120` and `index.html`, which drive the 283. **Do not run `*:update`** — a diff means a real regression |
 
 Baseline confirmed green at HEAD: `check-twin-drift` 27 pairs in sync; `check-style-twin-drift` 40 kiosk / 44 webc; `check-dom-contract-drift` in parity.
 
@@ -1589,10 +1679,10 @@ Baseline confirmed green at HEAD: `check-twin-drift` 27 pairs in sync; `check-st
 
 ### New
 
-1. **`custom-layout-fold` unit suites** (Stage 2) — document order; every per-facet rule; `suppress` at each tier; `*`-field rejection; every diagnostic code.
-2. **D3 re-layering** — the four changed cases and the three newly-expressible ones from the semantics table, per twin, plus the identity and null-prototype invariants.
+1. **`custom-layout-fold` unit suites** (Stage 2) — document order; every per-facet rule; `suppress` on the named tier; every diagnostic code; and that a rejected `rows` yields `invalid-rows` **alone**, never also `unknown-target`.
+2. **D3 re-layering** — the three changed cases and the two newly-expressible ones from the §4c table, per twin, plus the identity and null-prototype invariants, plus the retirement of `{"*": null}`.
 3. **All three `layoutRole` states** against the built-in secondary `numeric`: omitted → secondary, `Base` → base, `Secondary` → secondary; plus `Base` on a custom name with no built-in.
-4. **`suppress="Variants"`** on a layout inheriting the Latin table → no long-press affordance; with a `*` table present → still nothing; **with a `variants` table on the same custom layout** → exactly that table, no built-in and no `*` letters.
+4. **`suppress="Variants"`** on a layout inheriting the Latin table → no long-press affordance; with a `defaultVariants` table present → still nothing; **with a `variants` table on the same custom layout** → exactly that table, no built-in and no `defaultVariants` letters.
 5. **`suppress="Middleware"`** on `ko-hangul` → uncomposed jamo, proving `getMiddlewareFactory` no longer falls through `??`. **This capability does not exist at HEAD**, so a green run before the feature lands means the test asserts nothing.
 6. **Separator round-trip** — `suppress="Variants,Middleware"` (kiosk XML) and `suppress="Variants Middleware"` (webc) both yield the two-member array; `suppress="Varients"` **throws** on kiosk and emits `unknown-suppress` on webc.
 7. **XML authoring** — `customLayouts-xml.qunit.ts`, the only CI guard on D1.
