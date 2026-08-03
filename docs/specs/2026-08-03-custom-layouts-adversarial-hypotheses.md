@@ -163,12 +163,20 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
   webc fixtures Stage 4 rewrites drive 283 of the baselines, so a kiosk-only probe leaves the larger
   half unverified.
 
-- **H13 (the CI generate gate is blind to a new file).** `open`. _Already probed red-worthy._ An
-  untracked `packages/kiosk-keyboard/src/ZZTest.gen.d.ts` **passes**
-  `git diff --exit-code -- ':(glob)…/*.gen.d.ts'` with exit 0, because `git diff` does not see
-  untracked files — precisely the scenario this change creates.
-  **Red proof:** with the staged (`git add -A` then `git diff --cached`) form in place, delete
-  `CustomLayout.gen.d.ts` from git, regenerate, and confirm CI fails.
+- **H13 (the CI generate gate is blind to a new file).** `red-seen` — cleared 2026-08-03 in Stage 0.
+  Probed with an untracked `packages/kiosk-keyboard/src/ZZProbe.gen.d.ts` present:
+
+  ```
+  git diff --exit-code -- .../KioskKeyboard.gen.d.ts            -> exit 0, blind
+  git add -A -- packages/kiosk-keyboard/src
+  git diff --cached --exit-code -- ':(glob)...**/*.gen.d.ts'    -> exit 1, correct
+  ```
+
+  The old path-literal form passes a brand-new generated interface because `git diff` does not see
+  untracked files. Widening the glob alone does **not** fix it; staging first is what makes the glob
+  load-bearing. Both forms were run against the same probe file, and the probe was reverted.
+  Remaining check once the class exists: delete `CustomLayout.gen.d.ts` from git, regenerate, and
+  confirm the gate still fails.
 
 - **H21 (`check:base` and CI are treated as interchangeable).** `open`. They are not: CI
   re-implements the chain, uses the stricter `lint:ci --deny-warnings`, and omits
