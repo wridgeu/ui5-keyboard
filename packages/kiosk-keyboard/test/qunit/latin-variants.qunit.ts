@@ -1,12 +1,12 @@
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import {
   LATIN_DIACRITIC_VARIANTS,
-  WILDCARD_LAYOUT,
   applyVariantDefaults,
   resolveVariantTable,
   shiftedGlyph,
   toShiftVariant,
   toShiftVariants,
+  type InstanceVariants,
   type VariantTable,
 } from "ui5/kiosk/internal/latin-variants";
 
@@ -117,6 +117,11 @@ QUnit.test("keeps authored variants on action/modifier/space keys (filter gates 
   assert.deepEqual(out[0][1].variants, ["z"], "authored modifier-key variants preserved");
 });
 
+/** A house accent set, the shape a `defaultVariants` table has. */
+const DEFAULTS: VariantTable = { z: ["ź"], q: ["ǫ"] };
+/** One layout's own table, the shape a custom layout's `variants` has. */
+const NAMED: VariantTable = { a: ["ą"] };
+
 QUnit.module("latin-variants - resolveVariantTable");
 
 QUnit.test("falls back to the built-in Latin table for a layout with no instance entry", (assert) => {
@@ -134,68 +139,94 @@ QUnit.test("normalizes the layout name (case and surrounding space)", (assert) =
   assert.strictEqual(resolveVariantTable("QWERTY"), LATIN_DIACRITIC_VARIANTS, "uppercase resolves the Latin table");
 });
 
-QUnit.test("an instance entry extends the built-in table rather than replacing it", (assert) => {
-  const custom: VariantTable = { b: ["ḃ"] };
-  const map = new Map<string, VariantTable | null>([["qwerty", custom]]);
-  const table = resolveVariantTable("qwerty", map)!;
+/** The named tier for one layout, in the overlay shape the custom-layout fold produces. */
+const named = (layout: string, table: VariantTable | null, replace = false): InstanceVariants =>
+  new Map([[layout, { replace, table }]]);
+
+QUnit.test("a named entry extends the built-in table rather than replacing it", (assert) => {
+  const table = resolveVariantTable("qwerty", named("qwerty", { b: ["ḃ"] }))!;
   assert.deepEqual(table.b, ["ḃ"], "the entry's own letter is added");
   assert.deepEqual(table.a, [...LATIN_DIACRITIC_VARIANTS.a], "an untouched built-in letter survives");
 });
 
 QUnit.test("an entry replaces the built-in list for the letters it names", (assert) => {
-  const map = new Map<string, VariantTable | null>([["qwerty", { s: ["ś"] }]]);
-  assert.deepEqual(resolveVariantTable("qwerty", map)!.s, ["ś"], "the named letter takes the entry's list");
+  const table = resolveVariantTable("qwerty", named("qwerty", { s: ["ś"] }))!;
+  assert.deepEqual(table.s, ["ś"], "the named letter takes the entry's list");
 });
 
 QUnit.test("a letter mapped to an empty list is suppressed without touching its siblings", (assert) => {
-  const map = new Map<string, VariantTable | null>([["qwerty", { s: [] }]]);
-  const table = resolveVariantTable("qwerty", map)!;
+  const table = resolveVariantTable("qwerty", named("qwerty", { s: [] }))!;
   assert.notOk(Object.hasOwn(table, "s"), "the suppressed letter is gone");
   assert.deepEqual(table.a, [...LATIN_DIACRITIC_VARIANTS.a], "its siblings are untouched");
 });
 
 QUnit.test("does not mutate the built-in table", (assert) => {
-  const map = new Map<string, VariantTable | null>([["qwerty", { a: ["ā"], s: [] }]]);
-  resolveVariantTable("qwerty", map);
+  resolveVariantTable("qwerty", named("qwerty", { a: ["ā"], s: [] }));
   assert.ok(LATIN_DIACRITIC_VARIANTS.a.includes("ä"), "an overridden built-in letter is intact");
   assert.ok(LATIN_DIACRITIC_VARIANTS.s.includes("ß"), "a suppressed built-in letter is intact");
 });
 
 QUnit.test("a table keyed __proto__ contributes an own entry, not a prototype", (assert) => {
   const polluted = JSON.parse('{"__proto__":["x"]}') as VariantTable;
-  const map = new Map<string, VariantTable | null>([["qwerty", polluted]]);
-  const table = resolveVariantTable("qwerty", map)!;
+  const table = resolveVariantTable("qwerty", named("qwerty", polluted))!;
   assert.strictEqual(Object.getPrototypeOf(table), null, "the merged table has a null prototype");
   assert.ok(Object.hasOwn(table, "__proto__"), "the key lands as an own property");
   assert.strictEqual(({} as Record<string, unknown>).x, undefined, "Object.prototype is unpolluted");
 });
 
-QUnit.test("an explicit null instance entry opts the layout out", (assert) => {
-  const map = new Map<string, VariantTable | null>([["qwerty", null]]);
-  assert.strictEqual(resolveVariantTable("qwerty", map), null, "null entry suppresses the built-in table");
+QUnit.test("a suppressing named entry with no table of its own opts the layout out", (assert) => {
+  assert.strictEqual(resolveVariantTable("qwerty", named("qwerty", null, true)), null, "the built-in table is gone");
 });
 
-QUnit.test("the '*' wildcard applies to layouts without their own entry, even non-Latin ones", (assert) => {
-  const custom: VariantTable = { b: ["ḃ"] };
-  const map = new Map<string, VariantTable | null>([[WILDCARD_LAYOUT, custom]]);
-  assert.deepEqual(resolveVariantTable("qwerty", map)!.b, ["ḃ"], "wildcard covers a Latin layout");
-  // The non-Latin built-in tier is null, so a wildcard entry stands alone there.
-  assert.deepEqual(resolveVariantTable("arabic", map), { b: ["ḃ"] }, "wildcard re-enables a non-Latin layout");
-  assert.strictEqual(resolveVariantTable("arabic", map)!.a, undefined, "without inheriting the Latin table");
+QUnit.test("returns the built-in table itself when no tier applies", (assert) => {
+  assert.strictEqual(
+    resolveVariantTable("qwerty", named("azerty-fr", { b: ["ḃ"] })),
+    LATIN_DIACRITIC_VARIANTS,
+    "no copy is made",
+  );
+  assert.strictEqual(resolveVariantTable("qwerty", undefined, null), LATIN_DIACRITIC_VARIANTS, "nor for a null tier");
 });
 
-QUnit.test("returns the built-in table itself when no entry matches", (assert) => {
-  const map = new Map<string, VariantTable | null>([["azerty-fr", { b: ["ḃ"] }]]);
-  assert.strictEqual(resolveVariantTable("qwerty", map), LATIN_DIACRITIC_VARIANTS, "no copy is made");
+QUnit.module("latin-variants - the defaults tier");
+
+QUnit.test("applies to every layout, even non-Latin ones", (assert) => {
+  const table = resolveVariantTable("qwerty", undefined, DEFAULTS)!;
+  assert.deepEqual(table.q, ["ǫ"], "the defaults letter is added to a Latin layout");
+  assert.deepEqual(table.a, [...LATIN_DIACRITIC_VARIANTS.a], "the built-in tier below it survives");
+  // The non-Latin built-in tier is null, so the defaults tier stands alone there.
+  assert.deepEqual(resolveVariantTable("arabic", undefined, DEFAULTS), DEFAULTS, "it re-enables a non-Latin layout");
+  assert.strictEqual(
+    resolveVariantTable("arabic", undefined, DEFAULTS)!.a,
+    undefined,
+    "without inheriting the Latin table",
+  );
 });
 
-QUnit.test("an explicit entry beats the wildcard", (assert) => {
-  const custom: VariantTable = { b: ["ḃ"] };
-  const map = new Map<string, VariantTable | null>([
-    [WILDCARD_LAYOUT, custom],
-    ["qwerty", null],
-  ]);
-  assert.strictEqual(resolveVariantTable("qwerty", map), null, "the layout's own null entry wins over the wildcard");
+QUnit.test("composes with a named entry rather than being discarded by it", (assert) => {
+  const table = resolveVariantTable("qwerty", named("qwerty", NAMED), DEFAULTS)!;
+  assert.deepEqual(table.a, ["ą"], "the named tier wins for the letter it declares");
+  assert.deepEqual(table.q, ["ǫ"], "a defaults letter the named tier leaves alone survives");
+  assert.deepEqual(table.z, ["ź"], "and so does the one it overlaps with the built-in");
+});
+
+QUnit.test("composes with a named entry on a non-Latin layout", (assert) => {
+  const table = resolveVariantTable("arabic", named("arabic", NAMED), DEFAULTS)!;
+  assert.deepEqual(table, { z: ["ź"], q: ["ǫ"], a: ["ą"] }, "both tiers stand, with no Latin table beneath them");
+});
+
+QUnit.test("a letter it drops stays dropped when a named entry declares others", (assert) => {
+  const table = resolveVariantTable("qwerty", named("qwerty", NAMED), { s: [] })!;
+  assert.notOk(Object.hasOwn(table, "s"), "the letter the defaults tier drops is gone");
+  assert.deepEqual(table.a, ["ą"], "and the named tier still applies");
+});
+
+QUnit.test("a named entry that suppresses discards it", (assert) => {
+  assert.strictEqual(resolveVariantTable("qwerty", named("qwerty", null, true), DEFAULTS), null, "nothing survives");
+});
+
+QUnit.test("a named entry that suppresses and then declares a table stands that table alone", (assert) => {
+  const table = resolveVariantTable("qwerty", named("qwerty", NAMED, true), DEFAULTS)!;
+  assert.deepEqual(table, { a: ["ą"] }, "neither the built-in nor the defaults tier contributes");
 });
 
 QUnit.module("latin-variants - shift mapping");

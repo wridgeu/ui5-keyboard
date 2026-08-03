@@ -61,11 +61,19 @@ export function applyVariantDefaults(
   );
 }
 
-/** The instance-table key that supplies variants for every layout without its own entry. */
-export const WILDCARD_LAYOUT = "*";
+/**
+ * One tier's contribution to a layout's long-press variants. `replace` discards
+ * everything the tiers below contributed before `table` is merged, which is what
+ * suppressing the facet on the declaring custom layout means; a `table` of `null`
+ * contributes nothing, so `{ replace: true, table: null }` opts the layout out.
+ */
+export interface VariantOverlay {
+  readonly replace: boolean;
+  readonly table: VariantTable | null;
+}
 
-/** Per-instance, per-layout variant tables, keyed by normalized layout name. */
-export type InstanceVariants = ReadonlyMap<string, VariantTable | null>;
+/** Per-instance, per-layout variant overlays, keyed by normalized layout name. */
+export type InstanceVariants = ReadonlyMap<string, VariantOverlay>;
 
 /**
  * Merges `overrides` onto `base` per base letter. A letter mapped to an empty list is
@@ -73,7 +81,7 @@ export type InstanceVariants = ReadonlyMap<string, VariantTable | null>;
  * result has a null prototype, so a table keyed `__proto__` contributes an own property
  * rather than reassigning the prototype.
  */
-function mergeVariantTables(base: VariantTable | null, overrides: VariantTable): VariantTable {
+export function mergeVariantTables(base: VariantTable | null, overrides: VariantTable): VariantTable {
   const merged: Record<string, readonly string[]> = Object.create(null);
   Object.assign(merged, base);
   for (const [letter, glyphs] of Object.entries(overrides)) {
@@ -83,27 +91,37 @@ function mergeVariantTables(base: VariantTable | null, overrides: VariantTable):
   return merged;
 }
 
+/** Applies one tier to the table resolved so far. An absent tier is transparent. */
+function applyVariantOverlay(base: VariantTable | null, overlay: VariantOverlay | undefined): VariantTable | null {
+  if (overlay === undefined) return base;
+  const under = overlay.replace ? null : base;
+  return overlay.table === null ? null : mergeVariantTables(under, overlay.table);
+}
+
 /**
- * The variant table in effect for `layoutName`. An instance entry for the layout wins,
- * else the instance `*` wildcard; either is merged onto the built-in tier per base
- * letter, so an entry extends the defaults rather than replacing them and a letter
- * mapped to `[]` drops that letter. An entry of `null` opts the layout out. With no
- * entry the built-in tier stands: the layout's own declared table, or the Latin
- * table when it declares none. A `null` result fills no variants, so the keys carry
- * no long-press affordance.
+ * The variant table in effect for `layoutName`, layered built-in -> defaults -> named.
+ * Each tier merges onto the one below per base letter, so a letter mapped to `[]` drops
+ * that letter and a table for one layout extends the tier below instead of replacing it.
+ * A named tier that suppresses discards everything below it; one that suppresses and then
+ * declares a table stands that table alone. With no tier declared the built-in stands:
+ * the layout's own declared table, or the Latin table when it declares none. A `null`
+ * result fills no variants, so the keys carry no long-press affordance.
  */
-export function resolveVariantTable(layoutName: string, instanceVariants?: InstanceVariants): VariantTable | null {
+export function resolveVariantTable(
+  layoutName: string,
+  instanceVariants?: InstanceVariants,
+  defaults?: VariantTable | null,
+): VariantTable | null {
   const name = layoutName.trim().toLowerCase();
-  // A declared `null` opts the layout out; an absent declaration is distinct from
-  // it and leaves the Latin table in force.
+  // A declared `null` opts the layout out; an absent declaration is distinct from it
+  // and leaves the Latin table in force.
   const declared = BUILTIN_LAYOUT_META.get(name)?.variants;
-  const builtIn = declared === undefined ? LATIN_DIACRITIC_VARIANTS : declared;
-  if (!instanceVariants) return builtIn;
-  let entry: VariantTable | null | undefined;
-  if (instanceVariants.has(name)) entry = instanceVariants.get(name) ?? null;
-  else if (instanceVariants.has(WILDCARD_LAYOUT)) entry = instanceVariants.get(WILDCARD_LAYOUT) ?? null;
-  if (entry === undefined) return builtIn;
-  return entry === null ? null : mergeVariantTables(builtIn, entry);
+  let table: VariantTable | null = declared === undefined ? LATIN_DIACRITIC_VARIANTS : declared;
+  // The defaults tier only ever adds, so it is a plain table rather than an overlay:
+  // it cannot suppress, and there is no spelling for it to do so.
+  if (defaults) table = mergeVariantTables(table, defaults);
+  if (instanceVariants !== undefined) table = applyVariantOverlay(table, instanceVariants.get(name));
+  return table;
 }
 
 /**

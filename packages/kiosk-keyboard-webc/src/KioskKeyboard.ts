@@ -33,6 +33,7 @@ import {
   resolveVariantTable,
   shiftedGlyph,
   toShiftVariants,
+  type VariantOverlay,
   type VariantTable,
 } from "./core/latin-variants.js";
 import { VariantPopupController, type VariantPopupState } from "./core/variant-popup-controller.js";
@@ -1284,20 +1285,32 @@ class KioskKeyboard extends UI5Element {
     // keys so any layout gains the long-press variants. Author-declared
     // `variants` are preserved (applyVariantDefaults never overrides them).
     const variantsMap = this._variantsView.get(this.instanceVariants);
+    const defaults = this._defaultVariants();
     if (!this.accentVariants) {
-      this._warnDisarmedVariants(variantsMap);
+      this._warnDisarmedVariants(variantsMap !== undefined || defaults !== null);
       return base;
     }
-    const table = resolveVariantTable(layoutName, variantsMap);
+    const table = resolveVariantTable(layoutName, variantsMap, defaults);
     return table ? applyVariantDefaults(base, table) : base;
+  }
+
+  /**
+   * The variant tier applied under every layout: the `*` entry of `instanceVariants`.
+   * Silent - `_variantsView` validates the same entry and owns the rejection warning -
+   * and read as a plain table rather than an overlay, because the defaults tier only
+   * ever adds: a `*` of `null` is transparent rather than a global opt-out.
+   */
+  private _defaultVariants(): VariantTable | null {
+    const table = this.instanceVariants?.["*"];
+    return KioskKeyboard._isValidVariantTable(table) ? table : null;
   }
 
   /**
    * Warns once when `instanceVariants` carries usable entries while `accentVariants` is
    * off, the combination in which the tables resolve but nothing applies them.
    */
-  private _warnDisarmedVariants(variantsMap: ReadonlyMap<string, VariantTable | null> | undefined): void {
-    if (this._warnedDisarmedVariants || !variantsMap) return;
+  private _warnDisarmedVariants(hasEntries: boolean): void {
+    if (this._warnedDisarmedVariants || !hasEntries) return;
     this._warnedDisarmedVariants = true;
     console.warn(
       "[kiosk-keyboard] instanceVariants is set but accentVariants is false, so no variant table is applied. Set accent-variants to arm the long-press popups.",
@@ -1338,14 +1351,18 @@ class KioskKeyboard extends UI5Element {
     typeof factory === "function" ? (factory as () => CompositionMiddleware) : undefined,
   );
 
-  private readonly _variantsView = new MemoMapView<VariantTable | null>((name, table) => {
+  private readonly _variantsView = new MemoMapView<VariantOverlay>((name, table) => {
     // `null` is a meaningful entry: it opts the layout out of the built-in table.
-    if (table === null) return null;
-    if (KioskKeyboard._isValidVariantTable(table)) return table;
-    console.warn(
-      `[kiosk-keyboard] Invalid instanceVariants entry "${name}": must be null, or a non-empty object mapping lowercase base letters to arrays of non-empty glyph strings (an empty array suppresses that letter).`,
-    );
-    return undefined;
+    if (table !== null && !KioskKeyboard._isValidVariantTable(table)) {
+      console.warn(
+        `[kiosk-keyboard] Invalid instanceVariants entry "${name}": must be null, or a non-empty object mapping lowercase base letters to arrays of non-empty glyph strings (an empty array suppresses that letter).`,
+      );
+      return undefined;
+    }
+    // The `*` tier is read by `_defaultVariants` instead: it applies under every layout
+    // rather than at one layout's position, and it cannot suppress.
+    if (name.trim() === "*") return undefined;
+    return { replace: table === null, table };
   });
 
   /**
