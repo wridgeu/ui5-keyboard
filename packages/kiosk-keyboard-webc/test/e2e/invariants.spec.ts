@@ -248,8 +248,6 @@ test("key icons paint in their key's color", async ({ page }) => {
 // coordinate that disagrees with the key's actual place in the DOM would send
 // consumer CSS and tests to a key the user sees somewhere else.
 test("keys carry the grid coordinate they occupy", async ({ page }) => {
-  await openPage(page, "/test/pages/visual.html");
-
   for (const id of HOSTS) {
     const rows = await page.evaluate(
       ({ hostId, rootSel, rowSel, keySel, rowAttr, colAttr }) => {
