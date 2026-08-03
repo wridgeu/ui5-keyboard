@@ -96,13 +96,19 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
 
 ## Stage 3 — kiosk cutover
 
-- **H2 (the tsd file's failure mode).** `open`. **Refuted premise, corrected.** An earlier revision
+- **H2 (the tsd file's failure mode).** `red-seen` — cleared 2026-08-03. **Refuted premise, corrected.** An earlier revision
   claimed `instance-property-types.tsd.ts` fails with six "Unused '@ts-expect-error'" errors. It
   cannot: D2 _deletes_ the four setters, so every guarded line stays an error ("Property does not
   exist") and the directives stay consumed.
   **Red proof:** change the kiosk metadata without touching the tsd file; `typecheck:kiosk:test`
   must fail on the file's **unguarded** accepted-shapes block at `:27-36`. Then, after rewriting,
   delete one directive and confirm the positive direction also fails.
+
+  **Result.** The file was rewritten as `custom-layout-types.tsd.ts` against the new surface and
+  compiles with every `@ts-expect-error` consumed — so each guarded line really is an error.
+  Positive direction: deleting the directive above `layoutRole: "base"` produced
+  `error TS2769: No overload matches this call`, which is the closed enum rejecting a typo at
+  compile time. Restored.
 
 - **H3 (the locale facet is covered vacuously).** `refuted`, kept as a probe. The design once stated
   this as fact. It is false: nine kiosk tests drive layout selection purely through
@@ -113,32 +119,63 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
   webc test must fail. Expect red on the first try. If it stays green, _then_ the coverage is fake
   and the original claim was accidentally right.
 
-- **H5 (DEF-3: N folds, N diagnostic passes).** `open`. Observe through `sandbox.stub(Log, "warning")`
+- **H5 (DEF-3: N folds, N diagnostic passes).** `red-seen` — cleared 2026-08-03. Observe through `sandbox.stub(Log, "warning")`
   counts, **not** a spy on `foldCustomLayouts`: the UI5 AMD transpile captures named imports into
   module-scope consts at define time, so stubbing the module never intercepts the caller's binding.
   Exporting a call counter would violate CLAUDE.md §4.
   **Red proof:** call `_getFold()` eagerly from an `addCustomLayout` override; the "one fold, one
   warning, zero `unknown-target`" test must go red.
 
-- **H6 (DEF-4: a property write tears down an IME buffer).** `open`.
+  **Result.** An `addCustomLayout` override calling `_getFold()` turned exactly
+  "Construction folds once, over the complete list" red: the fold ran over each prefix of the
+  list and reported the spurious `unknown-target` for the overlay that precedes its rows-declaring
+  sibling. Reverted.
+
+- **H6 (DEF-4: a property write tears down an IME buffer).** `red-seen` — cleared 2026-08-03.
   **Red proof:** put `this._getFold()` inside `invalidate()`; the "edit an unrelated custom layout
   mid-composition" test must go red with a lost preedit.
 
-- **H7 (the `layoutRole` tri-state collapses).** `open`.
+  **Result, and the stated red proof is wrong.** `_getFold()` inside `invalidate()` leaves the
+  composition untouched — the fold reads elements and writes maps, and never reaches middleware
+  state — so it reddens only H5's counting test. DEF-4 is about a re-fold path that _tears down_
+  the buffer, so the perturbation has to do that: `this._endComposition()` inside `invalidate()`
+  turned both "Editing an unrelated custom layout mid-composition leaves the buffer alone" and
+  "A swap that leaves the resolved layout's factory alone keeps the composition" red. Reverted.
+
+- **H7 (the `layoutRole` tri-state collapses).** `red-seen` — cleared 2026-08-03.
   **Red proof:** replace `layoutRole` with `secondary: { type: "boolean", defaultValue: false }` and
   confirm the "absent inherits the built-in" test goes red — `numeric` must stay secondary when the
   custom layout declares nothing. This exercises `ManagedObject.js:1611-1614` directly.
 
-- **H8 (`suppress` is a no-op).** `open`.
+  **Result.** Collapsed at the `toSpec()` boundary instead, which is the same observable and a
+  smaller perturbation: dropping the `role !== "Inherit"` guard makes the `Inherit` case emit a
+  concrete `secondary: false`, exactly what a plain boolean property would do. Exactly one test
+  went red — "An omitted layoutRole inherits the built-in of the same name's role" — and its
+  `Base` sibling stayed green, which is what makes the three states provably distinct. Reverted.
+
+- **H8 (`suppress` is a no-op).** `red-seen` — cleared 2026-08-03.
   **Red proof:** make `toSpec()` drop `suppress`; both the variants-suppress and middleware-suppress
   tests must go red. The middleware one is the sharper probe, because that capability **does not
   exist at HEAD** — a green run before the feature lands means the test asserts nothing.
 
-- **H9 (the XML path is never actually parsed).** `open`.
+  **Result.** Dropping `suppress` from `toSpec()` turned four tests red, the middleware one among
+  them: "suppress=Middleware disables the built-in composer for the layout",
+  "suppress=Variants opts a custom layout out of the built-in table", "suppress=Variants discards
+  defaultVariants too…" and "Editing a custom layout's variants re-resolves on the next render".
+  Reverted.
+
+- **H9 (the XML path is never actually parsed).** `red-seen` — cleared 2026-08-03.
   **Red proof:** rename the aggregation in `metadata` to `customLayoutsX` without touching the view
   definition; `customLayouts-xml.qunit.ts` must fail. Then break `core:require` and confirm the
   `middleware` assertion fails _specifically_, not the whole view — a view that fails to parse at
   all proves nothing about the function-property path.
+
+  **Result.** Renaming the aggregation to `customLayoutsX` turned 6 of the suite's 7 tests red
+  (the seventh asserts the view _rejects_, and it still does). The `core:require` half is covered
+  standingly rather than by perturbation: the middleware assertion calls the resolved value and
+  checks the module's own counter incremented, so it fails on a value that is not that factory
+  even when the view parses. That assertion also caught a real fact — `resolveReference` returns a
+  **bound** function, so an identity comparison against the module member would have been wrong.
 
 - **H10 (the runner passes while running zero tests).** `open`. After renaming
   `instance-overrides.qunit.ts` → `custom-layouts.qunit.ts`, `testsuite.qunit.ts` must gain the new
@@ -147,11 +184,15 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
   `ui5-test-runner` exits 0 on a suite it never loads, so the exit code is not the signal — the
   count is.
 
-- **H18 (the generated interface is not actually regenerated).** `open`. Stage 3 commits two
+- **H18 (the generated interface is not actually regenerated).** `red-seen` — cleared 2026-08-03. Stage 3 commits two
   `*.gen.d.ts` files and CLAUDE.md forbids hand-editing them.
   **Red proof:** hand-edit one accessor signature in `CustomLayout.gen.d.ts`, run
   `npm run generate -w packages/kiosk-keyboard`, and confirm the edit is overwritten. If it
   survives, the file is not on the generator's output path and the CI gate is guarding a fossil.
+
+  **Result.** `getRows(): LayoutRows` was hand-edited to `getRows(): string /* HAND EDITED */`.
+  After `npm run generate -w packages/kiosk-keyboard` the marker was gone and the correct
+  signature restored, so the file is genuinely on the generator's output path.
 
 ## Stage 4 — webc cutover
 
@@ -182,13 +223,17 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
 
 ## Cross-cutting
 
-- **H11 (visual baselines are not actually compared).** `open`. The "no baseline changes" claim is
+- **H11 (visual baselines are not actually compared).** `open` — kiosk half green, see below. The "no baseline changes" claim is
   load-bearing across Stages 3 and 4, and covers **553** PNGs (270 kiosk / 283 webc), not the
   desktop-only 118 an earlier revision counted.
   **Red proof:** corrupt one committed PNG and confirm `test:e2e` goes red — **not** `test:e2e:ci`,
   which passes `--ignore-snapshots` and would stay green. Revert. Do this once per package: the
   webc fixtures Stage 4 rewrites drive 283 of the baselines, so a kiosk-only probe leaves the larger
   half unverified.
+
+  **Partial result.** The kiosk desktop project was run against the committed baselines after the
+  cutover: **100 passed**, no snapshot written, confirming the settings rewrite produces identical
+  DOM. The corrupt-a-PNG proof and the webc half are still outstanding.
 
 - **H13 (the CI generate gate is blind to a new file).** `red-seen` — cleared 2026-08-03 in Stage 0.
   Probed with an untracked `packages/kiosk-keyboard/src/ZZProbe.gen.d.ts` present:

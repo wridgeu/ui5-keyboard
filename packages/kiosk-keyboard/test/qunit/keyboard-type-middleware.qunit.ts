@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import Input from "sap/m/Input";
 import { KeyboardType } from "ui5/kiosk/library";
 import type { CompositionMiddleware } from "ui5/kiosk/types";
@@ -10,7 +11,7 @@ function commonAfterEach(): void {
 }
 
 /**
- * Spy middleware factory wired through the public `instanceMiddleware` setting.
+ * Spy middleware factory wired through a `customLayouts` entry.
  * `created` proves whether the keyboard instantiated the middleware at all;
  * `handled` records the keys routed through it; `commits` counts forced
  * commits of an in-progress composition. Twin of the webc
@@ -54,7 +55,7 @@ QUnit.module("keyboard-type-middleware - keyboardType vs composition middleware"
 QUnit.test("does not instantiate the layout middleware when keyboardType forces the numpad surface", async (assert) => {
   const { kb, input } = await setupHangul(KeyboardType.Numpad);
   const { calls, factory } = spyMiddleware();
-  kb.setInstanceMiddleware({ "ko-hangul": factory });
+  kb.addCustomLayout(new CustomLayout({ name: "ko-hangul", middleware: factory }));
   await waitForRender();
 
   // The rendered surface is the numpad; pressing a digit must resolve the
@@ -72,7 +73,7 @@ QUnit.test("does not instantiate the layout middleware when keyboardType forces 
 QUnit.test("commits an in-progress composition when a keyboardType change swaps the surface", async (assert) => {
   const { kb, input } = await setupHangul();
   const { calls, factory } = spyMiddleware();
-  kb.setInstanceMiddleware({ "ko-hangul": factory });
+  kb.addCustomLayout(new CustomLayout({ name: "ko-hangul", middleware: factory }));
   await waitForRender();
 
   // Start a composition on the full hangul surface.

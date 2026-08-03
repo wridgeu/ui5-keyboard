@@ -25,6 +25,7 @@ const packages = [
     requiredFiles: [
       "README.md",
       "src/KioskKeyboard.gen.d.ts",
+      "src/CustomLayout.gen.d.ts",
       "dist/.ui5/build-manifest.json",
       "dist/resources/ui5/kiosk/library.js",
     ],

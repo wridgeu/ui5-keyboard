@@ -18,7 +18,6 @@
  * are kept in sync, byte-identical apart from the ESM `.js` import suffix
  * (enforced by tools/check-twin-drift.mjs).
  */
-import { mergeVariantTables } from "./latin-variants";
 import type { InstanceVariants, VariantOverlay, VariantTable } from "./latin-variants";
 import type { InstanceLayoutMeta, LayoutMeta } from "./layout-meta";
 import type { InstanceLayouts, InstanceLocaleLayouts } from "./layout-registry";
@@ -144,6 +143,18 @@ function readVariants(
   return undefined;
 }
 
+/**
+ * Composes one variant patch onto another. Unlike `mergeVariantTables` this keeps a
+ * letter mapped to `[]`, because the accumulated overlay is still a patch: the deletion
+ * only happens when the overlay is finally applied to a real table, and dropping the
+ * marker here would silently lose a suppression the resolver never got to act on.
+ */
+function composeVariantPatches(base: VariantTable | null, patch: VariantTable): VariantTable {
+  const composed: Record<string, readonly string[]> = Object.create(null);
+  Object.assign(composed, base, patch);
+  return composed;
+}
+
 /** Folds one custom layout's variant declaration onto the overlay accumulated so far. */
 function foldVariantOverlay(
   acc: VariantOverlay | undefined,
@@ -154,7 +165,7 @@ function foldVariantOverlay(
   const replace = suppressed || (acc?.replace ?? false);
   if (table === undefined) return { replace, table: null };
   const under = suppressed || acc === undefined ? null : acc.table;
-  return { replace, table: mergeVariantTables(under, table) };
+  return { replace, table: composeVariantPatches(under, table) };
 }
 
 /**

@@ -2,10 +2,9 @@ import { KeyboardType } from "ui5/kiosk/library";
 import Event from "sap/ui/base/Event";
 import { MobileKeyboard } from "ui5/kiosk/library";
 import { FKeyMode } from "ui5/kiosk/library";
-import { InstanceLayoutMap } from "ui5/kiosk/library";
-import { InstanceLocaleLayoutMap } from "ui5/kiosk/library";
-import { InstanceMiddlewareMap } from "ui5/kiosk/library";
-import { InstanceVariantMap } from "ui5/kiosk/library";
+import { VariantOverrideTable } from "ui5/kiosk/library";
+import CustomLayout from "ui5/kiosk/CustomLayout";
+import { AggregationBindingInfo } from "sap/ui/base/ManagedObject";
 import Control from "sap/ui/core/Control";
 import { PropertyBindingInfo } from "sap/ui/base/ManagedObject";
 import { $ControlSettings } from "sap/ui/core/Control";
@@ -153,66 +152,31 @@ declare module "./KioskKeyboard" {
         controls?: string[] | PropertyBindingInfo | `{${string}}`;
 
         /**
-         * Per-instance layout overrides. Resolution order is
-        **instance map -> built-in**, so an entry here shadows the
-        built-in of the same name for this control only. Use this to
-        supply a custom layout, or to override a built-in (e.g. swap
-        the German layout) without affecting other controls. Accepts
-        a plain `Record<string, LayoutInput>`: each entry is either the
-        layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`)
-        declaring the layout's attributes alongside them. The control
-        stores the rows and the attributes as `Map`s internally.
+         * Long-press variants applied under every layout, merged per base letter beneath
+        anything a `customLayouts` entry declares for that layout, so a house accent set
+        extends the built-in table rather than replacing it and a base letter mapped to
+        `[]` drops that letter everywhere. Base letters must be lowercase. Effective only
+        while `accentVariants` is set.
         
-        Read by object identity: assign a new object to change the layouts.
-        Mutating the object already assigned is not observed until the next
-        render triggered by something else.
-         *
-         * @since 0.1.0
-         */
-        instanceLayouts?: InstanceLayoutMap | PropertyBindingInfo | `{${string}}`;
-
-        /**
-         * Per-instance locale-to-layout overrides. Resolution order is
-        **instance map -> built-in locale map -> default layout**.
-        Keys are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are
-        layout names. Accepts a plain `Record<string, string>`; the
-        control stores it as a `Map` internally.
-         *
-         * @since 0.1.0
-         */
-        instanceLocaleLayouts?: InstanceLocaleLayoutMap | PropertyBindingInfo | `{${string}}`;
-
-        /**
-         * Per-instance composition middleware overrides, keyed by layout
-        name. Resolution order is **instance map -> built-in**. Use
-        this to attach a layout-specific middleware factory for a
-        custom layout, or to swap the built-in middleware for one
-        control only. Accepts a plain
-        `Record<string, () => CompositionMiddleware>`; the control
-        stores it as a `Map` internally.
-         *
-         * @since 0.1.0
-         */
-        instanceMiddleware?: InstanceMiddlewareMap | PropertyBindingInfo | `{${string}}`;
-
-        /**
-         * Per-instance accent-variant table overrides, keyed by layout name
-        (or `"*"` for every layout). The entry for a layout wins, else the
-        `"*"` wildcard; either is merged onto the built-in table per base
-        letter, so it extends the defaults rather than replacing them. A base
-        letter mapped to `[]` drops that letter, and a `null` entry opts the
-        layout out entirely. Base letters must be lowercase. Effective only
-        while `accentVariants` is set. Accepts a plain
-        `Record<string, Record<string, string[]> | null>`; the control stores
-        it as a `Map` internally.
+        This tier only ever adds; it has no suppression spelling. To take one layout out
+        of variants entirely use `suppress="Variants"` on its `CustomLayout`, and to take
+        the whole affordance out leave `accentVariants` off, which is the default.
         
-        Read by object identity: assign a new object to change the tables.
-        Mutating the object already assigned is not observed until the next
-        render triggered by something else.
+        Read by object identity: assign a new object to change the table.
          *
          * @since 0.1.0
          */
-        instanceVariants?: InstanceVariantMap | PropertyBindingInfo | `{${string}}`;
+        defaultVariants?: VariantOverrideTable | PropertyBindingInfo | `{${string}}`;
+
+        /**
+         * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+        `name` already resolves to. Applied in aggregation order: for rows, locales,
+        metadata and middleware the last declaration wins; long-press variants
+        accumulate per base letter.
+         *
+         * @since 0.1.0
+         */
+        customLayouts?: CustomLayout[] | CustomLayout | AggregationBindingInfo | `{${string}}`;
         _activeTarget?: Control | string;
         ariaLabelledBy?: Control | string | (Control | string)[];
         ariaDescribedBy?: Control | string | (Control | string)[];
@@ -679,177 +643,182 @@ declare module "./KioskKeyboard" {
          */
         setControls(controls: string[]): this;
 
-        // property: instanceLayouts
+        // property: defaultVariants
 
         /**
-         * Gets current value of property "instanceLayouts".
+         * Gets current value of property "defaultVariants".
          *
-         * Per-instance layout overrides. Resolution order is
-        **instance map -> built-in**, so an entry here shadows the
-        built-in of the same name for this control only. Use this to
-        supply a custom layout, or to override a built-in (e.g. swap
-        the German layout) without affecting other controls. Accepts
-        a plain `Record<string, LayoutInput>`: each entry is either the
-        layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`)
-        declaring the layout's attributes alongside them. The control
-        stores the rows and the attributes as `Map`s internally.
+         * Long-press variants applied under every layout, merged per base letter beneath
+        anything a `customLayouts` entry declares for that layout, so a house accent set
+        extends the built-in table rather than replacing it and a base letter mapped to
+        `[]` drops that letter everywhere. Base letters must be lowercase. Effective only
+        while `accentVariants` is set.
         
-        Read by object identity: assign a new object to change the layouts.
-        Mutating the object already assigned is not observed until the next
-        render triggered by something else.
+        This tier only ever adds; it has no suppression spelling. To take one layout out
+        of variants entirely use `suppress="Variants"` on its `CustomLayout`, and to take
+        the whole affordance out leave `accentVariants` off, which is the default.
+        
+        Read by object identity: assign a new object to change the table.
          *
          * @since 0.1.0
          *
-         * @returns Value of property "instanceLayouts"
+         * @returns Value of property "defaultVariants"
          */
-        getInstanceLayouts(): InstanceLayoutMap;
+        getDefaultVariants(): VariantOverrideTable;
 
         /**
-         * Sets a new value for property "instanceLayouts".
+         * Sets a new value for property "defaultVariants".
          *
-         * Per-instance layout overrides. Resolution order is
-        **instance map -> built-in**, so an entry here shadows the
-        built-in of the same name for this control only. Use this to
-        supply a custom layout, or to override a built-in (e.g. swap
-        the German layout) without affecting other controls. Accepts
-        a plain `Record<string, LayoutInput>`: each entry is either the
-        layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`)
-        declaring the layout's attributes alongside them. The control
-        stores the rows and the attributes as `Map`s internally.
+         * Long-press variants applied under every layout, merged per base letter beneath
+        anything a `customLayouts` entry declares for that layout, so a house accent set
+        extends the built-in table rather than replacing it and a base letter mapped to
+        `[]` drops that letter everywhere. Base letters must be lowercase. Effective only
+        while `accentVariants` is set.
         
-        Read by object identity: assign a new object to change the layouts.
-        Mutating the object already assigned is not observed until the next
-        render triggered by something else.
+        This tier only ever adds; it has no suppression spelling. To take one layout out
+        of variants entirely use `suppress="Variants"` on its `CustomLayout`, and to take
+        the whole affordance out leave `accentVariants` off, which is the default.
+        
+        Read by object identity: assign a new object to change the table.
          *
          * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
-         * @param instanceLayouts New value for property "instanceLayouts"
+         * @param defaultVariants New value for property "defaultVariants"
          * @returns Reference to "this" in order to allow method chaining
          */
-        setInstanceLayouts(instanceLayouts: InstanceLayoutMap): this;
+        setDefaultVariants(defaultVariants: VariantOverrideTable): this;
 
-        // property: instanceLocaleLayouts
+        // aggregation: customLayouts
 
         /**
-         * Gets current value of property "instanceLocaleLayouts".
+         * Gets content of aggregation "customLayouts".
          *
-         * Per-instance locale-to-layout overrides. Resolution order is
-        **instance map -> built-in locale map -> default layout**.
-        Keys are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are
-        layout names. Accepts a plain `Record<string, string>`; the
-        control stores it as a `Map` internally.
+         * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+        `name` already resolves to. Applied in aggregation order: for rows, locales,
+        metadata and middleware the last declaration wins; long-press variants
+        accumulate per base letter.
          *
          * @since 0.1.0
-         *
-         * @returns Value of property "instanceLocaleLayouts"
          */
-        getInstanceLocaleLayouts(): InstanceLocaleLayoutMap;
+        getCustomLayouts(): CustomLayout[];
 
         /**
-         * Sets a new value for property "instanceLocaleLayouts".
+         * Adds some customLayout to the aggregation "customLayouts".
          *
-         * Per-instance locale-to-layout overrides. Resolution order is
-        **instance map -> built-in locale map -> default layout**.
-        Keys are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are
-        layout names. Accepts a plain `Record<string, string>`; the
-        control stores it as a `Map` internally.
+         * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+        `name` already resolves to. Applied in aggregation order: for rows, locales,
+        metadata and middleware the last declaration wins; long-press variants
+        accumulate per base letter.
          *
          * @since 0.1.0
-         * When called with a value of "null" or "undefined", the default value of the property will be restored.
-         *
-         * @param instanceLocaleLayouts New value for property "instanceLocaleLayouts"
+         * @param customLayout The customLayout to add; if empty, nothing is inserted
          * @returns Reference to "this" in order to allow method chaining
          */
-        setInstanceLocaleLayouts(instanceLocaleLayouts: InstanceLocaleLayoutMap): this;
-
-        // property: instanceMiddleware
+        addCustomLayout(customLayouts: CustomLayout): this;
 
         /**
-         * Gets current value of property "instanceMiddleware".
+         * Inserts a customLayout into the aggregation "customLayouts".
          *
-         * Per-instance composition middleware overrides, keyed by layout
-        name. Resolution order is **instance map -> built-in**. Use
-        this to attach a layout-specific middleware factory for a
-        custom layout, or to swap the built-in middleware for one
-        control only. Accepts a plain
-        `Record<string, () => CompositionMiddleware>`; the control
-        stores it as a `Map` internally.
+         * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+        `name` already resolves to. Applied in aggregation order: for rows, locales,
+        metadata and middleware the last declaration wins; long-press variants
+        accumulate per base letter.
          *
          * @since 0.1.0
-         *
-         * @returns Value of property "instanceMiddleware"
-         */
-        getInstanceMiddleware(): InstanceMiddlewareMap;
-
-        /**
-         * Sets a new value for property "instanceMiddleware".
-         *
-         * Per-instance composition middleware overrides, keyed by layout
-        name. Resolution order is **instance map -> built-in**. Use
-        this to attach a layout-specific middleware factory for a
-        custom layout, or to swap the built-in middleware for one
-        control only. Accepts a plain
-        `Record<string, () => CompositionMiddleware>`; the control
-        stores it as a `Map` internally.
-         *
-         * @since 0.1.0
-         * When called with a value of "null" or "undefined", the default value of the property will be restored.
-         *
-         * @param instanceMiddleware New value for property "instanceMiddleware"
+         * @param customLayout The customLayout to insert; if empty, nothing is inserted
+         * @param index The "0"-based index the customLayout should be inserted at; for
+         *              a negative value of "iIndex", the customLayout is inserted at position 0; for a value
+         *              greater than the current size of the aggregation, the customLayout is inserted at
+         *              the last position
          * @returns Reference to "this" in order to allow method chaining
          */
-        setInstanceMiddleware(instanceMiddleware: InstanceMiddlewareMap): this;
-
-        // property: instanceVariants
+        insertCustomLayout(customLayouts: CustomLayout, index: number): this;
 
         /**
-         * Gets current value of property "instanceVariants".
+         * Removes a customLayout from the aggregation "customLayouts".
          *
-         * Per-instance accent-variant table overrides, keyed by layout name
-        (or `"*"` for every layout). The entry for a layout wins, else the
-        `"*"` wildcard; either is merged onto the built-in table per base
-        letter, so it extends the defaults rather than replacing them. A base
-        letter mapped to `[]` drops that letter, and a `null` entry opts the
-        layout out entirely. Base letters must be lowercase. Effective only
-        while `accentVariants` is set. Accepts a plain
-        `Record<string, Record<string, string[]> | null>`; the control stores
-        it as a `Map` internally.
-        
-        Read by object identity: assign a new object to change the tables.
-        Mutating the object already assigned is not observed until the next
-        render triggered by something else.
+         * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+        `name` already resolves to. Applied in aggregation order: for rows, locales,
+        metadata and middleware the last declaration wins; long-press variants
+        accumulate per base letter.
          *
          * @since 0.1.0
-         *
-         * @returns Value of property "instanceVariants"
+         * @param customLayout The customLayout to remove or its index or id
+         * @returns The removed customLayout or "null"
          */
-        getInstanceVariants(): InstanceVariantMap;
+        removeCustomLayout(customLayouts: number | string | CustomLayout): CustomLayout | null;
 
         /**
-         * Sets a new value for property "instanceVariants".
+         * Removes all the controls from the aggregation "customLayouts".
+         * Additionally, it unregisters them from the hosting UIArea.
          *
-         * Per-instance accent-variant table overrides, keyed by layout name
-        (or `"*"` for every layout). The entry for a layout wins, else the
-        `"*"` wildcard; either is merged onto the built-in table per base
-        letter, so it extends the defaults rather than replacing them. A base
-        letter mapped to `[]` drops that letter, and a `null` entry opts the
-        layout out entirely. Base letters must be lowercase. Effective only
-        while `accentVariants` is set. Accepts a plain
-        `Record<string, Record<string, string[]> | null>`; the control stores
-        it as a `Map` internally.
-        
-        Read by object identity: assign a new object to change the tables.
-        Mutating the object already assigned is not observed until the next
-        render triggered by something else.
+         * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+        `name` already resolves to. Applied in aggregation order: for rows, locales,
+        metadata and middleware the last declaration wins; long-press variants
+        accumulate per base letter.
          *
          * @since 0.1.0
-         * When called with a value of "null" or "undefined", the default value of the property will be restored.
+         * @returns  An array of the removed elements (might be empty)
+         */
+        removeAllCustomLayouts(): CustomLayout[];
+
+        /**
+         * Checks for the provided "ui5.kiosk.CustomLayout" in the aggregation "customLayouts".
+         * and returns its index if found or -1 otherwise.
          *
-         * @param instanceVariants New value for property "instanceVariants"
+         * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+        `name` already resolves to. Applied in aggregation order: for rows, locales,
+        metadata and middleware the last declaration wins; long-press variants
+        accumulate per base letter.
+         *
+         * @since 0.1.0
+         * @param customLayout The customLayout whose index is looked for
+         * @returns The index of the provided control in the aggregation if found, or -1 otherwise
+         */
+        indexOfCustomLayout(customLayouts: CustomLayout): number;
+
+        /**
+         * Destroys all the customLayouts in the aggregation "customLayouts".
+         *
+         * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+        `name` already resolves to. Applied in aggregation order: for rows, locales,
+        metadata and middleware the last declaration wins; long-press variants
+        accumulate per base letter.
+         *
+         * @since 0.1.0
          * @returns Reference to "this" in order to allow method chaining
          */
-        setInstanceVariants(instanceVariants: InstanceVariantMap): this;
+        destroyCustomLayouts(): this;
+
+        /**
+         * Binds aggregation "customLayouts" to model data.
+         *
+         * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+        `name` already resolves to. Applied in aggregation order: for rows, locales,
+        metadata and middleware the last declaration wins; long-press variants
+        accumulate per base letter.
+         *
+         * @since 0.1.0
+         * See {@link sap.ui.base.ManagedObject#bindAggregation ManagedObject.bindAggregation} for a
+         * detailed description of the possible properties of "oBindingInfo".
+         * @param oBindingInfo The binding information
+         * @returns Reference to "this" in order to allow method chaining
+         */
+        bindCustomLayouts(bindingInfo: AggregationBindingInfo): this;
+
+        /**
+         * Unbinds aggregation "customLayouts" from model data.
+         *
+         * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
+        `name` already resolves to. Applied in aggregation order: for rows, locales,
+        metadata and middleware the last declaration wins; long-press variants
+        accumulate per base letter.
+         *
+         * @since 0.1.0
+         * @returns Reference to "this" in order to allow method chaining
+         */
+        unbindCustomLayouts(): this;
 
         // association: _activeTarget
 

@@ -1,3 +1,4 @@
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import FKeyController from "ui5/kiosk/internal/fkey-controller";
 import { FKeyMode } from "ui5/kiosk/library";
@@ -179,7 +180,10 @@ QUnit.test("F-key tap does NOT insert text", async (assert) => {
 });
 
 QUnit.test("F-key tap does NOT auto-release shift", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "test-qwerty-fk", instanceLayouts: { "test-qwerty-fk": qwertyFk } });
+  const kb = new KioskKeyboard({
+    layout: "test-qwerty-fk",
+    customLayouts: [new CustomLayout({ name: "test-qwerty-fk", rows: qwertyFk })],
+  });
   await placeAndWait(kb);
 
   // Activate shift
@@ -195,7 +199,10 @@ QUnit.test("F-key tap does NOT auto-release shift", async (assert) => {
 });
 
 QUnit.test("F-key tap fires keyPress with shiftKey=true when shift active", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "test-qwerty-fk", instanceLayouts: { "test-qwerty-fk": qwertyFk } });
+  const kb = new KioskKeyboard({
+    layout: "test-qwerty-fk",
+    customLayouts: [new CustomLayout({ name: "test-qwerty-fk", rows: qwertyFk })],
+  });
   await placeAndWait(kb);
 
   let shiftKey = false;
@@ -265,7 +272,7 @@ QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
   const kb = new KioskKeyboard({
     layout: "test-qwerty-fk",
     controls: [input.getId()],
-    instanceLayouts: { "test-qwerty-fk": qwertyFk },
+    customLayouts: [new CustomLayout({ name: "test-qwerty-fk", rows: qwertyFk })],
   });
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
@@ -297,7 +304,7 @@ QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (a
   const kb = new KioskKeyboard({
     layout: "test-qwerty-fk",
     controls: [input.getId()],
-    instanceLayouts: { "test-qwerty-fk": qwertyFk },
+    customLayouts: [new CustomLayout({ name: "test-qwerty-fk", rows: qwertyFk })],
   });
   kb.setFKeyMode(FKeyMode.Native);
   input.placeAt("qunit-fixture");
@@ -436,7 +443,7 @@ QUnit.test("Native fKeyMode does not dispatch unsupported custom fkey names", as
   const kb = new KioskKeyboard({
     layout: "qwerty",
     controls: [input.getId()],
-    instanceLayouts: { "test-custom-native-fkey": customLayout },
+    customLayouts: [new CustomLayout({ name: "test-custom-native-fkey", rows: customLayout })],
   });
   kb.setFKeyMode(FKeyMode.Native);
   kb.setLayout("test-custom-native-fkey");

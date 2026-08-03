@@ -1,6 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import type { KioskKeyboard$KeyPressEvent, KioskKeyboard$LayoutChangeEvent } from "ui5/kiosk/KioskKeyboard";
-import type { LayoutDefinition, LayoutInput } from "ui5/kiosk/types";
+import type { LayoutDefinition } from "ui5/kiosk/types";
 import { KeyboardType } from "ui5/kiosk/library";
 import MessageToast from "sap/m/MessageToast";
 import type { Select$ChangeEvent } from "sap/m/Select";
@@ -185,13 +186,13 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   private _hasInstanceLayout(kb: KioskKeyboard, name: string): boolean {
-    const map = kb.getInstanceLayouts();
-    return map !== null && Object.hasOwn(map, name);
+    return kb.getCustomLayouts().some((layout) => layout.getName() === name);
   }
 
-  private _addInstanceLayout(kb: KioskKeyboard, name: string, def: LayoutInput): void {
-    const current = kb.getInstanceLayouts() ?? {};
-    kb.setInstanceLayouts({ ...current, [name]: def });
+  private _addInstanceLayout(kb: KioskKeyboard, name: string, rows: LayoutDefinition): void {
+    // The aggregation appends, so registering one more layout no longer means
+    // reading the whole record back and writing a rebuilt copy of it.
+    kb.addCustomLayout(new CustomLayout({ name, rows }));
   }
 
   private _addLayoutOption(name: string): void {

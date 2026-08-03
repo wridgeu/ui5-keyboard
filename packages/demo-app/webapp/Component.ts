@@ -3,6 +3,7 @@ import Log from "sap/base/Log";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
+import { EMOJI_LAYOUT, IP_ADDRESS_LAYOUT, CURRENCY_LAYOUT, ICON_LABEL_LAYOUT } from "./layouts/custom-layouts";
 
 /**
  * @name demo.hotkeys.Component
@@ -19,6 +20,18 @@ export default class Component extends UIComponent {
 
   override init(): void {
     super.init();
+
+    // The layouts the Custom Layouts gallery declares in XML. A model is what lets
+    // `<kiosk:CustomLayout rows="{layouts>/emoji}">` carry rows without a controller.
+    this.setModel(
+      new JSONModel({
+        emoji: EMOJI_LAYOUT,
+        ipAddress: IP_ADDRESS_LAYOUT,
+        currency: CURRENCY_LAYOUT,
+        iconLabel: ICON_LABEL_LAYOUT,
+      }),
+      "layouts",
+    );
 
     this._hotkeyManager = new HotkeyManager();
     this._hotkeys = this._hotkeyManager.createGroup();

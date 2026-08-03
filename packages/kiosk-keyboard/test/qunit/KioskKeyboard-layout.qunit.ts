@@ -1,5 +1,6 @@
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import { KeyboardType } from "ui5/kiosk/library";
+import { KeyboardType, LayoutRole } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
 import Localization from "sap/base/i18n/Localization";
@@ -123,7 +124,7 @@ QUnit.test("KeyboardType 'Numeric' filter applies to overridden numeric layout t
       { value: "{enter}", type: "action" },
     ],
   ];
-  const kb = new KioskKeyboard({ instanceLayouts: { numeric: customNumeric } });
+  const kb = new KioskKeyboard({ customLayouts: [new CustomLayout({ name: "numeric", rows: customNumeric })] });
   kb.setKeyboardType(KeyboardType.Numeric);
   await placeAndWait(kb);
 
@@ -170,7 +171,7 @@ QUnit.test(
     const customSpecial: LayoutDefinition = [
       [{ value: "[" }, { value: "{layout:numeric}", label: "123" }, { value: "{layout:Base}", label: "ABC" }],
     ];
-    const kb = new KioskKeyboard({ instanceLayouts: { special: customSpecial } });
+    const kb = new KioskKeyboard({ customLayouts: [new CustomLayout({ name: "special", rows: customSpecial })] });
     kb.setKeyboardType(KeyboardType.Numeric);
     await placeAndWait(kb);
 
@@ -222,7 +223,7 @@ QUnit.test(
         { value: "{enter}", type: "action" },
       ],
     ];
-    const kb = new KioskKeyboard({ instanceLayouts: { numpad: customNumpad } });
+    const kb = new KioskKeyboard({ customLayouts: [new CustomLayout({ name: "numpad", rows: customNumpad })] });
     kb.setKeyboardType(KeyboardType.Numpad);
     await placeAndWait(kb);
 
@@ -272,7 +273,7 @@ QUnit.test(
         { value: "{enter}", type: "action" },
       ],
     ];
-    const kb = new KioskKeyboard({ instanceLayouts: { numeric: customNumeric } });
+    const kb = new KioskKeyboard({ customLayouts: [new CustomLayout({ name: "numeric", rows: customNumeric })] });
     kb.setKeyboardType(KeyboardType.Numeric);
     await placeAndWait(kb);
 
@@ -426,7 +427,10 @@ QUnit.test("Same-name {layout:X} switch repaints cleared shift state (no-op prop
   // shift/caps reset that accompanies every layout switch must still reach
   // the DOM, not leave stale shift-active styling behind.
   const selfLayout: LayoutDefinition = [[{ value: "{shift}" }, { value: "a" }, { value: "{layout:self}" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { self: selfLayout }, layout: "self" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "self", rows: selfLayout })],
+    layout: "self",
+  });
   await placeAndWait(kb);
 
   tapKey(kb, "{shift}");
@@ -536,7 +540,7 @@ QUnit.test(
         { value: "{enter}", type: "action" },
       ],
     ];
-    const kb = new KioskKeyboard({ instanceLayouts: { numpad: customNumpad } });
+    const kb = new KioskKeyboard({ customLayouts: [new CustomLayout({ name: "numpad", rows: customNumpad })] });
     kb.setKeyboardType(KeyboardType.Numpad);
     await placeAndWait(kb);
 
@@ -775,9 +779,12 @@ QUnit.test("Base layout roundtrip: qwertz-de -> numeric -> special -> base", asy
 // Per-instance layout overrides
 // ──────────────────────────────────────────────
 
-QUnit.test("instanceLayouts entry is usable by name", async (assert) => {
+QUnit.test("a customLayouts entry is usable by name", async (assert) => {
   const customLayout: LayoutDefinition = [[{ value: "x" }, { value: "y" }, { value: "z" }]];
-  const kb = new KioskKeyboard({ instanceLayouts: { "test-custom": customLayout }, layout: "test-custom" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "test-custom", rows: customLayout })],
+    layout: "test-custom",
+  });
   await placeAndWait(kb);
 
   const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
@@ -800,7 +807,7 @@ QUnit.test("Custom layout works as base layout for {layout:base} roundtrip", asy
   ];
 
   const kb = new KioskKeyboard({
-    instanceLayouts: { "test-roundtrip": customLayout },
+    customLayouts: [new CustomLayout({ name: "test-roundtrip", rows: customLayout })],
     layout: "test-roundtrip",
   });
   await placeAndWait(kb);
@@ -820,10 +827,13 @@ QUnit.test("Custom layout works as base layout for {layout:base} roundtrip", asy
   kb.destroy();
 });
 
-QUnit.test("instanceLayouts shadow built-in layouts for the controlling instance", async (assert) => {
+QUnit.test("customLayouts shadow built-in layouts for the controlling instance", async (assert) => {
   const custom: LayoutDefinition = [[{ value: "CUSTOM" }]];
 
-  const kb = new KioskKeyboard({ instanceLayouts: { qwerty: custom }, layout: "qwerty" });
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "qwerty", rows: custom })],
+    layout: "qwerty",
+  });
   await placeAndWait(kb);
 
   const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
@@ -832,14 +842,14 @@ QUnit.test("instanceLayouts shadow built-in layouts for the controlling instance
   kb.destroy();
 });
 
-QUnit.test("instanceLayouts accepts formerly forbidden map keys (Map-safe)", async (assert) => {
+QUnit.test("customLayouts accept formerly forbidden layout names (Map-safe)", async (assert) => {
   const layout: LayoutDefinition = [[{ value: "x" }]];
   for (const name of ["__proto__", "prototype", "constructor"]) {
-    const kb = new KioskKeyboard({ instanceLayouts: { [name]: layout }, layout: name });
+    const kb = new KioskKeyboard({ customLayouts: [new CustomLayout({ name, rows: layout })], layout: name });
     await placeAndWait(kb);
 
     const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-    assert.deepEqual(keys, ["x"], `Key "${name}" is accepted in instanceLayouts`);
+    assert.deepEqual(keys, ["x"], `Name "${name}" is accepted on a custom layout`);
 
     kb.destroy();
   }
@@ -899,13 +909,12 @@ QUnit.test("getLocaleLayout falls back to qwerty for unmapped locale", (assert) 
   }
 });
 
-QUnit.test("instanceLocaleLayouts extends the locale map for the controlling instance", async (assert) => {
+QUnit.test("a custom layout's locales extend the locale map for the controlling instance", async (assert) => {
   const currentLang = Localization.getLanguage();
   try {
     Localization.setLanguage("xx");
     const kb = new KioskKeyboard({
-      instanceLayouts: { "test-locale-layout": [[{ value: "x" }]] },
-      instanceLocaleLayouts: { xx: "test-locale-layout" },
+      customLayouts: [new CustomLayout({ name: "test-locale-layout", rows: [[{ value: "x" }]], locales: ["xx"] })],
     });
     await placeAndWait(kb);
 
@@ -917,7 +926,7 @@ QUnit.test("instanceLocaleLayouts extends the locale map for the controlling ins
   }
 });
 
-QUnit.test("instanceLocaleLayouts accepts formerly forbidden locale keys (Map-safe)", async (assert) => {
+QUnit.test("a custom layout's locales accept formerly forbidden prefixes (Map-safe)", async (assert) => {
   const localization = Localization as unknown as {
     getLanguageTag: () => { language: string; region?: string | null };
   };
@@ -928,7 +937,7 @@ QUnit.test("instanceLocaleLayouts accepts formerly forbidden locale keys (Map-sa
       localization.getLanguageTag = () => ({ language: locale, region: undefined });
 
       const kb = new KioskKeyboard({
-        instanceLocaleLayouts: { [locale]: "qwertz-de" },
+        customLayouts: [new CustomLayout({ name: "qwertz-de", locales: [locale] })],
       });
       await placeAndWait(kb);
 
@@ -945,7 +954,7 @@ QUnit.test("Unknown locale mapping falls back to default layout", async (assert)
   try {
     Localization.setLanguage("zz");
     const kb = new KioskKeyboard({
-      instanceLocaleLayouts: { zz: "layout-does-not-exist" },
+      customLayouts: [new CustomLayout({ name: "layout-does-not-exist", locales: ["zz"] })],
     });
     await placeAndWait(kb);
 
@@ -961,7 +970,7 @@ QUnit.test("Unknown exact locale mapping falls back to valid language prefix", a
   try {
     Localization.setLanguage("de-CH");
     const kb = new KioskKeyboard({
-      instanceLocaleLayouts: { "de-ch": "layout-does-not-exist" },
+      customLayouts: [new CustomLayout({ name: "layout-does-not-exist", locales: ["de-ch"] })],
     });
     await placeAndWait(kb);
 
@@ -1142,13 +1151,12 @@ QUnit.test("getLocaleLayout matches language prefix for regional variant", (asse
   }
 });
 
-QUnit.test("instanceLocaleLayouts exact region match takes priority over prefix", async (assert) => {
+QUnit.test("a custom layout's exact region locale takes priority over prefix", async (assert) => {
   const currentLang = Localization.getLanguage();
   try {
     Localization.setLanguage("de-AT");
     const kbAt = new KioskKeyboard({
-      instanceLayouts: { "test-de-at": [[{ value: "a" }]] },
-      instanceLocaleLayouts: { "de-at": "test-de-at" },
+      customLayouts: [new CustomLayout({ name: "test-de-at", rows: [[{ value: "a" }]], locales: ["de-at"] })],
     });
     await placeAndWait(kbAt);
     assert.strictEqual(kbAt.getLayout(), "test-de-at", "Exact de-at match wins over de prefix");
@@ -1209,12 +1217,11 @@ QUnit.test("Locale layout renders correct keys", async (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// instanceLayouts validation
+// customLayouts validation
 // ──────────────────────────────────────────────
 
-QUnit.test("instanceLayouts filters invalid entries and falls back to default", async (assert) => {
+QUnit.test("customLayouts filters invalid rows and falls back to default", async (assert) => {
   const cases: Array<[string, unknown]> = [
-    ["non-array", "not-an-array"],
     ["empty-array", []],
     ["empty-row", [[]]],
     ["missing-value", [[{ label: "x" }]]],
@@ -1223,7 +1230,7 @@ QUnit.test("instanceLayouts filters invalid entries and falls back to default", 
 
   for (const [name, def] of cases) {
     const kb = new KioskKeyboard({
-      instanceLayouts: { [name]: def as LayoutDefinition },
+      customLayouts: [new CustomLayout({ name, rows: def as LayoutDefinition })],
       layout: name,
     });
     await placeAndWait(kb);
@@ -1232,15 +1239,21 @@ QUnit.test("instanceLayouts filters invalid entries and falls back to default", 
   }
 });
 
-QUnit.test("instanceLocaleLayouts ignores non-string entries", async (assert) => {
+QUnit.test("a nameless custom layout is dropped whole, leaving the built-in locale mapping intact", async (assert) => {
   const currentLang = Localization.getLanguage();
   try {
     Localization.setLanguage("de");
+    // Nothing resolves a custom layout with no name, so its locale claim never reaches
+    // the map and `de` still resolves through the built-in mapping.
     const kb = new KioskKeyboard({
-      instanceLocaleLayouts: { de: 123 as never } as Record<string, string>,
+      customLayouts: [new CustomLayout({ locales: ["de"] })],
     });
     await placeAndWait(kb);
-    assert.strictEqual(kb.getLayout(), "qwertz-de", "Built-in locale mapping remains intact when value is non-string");
+    assert.strictEqual(
+      kb.getLayout(),
+      "qwertz-de",
+      "Built-in locale mapping remains intact when the custom layout is dropped",
+    );
     kb.destroy();
   } finally {
     Localization.setLanguage(currentLang);
@@ -1448,17 +1461,17 @@ QUnit.test("Programmatic setLayout commits in-progress composition (no leak acro
 });
 
 // ──────────────────────────────────────────────
-// Consumer-declared layout attributes (instanceLayouts descriptors)
+// Consumer-declared layout attributes (CustomLayout facets)
 // ──────────────────────────────────────────────
 
-/** An auxiliary surface a consumer registers, reachable only through instanceLayouts. */
+/** An auxiliary surface a consumer registers, reachable only through customLayouts. */
 const SYMBOL_SURFACE: LayoutDefinition = [
   [{ value: "\u00A7" }, { value: "\u00B6" }, { value: "{layout:base}", label: "ABC", type: "modifier" }],
 ];
 
 QUnit.test("a custom layout marked secondary is never tracked as the base", async (assert) => {
   const kb = new KioskKeyboard({
-    instanceLayouts: { "my-symbols": { rows: SYMBOL_SURFACE, secondary: true } },
+    customLayouts: [new CustomLayout({ name: "my-symbols", rows: SYMBOL_SURFACE, layoutRole: LayoutRole.Secondary })],
     layout: "qwertz-de",
   });
   await placeAndWait(kb);
@@ -1477,11 +1490,11 @@ QUnit.test("a custom layout marked secondary is never tracked as the base", asyn
   kb.destroy();
 });
 
-QUnit.test("without the secondary flag the same layout does become the base", async (assert) => {
+QUnit.test("without a declared role the same layout does become the base", async (assert) => {
   // The negative control for the test above: bare rows declare no attributes, so
   // the surface is read as an alphabetic layout and strands {layout:base} on itself.
   const kb = new KioskKeyboard({
-    instanceLayouts: { "my-symbols": SYMBOL_SURFACE },
+    customLayouts: [new CustomLayout({ name: "my-symbols", rows: SYMBOL_SURFACE })],
     layout: "qwertz-de",
   });
   await placeAndWait(kb);
@@ -1496,9 +1509,9 @@ QUnit.test("without the secondary flag the same layout does become the base", as
   kb.destroy();
 });
 
-QUnit.test("a descriptor shadowing a built-in keeps the attributes it does not declare", async (assert) => {
+QUnit.test("a custom layout shadowing a built-in keeps the attributes it does not declare", async (assert) => {
   const kb = new KioskKeyboard({
-    instanceLayouts: { numeric: { rows: SYMBOL_SURFACE } },
+    customLayouts: [new CustomLayout({ name: "numeric", rows: SYMBOL_SURFACE })],
     layout: "qwertz-de",
   });
   await placeAndWait(kb);
@@ -1512,9 +1525,9 @@ QUnit.test("a descriptor shadowing a built-in keeps the attributes it does not d
   kb.destroy();
 });
 
-QUnit.test("a descriptor shadowing a built-in can un-mark its secondary flag", async (assert) => {
+QUnit.test("a custom layout shadowing a built-in can un-mark its secondary role", async (assert) => {
   const kb = new KioskKeyboard({
-    instanceLayouts: { numeric: { rows: SYMBOL_SURFACE, secondary: false } },
+    customLayouts: [new CustomLayout({ name: "numeric", rows: SYMBOL_SURFACE, layoutRole: LayoutRole.Base })],
     layout: "qwertz-de",
   });
   await placeAndWait(kb);
@@ -1522,7 +1535,7 @@ QUnit.test("a descriptor shadowing a built-in can un-mark its secondary flag", a
   kb.setLayout("numeric");
   await waitForRender();
 
-  assert.strictEqual(kb.getBaseLayout(), "numeric", "a declared false overrides the built-in secondary flag");
+  assert.strictEqual(kb.getBaseLayout(), "numeric", "a declared Base role overrides the built-in secondary flag");
 
   kb.destroy();
 });

@@ -121,9 +121,11 @@ QUnit.test("variants: tables accumulate per base letter across custom layouts", 
   assert.deepEqual(f.variants!.get("qwerty"), { replace: false, table: { a: ["ą"], z: ["ź"] } }, "both letters stand");
 });
 
-QUnit.test("variants: a letter mapped to an empty list drops it from the accumulated table", (assert) => {
+QUnit.test("variants: a letter mapped to an empty list keeps its marker in the overlay", (assert) => {
+  // The overlay is still a patch: the deletion happens when it meets a real table, so
+  // dropping the marker here would lose a suppression aimed at the built-in tier.
   const f = fold({ name: "qwerty", variants: { a: ["ą"], z: ["ź"] } }, { name: "qwerty", variants: { a: [] } });
-  assert.deepEqual(f.variants!.get("qwerty")!.table, { z: ["ź"] }, "the dropped letter is gone");
+  assert.deepEqual(f.variants!.get("qwerty")!.table, { a: [], z: ["ź"] }, "the marker survives accumulation");
 });
 
 QUnit.module("custom-layout-fold - suppress");
@@ -238,7 +240,8 @@ QUnit.test("every code renders a sentence naming the twin's own surface", (asser
     "duplicate-middleware",
     "duplicate-locale",
   ];
-  assert.deepEqual([...seen].toSorted(), [...expected].toSorted(), "the fixture triggers all ten codes");
+  for (const code of expected) assert.ok(seen.has(code), `${code} is triggered by the fixture`);
+  assert.strictEqual(seen.size, expected.length, "and the fixture triggers nothing else");
   for (const d of f.diagnostics) {
     const message = describeDiagnostic(d, VOCAB);
     assert.ok(message.length > 0 && message.endsWith("."), `${d.code} renders a complete sentence`);

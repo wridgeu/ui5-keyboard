@@ -118,30 +118,30 @@ sap.ui.define(
     var qwertyLayout = KioskKeyboard.getRegisteredLayout("qwerty");
     new KioskKeyboard({
       layout: "qwerty-nav",
-      instanceLayouts: { "qwerty-nav": [navRow, ...qwertyLayout] },
+      customLayouts: [{ name: "qwerty-nav", rows: [navRow, ...qwertyLayout] }],
     }).placeAt("kb-qwerty-nav");
 
     // 14c. QWERTY + Compact Nav Rows: the 2x4 form for narrow keyboards
     new KioskKeyboard({
       layout: "qwerty-nav-compact",
-      instanceLayouts: { "qwerty-nav-compact": [...navRowCompact, ...qwertyLayout] },
+      customLayouts: [{ name: "qwerty-nav-compact", rows: [...navRowCompact, ...qwertyLayout] }],
     }).placeAt("kb-qwerty-nav-compact");
 
     // 14d/14e. QWERTY + F-key row: the single 12-key row and the 2x6 form
     new KioskKeyboard({
       layout: "qwerty-fk",
-      instanceLayouts: { "qwerty-fk": [fkeyRow, ...qwertyLayout] },
+      customLayouts: [{ name: "qwerty-fk", rows: [fkeyRow, ...qwertyLayout] }],
     }).placeAt("kb-qwerty-fk");
 
     new KioskKeyboard({
       layout: "qwerty-fk-compact",
-      instanceLayouts: { "qwerty-fk-compact": [...fkeyRowCompact, ...qwertyLayout] },
+      customLayouts: [{ name: "qwerty-fk-compact", rows: [...fkeyRowCompact, ...qwertyLayout] }],
     }).placeAt("kb-qwerty-fk-compact");
 
     // 15. Glyph stress layout
     new KioskKeyboard({
       layout: "glyph-stress",
-      instanceLayouts: { "glyph-stress": glyphStress },
+      customLayouts: [{ name: "glyph-stress", rows: glyphStress }],
     }).placeAt("kb-glyph-stress");
 
     // 20. Height-constrained container
@@ -212,7 +212,7 @@ sap.ui.define(
     ];
     new KioskKeyboard({
       layout: "indic-stress",
-      instanceLayouts: { "indic-stress": indicStress },
+      customLayouts: [{ name: "indic-stress", rows: indicStress }],
     }).placeAt("kb-indic-stress");
 
     // 35. Spanish (QWERTY-ES)
