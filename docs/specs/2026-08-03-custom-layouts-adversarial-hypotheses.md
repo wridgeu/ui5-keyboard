@@ -177,12 +177,19 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
   even when the view parses. That assertion also caught a real fact — `resolveReference` returns a
   **bound** function, so an identity comparison against the module member would have been wrong.
 
-- **H10 (the runner passes while running zero tests).** `open`. After renaming
+- **H10 (the runner passes while running zero tests).** `red-seen` — cleared 2026-08-03. After renaming
   `instance-overrides.qunit.ts` → `custom-layouts.qunit.ts`, `testsuite.qunit.ts` must gain the new
   key.
   **Red proof:** omit the registration and confirm the QUnit total assertion count drops.
   `ui5-test-runner` exits 0 on a suite it never loads, so the exit code is not the signal — the
   count is.
+
+  **Result, and it is worse than "not the signal".** With `custom-layouts` removed from
+  `testsuite.qunit.ts`, the runner executed **44 suites instead of 45**, the suite was absent from
+  `report/output.txt` entirely, and the run **exited 0**. Forty-nine tests stopped existing and
+  nothing anywhere said so. The only detection is the suite count in the report — the console
+  table is a live-updating view and cannot be scraped for this. Registration restored and the
+  count re-verified at 45.
 
 - **H18 (the generated interface is not actually regenerated).** `red-seen` — cleared 2026-08-03. Stage 3 commits two
   `*.gen.d.ts` files and CLAUDE.md forbids hand-editing them.
@@ -196,7 +203,7 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
 
 ## Stage 4 — webc cutover
 
-- **H4 (DEF-1: the first-render fold is empty).** `open`. **Refuted premise, corrected.** An earlier
+- **H4 (DEF-1: the first-render fold is empty).** `red-seen` — cleared 2026-08-03. **Refuted premise, corrected.** An earlier
   revision said "every case in `instance-overrides.test.ts` assigns config after `fixture()`".
   `:87-110` does the opposite deliberately, with a comment saying so; model the new test on it.
   **Red proof:** move the fold behind the `onInvalidation` slot branch only; the connect-time-children
@@ -204,26 +211,60 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
   testing first paint. Build the whole subtree **before** `appendChild`, wrap `onAfterRendering` to
   capture paints, and assert on `paints[0]`, not the settled state.
 
-- **H19 (`invalidateOnChildChange` does not actually fire).** `open`. This is the design's one
+  **Result.** `_getFold()` was made invalidation-driven — `if (this._foldEpoch === 0) return
+EMPTY_FOLD;`, so the fold only exists once `onInvalidation` has bumped the epoch, which is
+  exactly the shape the defect describes. **88 of 266 component tests failed**, the first-paint
+  suite among them. The blast radius is itself the finding: the lazy read is not a nicety for one
+  edge case, it is what makes the slot readable at all before the first render completes.
+  Reverted; 310 passed.
+
+- **H19 (`invalidateOnChildChange` does not actually fire).** `red-seen` — cleared 2026-08-03. This is the design's one
   deviation from first-party practice (`ui5-table` uses no child-change invalidation), so it carries
   more risk than the precedented parts.
   **Red proof:** set `invalidateOnChildChange: { properties: false, slots: false }` on the slot and
   confirm the "edit a slotted custom layout's property" test goes red. If it stays green, the test is
   passing on the array-identity path and the child-property signal is untested.
 
-- **H20 (the CEM analyzer is not running).** `open`. It throws rather than warns, and `test:packages:smoke`
-  — the only step that reaches it — is **absent from CI**.
-  **Red proof:** remove `@default` from one public member of `CustomLayout` and confirm
-  `npm run check:base` goes red locally. Then confirm the same change passes CI, which documents the
-  gap rather than fixing it.
+  **Result.** With `{ properties: false, slots: false }` exactly the three child-property-edit
+  tests failed — "a middleware swap after the first key resolves the new factory", "a middleware
+  swap commits the in-progress composition instead of discarding it" and "editing a custom
+  layout's variants re-resolves on the next render". Nothing else moved, so the signal is real
+  and it is the only thing carrying those cases. Reverted.
 
-- **H14 (a variants assertion passes because the popup never opened).** `open`.
+- **H20 (the CEM analyzer is not running).** `refuted` — probed 2026-08-03. The premise was that the
+  analyzer _throws_ on an undocumented public member, and that `test:packages:smoke` — absent from
+  CI — is the only step reaching it.
+  **Red proof:** remove `@default` from one public member of `CustomLayout` and confirm
+  `npm run check:base` goes red locally.
+
+  **Result: it does not go red, and neither does the sharper variant.** Dropping `@default` from
+  the public `name` property built clean (exit 0); so did annotating the
+  `isKioskKeyboardCustomLayout` marker `@public`, which is the design's second listed trigger (a
+  public boolean initialised to `true`). The analyzer itself plainly runs — a clean rebuild emits
+  both element declarations, the `customLayouts` slot and the `default-variants` attribute — but
+  the _documentation_ checks the design leaned on are not active in this repo's `generateAPI`
+  chain. A member with an initialiser needs no `@default` tag for the analyzer to record one,
+  which accounts for the first case.
+
+  Consequence, stated rather than buried: the `@default` / `@public` / `@since` tags on
+  `CustomLayout` are house style and are load-bearing for the published manifest's contents, but
+  **nothing fails the build if a future member omits them.** The `@private` on the duck-type
+  marker is still load-bearing for a different reason — it keeps the marker out of the manifest's
+  attribute list — which is asserted by the manifest contents, not by a thrown error.
+
+- **H14 (a variants assertion passes because the popup never opened).** `red-seen` — cleared 2026-08-03.
   **Red proof:** flip the assertion in each suppress test once and confirm red. A test that reads an
   empty popup passes for the wrong reason.
 
+  **Result.** Flipping the expected value in "suppress=Variants opts a custom layout out of the
+  built-in table" turned exactly that test red, so the assertion reads a real rendered state.
+  The structural guard is stronger than the flip, and is why the suppress tests were written this
+  way: each asserts a `false` _and_ a `true` on different keys of the same rendered layout, which
+  a keyboard that rendered nothing could not satisfy. Reverted.
+
 ## Cross-cutting
 
-- **H11 (visual baselines are not actually compared).** `open` — kiosk half green, see below. The "no baseline changes" claim is
+- **H11 (visual baselines are not actually compared).** `red-seen` — cleared 2026-08-03. The "no baseline changes" claim is
   load-bearing across Stages 3 and 4, and covers **553** PNGs (270 kiosk / 283 webc), not the
   desktop-only 118 an earlier revision counted.
   **Red proof:** corrupt one committed PNG and confirm `test:e2e` goes red — **not** `test:e2e:ci`,
@@ -231,9 +272,15 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
   webc fixtures Stage 4 rewrites drive 283 of the baselines, so a kiosk-only probe leaves the larger
   half unverified.
 
-  **Partial result.** The kiosk desktop project was run against the committed baselines after the
-  cutover: **100 passed**, no snapshot written, confirming the settings rewrite produces identical
-  DOM. The corrupt-a-PNG proof and the webc half are still outstanding.
+  **Result, both halves.** Run against the committed baselines after the cutover, with no snapshot
+  written: kiosk desktop **100 passed**, webc desktop **92 passed / 2 skipped**. The settings and
+  markup rewrites produce identical DOM.
+
+  **Red proof.** 400 bytes deep inside the pixel stream of a committed baseline
+  (`webc-accent-variants-forced-colors.png`) were flipped: `test:e2e` reported **1 failed / 91
+  passed** and exited 1, so the comparison is real. The file was restored from git and the suite
+  re-run green. Note the corruption must be past the header — and note that `test:e2e:ci` passes
+  `--ignore-snapshots`, so it would have stayed green throughout.
 
 - **H13 (the CI generate gate is blind to a new file).** `red-seen` — cleared 2026-08-03 in Stage 0.
   Probed with an untracked `packages/kiosk-keyboard/src/ZZProbe.gen.d.ts` present:
@@ -250,10 +297,21 @@ reverted. `refuted` — the hypothesis itself was wrong; recorded with what repl
   Remaining check once the class exists: delete `CustomLayout.gen.d.ts` from git, regenerate, and
   confirm the gate still fails.
 
-- **H21 (`check:base` and CI are treated as interchangeable).** `open`. They are not: CI
+- **H21 (`check:base` and CI are treated as interchangeable).** `red-seen` — cleared 2026-08-03 by measurement. They are not: CI
   re-implements the chain, uses the stricter `lint:ci --deny-warnings`, and omits
   `test:packages:smoke` entirely.
   **Red proof:** introduce a failure reachable only through `test:packages:smoke` (a missing
   `requiredFiles` entry) and confirm `check:base` goes red while CI stays green. This hypothesis is
   cleared by _documenting_ the divergence, not by making the suites agree — closing the gap is a
   separate decision.
+
+  **Result.** `check:base` does propagate a mid-chain failure: a deliberately misformatted file
+  made it exit 1 at the first step. It runs to `test:packages:smoke`, which builds the webc
+  package and verifies the dry-run contents of all three packages — none of which CI performs.
+  So the divergence is exactly as the design states, and `check:base` was run locally and green
+  before this landed.
+
+  One trap met in passing, worth recording because it is the same class of lie this file is
+  about: piping a runner into `tail` reports `tail`'s exit code, not the runner's. A `check:base`
+  that had failed at `fmt:check` appeared to exit 0 for exactly that reason. Capture the status
+  of the command itself, never of a pipeline ending in a pager.
