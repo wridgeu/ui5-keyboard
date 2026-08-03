@@ -7,6 +7,28 @@ Issue: [#216](https://github.com/wridgeu/ui5-keyboard/issues/216) — Extension 
 > citation from the pinned sources, but the spec as a whole has not been through the refutation
 > pass that CLAUDE.md §5 requires. Treat it as the plan of record, not as cleared.
 
+## Start here
+
+Nothing in this branch is code. It is one design document; `main` carries the only shipped change.
+
+**Already on `main`, do not redo:** `fix(keyboard): keep a composition alive across an unrelated middleware swap` (5a5f2c2f). That was a real data-loss bug — `reset()` erased a half-typed Hangul syllable out of the input on any `instanceMiddleware` reassignment, including one that never touched the active layout's entry. It is independent of this design. Its setter-local comparison is **superseded, not contradicted**, by the key-press-time factory check in section A.7; see "Reconciling with the Stage 0 fix" at the end.
+
+**Do these in order:**
+
+1. **Answer the five open decisions** (last section). Two of them — the property/class naming and whether `*` keeps its reserved name — get more expensive to reverse after Stage 3, and the spec says exactly what each reversal costs.
+2. **Run the refutation pass.** Two adversarial critics were commissioned against this spec and never ran. In the earlier round the critics were the highest-value step of the whole exercise: they killed a "no call site" claim that was false (`secondary: false` is tested in both twins) and caught a fatal first-render bug. Do not start Stage 4 on an uncleared spec. The two critic prompts are preserved in the workflow script at `.claude/.../workflows/scripts/issue-216-harden-aggregation-design-wf_33276a06-03e.js`; re-invoking `Workflow` with that `scriptPath` plus `resumeFromRunId: "wf_33276a06-03e"` replays the six completed agents from cache and runs only the two that failed.
+3. **Then Stages 1–4** as laid out in Migration.
+
+**Traps, each of which will cost an afternoon if hit cold:**
+
+- `packages/kiosk-keyboard/test/qunit/instance-property-types.tsd.ts` **will go red, and that is the file doing its job.** Its `@ts-expect-error` directives are the assertions; they fail the build when the line they guard stops being an error, which is exactly what renaming the properties does. Rewrite it against the new surface. Do not delete it and do not "fix the polarity".
+- A **second generated interface** (`LayoutPreset.gen.d.ts`) appears the first time `npm run generate` runs. `.github/workflows/ci.yml:59` is a path literal naming only `KioskKeyboard.gen.d.ts`, so CI will not notice it drifting. Widen that glob in the same commit that adds the class. Never hand-edit either file.
+- **Stage 4 cannot be split.** The twin-drift check and the `generate && git diff --exit-code` gate both fail on a partial landing, so the property flip, the regenerated artefacts, the test rewrites, the docs and the demo go in one commit. Stages 1–3 are each independently mergeable and green; Stage 4 is not divisible.
+- The webc twin's **first render** is the one place this design has previously been wrong. `_suppressInvalidation` is true from `UI5Element.js:121` until `:681`, so slot content present at connect time never fires `onInvalidation`. The lazy fold is what makes this safe — keep it lazy; an eager fold driven by mutators reintroduces DEF-1 through DEF-4 together.
+- Generic UI5 guidance will tell you to attach the new enums to the library object via `ObjectPath`. **It is wrong for this repo** — see "Guidance that does NOT apply here".
+
+**Verification budget.** CLAUDE.md §7 applies: the adversarial-hypotheses file is part of Stage 3, and each hypothesis must be _seen_ red, not argued. The one the spec singles out is that the locale facet is currently covered vacuously — `instanceLocaleLayouts` is effectively construction-time-only today, so delete the `locales` branch from the reverse-index builder and confirm a locale test actually fails before trusting that suite.
+
 ## Decisions taken by the repo owner
 
 - **D1.** XML declarability is a requirement for the UI5 twin: a Fiori developer must configure a complete layout extension in an XML view without touching a controller. It is explicitly _not_ a requirement for the web component, which instead uses the closest idiom its own framework offers.
