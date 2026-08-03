@@ -443,7 +443,7 @@ export interface ICustomLayout extends HTMLElement {
 export const isCustomLayout = createInstanceChecker<ICustomLayout>("isKioskKeyboardCustomLayout");
 ```
 
-`locales` and `suppress` are token **strings**, not `type: Array`: `UI5ElementMetadata.hasAttribute` excludes only `Object` (`UI5ElementMetadata.js:66-68`) and `defaultConverter.toAttribute` JSON-stringifies arrays (`UI5Element.js:49-56`), so a public `type: Array` property reflects a live JSON attribute — the trap already documented at `docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md:73`. Both separators are accepted so a `suppress="Variants,Middleware"` copied out of an XML view works verbatim; the reverse throws loudly on kiosk (`createArrayType.parseValue` splits only on `","`, `DataType.js:389-395`, and an unknown member fails `isValid` at `ManagedObject.js:1635-1638` — the same behaviour `mobileKeyboard="Bogus"` already has).
+`locales` and `suppress` are token **strings**, not `type: Array`: `UI5ElementMetadata.hasAttribute` excludes only `Object` (`UI5ElementMetadata.js:64-67`) and `defaultConverter.toAttribute` JSON-stringifies arrays (`UI5Element.js:49-56`), so a public `type: Array` property reflects a live JSON attribute — the trap already documented at `docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md:73`. Both separators are accepted so a `suppress="Variants,Middleware"` copied out of an XML view works verbatim; the reverse throws loudly on kiosk (`createArrayType.parseValue` splits only on `","`, `DataType.js:389-396`, and an unknown member fails `isValid` at `ManagedObject.js:1635-1638` — the same behaviour `mobileKeyboard="Bogus"` already has).
 
 **Every public member carries `@default`, `@public` and `@since`, and the class carries `@class` and `@extends`, because the CEM analyzer throws without them.** `displayDocumentationErrors()` (`node_modules/@ui5/webcomponents-tools/lib/cem/utils.mjs:385-399`) throws `Found N errors in the description of the public API.` on: a public field with no `default` and no `@default` tag (`custom-elements-manifest.config.mjs:279-281`); a public boolean field initialised to `true` (`:245-247`); and a class extending something with no `@extends` tag (`:143`). An earlier revision's sketch tripped all three — three optional properties with no initialiser, the `readonly isKioskKeyboardCustomLayout = true` marker, and a class doc-block with neither tag. The shipped house form is `packages/kiosk-keyboard-webc/src/KioskKeyboard.ts:532-537`; every public member in that file already carries all three tags. The marker is annotated `@private`, which takes it out of the public-API check entirely and, per `:196`/`:241`, also keeps it from becoming a phantom `is-kiosk-keyboard-custom-layout` attribute.
 
@@ -472,7 +472,7 @@ import { isCustomLayout, type ICustomLayout } from "./CustomLayout.js";
   customLayouts!: Slot<ICustomLayout>;
 ```
 
-`slot-strict.js` is present in the installed 2.22.0 tree (verified by listing `node_modules/@ui5/webcomponents-base/dist/decorators/`) and must be imported under the local identifier `slot` — the CEM analyzer detects slots by `findDecorator(member, "slot")` (`custom-elements-manifest.config.mjs:197,212`), which is why upstream writes `import { slotStrict as slot }` (`Table.js:9`). Both keys of `SlotInvalidation` are required (`UI5ElementMetadata.d.ts:3-6`); `{ properties: true }` alone does not compile. `individualSlots` is **not** set — nothing renders into an individual slot, and `_assignIndividualSlotsToChildren` (`UI5Element.js:720-727`) would stamp `slot="customLayouts-1"` onto React/Vue-managed light DOM for no benefit. `KioskKeyboardTemplate.tsx` is unchanged.
+`slot-strict.js` is present in the installed 2.22.0 tree (verified by listing `node_modules/@ui5/webcomponents-base/dist/decorators/`) and must be imported under the local identifier `slot` — the CEM analyzer detects slots by `findDecorator(member, "slot")` (`custom-elements-manifest.config.mjs:197,212`), which is why upstream writes `import { slotStrict as slot }` (`Table.js:9`). Both keys of `SlotInvalidation` are required (`UI5ElementMetadata.d.ts:2-5`); `{ properties: true }` alone does not compile. `individualSlots` is **not** set — nothing renders into an individual slot, and `_assignIndividualSlotsToChildren` (`UI5Element.js:720-727`) would stamp `slot="customLayouts-1"` onto React/Vue-managed light DOM for no benefit. `KioskKeyboardTemplate.tsx` is unchanged.
 
 `KioskKeyboard.ts` **value-imports** `isCustomLayout` from `./CustomLayout.js`. That is load-bearing, not stylistic: `customElements.define` runs synchronously inside `UI5Element.define()` (`:1121-1125`), so the child tag is always defined by the time a `<kiosk-keyboard>` connects and `_processChildren` never enters the `Promise.race([whenDefined, setTimeout(1000)])` at `UI5Element.js:369-379` (measured: 1004 ms to first paint for an undefined child tag).
 
@@ -1138,7 +1138,7 @@ Every field at `KioskKeyboard.ts:149-173` already follows this form. The one exc
 ```ts
   /**
    * A property write inside a parented custom layout reaches this control as an invalidation
-   * naming that element (ManagedObject.js:1509 -> :2623 -> Control.js:348). Dropping the
+   * naming that element (ManagedObject.js:1511 -> :2623 -> Control.js:348). Dropping the
    * cache is the entire reaction; the fold is rebuilt on the next read.
    */
   override invalidate(oOrigin?: ManagedObject): void {
@@ -1147,7 +1147,7 @@ Every field at `KioskKeyboard.ts:149-173` already follows this form. The one exc
   }
 ```
 
-The flag is dropped **before** `super`, because `Control.prototype.invalidate` returns early during `_bOnBeforeRenderingPhase` (`Control.js:352-354`). `oOrigin` is a real, typed parameter on `Control` (`Control.js:348`; `@openui5/types` `sap.ui.core.d.ts:22029`) — DEF-4's "mis-states the base signature" complaint applies only to the Element-level zero-arg form at `:13330`, which this never touches. `invalidate` is a hand-written prototype method, not a generated accessor, so `super.invalidate(oOrigin)` is safe from the DEF-2 mechanism. `instanceof` is cycle-free: `KioskKeyboard.ts` already value-imports `CustomLayout` for `defaultClass`, and `CustomLayout.ts` imports nothing from `KioskKeyboard.ts`. Subclassed custom layouts (the "ship a custom layout as a named unit" pattern) satisfy it.
+The flag is dropped **before** `super`, because `Control.prototype.invalidate` returns early during `_bOnBeforeRenderingPhase` (`Control.js:353-355`). `oOrigin` is a real, typed parameter on `Control` (`Control.js:348`; `@openui5/types` `sap.ui.core.d.ts:22029`) — DEF-4's "mis-states the base signature" complaint applies only to the Element-level zero-arg form at `:13330`, which this never touches. `invalidate` is a hand-written prototype method, not a generated accessor, so `super.invalidate(oOrigin)` is safe from the DEF-2 mechanism. `instanceof` is cycle-free: `KioskKeyboard.ts` already value-imports `CustomLayout` for `defaultClass`, and `CustomLayout.ts` imports nothing from `KioskKeyboard.ts`. Subclassed custom layouts (the "ship a custom layout as a named unit" pattern) satisfy it.
 
 `ManagedObjectObserver` was considered and is unusable: `@private @ui5-restricted sap.ui.model.base` (`ManagedObjectObserver.js:111-114`) and typed as `undefined` in `@openui5/types` (`sap.ui.core.d.ts:88124`).
 
@@ -1157,7 +1157,7 @@ The flag is dropped **before** `super`, because `Control.prototype.invalidate` r
 
 Under the lazy fold the kiosk twin overrides **zero** aggregation mutators, so `super.addCustomLayout` is never written. `ManagedObjectMetadata.js:1782-1794` installs every accessor through `function add(name, fn, info) { if (!proto[name]) { ... } }`, and `generateAccessors()` runs from the metadata constructor (`:912`) on first `getMetadata()` — long after a TS class body populated the prototype. A TS method of the same name permanently blocks the generated one and `super.addX` resolves to `undefined`. The repo already lives with this at `KioskKeyboard.ts:1141` (`return this.setProperty("instanceLayouts", value) as this;`, never `super.setInstanceLayouts`).
 
-For the record only — **this code does not ship** — the correct form if an override ever becomes unavoidable is the generic low-level API, transcribed from `Aggregation.prototype.generate` (`ManagedObjectMetadata.js:1811-1815`):
+For the record only — **this code does not ship** — the correct form if an override ever becomes unavoidable is the generic low-level API, transcribed from `Aggregation.prototype.generate` (`ManagedObjectMetadata.js:332`):
 
 ```ts
 addCustomLayout(p: CustomLayout): this { this.addAggregation("customLayouts", p); return this; }
@@ -1216,7 +1216,7 @@ The ordering constraint the semantics cluster hands over is therefore satisfied 
 
 ### A.6 Read sites
 
-`_performLayoutSwitch` (`:1071`) → `this._getFold().layouts`; `_resolvedLayoutName` (`:1896`); `_getLayoutLang` (`:1906`) → `.layoutMeta`; `_getResolvedLayout` (`:1912`, `:1929`) → `.layouts` / `resolveVariantTable(name, fold.variants, fold.defaultVariants)`; `_tryCompositionMiddleware` (`:2274`) → `.middleware`; `_warnDisarmedVariants` (`:1937-1945`) → `fold.variants !== undefined || fold.defaultVariants !== undefined`. The public statics (`KioskKeyboard.isSecondaryLayout` `:643`, `.getLocaleLayout` `:735`, `.getRegisteredLayout` `:748`) pass no instance tier and are unchanged.
+`_performLayoutSwitch` (`:1071`) → `this._getFold().layouts`; `_resolvedLayoutName` (`:1908`); `_getLayoutLang` (`:1918`) → `.layoutMeta`; `_getResolvedLayout` (`:1924`, `:1941`) → `.layouts` / `resolveVariantTable(name, fold.variants, this.getDefaultVariants())`; `_tryCompositionMiddleware` (`:2286`) → `.middleware`; `_warnDisarmedVariants` (`:1949-1957`) → `fold.variants !== undefined || this.getDefaultVariants() !== null`. The public statics (`KioskKeyboard.isSecondaryLayout` `:643`, `.getLocaleLayout` `:735`, `.getRegisteredLayout` `:748`) pass no instance tier and are unchanged.
 
 ### A.7 IME safety — an invariant, not a rule scattered across setters
 
@@ -1233,9 +1233,9 @@ The ordering constraint the semantics cluster hands over is therefore satisfied 
   }
 ```
 
-`_endComposition` (`:1118-1123`) already commits. Both fields start `null`, so the first key on `ko-hangul` takes the change branch with a no-op `_endComposition`. Null `_middlewareFactory` alongside every existing `this._middleware = null` site.
+`_endComposition` (`:1119-1124`) already commits. Both fields start `null`, so the first key on `ko-hangul` takes the change branch with a no-op `_endComposition`. Null `_middlewareFactory` alongside every existing `this._middleware = null` site.
 
-**The invariant:** the only code that can end a composition is (a) `_applyLayout` on a real layout switch (`:1109`), (b) a target/keyboardType switch (`:1343-1345`), (c) this factory-identity check at the next composition-affecting key. Nothing runs from `invalidate`, from a setter, or from the fold. `custom layout.setKeycapLang("pl")` nulls a cache and returns; a half-typed Hangul syllable is untouched.
+**The invariant:** the only code that can end a composition is (a) `_applyLayout` on a real layout switch (`:1106`), (b) a target switch (`:1410`), (c) a keyboardType switch (`:1510`), (d) the public `reset()` (`:1352-1358`), which deliberately **discards** rather than commits, and (e) this factory-identity check at the next composition-affecting key. An earlier revision listed only three paths and cited `:1343-1345`, which is inside `reset()` rather than at either switch. Nothing runs from `invalidate`, from a setter, or from the fold. `customLayout.setKeycapLang("pl")` nulls a cache and returns; a half-typed Hangul syllable is untouched.
 
 ### A.8 Cloning
 
@@ -1247,7 +1247,7 @@ The ordering constraint the semantics cluster hands over is therefore satisfied 
 
 ### A.10 One exotic hazard the aggregation newly exposes
 
-`BindingInfo.extract` treats any object with `oValue.path != undefined || oValue.parts` as a binding info (`BindingInfo.js:184`), and `applySettings`'s PROPERTY branch calls `extractBindingInfo` (`ManagedObject.js:1330-1336`). Today the exposed object is the outer `{layoutName: table}` map, so only a _layout named_ `path` collides; as a top-level `CustomLayout#variants` the table itself is inspected, so a variant table with a base letter `path` or `parts` is mis-read. `rows` is an array and is unaffected. Document the `ui5object: true` escape hatch (`BindingInfo.js:181-183`) in the `variants` doc-block.
+`BindingInfo.extract` treats any object with `oValue.path != undefined || oValue.parts` as a binding info (`BindingInfo.js:185`), and `applySettings`'s PROPERTY branch calls `extractBindingInfo` (`ManagedObject.js:1330-1336`). Today the exposed object is the outer `{layoutName: table}` map, so only a _layout named_ `path` collides; as a top-level `CustomLayout#variants` the table itself is inspected, so a variant table with a base letter `path` or `parts` is mis-read. `rows` is an array and is unaffected. Document the `ui5object: true` escape hatch (`BindingInfo.js:181-184`) in the `variants` doc-block.
 
 ---
 
@@ -1318,9 +1318,9 @@ const sameElements = (a: readonly unknown[], b: readonly unknown[]): boolean =>
   }
 ```
 
-`invalidateOnChildChange: { properties: true, slots: false }` — both keys are required by `SlotInvalidation` (`UI5ElementMetadata.d.ts:3-6`); `{ properties: true }` alone does not compile (`TS2322: Property 'slots' is missing`). The listener is attached only `if (instanceOfUI5Element(child) && slotData.invalidateOnChildChange)` (`UI5Element.js:385-388`), which is why the child **must** extend `UI5Element`.
+`invalidateOnChildChange: { properties: true, slots: false }` — both keys are required by `SlotInvalidation` (`UI5ElementMetadata.d.ts:2-5`); `{ properties: true }` alone does not compile (`TS2322: Property 'slots' is missing`). The listener is attached only `if (instanceOfUI5Element(child) && slotData.invalidateOnChildChange)` (`UI5Element.js:385-388`), which is why the child **must** extend `UI5Element`.
 
-`managedSlots` is unavoidable and is newly incurred: both `slot-strict.js:50` and the deprecated `slot.js:51` set `ctor.metadata.managedSlots = true`, and without it `getInitialState` never seeds `_state` (`UI5ElementMetadata.js:17-26`), `_generateAccessors` never defines the accessor (`UI5Element.js:1014-1017`) and `connectedCallback` never calls `_processChildren` (`:209-215`). Measured cost (jsdom, warm, 2.22.0): 0.271 ms `appendChild`→first `onBeforeRendering` with zero children, 1.017 ms with one defined child. The real change is that first render stops being synchronous inside `appendChild`, not latency.
+`managedSlots` is unavoidable and is newly incurred: both `slot-strict.js:50` and the deprecated `slot.js:51` set `ctor.metadata.managedSlots = true`, and without it `getInitialState` never seeds `_state` (`UI5ElementMetadata.js:17-26`), `_generateAccessors` never defines the accessor (`UI5Element.js:1017-1021`) and `connectedCallback` never calls `_processChildren` (`:209-215`). Measured cost (jsdom, warm, 2.22.0): 0.271 ms `appendChild`→first `onBeforeRendering` with zero children, 1.017 ms with one defined child. The real change is that first render stops being synchronous inside `appendChild`, not latency.
 
 ### B.2 DEF-3 and DEF-4 have no webc analogue
 
@@ -1346,7 +1346,7 @@ Delete the `instanceMiddleware` `onInvalidation` branch at `KioskKeyboard.ts:101
   }
 ```
 
-**Picked the kiosk shape over the webc-lifecycle cluster's `_syncMiddlewareToFold()` in `onInvalidation`.** Deciding reason: symmetry across the twins for a behaviour that lives in the hand-synced host tier and would otherwise silently diverge, plus it never commits a preedit from inside an invalidation or a render pass. Null `_middlewareFactory` alongside the three existing `this._middleware = null` sites (`:907`, `:983`, `:1787`).
+**Picked the kiosk shape over the webc-lifecycle cluster's `_syncMiddlewareToFold()` in `onInvalidation`.** Deciding reason: symmetry across the twins for a behaviour that lives in the hand-synced host tier and would otherwise silently diverge, plus it never commits a preedit from inside an invalidation or a render pass. Null `_middlewareFactory` alongside every existing `this._middleware = null` site. There are **six** at HEAD (`:685`, `:908`, `:983`, `:1035`, `:1175`, `:1797`), not the three an earlier revision listed, and five survive the Stage 4 deletion of the `instanceMiddleware` branch at `:1029-1037`. Note `:907` is `this._middleware.reset();` — the assignment is `:908`.
 
 ### B.4 Rendering, cloning, destroy
 
@@ -1414,9 +1414,9 @@ Import graph, verified framework-free — the exact list is in semantics §1. On
 
 ### Host tier
 
-`packages/kiosk-keyboard/src/KioskKeyboard.ts` — delete the four property blocks (`:387-460`), the four setters (`:1131-1171`), `_readInstanceLayouts` (`:1183-1205`), `_readLayoutInput` (`:1215-1225`), `_toStringMap` (`:1238-1248`), `_toMiddlewareMap` (`:1250-1260`), `_toVariantMap` (`:1262-1280`), `_isValidLayoutDefinition`, `_isValidVariantTable`, the five cache fields (`:158-167`), the five `init()` resets (`:873-877`), and the four now-orphaned imports. Add the `customLayouts` aggregation, `_fold`/`_foldChildren`/`_reportedDiagnostics`/`_middlewareFactory`, `_getFold`/`_sameChildren`/`_reportDiagnostics`, the `invalidate` override, the two-phase `applySettings`. Rewrite the six read sites and the JSDoc examples at `:185, 299, 628-629, 668, 676, 726, 742`.
+`packages/kiosk-keyboard/src/KioskKeyboard.ts` — delete the four property blocks (`:387-460`), the four setters (`:1131-1183`), `_readInstanceLayouts` (`:1195-1217`), `_readLayoutInput` (`:1227-1237`), `_toStringMap` (`:1250-1260`), `_toMiddlewareMap` (`:1262-1272`), `_toVariantMap` (`:1274-1292`), `_isValidLayoutDefinition`, `_isValidVariantTable`, the five cache fields (`:158-167`), the five `init()` resets (`:873-877`), and the four now-orphaned imports. Add the `customLayouts` aggregation, `_fold`/`_foldChildren`/`_reportedDiagnostics`/`_middlewareFactory`, `_getFold`/`_sameChildren`/`_reportDiagnostics`, the `invalidate` override, the two-phase `applySettings`. Rewrite the six read sites and the JSDoc examples at `:185, 299, 628-629, 668, 676, 726, 742`.
 
-`packages/kiosk-keyboard-webc/src/KioskKeyboard.ts` — delete the four `@property({type: Object})` blocks (`:514-592`), the `MemoMapView` block (`:1290-1332`) and its import (`:39`), `_readLayoutInput` (`:1334-1352`), the `instanceMiddleware` `onInvalidation` branch (`:1019-1027`). Add the `@slot`, the lazy fold, `_reportDiagnostics`, `_ensureMiddleware`, the `customLayouts` `onInvalidation` branch, and the **missing registry check on the `layout` property** at `:962-965` (Stage 0). Rewrite reads at `:1218-1219, 1239, 1251, 1255, 1269, 1658, 1774, 1795` and JSDoc at `:272, 278, 387, 501, 634`.
+`packages/kiosk-keyboard-webc/src/KioskKeyboard.ts` — delete the four `@property({type: Object})` blocks (`:514-592`), the `MemoMapView` block (`:1300-1342`) and its import (`:39`), `_readLayoutInput` (`:1344-1362`), the `instanceMiddleware` `onInvalidation` branch (`:1029-1037` — note it **commits** at HEAD, since `5a5f2c2f`; an earlier revision described it as unconditionally `reset()`ing). Add the `@slot`, the lazy fold, `_reportDiagnostics`, `_ensureMiddleware`, the `customLayouts` `onInvalidation` branch, the `defaultVariants` property, and the **missing registry check on the `layout` property** at `:962-965` (Stage 0). Rewrite reads at `:1228-1229, 1249, 1261, 1265, 1279, 1668, 1784, 1805` and JSDoc at `:272, 278, 387, 501, 634`.
 
 `packages/kiosk-keyboard/src/library.ts` — see surface §1.
 Both `types.ts` — delete `LayoutSpec` / `LayoutInput`, add `CustomLayoutSpec`; webc `types.ts` additionally houses `LayoutRole` / `LayoutFacet`.
@@ -1557,13 +1557,13 @@ Today's comment explains that the four record types are coarse-validated because
 
 ## Stage 0 — HEAD bug fixes. No API change, no design commitment.
 
-Independently valuable and independently revertable.
+Independently valuable and independently revertable. **Three of the original nine items already landed in `5a5f2c2f`** and are struck rather than renumbered, so a reader comparing against an earlier revision can see what happened:
 
-1. **Data-loss fix, failing test first (CLAUDE.md §3).** kiosk `KioskKeyboard.ts:1155-1161` and webc `:1019-1027` unconditionally `reset()` the composition on any identity change to `instanceMiddleware`; `types.ts:247` documents `reset()` as clearing state _without committing_. Fix on the existing property: cache the factory, act only when the factory in effect for the **resolved** layout actually changed, and commit (kiosk `_endComposition()` `:1118-1123`; webc the `:981-984` commit+null path). Test: type a partial Hangul syllable, swap the middleware, assert the syllable reached the target.
-2. Delete the false `applySettings` doc comment, `KioskKeyboard.ts:796-799` (`ManagedObject.js:534` calls `applySettings` unconditionally).
-3. Fix `packages/kiosk-keyboard/README.md:344`'s stale `object | null` claim (falsified by `KioskKeyboard.gen.d.ts:172,730`).
+1. ~~Composition data-loss fix.~~ **Landed.** Both twins now compare the factory the resolved layout reads on either side of the swap and commit rather than `reset()`. Do not re-derive it; §A.7 _changes_ its timing, which is stated in "Reconciling with the fix already on `main`".
+2. ~~Delete the false `applySettings` doc comment.~~ **Landed** — and it was never false in the way an earlier revision claimed. `KioskKeyboard.ts:786-798` asserts only that pre-population precedes `super.applySettings` and that `init()` runs before it; both are true (`ManagedObject.js:530` then `:534`). "`applySettings` is called unconditionally" refutes neither. What `5a5f2c2f` actually corrected was the separate claim that `ManagedObject` _skips_ `applySettings` when no settings are passed.
+3. ~~`README.md:344`'s stale `object | null` claim.~~ **Landed.**
 4. Add webc's missing registry check on the `layout` property (`KioskKeyboard.ts:962-965`), matching kiosk `:1071-1077`, with a regression test in `test/component/`.
-5. **DEF-6 — `.github/workflows/ci.yml:57-63`.** The widened-glob fix alone is insufficient: probed, an untracked `packages/kiosk-keyboard/src/ZZTest.gen.d.ts` **passes** `git diff --exit-code -- ':(glob)packages/kiosk-keyboard/src/**/*.gen.d.ts'` (exit 0), because `git diff` does not see untracked files — precisely the DEF-6 scenario. Staging first is required and does fail correctly:
+5. **DEF-6 — `.github/workflows/ci.yml:57-63`** (the step is named "Verify generated interface is in sync", singular, and the path literal is `:60`). The widened-glob fix alone is insufficient: probed, an untracked `packages/kiosk-keyboard/src/ZZTest.gen.d.ts` **passes** `git diff --exit-code -- ':(glob)packages/kiosk-keyboard/src/**/*.gen.d.ts'` (exit 0), because `git diff` does not see untracked files — precisely the DEF-6 scenario. Staging first is required and does fail correctly:
 
 ```yaml
 # The kiosk interfaces are committed (see CONTRIBUTING.md "Generated files in
@@ -1687,7 +1687,7 @@ Baseline confirmed green at HEAD: `check-twin-drift` 27 pairs in sync; `check-st
 6. **Separator round-trip** — `suppress="Variants,Middleware"` (kiosk XML) and `suppress="Variants Middleware"` (webc) both yield the two-member array; `suppress="Varients"` **throws** on kiosk and emits `unknown-suppress` on webc.
 7. **XML authoring** — `customLayouts-xml.qunit.ts`, the only CI guard on D1.
 8. **DEF-1 first paint (webc)** — build the whole subtree **before** `appendChild`, wrap `onAfterRendering` to capture paints, assert on `paints[0]`, not the settled state. Plus the locale variant (`locales="pl"`, no `layout`), which `onEnterDOM` cannot rescue because it runs at `:225`, after `renderImmediately` at `:222`.
-9. **DEF-3 (kiosk)** — spy `foldCustomLayouts`: exactly **two** calls during `new KioskKeyboard({layout, customLayouts:[a,b,c]})` (the cold `EMPTY_FOLD` in `init()` and the real one between the phases), and exactly **one** `Log.warning` for a fixture with one bad custom layout among three, with an overlay placed before its rows-declaring sibling and **zero** `unknown-target`.
+9. **DEF-3 (kiosk)** — exactly **one** fold during `new KioskKeyboard({layout, customLayouts:[a,b,c]})`, and exactly **one** `Log.warning` for a fixture with one bad custom layout among three, with an overlay placed before its rows-declaring sibling and **zero** `unknown-target`. Two corrections to an earlier revision of this item. The count is one, not two: `init()` only assigns `this._fold = null` and never calls `_getFold()`, so the only fold is the one between the `applySettings` phases. And it **cannot be observed by spying `foldCustomLayouts`** — the UI5 AMD transpile captures named imports into module-scope consts at define time (`dist/resources/ui5/kiosk/internal/latin-variants-dbg.js:17`, `const BUILTIN_LAYOUT_META = ___layout_meta["BUILTIN_LAYOUT_META"];`), so `sinon.stub(mod, "foldCustomLayouts")` cannot intercept the caller's binding. Observe it through `sandbox.stub(Log, "warning")` instead, which the repo already does elsewhere; exporting a call counter from the fold would violate CLAUDE.md §4.
 10. **Cache liveness (kiosk)** — `custom layout.setRows(x)` refolds once, a second read does not; `removeCustomLayout` / `destroyCustomLayouts` / `custom layout.destroy()` each make the next resolution fall back.
 11. **Construction ordering** — `new KioskKeyboard({layout:"pl-warehouse", customLayouts:[…]})` with `layout` written first sets the layout with no warning; `kb.clone().getLayout()` matches with no warning.
 12. **Coercion parity** — `locales: "pl"` on a literal and `new CustomLayout({locales:["pl"]})` produce the same construction-time layout.
@@ -1702,13 +1702,13 @@ File: `docs/specs/2026-08-03-custom-layouts-adversarial-hypotheses.md`, written 
 
 **H1 — "an explicit entry beats the wildcard" is vacuous.** _Confirmed live at HEAD, not hypothetical._ `latin-variants.qunit.ts:192-199` and `latin-variants.test.ts:170-176` pass `["qwerty", null]`, the one case the re-layering does not change. **Red proof:** land the three-tier resolver with the old bodies untouched and watch both suites pass; then add the named-table + `*`-table case and confirm it goes red against the old resolver.
 
-**H2 — the `instance-property-types.tsd.ts` inverted-polarity trap.** **Red proof:** change the kiosk metadata without touching the tsd file; `typecheck:kiosk:test` must fail with six "Unused '@ts-expect-error'" errors. After rewriting, delete one directive and confirm the positive direction also fails.
+**H2 — the `instance-property-types.tsd.ts` trap.** Not "inverted polarity", which is what an earlier revision called it. Because D2 **deletes** the four setters rather than retyping them, every `@ts-expect-error`-guarded line stays an error — now "Property 'setInstanceLayouts' does not exist" — so the directives are still consumed and no "Unused '@ts-expect-error'" is ever emitted. **Red proof:** change the kiosk metadata without touching the tsd file; `typecheck:kiosk:test` must fail on the file's **unguarded** accepted-shapes block at `:27-36`. After rewriting, delete one directive and confirm the positive direction also fails.
 
 **H3 — the locale facet is covered vacuously.** At HEAD `instanceLocaleLayouts`'s only reader is the `applySettings` pre-population (`:805,810`), making it the facet most likely asserted without being exercised. **Red proof:** delete the `locales` branch from `foldCustomLayouts` and confirm at least one kiosk and one webc test fails. If both stay green, the coverage is fake.
 
-**H4 — DEF-1: the first-render fold is empty.** _The existing webc component suite is structurally blind here — every case in `instance-overrides.test.ts` assigns config after `fixture()` and awaits `nextRender()` (`:38-39,46-47,60-61`)._ **Red proof:** move the fold behind the `onInvalidation` slot branch only; the connect-time-children test must go red. If it stays green, the test is asserting after an extra microtask and is not testing first paint.
+**H4 — DEF-1: the first-render fold is empty.** _Most cases in `instance-overrides.test.ts` assign config after `fixture()` and await `nextRender()` (`:38-39,46-47,60-61`), so they cannot see this._ An earlier revision said "every case", which is false: `:87-110` deliberately assigns **before** `appendChild`, with the comment "Properties must be assigned before the element connects so `onEnterDOM` sees them". Model the new test on that one. **Red proof:** move the fold behind the `onInvalidation` slot branch only; the connect-time-children test must go red. If it stays green, the test is asserting after an extra microtask and is not testing first paint.
 
-**H5 — DEF-3: N folds, N diagnostics.** **Red proof:** call `_getFold()` eagerly from an `addCustomLayout` override; the "exactly two folds, one warning, zero `unknown-target`" test must go red.
+**H5 — DEF-3: N folds, N diagnostics.** **Red proof:** call `_getFold()` eagerly from an `addCustomLayout` override; the "one fold, one warning, zero `unknown-target`" test must go red — observed through `Log.warning` counts, per test 9, not through a spy on `foldCustomLayouts`.
 
 **H6 — DEF-4: a property write tears down an IME buffer.** **Red proof:** put `this._getFold()` inside `invalidate()`; the "edit an unrelated custom layout mid-composition" test must go red with a lost preedit.
 
