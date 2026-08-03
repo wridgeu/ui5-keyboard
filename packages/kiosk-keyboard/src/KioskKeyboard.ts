@@ -70,9 +70,7 @@ export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 const KIOSK_DIAGNOSTIC_VOCABULARY: DiagnosticVocabulary = {
   customLayouts: "customLayouts aggregation",
   customLayout: "<kiosk:CustomLayout>",
-  get builtInLayouts() {
-    return registryGetLayoutNames();
-  },
+  builtInLayouts: registryGetLayoutNames(),
 };
 
 /**

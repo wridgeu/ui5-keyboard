@@ -1291,6 +1291,9 @@ QUnit.test("Construction folds once, over the complete list", async (assert) => 
   const messages = warn.getCalls().map((call) => String(call.args[0]));
   assert.strictEqual(messages.length, 1, "exactly one diagnostic for the one real fault");
   assert.ok(messages[0]!.includes("typo-only"), "and it names the custom layout that resolves nothing");
+  // The remedy quotes the real registry rather than a literal, so a vocabulary wired to
+  // nothing would render "the built-ins are: ." and help no one.
+  assert.ok(messages[0]!.includes("qwertz-de"), "and the remedy lists the built-ins it could have meant");
 
   kb.destroy();
 });
