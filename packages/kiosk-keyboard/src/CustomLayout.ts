@@ -13,13 +13,13 @@ import type { CompositionMiddleware, CustomLayoutSpec } from "./types";
  * a different middleware or a different locale binding without restating its keys.
  * Custom layouts apply in aggregation order.
  *
- * @example <caption>A whole layout, declaratively</caption>
- * &lt;kiosk:KioskKeyboard controls="name"&gt;
- *   &lt;kiosk:customLayouts&gt;
- *     &lt;kiosk:CustomLayout name="pl-warehouse" locales="pl,pl-PL" keycapLang="pl"
- *       rows="{layouts&gt;/plWarehouse}" /&gt;
- *   &lt;/kiosk:customLayouts&gt;
- * &lt;/kiosk:KioskKeyboard&gt;
+ * @example <caption>XML view</caption>
+ * <kiosk:KioskKeyboard controls="name">
+ *   <kiosk:customLayouts>
+ *     <kiosk:CustomLayout name="pl-warehouse" locales="pl,pl-PL" keycapLang="pl"
+ *       rows="{layouts>/plWarehouse}" />
+ *   </kiosk:customLayouts>
+ * </kiosk:KioskKeyboard>
  *
  * @namespace ui5.kiosk
  * @extends sap.ui.core.Element

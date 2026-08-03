@@ -20,8 +20,7 @@ import qwertyEs from "../layouts/qwerty-es.js";
 // here, so a bundler cannot drop the definitions. Side-effect imports +
 // `_registerBuiltInLayout` self-registration would instead be tree-shaken out
 // of the production bundle. There is no public mutation API: per-app
-// customization is done with the `customLayouts` slot
-// properties on the element.
+// customization is done with the `customLayouts` slot on the element.
 const layouts: ReadonlyMap<string, LayoutDefinition> = new Map([
   ["qwerty", qwerty],
   ["qwertz-de", qwertzDe],

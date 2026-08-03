@@ -346,8 +346,8 @@ const kb = new KioskKeyboard({
     }),
     // Rows-less overlay: give the built-in kana layout a different middleware.
     new CustomLayout({ name: "ja-kana", middleware: kanaDakutenFactory }),
-    // Take one layout out of a facet it would otherwise inherit.
-    new CustomLayout({ name: "my-ime", suppress: [LayoutFacet.Variants] }),
+    // A transliteration IME whose Latin-looking keys take no accent popups.
+    new CustomLayout({ name: "my-ime", rows: myImeLayout, suppress: [LayoutFacet.Variants] }),
     // Promote the built-in secondary `numeric` to a base alphabetic layout.
     new CustomLayout({ name: "numeric", layoutRole: LayoutRole.Base, rows: symbolSurface }),
   ],
@@ -689,6 +689,7 @@ With `accentVariants` on, the built-in Latin table is resolved through two furth
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 
 const kb = new KioskKeyboard({
   accentVariants: true,
@@ -740,6 +741,7 @@ Implement the `CompositionMiddleware` interface and supply the factory on the `c
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import type { CompositionMiddleware } from "ui5/kiosk/types";
 
 function createMyMiddleware(): CompositionMiddleware {
@@ -794,6 +796,7 @@ Compose a custom layout with the shared `fkey-row` module to render a full keybo
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 
 const kb = new KioskKeyboard({
@@ -923,6 +926,7 @@ Import the shared `fkey-row` module to compose custom layouts with an F-key row 
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import navRow from "ui5/kiosk/layouts/nav-row";
 import navRowCompact from "ui5/kiosk/layouts/nav-row-compact";
@@ -1000,6 +1004,7 @@ Additional mappings are supplied by the `locales` of a `customLayouts` entry:
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 
 const kb = new KioskKeyboard({
   customLayouts: [
