@@ -13,8 +13,10 @@ import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 /**
  * Pairs whose glyphs are mirror images by design. Direction is what
  * distinguishes them, which pixel overlap cannot see, so they are exempt.
+ * Keyed on the two labels sorted, so the exemption does not depend on where
+ * the keys sit in the row.
  */
-const MIRROR_PAIRS = new Set(["Home/End", "Up/Down", "Left/Right", "PgUp/PgDn"]);
+const MIRROR_PAIRS = new Set(["End/Home", "Down/Up", "Left/Right", "PgDn/PgUp"]);
 
 /**
  * Minimum ink-overlap distance for every other pair. The shipped row measures
@@ -25,7 +27,6 @@ const MIN_DISTANCE = 0.78;
 const NAV_KEYS = navRow.map((key) => ({
   name: key.label!,
   icon: key.icon!,
-  value: key.value,
 }));
 
 test("nav key icons are tellable apart when the label is hidden", async ({ page }) => {
@@ -81,8 +82,10 @@ test("nav key icons are tellable apart when the label is hidden", async ({ page 
       const pairs: { pair: string; distance: number }[] = [];
       for (let i = 0; i < rasters.length; i++) {
         for (let j = i + 1; j < rasters.length; j++) {
+          const one = rasters[i]!.name;
+          const two = rasters[j]!.name;
           pairs.push({
-            pair: `${rasters[i]!.name}/${rasters[j]!.name}`,
+            pair: one < two ? `${one}/${two}` : `${two}/${one}`,
             distance: Math.round(distance(rasters[i]!.ink, rasters[j]!.ink) * 1000) / 1000,
           });
         }

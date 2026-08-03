@@ -828,7 +828,8 @@ QUnit.test("switching to a UI-language layout clears the language from reused la
 // Every key publishes its grid coordinate twice: in the element id, which
 // arrow-key navigation parses to move, and in the two data attributes consumer
 // CSS and tests select on. Either one disagreeing with the key's place in the
-// DOM points at a key the user sees somewhere else, so both are checked.
+// DOM points at a key the user sees somewhere else, so both are checked, along
+// with the `keyByPosition` selector consumers reach the attributes through.
 QUnit.test("keys carry the grid coordinate they occupy", async (assert) => {
   for (const layout of KioskKeyboard.getRegisteredLayoutNames()) {
     const kb = new KioskKeyboard({ layout });
@@ -839,6 +840,10 @@ QUnit.test("keys carry the grid coordinate they occupy", async (assert) => {
       row.map((k) => `${k.getAttribute(DOM.attributes.rowIndex)},${k.getAttribute(DOM.attributes.keyIndex)}`),
     );
     const ids = rows.map((row) => row.map((k) => k.id.slice(kb.getId().length)));
+    const renderedIds = rows.map((row) => row.map((k) => k.id));
+    const selectedIds = rows.map((row, r) =>
+      row.map((_, c) => getKeyboardDom(kb).querySelector<HTMLElement>(DOM.selectors.keyByPosition(r, c))?.id ?? null),
+    );
 
     // Derived from the rendered shape, so each grid is asserted against where
     // its key actually sits rather than against itself.
@@ -849,6 +854,7 @@ QUnit.test("keys carry the grid coordinate they occupy", async (assert) => {
     assert.ok(rows.flat().length > 0, `"${layout}" renders keys`);
     assert.deepEqual(published, occupied, `"${layout}" attribute coordinates match DOM position`);
     assert.deepEqual(ids, occupiedIds, `"${layout}" key ids match DOM position`);
+    assert.deepEqual(selectedIds, renderedIds, `"${layout}" keyByPosition selects the key rendered at that coordinate`);
 
     kb.destroy();
   }

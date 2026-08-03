@@ -69,6 +69,26 @@ describe("kiosk-keyboard", () => {
       expect(Object.isFrozen(KioskKeyboard.DOM.selectors)).to.be.true;
     });
 
+    // `keyByPosition` is the published way to select on the per-key grid
+    // coordinate, so it is resolved against the shadow DOM: a selector that
+    // names the attributes differently than the template writes them reaches
+    // no key at all.
+    it("resolves keyByPosition to the key rendered at that coordinate", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      const rows = Array.from(queryRows(el)).map((row) =>
+        Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)),
+      );
+      const renderedIds = rows.map((row) => row.map((k) => k.id));
+      const selectedIds = rows.map((row, r) =>
+        row.map((_, c) => el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByPosition(r, c))?.id ?? null),
+      );
+
+      expect(rows.flat().length, "qwerty renders keys").to.be.greaterThan(0);
+      expect(selectedIds, "keyByPosition selects the key rendered at that coordinate").to.deep.equal(renderedIds);
+    });
+
     it("renders docked mode with docked class", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard> `);
       await nextRender();
