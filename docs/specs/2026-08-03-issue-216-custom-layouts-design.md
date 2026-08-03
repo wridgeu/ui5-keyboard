@@ -101,6 +101,7 @@ Registered-type count is unchanged at 4→4 in kind but the two coarse record ty
 
 ```ts
 import Element from "sap/ui/core/Element";
+import type { MetadataOptions } from "sap/ui/core/Element";
 import { LayoutFacet, LayoutRole } from "./library";
 import type { CompositionMiddleware, LayoutDefinition, LayoutPresetSpec } from "./types";
 import type { VariantTable } from "./internal/latin-variants";
@@ -117,11 +118,21 @@ import type { VariantTable } from "./internal/latin-variants";
  *
  * The name `*` addresses every layout at once and carries `variants` only.
  *
+ * @namespace ui5.kiosk
+ * @extends sap.ui.core.Element
  * @public
  * @since 0.1.0
  */
 export default class LayoutPreset extends Element {
-  static readonly metadata = {
+  // The following three lines were generated and should remain as-is to make TypeScript aware of the constructor signatures
+  constructor(idOrSettings?: string | $LayoutPresetSettings);
+  constructor(id?: string, settings?: $LayoutPresetSettings);
+  // oxlint-disable-next-line no-useless-constructor -- required by @ui5/ts-interface-generator overloads
+  constructor(id?: string, settings?: $LayoutPresetSettings) {
+    super(id, settings);
+  }
+
+  static readonly metadata: MetadataOptions = {
     library: "ui5.kiosk",
     properties: {
       /**
@@ -1579,3 +1590,33 @@ Either the demo demonstrates "hand a teammate one tag" with a real subclass in `
 **Recommendation: do not.** It would be a second hand-maintained shape sitting next to a file CLAUDE.md forbids hand-editing, for an ergonomic that no TypeScript consumer in this repo uses — every TS fixture and the demo construct `new LayoutPreset(...)`. `defaultClass` is still kept, because it is what makes the plain-JS call sites (`packages/kiosk-keyboard/test/e2e/visual/init.js`) and `applySettings`phase 1 work. Document the asymmetry in the kiosk README's aggregation section: "JavaScript callers may pass object literals; TypeScript callers construct`LayoutPreset`."
 
 **One thing I decided rather than deferred, flagged because two clusters disagreed and the loser had a real argument.** The child class is named `LayoutPreset` (tag `kiosk-keyboard-preset`), not `CustomLayout` / `KioskKeyboardCustomLayout`. The losing argument — that the class should share the collection's noun — is legitimate; it lost because `getCustomLayouts()[0] instanceof CustomLayout` reads worse than `instanceof LayoutPreset`, and because a class and a collection with the same name make the XML nesting (`<kiosk:customLayouts><kiosk:LayoutPreset/>`) ambiguous to skim. If the owner reverses this, it is a mechanical rename across the two new source files, the two new fold modules' spec-type name, the tag, the marker property, the bundle export and the docs — do it before Stage 3, not after.
+
+## Review notes
+
+A review pass against the UI5 TypeScript-conversion guidance, a slop pass over the code sketches, and the modern-web-guidance corpus. This is not the refutation pass the status banner still asks for.
+
+### Corrected in this document
+
+`LayoutPreset` was sketched without three things every control-like class in this repo carries, all of them load-bearing for `@ui5/ts-interface-generator`:
+
+- **`@namespace ui5.kiosk`** and **`@extends sap.ui.core.Element`** in the class doc-block. The namespace annotation is what the transformer reads to build the runtime class name; `KioskKeyboard.ts:101-102` carries the same pair.
+- **The three generated constructor overloads.** Without them TypeScript sees only `Element`'s constructor, so `new LayoutPreset({ name: "pl-warehouse", … })` — the form this design tells TypeScript consumers to use, since `defaultClass` object literals are not modelled by the generator — would not compile. Copied in the shape `KioskKeyboard.ts:117-122` already uses, including the `oxlint-disable` for the otherwise-useless constructor body. `$LayoutPresetSettings` is referenced without an import, matching the rule in CLAUDE.md and the existing `$KioskKeyboardSettings` usage.
+- **`static readonly metadata: MetadataOptions`**, with `import type { MetadataOptions } from "sap/ui/core/Element"`. Untyped metadata is what lets a subclass silently restate an inherited property.
+
+### Guidance that does NOT apply here
+
+Generic UI5 library guidance says every enum must be attached to the global library object via `ObjectPath.get(...)`, calling it critical for runtime type validation and an XSS risk otherwise. **Do not apply it to `LayoutRole` or `LayoutFacet`.** CLAUDE.md records the verified position for this repo: with `Lib.init({ apiVersion: 2 })` plus `DataType.registerEnum`, the auto-attachment is skipped by design (`sap/ui/core/Lib.js`), XML `core:require` binds to the module's named exports, and runtime validation resolves through the `DataType` registry rather than the global namespace. The existing enums in `library.ts` already follow the registry-only form; a future implementer reading the generic guidance should not "fix" them back.
+
+### Reconciling with the Stage 0 fix already on `main`
+
+The middleware data-loss bug was fixed independently of this design (`fix(keyboard): keep a composition alive across an unrelated middleware swap`). That fix compares the factory the resolved layout reads on either side of the property assignment and needs no cached field, because the setter has both values in hand.
+
+This document's `_middlewareFactory` is a different mechanism, not a contradiction. Under `customLayouts` the setter disappears, so the check moves to the next composition-affecting key press (`_tryCompositionMiddleware`), where there is no before-and-after to compare and the previously-used factory must be remembered. It also strictly improves on the shipped fix: nothing ends a composition from inside a setter, an invalidation or a render pass. When Stage 4 lands, the shipped setter-local comparison is superseded rather than merged.
+
+### Slop pass
+
+No `as any`, no try/catch around trusted paths, no defensive `typeof x !== "undefined"` guards, no orphaned TODOs. The conditional-spread idiom in `toSpec()` matches the shipped `KioskKeyboard.ts:1221`. The two twins deliberately use different fold-invalidation mechanisms — kiosk `_fold`/`_foldChildren` keyed off `invalidate(origin)`, webc `_foldEpoch`/`_foldKey` keyed off `onInvalidation` — which is the per-environment idiom this design was chosen for, not an inconsistency.
+
+### Modern-web-guidance
+
+Searched for custom-element configuration APIs, slots carrying non-rendered configuration, and property-versus-attribute handling of object and function values. **No applicable guide exists in that corpus** — top similarity 0.41 across two queries, every result CSS or visual-design. The web-component half of this design rests on the installed `@ui5/webcomponents-base` 2.22.0 sources and first-party precedent (`ui5-table`'s `features` slot) instead. Recorded so the search is not repeated expecting a result.
