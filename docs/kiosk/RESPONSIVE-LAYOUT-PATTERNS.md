@@ -54,6 +54,8 @@ applyNavRow(kb);
 narrow.addEventListener("change", () => applyNavRow(kb));
 ```
 
+`matchMedia` measures the viewport, while the 20rem it borrows is the keyboard's own container width, and `rem` in a media query resolves against the browser's default font size rather than the root font size the `@container` rules use — the two figures agree only when the keyboard fills the viewport at the default root size. Where the keyboard can be narrower than the viewport, such as a panel on a wide screen, observe the keyboard element with a `ResizeObserver` instead; the same holds for the breakpoint switch under [Switching Layouts Per Device Size](#switching-layouts-per-device-size).
+
 See [Worked Example: Custom Row Wrapping](#worked-example-custom-row-wrapping) below for the CSS-side pattern, which remains appropriate for rows whose source order already matches the wrapped arrangement.
 
 ### Height-Responsive Classes
@@ -161,7 +163,7 @@ applyLayout(mq);
 
 Wrapping a row in CSS is the right tool when the wrapped arrangement is the row's own order, read left to right and top to bottom. The row stays one logical row, and the keys a user sees adjacent stay adjacent to arrow-key navigation.
 
-Reach for a second layout instead, as [`nav-row-compact`](#nav-rows-choose-the-arrangement-dont-reflow-it) does, when the arrangement you want moves keys past one another. `order` inside a `@container` query would achieve it visually, but navigation follows the resolved layout, so focus would jump against the visual order.
+Reach for a second layout instead, as [`nav-row-compact`](#rows-choose-the-arrangement-dont-reflow-it) does, when the arrangement you want moves keys past one another. `order` inside a `@container` query would achieve it visually, but navigation follows the resolved layout, so focus would jump against the visual order.
 
 ### The Problem
 
