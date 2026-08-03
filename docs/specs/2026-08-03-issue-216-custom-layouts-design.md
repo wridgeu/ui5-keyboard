@@ -1,53 +1,72 @@
-# LayoutPreset — implementation specification for issue #216 (customLayouts aggregation + slot)
+# CustomLayout — implementation specification for issue #216 (customLayouts aggregation + slot)
 
-Issue: [#216](https://github.com/wridgeu/ui5-keyboard/issues/216) — Extension surface: four parallel `instance*` maps vs a cohesive preset/plugin unit.
+Issue: [#216](https://github.com/wridgeu/ui5-keyboard/issues/216) — Extension surface: four parallel `instance*` maps vs a cohesive custom layout/plugin unit.
 
-> **Status: design, not yet verified.** The two adversarial critics that were to attack this
-> specification did not run (session limit). Every framework claim below carries a `file:line`
-> citation from the pinned sources, but the spec as a whole has not been through the refutation
-> pass that CLAUDE.md §5 requires. Treat it as the plan of record, not as cleared.
+> **Status: refuted, corrected, cleared for implementation.** Two adversarial critics — a
+> framework-reality lens and a behaviour-regression lens — attacked this specification against
+> the pinned sources. Neither could refute the design: the tri-state argument, the kiosk
+> invalidation chain, the XML authoring path, the generator's output shapes, `defaultClass`,
+> the two-phase `applySettings`, clone ordering and DEF-1 all survived. They confirmed eight
+> implementation blockers and roughly thirty citation errors, all folded in below.
 
 ## Start here
 
 Nothing in this branch is code. It is one design document; `main` carries the only shipped change.
 
-**Already on `main`, do not redo:** `fix(keyboard): keep a composition alive across an unrelated middleware swap` (5a5f2c2f). That was a real data-loss bug — `reset()` erased a half-typed Hangul syllable out of the input on any `instanceMiddleware` reassignment, including one that never touched the active layout's entry. It is independent of this design. Its setter-local comparison is **superseded, not contradicted**, by the key-press-time factory check in section A.7; see "Reconciling with the Stage 0 fix" at the end.
+**Citation base.** Every `file:line` below is relative to the branch tip. An earlier revision was written against `cc34a371`, one commit before the branch base. `5a5f2c2f` shifted `packages/kiosk-keyboard/src/KioskKeyboard.ts` by **+12 below line 1151** and `packages/kiosk-keyboard-webc/src/KioskKeyboard.ts` by **+10 below line 1017**. Citations above those lines are exact; where a citation below them still reads low, apply the offset rather than trusting the number.
 
-**Do these in order:**
+**Already on `main`, do not redo.** `fix(keyboard): keep a composition alive across an unrelated middleware swap` (`5a5f2c2f`) landed **three** of what were Stage 0's nine items, not one — its commit message enumerates them:
 
-1. **Answer the five open decisions** (last section). Two of them — the property/class naming and whether `*` keeps its reserved name — get more expensive to reverse after Stage 3, and the spec says exactly what each reversal costs.
-2. **Run the refutation pass.** Two adversarial critics were commissioned against this spec and never ran. In the earlier round the critics were the highest-value step of the whole exercise: they killed a "no call site" claim that was false (`secondary: false` is tested in both twins) and caught a fatal first-render bug. Do not start Stage 4 on an uncleared spec. The two critic prompts are preserved in the workflow script at `.claude/.../workflows/scripts/issue-216-harden-aggregation-design-wf_33276a06-03e.js`; re-invoking `Workflow` with that `scriptPath` plus `resumeFromRunId: "wf_33276a06-03e"` replays the six completed agents from cache and runs only the two that failed.
-3. **Then Stages 1–4** as laid out in Migration.
+1. the composition data-loss fix itself: `reset()` erased a half-typed Hangul syllable out of the input on any `instanceMiddleware` reassignment, including one that never touched the active layout's entry;
+2. the two `applySettings` doc comments claiming `ManagedObject` skips `applySettings` when no settings are passed;
+3. `packages/kiosk-keyboard/README.md:344`'s stale `object | null` claim.
+
+Item 1's setter-local comparison is **changed, not superseded**, by the key-press-time factory check in §A.7. It commits at swap time; §A.7 commits at the next composition-affecting key. See "Reconciling with the fix already on `main`" at the end, which states the delta instead of claiming there is none.
+
+**All open decisions are closed** (D5–D10 below). The two that were expensive to reverse — the class name and the wildcard's home — were both decided **against** the original draft. If you are working from memory of an earlier revision, re-read the decisions section first.
+
+**Do these in order:** Stages 0–5 as laid out in Migration. The refutation pass CLAUDE.md §5 requires has been run; its findings are already applied.
 
 **Traps, each of which will cost an afternoon if hit cold:**
 
-- `packages/kiosk-keyboard/test/qunit/instance-property-types.tsd.ts` **will go red, and that is the file doing its job.** Its `@ts-expect-error` directives are the assertions; they fail the build when the line they guard stops being an error, which is exactly what renaming the properties does. Rewrite it against the new surface. Do not delete it and do not "fix the polarity".
-- A **second generated interface** (`LayoutPreset.gen.d.ts`) appears the first time `npm run generate` runs. `.github/workflows/ci.yml:59` is a path literal naming only `KioskKeyboard.gen.d.ts`, so CI will not notice it drifting. Widen that glob in the same commit that adds the class. Never hand-edit either file.
+- **Kiosk fields use definite assignment with no initialiser** (`private _x!: T;`), seeded in `init()`. The root `tsconfig.json` targets ES2022 and never sets `useDefineForClassFields`, so it defaults to `true`; the kiosk package does not override it (webc does, `packages/kiosk-keyboard-webc/tsconfig.json:9`). `ManagedObject` calls `init()` (`:530`) and `applySettings()` (`:534`) _inside_ `super()`, so a derived field initialiser runs **after** both. An initialised `_reportedDiagnostics` makes `init()` throw on `undefined`; an initialised `_fold` silently discards the single fold built between the `applySettings` phases — the property §A.5 and its test are built on. Every field at `KioskKeyboard.ts:149-173` already follows this; the lone exception (`_layoutSource`, `:148`) is benign only because its initial value equals its construction-time value.
+- **A registered `DataType` needs a matching exported TypeScript alias, and the alias is where `| null` lives.** `library.ts:247-258` states the rule: the generator emits no `| null` union of its own for a custom type. A `createType` name with no exported alias makes the generator emit `import X from "ui5/kiosk/X"` — a module that does not exist — and `tsc --noEmit` fails (`astGenerationHelper.js:458-478`).
+- `packages/kiosk-keyboard/test/qunit/instance-property-types.tsd.ts` **will go red, and that is the file doing its job** — but not the way earlier revisions claimed. Because D2 _deletes_ the four setters, each `@ts-expect-error`-guarded line stays an error (now "Property does not exist") and the directives are still consumed. The file fails on its **unguarded** accepted-shapes block at `:27-36`. Rewrite it against the new surface. Do not delete it and do not "fix the polarity".
+- **The webc CEM analyzer throws, and it is not in CI.** `displayDocumentationErrors()` (`node_modules/@ui5/webcomponents-tools/lib/cem/utils.mjs:385-399`) throws on a public member with no `@default`, on a public boolean initialised to `true`, and on a class with no `@extends` tag. It runs in `build` → `test:packages:smoke` → `check:base`. **CI does not run `check:base`**: it re-implements it with `lint:ci --deny-warnings` and omits `test:packages:smoke` entirely, so a green CI run does not mean the webc package builds.
+- A **second generated interface** (`CustomLayout.gen.d.ts`) appears the first time `npm run generate` runs. `.github/workflows/ci.yml:60` is a path literal naming only `KioskKeyboard.gen.d.ts` (and the step is named "Verify generated interface is in sync", singular), so CI will not notice it drifting. Widen that glob in the same commit that adds the class. Never hand-edit either file.
 - **Stage 4 cannot be split.** The twin-drift check and the `generate && git diff --exit-code` gate both fail on a partial landing, so the property flip, the regenerated artefacts, the test rewrites, the docs and the demo go in one commit. Stages 1–3 are each independently mergeable and green; Stage 4 is not divisible.
 - The webc twin's **first render** is the one place this design has previously been wrong. `_suppressInvalidation` is true from `UI5Element.js:121` until `:681`, so slot content present at connect time never fires `onInvalidation`. The lazy fold is what makes this safe — keep it lazy; an eager fold driven by mutators reintroduces DEF-1 through DEF-4 together.
-- Generic UI5 guidance will tell you to attach the new enums to the library object via `ObjectPath`. **It is wrong for this repo** — see "Guidance that does NOT apply here".
+- Generic UI5 guidance — including the `ui5-typescript-conversion` skill, which calls it "CRITICAL to avoid XSS issues" — will tell you to attach the new enums to the library object via `ObjectPath`. **It is wrong for this repo** — see "Guidance that does NOT apply here".
 
-**Verification budget.** CLAUDE.md §7 applies: the adversarial-hypotheses file is part of Stage 3, and each hypothesis must be _seen_ red, not argued. The one the spec singles out is that the locale facet is currently covered vacuously — `instanceLocaleLayouts` is effectively construction-time-only today, so delete the `locales` branch from the reverse-index builder and confirm a locale test actually fails before trusting that suite.
+**Verification budget.** CLAUDE.md §7 applies: the adversarial-hypotheses file is part of Stage 3, and each hypothesis must be _seen_ red, not argued. Note that an earlier revision pre-announced H3's answer — "the locale facet is covered vacuously" — as fact. **That is false.** Nine kiosk tests drive layout selection purely through `instanceLocaleLayouts` (`instance-overrides.qunit.ts:212,240,259,281,309,389,408`; `KioskKeyboard-layout.qunit.ts:902,948,1145`), and `instance-overrides.test.ts:87-110` does so on the webc side, deliberately assigning before `appendChild`. H3 is still worth probing; expect it to go red on the first try.
 
 ## Decisions taken by the repo owner
 
 - **D1.** XML declarability is a requirement for the UI5 twin: a Fiori developer must configure a complete layout extension in an XML view without touching a controller. It is explicitly _not_ a requirement for the web component, which instead uses the closest idiom its own framework offers.
 - **D2.** The surface is renamed; `instanceLayouts` is retired in favour of `customLayouts`. Breaking changes across both keyboards, the demo apps and the GitHub-Pages demos are accepted — nothing is published.
-- **D3.** The `"*"` wildcard variant tier is re-layered in this change: built-in → wildcard → named, with `[]` suppression honoured at each tier.
+- **D3.** The wildcard variant tier is re-layered in this change: built-in → defaults → named, with `[]` suppression honoured at each tier.
 - **D4.** The new unit absorbs per-layout metadata and any future per-layout concern; a fifth concern folds into an existing level rather than becoming a sixth sibling map.
+- **D5.** The child class is **`CustomLayout`** (kiosk `ui5.kiosk.CustomLayout`, webc tag `kiosk-keyboard-custom-layout`), not `LayoutPreset`. Deciding reason: singular class plus plural aggregation is the first-party pattern. `sap.ui.table/1.136.0/src/sap/ui/table/Table.js:459` declares `columns: {type: "sap.ui.table.Column", defaultClass: Column, multiple: true, singularName: "column", bindable: "bindable", …}` — very nearly the declaration this design needs — and `addCustomLayout(new CustomLayout({…}))` reads as UI5 is meant to read. The earlier draft's objection, that a class and a collection sharing a noun reads badly, does not survive that precedent.
+- **D6.** The defaults tier is a **host property `defaultVariants`** on `KioskKeyboard`, not a reserved `name="*"` and not a second collection. Deciding reasons, in order: (i) under D5 a `<kiosk:CustomLayout name="*">` is a custom layout that is not a layout, and the `wildcard-field` diagnostic existed only to apologise for that; (ii) a dedicated `layoutDefaults` collection reusing `CustomLayout` would merely relocate the same six meaningless properties, and doing it honestly costs a third public class per twin for one table; (iii) the tier carries exactly one value, because global suppression is not part of it (D7), so it has no tri-state and needs no element at all. It pairs with the `accentVariants` switch already at that level. Cost, accepted: a future per-layout facet's apply-to-all case loses its free ride — but D3 scopes the defaults tier to variants, and the earlier draft had already declined to admit middleware there.
+- **D7.** Suppression is **per layout only**: `suppress="Variants,Middleware"` on the `CustomLayout` that names the layout. The defaults tier cannot suppress. "No long-press affordance anywhere" is already `accentVariants="false"`, which is the default (`KioskKeyboard.ts:311-315`), and the README's opt-out ladder (`README.md:618-624`) documents exactly three recipes — one base letter, one layout, one key — none global. `{"*": null}` works at HEAD only as a side effect of the either/or short-circuit at `latin-variants.ts:104-105`, the line D3 deletes; its HEAD meaning does not survive the re-layering wherever the tier lives.
+- **D8.** `LayoutFacet` admits `Variants` and `Middleware` only (CLAUDE.md §1 — nothing in #216 asks to disable an inherited keycap language). Adding a member later costs one line in `library.ts`, one in `SUPPRESSIBLE_FACETS`, one branch in the fold, and — for `Lang`/`Secondary` — widening `LayoutMeta` to `| null`, a byte-compared change to `layout-meta.ts` this design deliberately avoids. `Secondary` would duplicate `layoutRole="Base"`; if it is ever added, retire one spelling rather than shipping both.
+- **D9.** The aggregation's generated type is **not** hand-widened for object literals. `@ui5/ts-interface-generator` 0.11.1 does not model `defaultClass`, so `customLayouts` types as the four-way union and TypeScript consumers construct `new CustomLayout({…})`. A hand-written declaration merge would be a second hand-maintained shape next to a file CLAUDE.md forbids hand-editing, for an ergonomic no TypeScript consumer in this repo uses. `defaultClass` is still declared, because it is what makes the plain-JS call sites and `applySettings` phase 1 work. Document the asymmetry in the kiosk README: "JavaScript callers may pass object literals; TypeScript callers construct `CustomLayout`."
+- **D10.** The demo ships a `CustomLayout` subclass as a named unit (`PlWarehouseCustomLayout`) in both twins. It is the only thing that makes the "a custom layout is an authoring unit, not a bag of properties" claim checkable rather than asserted, and it exercises the subclass path through `instanceof CustomLayout` (kiosk) and `isCustomLayout` (webc).
+
+**Standing authoring constraint.** Types and accessors come from the tooling, never from hand-written equivalents: declare the property or aggregation in `metadata` and use the generated accessor. This is not style. `ManagedObjectMetadata`'s `generateAccessors` installs each accessor through `if (!proto[name])`, and a TS class body populates the prototype long before the metadata constructor runs, so a hand-written method of the same name does not duplicate the generated one — it **replaces** it, and `super.<accessor>` then resolves to `undefined`. That mechanism is why DEF-2 dissolves rather than needing engineering around, and why D9 refuses the hand-widened type.
 
 ## Surface
 
 ## 0. Names, decided once
 
-| thing            | kiosk                                                                    | webc                                                                                             |
-| ---------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| collection       | `customLayouts` 0..n aggregation                                         | `customLayouts` named slot                                                                       |
-| child class      | `ui5.kiosk.LayoutPreset` (`packages/kiosk-keyboard/src/LayoutPreset.ts`) | `LayoutPreset` (`packages/kiosk-keyboard-webc/src/LayoutPreset.ts`), tag `kiosk-keyboard-preset` |
-| shared fold      | `src/internal/preset-fold.ts`                                            | `src/core/preset-fold.ts`                                                                        |
-| shared spec type | `LayoutPresetSpec` in `types.ts`                                         | same, byte-identical text                                                                        |
+| thing            | kiosk                                                                    | webc                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| collection       | `customLayouts` 0..n aggregation                                         | `customLayouts` named slot                                                                              |
+| child class      | `ui5.kiosk.CustomLayout` (`packages/kiosk-keyboard/src/CustomLayout.ts`) | `CustomLayout` (`packages/kiosk-keyboard-webc/src/CustomLayout.ts`), tag `kiosk-keyboard-custom-layout` |
+| shared fold      | `src/internal/custom-layout-fold.ts`                                     | `src/core/custom-layout-fold.ts`                                                                        |
+| shared spec type | `CustomLayoutSpec` in `types.ts`                                         | same, byte-identical text                                                                               |
 
-**Picked `LayoutPreset` over `CustomLayout` / `KioskKeyboardCustomLayout`** (the tristate + blast-radius clusters vs the webc-lifecycle + semantics clusters). Deciding reason: it is the chosen design's own name, it does not collide with the _aggregation_ name `customLayouts` (a class and a collection called the same thing reads badly in `getCustomLayouts()[0] instanceof CustomLayout`), and it keeps the child/collection distinction visible in XML (`<kiosk:customLayouts><kiosk:LayoutPreset/></kiosk:customLayouts>`).
+**Picked `CustomLayout` over `CustomLayout` / `KioskKeyboardCustomLayout`** (the tristate + blast-radius clusters vs the webc-lifecycle + semantics clusters). Deciding reason: it is the chosen design's own name, it does not collide with the _aggregation_ name `customLayouts` (a class and a collection called the same thing reads badly in `getCustomLayouts()[0] instanceof CustomLayout`), and it keeps the child/collection distinction visible in XML (`<kiosk:customLayouts><kiosk:CustomLayout/></kiosk:customLayouts>`).
 
 Both files sit at `src/` top level, **not** in `internal/` / `core/`: `tools/check-twin-drift.mjs:261-262` reconciles only the intersection of those two directories' basenames, and two deliberately framework-specific classes must never be paired.
 
@@ -80,11 +99,11 @@ export enum LayoutRole {
 }
 
 /**
- * A per-layout facet whose inherited value a preset discards. A listed facet resolves
- * to nothing at that preset's position: the built-in tier and every earlier preset's
- * contribution are dropped, and only a value the same preset declares survives.
+ * A per-layout facet whose inherited value a custom layout discards. A listed facet resolves
+ * to nothing at that custom layout's position: the built-in tier and every earlier custom layout's
+ * contribution are dropped, and only a value the same custom layout declares survives.
  *
- * Rows are not listed: the built-in registry is sealed, so a preset shadows rows and
+ * Rows are not listed: the built-in registry is sealed, so a custom layout shadows rows and
  * never removes them.
  *
  * @enum {string}
@@ -98,7 +117,7 @@ export enum LayoutFacet {
   Middleware = "Middleware",
 }
 
-/** A layout's rows, or `null` for a preset that overlays an existing layout. */
+/** A layout's rows, or `null` for a custom layout that overlays an existing layout. */
 function isLayoutRows(value: unknown): boolean {
   return value === null || Array.isArray(value);
 }
@@ -110,47 +129,60 @@ function isVariantTable(value: unknown): boolean {
 DataType.registerEnum("ui5.kiosk.LayoutRole", LayoutRole);
 DataType.registerEnum("ui5.kiosk.LayoutFacet", LayoutFacet);
 DataType.createType("ui5.kiosk.LayoutRows", { defaultValue: null, isValid: isLayoutRows }, "object");
-DataType.createType("ui5.kiosk.VariantTable", { defaultValue: null, isValid: isVariantTable }, "object");
+DataType.createType("ui5.kiosk.VariantOverrideTable", { defaultValue: null, isValid: isVariantTable }, "object");
+
+/**
+ * The shapes the row and variant-table properties accept, each `null` for "not supplied".
+ * The interface generator emits no `| null` union of its own for a custom type, so — as
+ * for the four record types these replace — the null lives in the alias.
+ *
+ * @public
+ * @since 0.1.0
+ */
+export type LayoutRows = LayoutDefinition | null;
+export type VariantOverrideTable = VariantTable | null;
 ```
 
-`Lib.init` (`library.ts:211-230`): `types` becomes `["ui5.kiosk.KeyboardLayout", "ui5.kiosk.KeyboardType", "ui5.kiosk.MobileKeyboard", "ui5.kiosk.FKeyMode", "ui5.kiosk.LayoutRole", "ui5.kiosk.LayoutFacet", "ui5.kiosk.LayoutRows", "ui5.kiosk.VariantTable"]`; `elements: []` (`:228`) becomes `elements: ["ui5.kiosk.LayoutPreset"]`.
+**Every registered `DataType` name must have an exported TypeScript alias of the same name, and the alias is where `| null` lives.** This is the rule `library.ts:247-258` already states for the four record types being deleted, and it is load-bearing twice over. Without an export, `addSourceExports.js:54-63` never learns the name, and `astGenerationHelper.js:437-439` falls through to `uniqueImport`'s unknown-name branch (`:458-478`), which emits `import LayoutRows from "ui5/kiosk/LayoutRows";` — a module that does not exist — and logs _"an import is created with module name … Is this correct? Usually this indicates some kind of issue."_ `tsc --noEmit` then fails. With an export whose type is non-nullable, the generator instead emits a confident lie: `getVariants(): VariantTable` against `defaultValue: null`.
 
-Registered-type count is unchanged at 4→4 in kind but the two coarse record types are gone; `Inherit` is declared first so it is also the `DataType` default (`DataType.js:414-421`, "the first entry will become the default value"). `ui5.kiosk.LayoutFacet[]` is **not** registered — `DataType.getType` derives the array form on demand (`DataType.js:531-537`), exactly as `sap.m` registers `sap.m.Sticky` and never `sap.m.Sticky[]`.
+That second trap is why the variant table's registered name is **`ui5.kiosk.VariantOverrideTable`**, not `ui5.kiosk.VariantTable`. `library.ts:245` already exports `VariantTable` as the **non-nullable** table type, re-exported for consumers to spread; reusing that name would silently bind the property to it. The new alias is distinct and nullable, and `toSpec()` therefore needs no `as` cast on either property.
+
+`Lib.init` (`library.ts:211-230`): `types` becomes `["ui5.kiosk.KeyboardLayout", "ui5.kiosk.KeyboardType", "ui5.kiosk.MobileKeyboard", "ui5.kiosk.FKeyMode", "ui5.kiosk.LayoutRole", "ui5.kiosk.LayoutFacet", "ui5.kiosk.LayoutRows", "ui5.kiosk.VariantOverrideTable"]`; `elements: []` (`:228`) becomes `elements: ["ui5.kiosk.CustomLayout"]`. `elements` is what lets `XMLTemplateProcessor.findControlClass` (`:854-863`) resolve `<kiosk:CustomLayout>` out of the library namespace, so it is not optional.
+
+Registered-type count is unchanged at 4→4 in kind but the two coarse record types are gone; `Inherit` is declared first so it is also the `DataType` default (`DataType.js:419`, "the first entry will become the default value"). `ui5.kiosk.LayoutFacet[]` is **not** registered — `DataType.getType` derives the array form on demand (`DataType.js:545-552`), exactly as `sap.m` registers `sap.m.Sticky` and never `sap.m.Sticky[]`.
 
 ---
 
-## 2. `packages/kiosk-keyboard/src/LayoutPreset.ts` (new)
+## 2. `packages/kiosk-keyboard/src/CustomLayout.ts` (new)
 
 ```ts
 import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
-import { LayoutFacet, LayoutRole } from "./library";
-import type { CompositionMiddleware, LayoutDefinition, LayoutPresetSpec } from "./types";
-import type { VariantTable } from "./internal/latin-variants";
+import { LayoutRole } from "./library"; // side-effect: ensures Lib.init() runs
+import type { LayoutRows, VariantOverrideTable } from "./library";
+import type { CompositionMiddleware, CustomLayoutSpec } from "./types";
 
 /**
  * One layout and everything that belongs with it: its rows, the locales that select
  * it, its keycap language, its role, its composition middleware and its long-press
  * variants.
  *
- * A preset that declares `rows` declares a layout. A preset without them overlays the
+ * A custom layout that declares `rows` declares a layout. One without them overlays the
  * layout its `name` already resolves to, so a built-in can be given different variants,
  * a different middleware or a different locale binding without restating its keys.
- * Presets apply in aggregation order.
- *
- * The name `*` addresses every layout at once and carries `variants` only.
+ * Custom layouts apply in aggregation order.
  *
  * @namespace ui5.kiosk
  * @extends sap.ui.core.Element
  * @public
  * @since 0.1.0
  */
-export default class LayoutPreset extends Element {
+export default class CustomLayout extends Element {
   // The following three lines were generated and should remain as-is to make TypeScript aware of the constructor signatures
-  constructor(idOrSettings?: string | $LayoutPresetSettings);
-  constructor(id?: string, settings?: $LayoutPresetSettings);
+  constructor(idOrSettings?: string | $CustomLayoutSettings);
+  constructor(id?: string, settings?: $CustomLayoutSettings);
   // oxlint-disable-next-line no-useless-constructor -- required by @ui5/ts-interface-generator overloads
-  constructor(id?: string, settings?: $LayoutPresetSettings) {
+  constructor(id?: string, settings?: $CustomLayoutSettings) {
     super(id, settings);
   }
 
@@ -158,8 +190,8 @@ export default class LayoutPreset extends Element {
     library: "ui5.kiosk",
     properties: {
       /**
-       * The layout this preset declares or overlays, matched after trim and lowercase.
-       * `*` addresses every layout.
+       * The layout this custom layout declares or overlays, matched after trim and
+       * lowercase.
        */
       name: { type: "string", defaultValue: "", group: "Behavior" },
       /**
@@ -175,9 +207,9 @@ export default class LayoutPreset extends Element {
        * tech announces them with the script's own pronunciation rules (WCAG 2.2 SC 3.1.2).
        * Empty takes the built-in layout's value.
        */
-      lang: { type: "string", defaultValue: "", group: "Behavior" },
+      keycapLang: { type: "string", defaultValue: "", group: "Behavior" },
       /** Whether the layout is an auxiliary surface or a base alphabetic layout. */
-      layoutRole: { type: "ui5.kiosk.LayoutRole", defaultValue: "Inherit", group: "Behavior" },
+      layoutRole: { type: "ui5.kiosk.LayoutRole", defaultValue: LayoutRole.Inherit, group: "Behavior" },
       /**
        * BCP-47 prefixes that select this layout when the control has no explicit
        * `layout`, e.g. `locales="pl,pl-PL"`.
@@ -195,29 +227,29 @@ export default class LayoutPreset extends Element {
        *
        * Read by object identity: assign a new object to change the table.
        */
-      variants: { type: "ui5.kiosk.VariantTable", defaultValue: null, group: "Behavior" },
+      variants: { type: "ui5.kiosk.VariantOverrideTable", defaultValue: null, group: "Behavior" },
       /**
-       * Facets whose inherited value this preset discards, e.g.
+       * Facets whose inherited value this custom layout discards, e.g.
        * `suppress="Variants,Middleware"`. A listed facet resolves to nothing at this
-       * preset's position; a value this same preset declares still applies.
+       * custom layout's position; a value this same custom layout declares still applies.
        */
       suppress: { type: "ui5.kiosk.LayoutFacet[]", defaultValue: [], group: "Behavior" },
     },
   };
 
-  /** The framework-agnostic record this preset declares. The control's fold is its only reader. */
-  toSpec(): LayoutPresetSpec {
-    const rows = this.getRows() as LayoutDefinition | null;
-    const lang = this.getLang();
+  /** The framework-agnostic record this custom layout declares. The control's fold is its only reader. */
+  toSpec(): CustomLayoutSpec {
+    const rows = this.getRows();
+    const keycapLang = this.getKeycapLang();
     const role = this.getLayoutRole();
     const locales = this.getLocales();
     const middleware = this.getMiddleware() as (() => CompositionMiddleware) | null;
-    const variants = this.getVariants() as VariantTable | null;
+    const variants = this.getVariants();
     const suppress = this.getSuppress();
     return {
       name: this.getName(),
       ...(rows !== null && { rows }),
-      ...(lang && { lang }),
+      ...(keycapLang && { keycapLang }),
       ...(role !== "Inherit" && { secondary: role === "Secondary" }),
       ...(locales.length > 0 && { locales }),
       ...(middleware !== null && { middleware }),
@@ -228,11 +260,13 @@ export default class LayoutPreset extends Element {
 }
 ```
 
-`role !== "Inherit"` / `role === "Secondary"` are string-literal comparisons per CLAUDE.md. Conditional spread everywhere: `exactOptionalPropertyTypes` is off in this repo, so `{ secondary: undefined }` would type-check and then clobber the built-in in `layout-meta.ts`'s `{...builtIn, ...instance}` (`layout-meta.ts:78-84`).
+`role !== "Inherit"` / `role === "Secondary"` are string-literal comparisons per CLAUDE.md. `rows` and `variants` need no `as` cast: their registered `DataType` names resolve to the nullable aliases exported alongside them in §1, so the generated accessors already return `LayoutDefinition | null` and `VariantTable | null`. Conditional spread everywhere: `exactOptionalPropertyTypes` is off in this repo, so `{ secondary: undefined }` would type-check and then clobber the built-in in `layout-meta.ts`'s `{...builtIn, ...instance}` (`layout-meta.ts:78-84`).
 
-`LayoutPreset` declares **no** `invalidate()` override, **no** `setProperty` override, and **no** parent protocol. Properties keep the default `invalidate: true` — do **not** copy `sap.ui.core.dnd.DragDropBase`'s `invalidate: false` (`dnd/DragDropBase.js:54,60,71`), which is exactly what would sever the only content-change signal the control has.
+**The keycap-language property is `keycapLang`, not `lang`, in both twins.** On webc, `@property() lang` is rejected outright: `isValidPropertyName` (`node_modules/@ui5/webcomponents-base/dist/util/isValidPropertyName.js:16-25`) allow-lists only `disabled`, `title`, `hidden`, `role`, `draggable` and `aria*`, and returns false for anything owned by `HTMLElement.prototype` — which owns `lang`. `UI5Element.js:963-965` then `console.warn`s _"is not a valid property name. Use a name that does not collide with DOM APIs"_ on every import of the bundle, and the UI5 accessor shadows the reflected global attribute. The kiosk twin has no such collision, but the name is mirrored anyway: an asymmetric public name across the twins is the drift class that produced #98 and #108, and D2 makes the rename free. The DOM attribute the renderer emits on key labels is still `lang` — only the authoring property is renamed.
 
-`packages/kiosk-keyboard/src/LayoutPreset.gen.d.ts` is generated by `npm run generate` and **committed**, by CLAUDE.md's stated principle: `LayoutPreset.ts` uses `$LayoutPresetSettings` in its constructor overloads without importing it, so the IDE and a bare `tsc --noEmit` need it on disk before any build, and kiosk ships `src/` to npm. `.gitattributes` already globs `*.gen.d.ts linguist-generated`; no change there.
+`CustomLayout` declares **no** `invalidate()` override, **no** `setProperty` override, and **no** parent protocol. Properties keep the default `invalidate: true` — do **not** copy `sap.ui.core.dnd.DragDropBase`'s `invalidate: false` (`dnd/DragDropBase.js:54,60,71`), which is exactly what would sever the only content-change signal the control has.
+
+`packages/kiosk-keyboard/src/CustomLayout.gen.d.ts` is generated by `npm run generate` and **committed**, by CLAUDE.md's stated principle: `CustomLayout.ts` uses `$CustomLayoutSettings` in its constructor overloads without importing it, so the IDE and a bare `tsc --noEmit` need it on disk before any build, and kiosk ships `src/` to npm. `.gitattributes` already globs `*.gen.d.ts linguist-generated`; no change there.
 
 ---
 
@@ -243,7 +277,7 @@ Delete the four property blocks at `KioskKeyboard.ts:387-460`. Extend `metadata.
 ```ts
     aggregations: {
       /**
-       * Per-instance layouts. Each preset declares a layout, or overlays the one its
+       * Per-instance layouts. Each custom layout declares a layout, or overlays the one its
        * `name` already resolves to. Applied in aggregation order: for rows, locales,
        * metadata and middleware the last declaration wins; long-press variants
        * accumulate per base letter.
@@ -251,17 +285,17 @@ Delete the four property blocks at `KioskKeyboard.ts:387-460`. Extend `metadata.
        * @since 0.1.0
        */
       customLayouts: {
-        type: "ui5.kiosk.LayoutPreset",
+        type: "ui5.kiosk.CustomLayout",
         multiple: true,
         singularName: "customLayout",
         bindable: "bindable",
-        defaultClass: LayoutPreset,
+        defaultClass: CustomLayout,
       },
       _variantPopover: { type: "sap.m.Popover", multiple: false, visibility: "hidden" },
     },
 ```
 
-`defaultClass` (since 1.120; `ManagedObject.js:812` typedef, `:1076` `FnClass ??= oKeyInfo?.defaultClass`) lets a plain object literal be coerced into a real `LayoutPreset`. It is kept for the plain-JS consumers that exist in this repo (`packages/kiosk-keyboard/test/e2e/visual/init.js`) and for `applySettings` phase 1. Known gap, stated rather than hidden: `@ui5/ts-interface-generator` 0.11.1 does not model `defaultClass`, so the generated union is `LayoutPreset[] | LayoutPreset | AggregationBindingInfo | \`{${string}}\``and **TypeScript consumers construct`new LayoutPreset({...})`**. Every TS fixture in this repo does so.
+`defaultClass` (since 1.120; `ManagedObject.js:812` typedef, `:1076` `FnClass ??= oKeyInfo?.defaultClass`) lets a plain object literal be coerced into a real `CustomLayout`. It is kept for the plain-JS consumers that exist in this repo (`packages/kiosk-keyboard/test/e2e/visual/init.js`) and for `applySettings` phase 1. Known gap, stated rather than hidden: `@ui5/ts-interface-generator` 0.11.1 does not model `defaultClass`, so the generated union is `CustomLayout[] | CustomLayout | AggregationBindingInfo | \`{${string}}\``and **TypeScript consumers construct`new CustomLayout({...})`**. Every TS fixture in this repo does so.
 
 Nine accessors are generated and **none is overridden**: `getCustomLayouts`, `addCustomLayout`, `insertCustomLayout`, `removeCustomLayout`, `removeAllCustomLayouts`, `indexOfCustomLayout`, `destroyCustomLayouts`, `bindCustomLayouts`, `unbindCustomLayouts`.
 
@@ -283,19 +317,19 @@ export enum LayoutFacet {
 }
 ```
 
-`packages/kiosk-keyboard-webc/src/LayoutPreset.ts`:
+`packages/kiosk-keyboard-webc/src/CustomLayout.ts`:
 
 ```ts
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import customElement from "@ui5/webcomponents-base/dist/decorators/customElement.js";
 import property from "@ui5/webcomponents-base/dist/decorators/property.js";
 import createInstanceChecker from "@ui5/webcomponents-base/dist/util/createInstanceChecker.js";
-import type { CompositionMiddleware, LayoutDefinition, LayoutPresetSpec, LayoutRole } from "./types.js";
+import type { CompositionMiddleware, LayoutDefinition, CustomLayoutSpec, LayoutRole } from "./types.js";
 import type { VariantTable } from "./core/latin-variants.js";
 
 /**
  * One layout and everything that belongs with it, slotted into a `<kiosk-keyboard>`'s
- * `customLayouts` slot. A preset with `rows` declares a layout; one without them
+ * `customLayouts` slot. A custom layout with `rows` declares a layout; one without them
  * overlays the layout its `name` already resolves to. Applied in DOM order.
  *
  * Renders nothing: no renderer, template or styles, so it never attaches a shadow root
@@ -306,24 +340,24 @@ import type { VariantTable } from "./core/latin-variants.js";
  * @public
  * @since 0.1.0
  */
-@customElement({ tag: "kiosk-keyboard-preset" })
-class LayoutPreset extends UI5Element {
+@customElement({ tag: "kiosk-keyboard-custom-layout" })
+class CustomLayout extends UI5Element {
   /**
    * Identifies this element to the host without `instanceof` or a tag-name check: UI5
    * rewrites tags under scoping (UI5ElementMetadata.js:50-60) and a cross-bundle
    * duplicate defeats `instanceof`.
    */
-  readonly isKioskKeyboardPreset = true;
+  readonly isKioskKeyboardCustomLayout = true;
 
-  /** The layout this preset declares or overlays. `*` addresses every layout. */
+  /** The layout this custom layout declares or overlays. `*` addresses every layout. */
   @property() name = "";
   /** BCP-47 language of the keycaps. Empty takes the built-in layout's value. */
-  @property() lang = "";
+  @property() keycapLang = "";
   /** BCP-47 prefixes that select this layout, comma- or space-separated. */
   @property() locales = "";
   /** Whether the layout is an auxiliary surface or a base alphabetic layout. */
   @property() layoutRole: `${LayoutRole}` = "Inherit";
-  /** Facets whose inherited value this preset discards, comma- or space-separated. */
+  /** Facets whose inherited value this custom layout discards, comma- or space-separated. */
   @property() suppress = "";
   /** The layout's rows, or absent to make this an overlay. Assign a new array to change them. */
   @property({ type: Object }) rows?: LayoutDefinition;
@@ -332,8 +366,8 @@ class LayoutPreset extends UI5Element {
   /** Composition middleware factory. `null` disables the built-in for this layout. */
   @property({ type: Object }) middleware?: (() => CompositionMiddleware) | null;
 
-  /** The framework-agnostic record this preset declares. The host's fold is its only reader. */
-  toSpec(): LayoutPresetSpec {
+  /** The framework-agnostic record this custom layout declares. The host's fold is its only reader. */
+  toSpec(): CustomLayoutSpec {
     const suppress = splitTokens(this.suppress);
     if (this.variants === null && !suppress.includes("Variants")) suppress.push("Variants");
     if (this.middleware === null && !suppress.includes("Middleware")) suppress.push("Middleware");
@@ -341,7 +375,7 @@ class LayoutPreset extends UI5Element {
     return {
       name: this.name,
       ...(this.rows !== undefined && { rows: this.rows }),
-      ...(this.lang && { lang: this.lang }),
+      ...(this.keycapLang && { lang: this.keycapLang }),
       ...(this.layoutRole !== "Inherit" && { secondary: this.layoutRole === "Secondary" }),
       ...(locales.length > 0 && { locales }),
       ...(this.middleware != null && { middleware: this.middleware }),
@@ -356,16 +390,16 @@ function splitTokens(value: string): string[] {
   return value.trim() ? value.trim().split(/[\s,]+/) : [];
 }
 
-LayoutPreset.define();
-export default LayoutPreset;
+CustomLayout.define();
+export default CustomLayout;
 
 /** The host-facing contract, duck-typed so an element from another bundle still matches. */
-export interface ILayoutPreset extends HTMLElement {
-  readonly isKioskKeyboardPreset: boolean;
-  toSpec(): LayoutPresetSpec;
+export interface ICustomLayout extends HTMLElement {
+  readonly isKioskKeyboardCustomLayout: boolean;
+  toSpec(): CustomLayoutSpec;
 }
 
-export const isLayoutPreset = createInstanceChecker<ILayoutPreset>("isKioskKeyboardPreset");
+export const isCustomLayout = createInstanceChecker<ICustomLayout>("isKioskKeyboardCustomLayout");
 ```
 
 `locales` and `suppress` are token **strings**, not `type: Array`: `UI5ElementMetadata.hasAttribute` excludes only `Object` (`UI5ElementMetadata.js:66-68`) and `defaultConverter.toAttribute` JSON-stringifies arrays (`UI5Element.js:49-56`), so a public `type: Array` property reflects a live JSON attribute — the trap already documented at `docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md:73`. Both separators are accepted so a `suppress="Variants,Middleware"` copied out of an XML view works verbatim; the reverse throws loudly on kiosk (`createArrayType.parseValue` splits only on `","`, `DataType.js:389-395`, and an unknown member fails `isValid` at `ManagedObject.js:1635-1638` — the same behaviour `mobileKeyboard="Bogus"` already has).
@@ -377,10 +411,10 @@ The slot on `KioskKeyboard.ts`, replacing the four `@property({ type: Object })`
 ```ts
 import slot from "@ui5/webcomponents-base/dist/decorators/slot-strict.js";
 import type { Slot } from "@ui5/webcomponents-base/dist/UI5Element.js";
-import { isLayoutPreset, type ILayoutPreset } from "./LayoutPreset.js";
+import { isCustomLayout, type ICustomLayout } from "./CustomLayout.js";
 
   /**
-   * Per-instance layouts. Each `<kiosk-keyboard-preset>` declares a layout, or overlays
+   * Per-instance layouts. Each `<kiosk-keyboard-custom-layout>` declares a layout, or overlays
    * the one its `name` already resolves to. Applied in DOM order.
    *
    * Not projected: these are configuration, so the shadow template renders no
@@ -390,12 +424,12 @@ import { isLayoutPreset, type ILayoutPreset } from "./LayoutPreset.js";
    * @since 0.1.0
    */
   @slot({ type: HTMLElement, invalidateOnChildChange: { properties: true, slots: false } })
-  customLayouts!: Slot<ILayoutPreset>;
+  customLayouts!: Slot<ICustomLayout>;
 ```
 
 `slot-strict.js` is present in the installed 2.22.0 tree (verified by listing `node_modules/@ui5/webcomponents-base/dist/decorators/`) and must be imported under the local identifier `slot` — the CEM analyzer detects slots by `findDecorator(member, "slot")` (`custom-elements-manifest.config.mjs:197,212`), which is why upstream writes `import { slotStrict as slot }` (`Table.js:9`). Both keys of `SlotInvalidation` are required (`UI5ElementMetadata.d.ts:3-6`); `{ properties: true }` alone does not compile. `individualSlots` is **not** set — nothing renders into an individual slot, and `_assignIndividualSlotsToChildren` (`UI5Element.js:720-727`) would stamp `slot="customLayouts-1"` onto React/Vue-managed light DOM for no benefit. `KioskKeyboardTemplate.tsx` is unchanged.
 
-`KioskKeyboard.ts` **value-imports** `isLayoutPreset` from `./LayoutPreset.js`. That is load-bearing, not stylistic: `customElements.define` runs synchronously inside `UI5Element.define()` (`:1121-1125`), so the child tag is always defined by the time a `<kiosk-keyboard>` connects and `_processChildren` never enters the `Promise.race([whenDefined, setTimeout(1000)])` at `UI5Element.js:369-379` (measured: 1004 ms to first paint for an undefined child tag).
+`KioskKeyboard.ts` **value-imports** `isCustomLayout` from `./CustomLayout.js`. That is load-bearing, not stylistic: `customElements.define` runs synchronously inside `UI5Element.define()` (`:1121-1125`), so the child tag is always defined by the time a `<kiosk-keyboard>` connects and `_processChildren` never enters the `Promise.race([whenDefined, setTimeout(1000)])` at `UI5Element.js:369-379` (measured: 1004 ms to first paint for an undefined child tag).
 
 ---
 
@@ -403,14 +437,14 @@ import { isLayoutPreset, type ILayoutPreset } from "./LayoutPreset.js";
 
 ```ts
 /**
- * What one layout preset declares. A preset without `rows` overlays the layout its
+ * What one layout custom layout declares. A custom layout without `rows` overlays the layout its
  * `name` already resolves to; the name `*` addresses every layout and carries
  * `variants` only.
  */
-export interface LayoutPresetSpec {
+export interface CustomLayoutSpec {
   readonly name: string;
   readonly rows?: LayoutDefinition;
-  readonly lang?: string;
+  readonly keycapLang?: string;
   /**
    * Whether the layout is an auxiliary surface rather than a base alphabetic layout.
    * Absent takes the built-in of the same name's value, and the base alphabetic role
@@ -421,8 +455,8 @@ export interface LayoutPresetSpec {
   readonly middleware?: () => CompositionMiddleware;
   readonly variants?: VariantTable;
   /**
-   * Facets whose inherited value this preset discards. A listed facet resolves to
-   * nothing at this preset's position; a value this same preset declares still applies.
+   * Facets whose inherited value this custom layout discards. A listed facet resolves to
+   * nothing at this custom layout's position; a value this same custom layout declares still applies.
    * Entries outside `SUPPRESSIBLE_FACETS` are reported and ignored.
    */
   readonly suppress?: readonly string[];
@@ -447,26 +481,26 @@ export interface LayoutPresetSpec {
     <kiosk:customLayouts>
 
       <!-- A whole custom layout: rows, locale binding, keycap language, IME, accents. -->
-      <kiosk:LayoutPreset core:require="{ Warehouse: 'demo/hotkeys/middleware/warehouse' }"
-        name="pl-warehouse" locales="pl,pl-PL" lang="pl"
+      <kiosk:CustomLayout core:require="{ Warehouse: 'demo/hotkeys/middleware/warehouse' }"
+        name="pl-warehouse" locales="pl,pl-PL" keycap-lang="pl"
         rows="{layouts>/plWarehouse}"
         middleware="Warehouse.createMiddleware"
         variants="{layouts>/plVariants}" />
 
       <!-- Rows-less overlay: point the Japanese locale at the BUILT-IN kana layout. -->
-      <kiosk:LayoutPreset name="ja-kana" locales="ja" />
+      <kiosk:CustomLayout name="ja-kana" locales="ja" />
 
       <!-- Opt a layout out of accents entirely. -->
-      <kiosk:LayoutPreset name="arabic" suppress="Variants" />
+      <kiosk:CustomLayout name="arabic" suppress="Variants" />
 
       <!-- Disable the built-in Hangul composer for directly-typed rows. -->
-      <kiosk:LayoutPreset name="ko-hangul" suppress="Middleware" rows="{layouts>/hangulDirect}" />
+      <kiosk:CustomLayout name="ko-hangul" suppress="Middleware" rows="{layouts>/hangulDirect}" />
 
       <!-- Promote the built-in secondary `numeric` to a base alphabetic layout. -->
-      <kiosk:LayoutPreset name="numeric" layoutRole="Base" rows="{layouts>/symbolSurface}" />
+      <kiosk:CustomLayout name="numeric" layoutRole="Base" rows="{layouts>/symbolSurface}" />
 
       <!-- House accent set for every layout that has none of its own. -->
-      <kiosk:LayoutPreset name="*" variants="{layouts>/houseAccents}" />
+      <kiosk:CustomLayout name="*" variants="{layouts>/houseAccents}" />
 
     </kiosk:customLayouts>
   </kiosk:KioskKeyboard>
@@ -479,25 +513,25 @@ export interface LayoutPresetSpec {
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import LayoutPreset from "ui5/kiosk/LayoutPreset";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import { LayoutFacet, LayoutRole } from "ui5/kiosk/library";
 
 const kb = new KioskKeyboard({
   controls: ["name"],
   customLayouts: [
-    new LayoutPreset({
+    new CustomLayout({
       name: "pl-warehouse",
       locales: ["pl", "pl-PL"],
-      lang: "pl",
+      keycapLang: "pl",
       rows: PL_ROWS,
       middleware: createWarehouseMiddleware,
       variants: PL_VARIANTS,
     }),
-    new LayoutPreset({ name: "numeric", layoutRole: LayoutRole.Base, rows: SYMBOL_SURFACE }),
-    new LayoutPreset({ name: "arabic", suppress: [LayoutFacet.Variants] }),
+    new CustomLayout({ name: "numeric", layoutRole: LayoutRole.Base, rows: SYMBOL_SURFACE }),
+    new CustomLayout({ name: "arabic", suppress: [LayoutFacet.Variants] }),
   ],
 });
-kb.addCustomLayout(new LayoutPreset({ name: "ja-kana", locales: ["ja"] }));
+kb.addCustomLayout(new CustomLayout({ name: "ja-kana", locales: ["ja"] }));
 ```
 
 The generated interface reads `layoutRole?: LayoutRole | PropertyBindingInfo | \`{${string}}\`` and `suppress?: LayoutFacet[] | PropertyBindingInfo | \`{${string}}\``—`astGenerationHelper.js:431-435`maps a dotted`X[]`to`createArrayTypeNode`over a named import and`:437-439`maps a dotted scalar to a named import, the same path that already yields`import { MobileKeyboard } from "ui5/kiosk/library"`at`KioskKeyboard.gen.d.ts:3`.
@@ -510,10 +544,10 @@ The generated interface reads `layoutRole?: LayoutRole | PropertyBindingInfo | \
 </script>
 
 <kiosk-keyboard accent-variants controls="user,pin">
-  <kiosk-keyboard-preset slot="customLayouts" name="ja-kana" locales="ja"></kiosk-keyboard-preset>
-  <kiosk-keyboard-preset slot="customLayouts" name="numeric" layout-role="Base"></kiosk-keyboard-preset>
-  <kiosk-keyboard-preset slot="customLayouts" name="arabic" suppress="Variants"></kiosk-keyboard-preset>
-  <kiosk-keyboard-preset slot="customLayouts" name="*" id="house"></kiosk-keyboard-preset>
+  <kiosk-keyboard-custom-layout slot="customLayouts" name="ja-kana" locales="ja"></kiosk-keyboard-custom-layout>
+  <kiosk-keyboard-custom-layout slot="customLayouts" name="numeric" layout-role="Base"></kiosk-keyboard-custom-layout>
+  <kiosk-keyboard-custom-layout slot="customLayouts" name="arabic" suppress="Variants"></kiosk-keyboard-custom-layout>
+  <kiosk-keyboard-custom-layout slot="customLayouts" name="*" id="house"></kiosk-keyboard-custom-layout>
 </kiosk-keyboard>
 
 <script type="module">
@@ -524,28 +558,28 @@ The generated interface reads `layoutRole?: LayoutRole | PropertyBindingInfo | \
 **Zero-JS HTML, by shipping a layout as its own element module** (the `TableSelectionMulti` model):
 
 ```ts
-import LayoutPreset from "kiosk-keyboard-webc/LayoutPreset";
+import CustomLayout from "kiosk-keyboard-webc/CustomLayout";
 import customElement from "@ui5/webcomponents-base/dist/decorators/customElement.js";
 
-@customElement({ tag: "acme-pl-warehouse-preset" })
-class PlWarehousePreset extends LayoutPreset {
+@customElement({ tag: "acme-pl-warehouse-custom layout" })
+class PlWarehouseCustomLayout extends CustomLayout {
   name = "pl-warehouse";
   locales = "pl,pl-PL";
-  lang = "pl";
+  keycapLang = "pl";
   rows = PL_ROWS;
   variants = PL_VARIANTS;
   middleware = createWarehouseMiddleware;
 }
-PlWarehousePreset.define();
+PlWarehouseCustomLayout.define();
 ```
 
 ```html
 <kiosk-keyboard accent-variants>
-  <acme-pl-warehouse-preset slot="customLayouts"></acme-pl-warehouse-preset>
+  <acme-pl-warehouse-custom layout slot="customLayouts"></acme-pl-warehouse-custom layout>
 </kiosk-keyboard>
 ```
 
-The subclass keeps `isKioskKeyboardPreset` and `toSpec()`, so the duck-typed host accepts it unchanged.
+The subclass keeps `isKioskKeyboardCustomLayout` and `toSpec()`, so the duck-typed host accepts it unchanged.
 
 **React 19:**
 
@@ -562,9 +596,15 @@ function Keyboard() {
   }, []);
   return (
     <kiosk-keyboard accent-variants="" controls="user,pin">
-      <kiosk-keyboard-preset ref={pl} slot="customLayouts" name="pl-warehouse" locales="pl,pl-PL" lang="pl" />
-      <kiosk-keyboard-preset slot="customLayouts" name="ja-kana" locales="ja" />
-      <kiosk-keyboard-preset slot="customLayouts" name="numeric" layout-role="Base" />
+      <kiosk-keyboard-custom-layout
+        ref={pl}
+        slot="customLayouts"
+        name="pl-warehouse"
+        locales="pl,pl-PL"
+        keycap-lang="pl"
+      />
+      <kiosk-keyboard-custom-layout slot="customLayouts" name="ja-kana" locales="ja" />
+      <kiosk-keyboard-custom-layout slot="customLayouts" name="numeric" layout-role="Base" />
     </kiosk-keyboard>
   );
 }
@@ -581,38 +621,38 @@ const plRows = markRaw(PL_ROWS),
 </script>
 <template>
   <kiosk-keyboard accent-variants controls="user,pin">
-    <kiosk-keyboard-preset
+    <kiosk-keyboard-custom-layout
       slot="customLayouts"
       name="pl-warehouse"
       locales="pl,pl-PL"
-      lang="pl"
+      keycap-lang="pl"
       :rows.prop="plRows"
       :variants.prop="plVariants"
       :middleware.prop="plMw"
     />
-    <kiosk-keyboard-preset slot="customLayouts" name="arabic" suppress="Variants" />
+    <kiosk-keyboard-custom-layout slot="customLayouts" name="arabic" suppress="Variants" />
   </kiosk-keyboard>
 </template>
 ```
 
-**Angular** (`CUSTOM_ELEMENTS_SCHEMA`): `<kiosk-keyboard-preset slot="customLayouts" name="pl-warehouse" locales="pl,pl-PL" [rows]="plRows" [variants]="plVariants" [middleware]="plMw">`.
+**Angular** (`CUSTOM_ELEMENTS_SCHEMA`): `<kiosk-keyboard-custom-layout slot="customLayouts" name="pl-warehouse" locales="pl,pl-PL" [rows]="plRows" [variants]="plVariants" [middleware]="plMw">`.
 
 ## Semantics
 
-## 1. The fold — `preset-fold.ts` (new byte-compared pair)
+## 1. The fold — `custom-layout-fold.ts` (new byte-compared pair)
 
-`packages/kiosk-keyboard/src/internal/preset-fold.ts` ↔ `packages/kiosk-keyboard-webc/src/core/preset-fold.ts`. Framework-free leaf: imports `mergeVariantTables` / types from `./latin-variants` and `LayoutMeta` from `./layout-meta`, and **nothing else**. It must not import `layout-registry` (its `normalizeLowerString` logs, `layout-registry.ts:61-71`) or `middleware-registry` (which pulls the 8.9 KB Hangul composer into the leaf tier). `isBuiltIn` is injected by the host for the same reason.
+`packages/kiosk-keyboard/src/internal/custom-layout-fold.ts` ↔ `packages/kiosk-keyboard-webc/src/core/custom-layout-fold.ts`. Framework-free leaf: imports `mergeVariantTables` / types from `./latin-variants` and `LayoutMeta` from `./layout-meta`, and **nothing else**. It must not import `layout-registry` (its `normalizeLowerString` logs, `layout-registry.ts:61-71`) or `middleware-registry` (which pulls the 8.9 KB Hangul composer into the leaf tier). `isBuiltIn` is injected by the host for the same reason.
 
 ```ts
-/** The facets a preset can discard the inherited value of. */
+/** The facets a custom layout can discard the inherited value of. */
 export const SUPPRESSIBLE_FACETS = ["Variants", "Middleware"] as const;
 export type SuppressibleFacet = (typeof SUPPRESSIBLE_FACETS)[number];
 
-/** The preset name that addresses every layout. */
+/** The custom layout name that addresses every layout. */
 export const WILDCARD_LAYOUT = "*";
 
-/** The lookup maps a control resolves through, folded from its presets. */
-export interface PresetFold {
+/** The lookup maps a control resolves through, folded from its custom layouts. */
+export interface CustomLayoutFold {
   readonly layouts?: InstanceLayouts;
   readonly layoutMeta?: InstanceLayoutMeta;
   readonly localeLayouts?: InstanceLocaleLayouts;
@@ -623,14 +663,17 @@ export interface PresetFold {
   readonly diagnostics: readonly LayoutDiagnostic[];
 }
 
-/** The fold of no presets. Shared, so a control with none allocates nothing. */
-export const EMPTY_FOLD: PresetFold = Object.freeze({ diagnostics: Object.freeze([]) });
+/** The fold of no custom layouts. Shared, so a control with none allocates nothing. */
+export const EMPTY_FOLD: CustomLayoutFold = Object.freeze({ diagnostics: Object.freeze([]) });
 ```
 
 Every map is `undefined` rather than an empty `Map` when nothing was declared — the repo's settled derived-cache convention, and what keeps `resolveVariantTable`'s `if (!instanceVariants) return builtIn` fast path and its identity guarantee (`latin-variants.qunit.ts:187` asserts `strictEqual(..., LATIN_DIACRITIC_VARIANTS)`).
 
 ```ts
-export function foldPresets(specs: readonly LayoutPresetSpec[], isBuiltIn: (name: string) => boolean): PresetFold {
+export function foldCustomLayouts(
+  specs: readonly CustomLayoutSpec[],
+  isBuiltIn: (name: string) => boolean,
+): CustomLayoutFold {
   if (specs.length === 0) return EMPTY_FOLD;
 
   const layouts = new Map<string, LayoutDefinition>();
@@ -673,7 +716,7 @@ export function foldPresets(specs: readonly LayoutPresetSpec[], isBuiltIn: (name
       }
     }
 
-    const lang = typeof spec.lang === "string" ? spec.lang.trim() : "";
+    const lang = typeof spec.keycapLang === "string" ? spec.keycapLang.trim() : "";
     const patch: LayoutMeta = {
       ...(lang && { lang }),
       ...(typeof spec.secondary === "boolean" && { secondary: spec.secondary }),
@@ -709,7 +752,7 @@ export function foldPresets(specs: readonly LayoutPresetSpec[], isBuiltIn: (name
     if (overlay !== undefined) variants.set(name, overlay);
   }
 
-  // Resolvability is a property of the complete list: an overlay may precede the preset
+  // Resolvability is a property of the complete list: an overlay may precede the custom layout
   // that declares its rows.
   for (const name of addressed) {
     if (!rowsDeclared.has(name) && !isBuiltIn(name)) diagnostics.push({ code: "unknown-target", layout: name });
@@ -731,21 +774,21 @@ export function foldPresets(specs: readonly LayoutPresetSpec[], isBuiltIn: (name
 
 ## 2. Resolution order, per facet
 
-| facet        | across presets with the same name                                                                                          | across tiers                                                                      |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `rows`       | last declaration wins; a preset that declares none leaves the previous standing                                            | named → built-in (`layout-registry.ts:95`, unchanged)                             |
-| `lang`       | last declaration wins, per attribute                                                                                       | named → built-in (`layout-meta.ts:78-84`, unchanged)                              |
-| `secondary`  | last declaration wins, per attribute                                                                                       | named → built-in                                                                  |
-| `locales`    | additive union; per prefix, last wins                                                                                      | instance index → `BUILTIN_LOCALE_LAYOUT_MAP` (`layout-registry.ts:79`, unchanged) |
-| `middleware` | last declaration wins                                                                                                      | named → built-in                                                                  |
-| `variants`   | additive per base letter (`mergeVariantTables`); `[]` deletes a letter                                                     | built-in → `*` → named, each merged                                               |
-| `suppress`   | resets the accumulator for that facet at this preset's position; a value the same preset declares then layers onto nothing | applies at the preset's own tier                                                  |
+| facet        | across custom layouts with the same name                                                                                                 | across tiers                                                                      |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `rows`       | last declaration wins; a custom layout that declares none leaves the previous standing                                                   | named → built-in (`layout-registry.ts:95`, unchanged)                             |
+| `lang`       | last declaration wins, per attribute                                                                                                     | named → built-in (`layout-meta.ts:78-84`, unchanged)                              |
+| `secondary`  | last declaration wins, per attribute                                                                                                     | named → built-in                                                                  |
+| `locales`    | additive union; per prefix, last wins                                                                                                    | instance index → `BUILTIN_LOCALE_LAYOUT_MAP` (`layout-registry.ts:79`, unchanged) |
+| `middleware` | last declaration wins                                                                                                                    | named → built-in                                                                  |
+| `variants`   | additive per base letter (`mergeVariantTables`); `[]` deletes a letter                                                                   | built-in → `*` → named, each merged                                               |
+| `suppress`   | resets the accumulator for that facet at this custom layout's position; a value the same custom layout declares then layers onto nothing | applies at the custom layout's own tier                                           |
 
 Three different rules is not sloppiness — the code already has three (`layout-registry.ts:95` shadow, `layout-meta.ts:83` per-attribute merge, `latin-variants.ts:76-84` per-letter merge) and no design can flatten them without breaking shipped behaviour. Ordering is aggregation index on kiosk, DOM order on webc. Keys are `name.trim().toLowerCase()`, mirroring the storage normalisation at `KioskKeyboard.ts:1196` and the lookup normalisation at `latin-variants.ts:96`, `middleware-registry.ts:34`, `layout-registry.ts:66`.
 
-**Duplicate `name` is legal and is the overlay mechanism.** Duplicating a _facet_ across two presets for one name is reported (`duplicate-rows`, `duplicate-middleware`, `duplicate-locale`) and the later one wins.
+**Duplicate `name` is legal and is the overlay mechanism.** Duplicating a _facet_ across two custom layouts for one name is reported (`duplicate-rows`, `duplicate-middleware`, `duplicate-locale`) and the later one wins.
 
-**One forced semantic change, to be documented and tested:** `_readLayoutInput` (kiosk `:1215-1225`, webc `:1342-1352`) today rejects a whole entry when `rows` is malformed, discarding that entry's `lang` and `secondary` with it. Under a per-facet fold that is inexpressible: a bad `rows` drops only `rows` (`invalid-rows`) and the preset's other facets still apply.
+**One forced semantic change, to be documented and tested:** `_readLayoutInput` (kiosk `:1215-1225`, webc `:1342-1352`) today rejects a whole entry when `rows` is malformed, discarding that entry's `lang` and `secondary` with it. Under a per-facet fold that is inexpressible: a bad `rows` drops only `rows` (`invalid-rows`) and the custom layout's other facets still apply.
 
 ## 3. The tri-states (DEF-5), all three solved
 
@@ -755,7 +798,7 @@ UI5 has no `null`-carries-meaning idiom for control properties at all. `ManagedO
 
 | lost tri-state         | new spelling                                     | resolved value                                  |
 | ---------------------- | ------------------------------------------------ | ----------------------------------------------- |
-| (c) `secondary: false` | `layoutRole="Base"` (vs `Inherit` / `Secondary`) | `LayoutPresetSpec.secondary = false`            |
+| (c) `secondary: false` | `layoutRole="Base"` (vs `Inherit` / `Secondary`) | `CustomLayoutSpec.secondary = false`            |
 | (a) `variants: null`   | `suppress="Variants"`                            | `VariantOverlay { replace: true, table: null }` |
 | (b) `middleware: null` | `suppress="Middleware"`                          | `InstanceMiddleware` entry of `null`            |
 
@@ -795,7 +838,7 @@ An either/or: a named entry silently discards the entire `*` tier — its table,
 /**
  * One tier's contribution to a layout's long-press variants. `replace` discards
  * everything the tiers below contributed before `table` is merged, which is what
- * suppressing the facet on the declaring preset means; a `table` of `null` contributes
+ * suppressing the facet on the declaring custom layout means; a `table` of `null` contributes
  * nothing, so `{ replace: true, table: null }` opts the layout out.
  */
 export interface VariantOverlay {
@@ -838,12 +881,12 @@ export function resolveVariantTable(
 }
 ```
 
-`mergeVariantTables` is promoted to `export` (the fold uses it). `WILDCARD_LAYOUT` moves out of `latin-variants.ts:65` into `preset-fold.ts` — the resolver no longer knows the name exists, which is the structural point of the re-layering.
+`mergeVariantTables` is promoted to `export` (the fold uses it). `WILDCARD_LAYOUT` moves out of `latin-variants.ts:65` into `custom-layout-fold.ts` — the resolver no longer knows the name exists, which is the structural point of the re-layering.
 
-The child-level accumulator, in `preset-fold.ts`:
+The child-level accumulator, in `custom-layout-fold.ts`:
 
 ```ts
-/** Folds one preset's variant declaration onto the overlay accumulated so far. */
+/** Folds one custom layout's variant declaration onto the overlay accumulated so far. */
 function foldVariantOverlay(
   acc: VariantOverlay | undefined,
   suppressed: boolean,
@@ -888,11 +931,11 @@ Invariants preserved: identity when no tier applies (`strictEqual(..., LATIN_DIA
 
 ## 5. Where `*` lives — decision
 
-**`*` stays as a reserved `name` on a `LayoutPreset` in the single `customLayouts` collection.** Rejected: the semantics cluster's dedicated `layoutDefaults` 0..1 aggregation/slot carrying the same class.
+**`*` stays as a reserved `name` on a `CustomLayout` in the single `customLayouts` collection.** Rejected: the semantics cluster's dedicated `layoutDefaults` 0..1 aggregation/slot carrying the same class.
 
-Deciding reason: D3 names the wildcard tier as an existing published concept being **re-layered**, not renamed; a second aggregation and a second slot is a second public surface name and a second idiom in both twins for what is one tier of one concern. The special-casing the second aggregation removes collapses to exactly **one partition at the top of the fold loop** (the `if (name === WILDCARD_LAYOUT)` branch above, which `continue`s before any named-facet code runs, so a `*` preset's rows can never reach `fold.layouts` and `getRegisteredLayout("*")` can never return them) plus one diagnostic. The cluster's two strongest objections are answered rather than dismissed: the _"name lies"_ objection is answered by the branch being the first thing the loop does, and the _"position lies"_ objection is answered by `wildcard-field`, which reports every per-layout facet declared on a `*` preset instead of silently ignoring it.
+Deciding reason: D3 names the wildcard tier as an existing published concept being **re-layered**, not renamed; a second aggregation and a second slot is a second public surface name and a second idiom in both twins for what is one tier of one concern. The special-casing the second aggregation removes collapses to exactly **one partition at the top of the fold loop** (the `if (name === WILDCARD_LAYOUT)` branch above, which `continue`s before any named-facet code runs, so a `*` custom layout's rows can never reach `fold.layouts` and `getRegisteredLayout("*")` can never return them) plus one diagnostic. The cluster's two strongest objections are answered rather than dismissed: the _"name lies"_ objection is answered by the branch being the first thing the loop does, and the _"position lies"_ objection is answered by `wildcard-field`, which reports every per-layout facet declared on a `*` custom layout instead of silently ignoring it.
 
-**A `*` preset carries `variants` and `suppress="Variants"` only.** `name`, `rows`, `lang`, `layoutRole`, `locales`, `middleware` and `suppress="Middleware"` on a `*` preset are reported (`wildcard-field`) and ignored. Deciding reason for excluding middleware: D3 scopes the wildcard to the variants tier, admitting it would add a third parameter to `getMiddlewareFactory` in the hand-synced `UNCHECKED_CORE_TWINS` tier, and nobody asked for it (CLAUDE.md §1).
+**A `*` custom layout carries `variants` and `suppress="Variants"` only.** `name`, `rows`, `lang`, `layoutRole`, `locales`, `middleware` and `suppress="Middleware"` on a `*` custom layout are reported (`wildcard-field`) and ignored. Deciding reason for excluding middleware: D3 scopes the wildcard to the variants tier, admitting it would add a third parameter to `getMiddlewareFactory` in the hand-synced `UNCHECKED_CORE_TWINS` tier, and nobody asked for it (CLAUDE.md §1).
 
 ## 6. `middleware-registry.ts` (both twins, hand-mirrored)
 
@@ -915,15 +958,15 @@ Read at HEAD, `:34` is `return instanceFactories?.get(name) ?? BUILTIN_FACTORIES
 
 ## 7. `layout-registry.ts` — no logic change
 
-Verified at HEAD: `getRegisteredLayout` (`:95`) is `instanceLayouts?.get(name) ?? BUILTIN_LAYOUTS.get(name)`, so a rows-less preset already falls through to the built-in; `resolveLocaleMappedLayout` (`:79-81`) already accepts a locale pointed at a built-in via `instanceLayouts?.has(mapped) || BUILTIN_LAYOUTS.has(mapped)`. Only the doc comments at `:20-23` and `:41` change (they name `instanceLayouts` / `instanceLocaleLayouts`). The brief's complaint that an unresolvable locale mapping returns `null` without a word is fully covered by the fold's `unknown-target`, which fires once at authoring time instead of silently on every resolution.
+Verified at HEAD: `getRegisteredLayout` (`:95`) is `instanceLayouts?.get(name) ?? BUILTIN_LAYOUTS.get(name)`, so a rows-less custom layout already falls through to the built-in; `resolveLocaleMappedLayout` (`:79-81`) already accepts a locale pointed at a built-in via `instanceLayouts?.has(mapped) || BUILTIN_LAYOUTS.has(mapped)`. Only the doc comments at `:20-23` and `:41` change (they name `instanceLayouts` / `instanceLocaleLayouts`). The brief's complaint that an unresolvable locale mapping returns `null` without a word is fully covered by the fold's `unknown-target`, which fires once at authoring time instead of silently on every resolution.
 
 ## 8. D4 — the fifth concern
 
 Say the fifth concern is a per-layout keycap label map. It folds in as a **facet**, not a surface:
 
-1. `types.ts` — one field on `LayoutPresetSpec` (both twins).
-2. `LayoutPreset` — one property + one line in `toSpec()` (both twins).
-3. `preset-fold.ts` — one branch in the loop, one field on `PresetFold`, and, if it is disableable, one member on `SUPPRESSIBLE_FACETS` **and** one on `library.ts`'s `LayoutFacet` enum.
+1. `types.ts` — one field on `CustomLayoutSpec` (both twins).
+2. `CustomLayout` — one property + one line in `toSpec()` (both twins).
+3. `custom-layout-fold.ts` — one branch in the loop, one field on `CustomLayoutFold`, and, if it is disableable, one member on `SUPPRESSIBLE_FACETS` **and** one on `library.ts`'s `LayoutFacet` enum.
 4. One resolver consuming it, in the `(name, instanceMap, defaults?)` shape.
 
 Zero new top-level surface on the control, zero new diagnostic codes (`duplicate-*` and `unknown-suppress` fall out of the generic machinery). The apply-to-all case, if wanted, is one more admitted field in the `*` branch.
@@ -937,46 +980,53 @@ Zero new top-level surface on the control, zero new diagnostic codes (`duplicate
 Delete the five `_instance*Map` fields (`KioskKeyboard.ts:158-167`) and their five `init()` resets (`:873-877`). Add:
 
 ```ts
-  /** Presets folded into the lookup maps; `null` while the cache is cold or stale. */
-  private _fold: PresetFold | null = null;
+  /** Custom layouts folded into the lookup maps; `null` while the cache is cold or stale. */
+  private _fold!: CustomLayoutFold | null;
   /** The elements the cached fold was built from, compared element-wise on read. */
-  private _foldChildren: LayoutPreset[] = [];
+  private _foldChildren!: CustomLayout[];
   /** Diagnostics already reported for the current configuration, keyed by content. */
-  private _reportedDiagnostics = new Set<string>();
+  private _reportedDiagnostics!: Set<string>;
   /** The factory that produced `_middleware`, so a re-resolve onto the same factory is a no-op. */
-  private _middlewareFactory: (() => CompositionMiddleware) | null = null;
+  private _middlewareFactory!: (() => CompositionMiddleware) | null;
 ```
 
-`init()` seeds `this._fold = null; this._foldChildren = []; this._reportedDiagnostics.clear(); this._middlewareFactory = null;` in the existing `:872-878` block.
+`init()` seeds `this._fold = null; this._foldChildren = []; this._reportedDiagnostics = new Set(); this._middlewareFactory = null;` in the existing `:872-878` block — **constructing** the `Set`, not clearing one.
+
+**Definite assignment with no initialiser is mandatory here, not stylistic.** The root `tsconfig.json` sets `"target": "ES2022"` and never sets `useDefineForClassFields`, so it defaults to `true`; the kiosk package does not override it, while webc does (`packages/kiosk-keyboard-webc/tsconfig.json:9` `"useDefineForClassFields": false`). `ManagedObject`'s constructor calls `that.init()` (`ManagedObject.js:530`) and `that.applySettings(mSettings, oScope)` (`:534`) — **both inside `super()`** — so a derived field initialiser runs _after_ both. Two concrete failures if initialisers are used:
+
+- `init()`'s `this._reportedDiagnostics` is still `undefined`, so seeding it throws a `TypeError` on every `new KioskKeyboard()`;
+- the single fold built between the `applySettings` phases (§A.4) is overwritten by `_fold = null` running afterwards, silently destroying the "exactly one fold, one diagnostic pass" property §A.5 rests on and test 9 asserts.
+
+Every field at `KioskKeyboard.ts:149-173` already follows this form. The one exception, `_layoutSource` at `:148`, is benign only by coincidence: its initialiser writes `"external"`, which is also its construction-time value. Do not read it as licence.
 
 ### A.2 The lazy memoized fold — the DEF-3 and DEF-4 fix
 
 ```ts
   /**
    * The folded view of `customLayouts`: the lookup maps every resolution path reads,
-   * rebuilt only when the aggregation or one of its presets actually changed.
+   * rebuilt only when the aggregation or one of its custom layouts actually changed.
    *
    * Two signals, one per axis. Structure - adds, inserts, removals, reorders - is read
    * off the element list here, because `removeAggregation` (ManagedObject.js:2434),
    * `removeAllAggregation` (:2495) and `destroyAggregation` (:2587) invalidate without
-   * naming a child. Content - a property write inside a parented preset - arrives as
-   * `invalidate(preset)` and drops the cache there.
+   * naming a child. Content - a property write inside a parented custom layout - arrives as
+   * `invalidate(custom layout)` and drops the cache there.
    *
    * Never call this from `invalidate`.
    */
-  private _getFold(): PresetFold {
+  private _getFold(): CustomLayoutFold {
     const children = this.getCustomLayouts();
     if (this._fold && this._sameChildren(children)) return this._fold;
     this._foldChildren = children;
-    this._fold = foldPresets(
-      children.map((preset) => preset.toSpec()),
+    this._fold = foldCustomLayouts(
+      children.map((custom layout) => custom layout.toSpec()),
       registryIsBuiltInLayout,
     );
     this._reportDiagnostics(this._fold.diagnostics);
     return this._fold;
   }
 
-  private _sameChildren(children: readonly LayoutPreset[]): boolean {
+  private _sameChildren(children: readonly CustomLayout[]): boolean {
     const cached = this._foldChildren;
     if (children.length !== cached.length) return false;
     for (let i = 0; i < children.length; i++) {
@@ -1005,17 +1055,17 @@ Delete the five `_instance*Map` fields (`KioskKeyboard.ts:158-167`) and their fi
 
 ```ts
   /**
-   * A property write inside a parented preset reaches this control as an invalidation
+   * A property write inside a parented custom layout reaches this control as an invalidation
    * naming that element (ManagedObject.js:1509 -> :2623 -> Control.js:348). Dropping the
    * cache is the entire reaction; the fold is rebuilt on the next read.
    */
   override invalidate(oOrigin?: ManagedObject): void {
-    if (oOrigin instanceof LayoutPreset) this._fold = null;
+    if (oOrigin instanceof CustomLayout) this._fold = null;
     super.invalidate(oOrigin);
   }
 ```
 
-The flag is dropped **before** `super`, because `Control.prototype.invalidate` returns early during `_bOnBeforeRenderingPhase` (`Control.js:352-354`). `oOrigin` is a real, typed parameter on `Control` (`Control.js:348`; `@openui5/types` `sap.ui.core.d.ts:22029`) — DEF-4's "mis-states the base signature" complaint applies only to the Element-level zero-arg form at `:13330`, which this never touches. `invalidate` is a hand-written prototype method, not a generated accessor, so `super.invalidate(oOrigin)` is safe from the DEF-2 mechanism. `instanceof` is cycle-free: `KioskKeyboard.ts` already value-imports `LayoutPreset` for `defaultClass`, and `LayoutPreset.ts` imports nothing from `KioskKeyboard.ts`. Subclassed presets (the "ship a preset as a named unit" pattern) satisfy it.
+The flag is dropped **before** `super`, because `Control.prototype.invalidate` returns early during `_bOnBeforeRenderingPhase` (`Control.js:352-354`). `oOrigin` is a real, typed parameter on `Control` (`Control.js:348`; `@openui5/types` `sap.ui.core.d.ts:22029`) — DEF-4's "mis-states the base signature" complaint applies only to the Element-level zero-arg form at `:13330`, which this never touches. `invalidate` is a hand-written prototype method, not a generated accessor, so `super.invalidate(oOrigin)` is safe from the DEF-2 mechanism. `instanceof` is cycle-free: `KioskKeyboard.ts` already value-imports `CustomLayout` for `defaultClass`, and `CustomLayout.ts` imports nothing from `KioskKeyboard.ts`. Subclassed custom layouts (the "ship a custom layout as a named unit" pattern) satisfy it.
 
 `ManagedObjectObserver` was considered and is unusable: `@private @ui5-restricted sap.ui.model.base` (`ManagedObjectObserver.js:111-114`) and typed as `undefined` in `@openui5/types` (`sap.ui.core.d.ts:88124`).
 
@@ -1028,10 +1078,10 @@ Under the lazy fold the kiosk twin overrides **zero** aggregation mutators, so `
 For the record only — **this code does not ship** — the correct form if an override ever becomes unavoidable is the generic low-level API, transcribed from `Aggregation.prototype.generate` (`ManagedObjectMetadata.js:1811-1815`):
 
 ```ts
-addCustomLayout(p: LayoutPreset): this { this.addAggregation("customLayouts", p); return this; }
-insertCustomLayout(p: LayoutPreset, i: number): this { this.insertAggregation("customLayouts", p, i); return this; }
-removeCustomLayout(v: number | string | LayoutPreset): LayoutPreset | null { return this.removeAggregation("customLayouts", v) as LayoutPreset | null; }
-removeAllCustomLayouts(): LayoutPreset[] { return this.removeAllAggregation("customLayouts") as LayoutPreset[]; }
+addCustomLayout(p: CustomLayout): this { this.addAggregation("customLayouts", p); return this; }
+insertCustomLayout(p: CustomLayout, i: number): this { this.insertAggregation("customLayouts", p, i); return this; }
+removeCustomLayout(v: number | string | CustomLayout): CustomLayout | null { return this.removeAggregation("customLayouts", v) as CustomLayout | null; }
+removeAllCustomLayouts(): CustomLayout[] { return this.removeAllAggregation("customLayouts") as CustomLayout[]; }
 destroyCustomLayouts(): this { this.destroyAggregation("customLayouts"); return this; }
 ```
 
@@ -1044,13 +1094,13 @@ Replaces `KioskKeyboard.ts:786-814` including the false doc comment at `:796-799
    * Applies `customLayouts` in its own pass before everything else, then injects the
    * locale-detected layout when the caller named none.
    *
-   * The presets go through `super.applySettings` rather than being read out of
-   * `mSettings`: that is what makes an object literal and a `LayoutPreset` instance the
+   * The custom layouts go through `super.applySettings` rather than being read out of
+   * `mSettings`: that is what makes an object literal and a `CustomLayout` instance the
    * same input. A literal is constructed through the aggregation's `defaultClass`
    * (ManagedObject.js:1076) and each value passes `validateProperty` exactly once, so
    * `locales: "pl"` widens to `["pl"]` (ManagedObject.js:1621-1624) whichever form the
    * caller wrote. By the time `layout` is applied, `setLayout`'s registry validation and
-   * the locale default below both resolve through the complete set of presets.
+   * the locale default below both resolve through the complete set of custom layouts.
    *
    * A `customLayouts` bound to a model populates asynchronously and therefore does not
    * contribute to the layout chosen here.
@@ -1072,13 +1122,13 @@ Replaces `KioskKeyboard.ts:786-814` including the false doc comment at `:796-799
 
 Canon: `sap.ui.table.Table.prototype.applySettings` (`sap.ui.table/1.136.0/src/sap/ui/table/Table.js:1107-1136`), which applies the `plugins` **aggregation** in an early `Control.prototype.applySettings.call` and runs `initDefaultRowMode(this)` between the passes. SAP mutates the caller's object with `delete`; this repo must not — the destructure keeps `mSettings` untouched, preserving the intent already documented at `:807-808`.
 
-**Rejected alternatives:** (i) normalizing inside a pre-read — constructing throwaway `LayoutPreset`s duplicates any author-supplied `id` and throws on the second construction, while hand-mirroring the coercions means keeping a normalizer permanently in sync with `validateProperty`'s `string[]` widening, `null` collapse and array `slice`; (ii) resolving the locale default lazily at `onBeforeRendering` — `new KioskKeyboard({customLayouts:[…]}).getLayout()` would return `"qwerty"` until first paint and the unregistered-layout warning would move to a render that may never happen; (iii) a read-only pre-read — the divergence is a coercion problem, not a diagnostics problem.
+**Rejected alternatives:** (i) normalizing inside a pre-read — constructing throwaway `CustomLayout`s duplicates any author-supplied `id` and throws on the second construction, while hand-mirroring the coercions means keeping a normalizer permanently in sync with `validateProperty`'s `string[]` widening, `null` collapse and array `slice`; (ii) resolving the locale default lazily at `onBeforeRendering` — `new KioskKeyboard({customLayouts:[…]}).getLayout()` would return `"qwerty"` until first paint and the unregistered-layout warning would move to a render that may never happen; (iii) a read-only pre-read — the divergence is a coercion problem, not a diagnostics problem.
 
-**Behaviour delta: none observable.** `getLayout()` immediately after `new` still returns the locale-derived name; the unregistered-layout warning still fires at construction; `instance-overrides.qunit.ts:198/217/236/260/366/385` and `KioskKeyboard-layout.qunit.ts:912/935/952/1154` keep their answers. Residual cost, stated: the view settings-preprocessor (`ManagedObject.js:1274`, installed by `View.js:562`) runs twice when phase 1 fires. It is idempotent, and SAP ships the identical exposure. Phase 1 is skipped entirely when no `customLayouts` is given, so the no-preset path is a single `super` call.
+**Behaviour delta: none observable.** `getLayout()` immediately after `new` still returns the locale-derived name; the unregistered-layout warning still fires at construction; `instance-overrides.qunit.ts:198/217/236/260/366/385` and `KioskKeyboard-layout.qunit.ts:912/935/952/1154` keep their answers. Residual cost, stated: the view settings-preprocessor (`ManagedObject.js:1274`, installed by `View.js:562`) runs twice when phase 1 fires. It is idempotent, and SAP ships the identical exposure. Phase 1 is skipped entirely when no `customLayouts` is given, so the no-custom layout path is a single `super` call.
 
 ### A.5 DEF-3 — dead by arithmetic
 
-Constructing `new KioskKeyboard({ layout, customLayouts: [a, b, c] })`: phase 1 runs `addAllToAggregation` (`ManagedObject.js:1251-1259`), whose three mutator calls only null the cache; the fold then runs **once**, over the complete list, between the phases; every later read is a cache hit. **One fold, one diagnostic pass** — against N folds and N prefix-list diagnostic passes, including the spurious `unknown-target` that the flagship diagnostic would otherwise emit on correct input when an overlay precedes the preset declaring its rows.
+Constructing `new KioskKeyboard({ layout, customLayouts: [a, b, c] })`: phase 1 runs `addAllToAggregation` (`ManagedObject.js:1251-1259`), whose three mutator calls only null the cache; the fold then runs **once**, over the complete list, between the phases; every later read is a cache hit. **One fold, one diagnostic pass** — against N folds and N prefix-list diagnostic passes, including the spurious `unknown-target` that the flagship diagnostic would otherwise emit on correct input when an overlay precedes the custom layout declaring its rows.
 
 The ordering constraint the semantics cluster hands over is therefore satisfied structurally, not by the dedupe set: `_reportDiagnostics` is called only from `_getFold`, and `_getFold` is never called from a mutator. The dedupe key-set additionally makes repeated emission idempotent for the incremental case (`kb.addCustomLayout(a)` then a render then `kb.addCustomLayout(b)`), where a transient `unknown-target` is genuine and clears itself when `b` lands.
 
@@ -1103,11 +1153,11 @@ The ordering constraint the semantics cluster hands over is therefore satisfied 
 
 `_endComposition` (`:1118-1123`) already commits. Both fields start `null`, so the first key on `ko-hangul` takes the change branch with a no-op `_endComposition`. Null `_middlewareFactory` alongside every existing `this._middleware = null` site.
 
-**The invariant:** the only code that can end a composition is (a) `_applyLayout` on a real layout switch (`:1109`), (b) a target/keyboardType switch (`:1343-1345`), (c) this factory-identity check at the next composition-affecting key. Nothing runs from `invalidate`, from a setter, or from the fold. `preset.setLang("pl")` nulls a cache and returns; a half-typed Hangul syllable is untouched.
+**The invariant:** the only code that can end a composition is (a) `_applyLayout` on a real layout switch (`:1109`), (b) a target/keyboardType switch (`:1343-1345`), (c) this factory-identity check at the next composition-affecting key. Nothing runs from `invalidate`, from a setter, or from the fold. `custom layout.setKeycapLang("pl")` nulls a cache and returns; a half-typed Hangul syllable is untouched.
 
 ### A.8 Cloning
 
-`ManagedObject.prototype.clone` (`:4520 ff.`) iterates `mProperties` first and `mAggregations` second, so `layout` precedes `customLayouts` in the clone's settings — a single-phase `applySettings` would run `setLayout("pl-warehouse")` against an empty fold and warn and bail. The two-phase form makes `kb.clone()` correct, and it must be a regression test: it is the one path that exercises the hoist without any consumer writing settings in that order. Each preset is deep-cloned with a derived id and its property _values_ shared by reference — strictly better than HEAD, where two clones share one mutable `Record`. The `BindingInfo.UI5ObjectMarker` stamp applied to non-frozen object property values during clone is a `Symbol` (`BindingInfo.js:20`), so it is invisible to `Object.entries` and cannot corrupt variant-table validation.
+`ManagedObject.prototype.clone` (`:4520 ff.`) iterates `mProperties` first and `mAggregations` second, so `layout` precedes `customLayouts` in the clone's settings — a single-phase `applySettings` would run `setLayout("pl-warehouse")` against an empty fold and warn and bail. The two-phase form makes `kb.clone()` correct, and it must be a regression test: it is the one path that exercises the hoist without any consumer writing settings in that order. Each custom layout is deep-cloned with a derived id and its property _values_ shared by reference — strictly better than HEAD, where two clones share one mutable `Record`. The `BindingInfo.UI5ObjectMarker` stamp applied to non-frozen object property values during clone is a `Symbol` (`BindingInfo.js:20`), so it is invisible to `Object.entries` and cannot corrupt variant-table validation.
 
 ### A.9 Destroy
 
@@ -1115,7 +1165,7 @@ The ordering constraint the semantics cluster hands over is therefore satisfied 
 
 ### A.10 One exotic hazard the aggregation newly exposes
 
-`BindingInfo.extract` treats any object with `oValue.path != undefined || oValue.parts` as a binding info (`BindingInfo.js:184`), and `applySettings`'s PROPERTY branch calls `extractBindingInfo` (`ManagedObject.js:1330-1336`). Today the exposed object is the outer `{layoutName: table}` map, so only a _layout named_ `path` collides; as a top-level `LayoutPreset#variants` the table itself is inspected, so a variant table with a base letter `path` or `parts` is mis-read. `rows` is an array and is unaffected. Document the `ui5object: true` escape hatch (`BindingInfo.js:181-183`) in the `variants` doc-block.
+`BindingInfo.extract` treats any object with `oValue.path != undefined || oValue.parts` as a binding info (`BindingInfo.js:184`), and `applySettings`'s PROPERTY branch calls `extractBindingInfo` (`ManagedObject.js:1330-1336`). Today the exposed object is the outer `{layoutName: table}` map, so only a _layout named_ `path` collides; as a top-level `CustomLayout#variants` the table itself is inspected, so a variant table with a base letter `path` or `parts` is mis-read. `rows` is an array and is unaffected. Document the `ui5object: true` escape hatch (`BindingInfo.js:181-183`) in the `variants` doc-block.
 
 ---
 
@@ -1123,15 +1173,15 @@ The ordering constraint the semantics cluster hands over is therefore satisfied 
 
 ### B.1 DEF-1 — the fatal defect, and the fix
 
-Confirmed in the installed `@ui5/webcomponents-base@2.22.0`: `_invalidate` returns early on `this._suppressInvalidation` (`UI5Element.js:69-74`), which is initialised `true` in the constructor (`:121`) and first cleared inside `_render`'s `finally` **after** `onBeforeRendering()` (`:669-684`). `connectedCallback` runs `_startObservingDOMChildren()` (`:213`) then `await this._processChildren()` (`:214`) **before** `renderImmediately(this)` (`:222`), and `_processChildren` writes `this._state[propertyName]` directly (`:346-349`) with its own `_invalidate` (`:397-410`) inside the suppression window. A prior probe under the package's own vitest/jsdom logged exactly this: `onBeforeRendering` fired with `presets.length === 1` and `onInvalidation` was never called.
+Confirmed in the installed `@ui5/webcomponents-base@2.22.0`: `_invalidate` returns early on `this._suppressInvalidation` (`UI5Element.js:69-74`), which is initialised `true` in the constructor (`:121`) and first cleared inside `_render`'s `finally` **after** `onBeforeRendering()` (`:669-684`). `connectedCallback` runs `_startObservingDOMChildren()` (`:213`) then `await this._processChildren()` (`:214`) **before** `renderImmediately(this)` (`:222`), and `_processChildren` writes `this._state[propertyName]` directly (`:346-349`) with its own `_invalidate` (`:397-410`) inside the suppression window. A prior probe under the package's own vitest/jsdom logged exactly this: `onBeforeRendering` fired with `custom layouts.length === 1` and `onInvalidation` was never called.
 
 **The array is populated before first render; only the notification is missing.** So the fold is **lazy and memoized, read on demand** — never assembled from `onInvalidation`. That is also the first-party idiom: `ui5-table` declares no `onInvalidation` at all and reads `this.features` lazily at `Table.js:171, 191, 197, 203, 217`.
 
-`onEnterDOM` runs at `:225`, **after** `renderImmediately` at `:222`, so `KioskKeyboard.ts:867-872`'s `_baseLayout = this.layout || this._localeLayout()` seed is evaluated during the first render. With an eager fold a `<kiosk-keyboard-preset locales="pl">` present at connect time is ignored on first paint; with the lazy fold it is honoured with no pre-population hack.
+`onEnterDOM` runs at `:225`, **after** `renderImmediately` at `:222`, so `KioskKeyboard.ts:867-872`'s `_baseLayout = this.layout || this._localeLayout()` seed is evaluated during the first render. With an eager fold a `<kiosk-keyboard-custom-layout locales="pl">` present at connect time is ignored on first paint; with the lazy fold it is honoured with no pre-population hack.
 
 ```ts
-  private _foldCache: PresetFold = EMPTY_FOLD;
-  private _foldKey: readonly ILayoutPreset[] = [];
+  private _foldCache: CustomLayoutFold = EMPTY_FOLD;
+  private _foldKey: readonly ICustomLayout[] = [];
   private _foldEpoch = 0;
   private _foldedEpoch = -1;
   private _reportedDiagnostics = new Set<string>();
@@ -1150,18 +1200,18 @@ Confirmed in the installed `@ui5/webcomponents-base@2.22.0`: `_invalidate` retur
    * Rebuilt only when the slotted elements change identity or one of them reports a
    * property change, so diagnostics are emitted once per real change, not once per read.
    */
-  private _getFold(): PresetFold {
+  private _getFold(): CustomLayoutFold {
     const children = this.customLayouts;
     if (this._foldedEpoch === this._foldEpoch && sameElements(this._foldKey, children)) return this._foldCache;
     this._foldKey = children;
     this._foldedEpoch = this._foldEpoch;
 
-    const specs: LayoutPresetSpec[] = [];
+    const specs: CustomLayoutSpec[] = [];
     for (const child of children) {
-      if (isLayoutPreset(child)) specs.push(child.toSpec());
-      else console.warn(`[kiosk-keyboard] Ignoring <${child.localName}> in the customLayouts slot: not a <kiosk-keyboard-preset>.`);
+      if (isCustomLayout(child)) specs.push(child.toSpec());
+      else console.warn(`[kiosk-keyboard] Ignoring <${child.localName}> in the customLayouts slot: not a <kiosk-keyboard-custom-layout>.`);
     }
-    this._foldCache = foldPresets(specs, isBuiltInLayout);
+    this._foldCache = foldCustomLayouts(specs, isBuiltInLayout);
     this._reportDiagnostics(this._foldCache.diagnostics);
     return this._foldCache;
   }
@@ -1180,7 +1230,7 @@ const sameElements = (a: readonly unknown[], b: readonly unknown[]): boolean =>
   override onInvalidation(changeInfo: ChangeInfo): void {
     // ...existing layout / keyboardType / fKeyMode / mobileKeyboard / docked / autoShow branches
     // UI5Element.js:465-477 folds a child property change into a slot change, so this one
-    // branch covers a preset being added, removed, reordered or edited. It never fires for
+    // branch covers a custom layout being added, removed, reordered or edited. It never fires for
     // the slot content present at connect time, which is why the fold above is lazy.
     if (changeInfo.type === "slot" && changeInfo.name === "customLayouts") this._foldEpoch++;
   }
@@ -1218,7 +1268,7 @@ Delete the `instanceMiddleware` `onInvalidation` branch at `KioskKeyboard.ts:101
 
 ### B.4 Rendering, cloning, destroy
 
-`KioskKeyboardTemplate.tsx` renders no `<slot name="customLayouts">`: presets are configuration and are never projected, mirroring `TableTemplate.js` omitting `features`. `LayoutPreset` has no renderer/template/styles, so `_needsShadowDOM()` (`UI5Element.js:951-953`) is false and it attaches no shadow root — no CSS, no layout impact, no visual-regression surface. There is no clone concept; `cloneNode(true)` on the host copies the light-DOM children as ordinary elements. Teardown is the platform's: removing a preset fires `_updateSlots`, the array identity changes, the next read refolds.
+`KioskKeyboardTemplate.tsx` renders no `<slot name="customLayouts">`: custom layouts are configuration and are never projected, mirroring `TableTemplate.js` omitting `features`. `CustomLayout` has no renderer/template/styles, so `_needsShadowDOM()` (`UI5Element.js:951-953`) is false and it attaches no shadow root — no CSS, no layout impact, no visual-regression surface. There is no clone concept; `cloneNode(true)` on the host copies the light-DOM children as ordinary elements. Teardown is the platform's: removing a custom layout fires `_updateSlots`, the array identity changes, the next read refolds.
 
 ---
 
@@ -1227,7 +1277,7 @@ Delete the `instanceMiddleware` `onInvalidation` branch at `KioskKeyboard.ts:101
 | defect                                                          | fix                                                                                                                                                                                                                | file:line of the fix                                           |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
 | **DEF-1** webc fold empty for the first render                  | fold is lazy and memoized, read on demand from `_getFold()`; `onInvalidation` only bumps an epoch                                                                                                                  | webc `KioskKeyboard.ts` `_getFold()` / `onInvalidation` (§B.1) |
-| **DEF-2** `super.addPreset` does not exist                      | zero mutator overrides on kiosk; all nine accessors stay generated. Escape-hatch form recorded, not shipped                                                                                                        | §A.3                                                           |
+| **DEF-2** `super.addCustomLayout` does not exist                | zero mutator overrides on kiosk; all nine accessors stay generated. Escape-hatch form recorded, not shipped                                                                                                        | §A.3                                                           |
 | **DEF-3** N folds, N diagnostic passes over partial lists       | lazy fold + two-phase `applySettings`: exactly one fold over the complete list between the phases; `_reportDiagnostics` is reachable only from `_getFold`                                                          | §A.2, §A.4, §A.5                                               |
 | **DEF-4** re-fold from `invalidate` can tear down an IME buffer | `invalidate(oOrigin)` body is one statement — drop a cache; the composition invariant moves to the next composition-affecting key. Base signature taken from `Control.js:348`, not the Element-level zero-arg form | §A.2, §A.7                                                     |
 | **DEF-5** three lost tri-states                                 | `layoutRole` sentinel enum for (c); shared `suppress: LayoutFacet[]` for (a) and (b); `middleware-registry` widened to `\| null` with a `.has()` read                                                              | semantics §3, §6                                               |
@@ -1237,19 +1287,19 @@ Delete the `instanceMiddleware` `onInvalidation` branch at `KioskKeyboard.ts:101
 
 ## New modules
 
-| path                                                   | tier                     | notes                                                                          |
-| ------------------------------------------------------ | ------------------------ | ------------------------------------------------------------------------------ |
-| `packages/kiosk-keyboard/src/LayoutPreset.ts`          | kiosk host (framework)   | `sap.ui.core.Element` subclass. Top level, **not** `internal/`                 |
-| `packages/kiosk-keyboard/src/LayoutPreset.gen.d.ts`    | generated, **committed** | see below                                                                      |
-| `packages/kiosk-keyboard/src/internal/preset-fold.ts`  | **byte-compared**        | new `CORE_MODULES` entry                                                       |
-| `packages/kiosk-keyboard-webc/src/LayoutPreset.ts`     | webc host (framework)    | `UI5Element` subclass, tag `kiosk-keyboard-preset`. Top level, **not** `core/` |
-| `packages/kiosk-keyboard-webc/src/core/preset-fold.ts` | **byte-compared**        | twin of the above                                                              |
+| path                                                          | tier                     | notes                                                                                 |
+| ------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------- |
+| `packages/kiosk-keyboard/src/CustomLayout.ts`                 | kiosk host (framework)   | `sap.ui.core.Element` subclass. Top level, **not** `internal/`                        |
+| `packages/kiosk-keyboard/src/CustomLayout.gen.d.ts`           | generated, **committed** | see below                                                                             |
+| `packages/kiosk-keyboard/src/internal/custom-layout-fold.ts`  | **byte-compared**        | new `CORE_MODULES` entry                                                              |
+| `packages/kiosk-keyboard-webc/src/CustomLayout.ts`            | webc host (framework)    | `UI5Element` subclass, tag `kiosk-keyboard-custom-layout`. Top level, **not** `core/` |
+| `packages/kiosk-keyboard-webc/src/core/custom-layout-fold.ts` | **byte-compared**        | twin of the above                                                                     |
 
-Both `LayoutPreset.ts` files sit at `src/` top level deliberately: `tools/check-twin-drift.mjs:261-262` reconciles the intersection of `internal/` and `core/` basenames, and the completeness guard fails on any same-named pair not listed in `CORE_MODULES` or `UNCHECKED_CORE_TWINS`. Two framework-specific classes must never be paired.
+Both `CustomLayout.ts` files sit at `src/` top level deliberately: `tools/check-twin-drift.mjs:261-262` reconciles the intersection of `internal/` and `core/` basenames, and the completeness guard fails on any same-named pair not listed in `CORE_MODULES` or `UNCHECKED_CORE_TWINS`. Two framework-specific classes must never be paired.
 
-`preset-fold.ts` contents: `LayoutPresetSpec` re-export surface, `PresetFold`, `EMPTY_FOLD`, `foldPresets`, `foldVariantOverlay`, `SUPPRESSIBLE_FACETS` / `SuppressibleFacet`, `WILDCARD_LAYOUT`, `LayoutDiagnostic` + `DiagnosticCode`, `DiagnosticVocabulary`, `describeDiagnostic`, and the two validators `isValidLayoutDefinition` / `isValidVariantTable` moved off the host classes.
+`custom-layout-fold.ts` contents: `CustomLayoutSpec` re-export surface, `CustomLayoutFold`, `EMPTY_FOLD`, `foldCustomLayouts`, `foldVariantOverlay`, `SUPPRESSIBLE_FACETS` / `SuppressibleFacet`, `WILDCARD_LAYOUT`, `LayoutDiagnostic` + `DiagnosticCode`, `DiagnosticVocabulary`, `describeDiagnostic`, and the two validators `isValidLayoutDefinition` / `isValidVariantTable` moved off the host classes.
 
-Import graph, verified framework-free: `preset-fold` → `latin-variants` (value: `mergeVariantTables`; types) → `layout-meta` (value: `BUILTIN_LAYOUT_META`). It must **not** import `layout-registry` (`normalizeLowerString` logs, `:61-71`) or `middleware-registry` (which pulls the 8.9 KB Hangul composer into the leaf tier). Zero `Log.` / `console.` — mandatory, because all nine current `CORE_MODULES` contain zero logging and `normalize()` in the drift checker cannot reconcile kiosk's `Log.warning` with webc's `console.warn`.
+Import graph, verified framework-free: `custom-layout-fold` → `latin-variants` (value: `mergeVariantTables`; types) → `layout-meta` (value: `BUILTIN_LAYOUT_META`). It must **not** import `layout-registry` (`normalizeLowerString` logs, `:61-71`) or `middleware-registry` (which pulls the 8.9 KB Hangul composer into the leaf tier). Zero `Log.` / `console.` — mandatory, because all nine current `CORE_MODULES` contain zero logging and `normalize()` in the drift checker cannot reconcile kiosk's `Log.warning` with webc's `console.warn`.
 
 ## Deleted modules
 
@@ -1265,11 +1315,11 @@ Import graph, verified framework-free: `preset-fold` → `latin-variants` (value
 
 ### Byte-compared tier (`CORE_MODULES`) — **must land in both twins in one commit or CI is red**
 
-| module               | change                                                                                                                                                                                                                                                                                                                              |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `latin-variants.ts`  | `VariantOverlay` added; `InstanceVariants` retyped to `ReadonlyMap<string, VariantOverlay>`; `mergeVariantTables` exported; `applyVariantOverlay` added; `resolveVariantTable` gains a third `defaults?: VariantOverlay` parameter and becomes a three-tier apply; `WILDCARD_LAYOUT` (`:65`) deleted (it moves to `preset-fold.ts`) |
-| `layout-meta.ts`     | **doc only** — `:61-66` (`InstanceLayoutMeta` provenance names `instanceLayouts`) and `:75-76` (the "`variants` is not resolved here … that tier is `instanceVariants`" sentence). No code change: `resolveLayoutMeta` `:78-84` and `isSecondaryLayout` `:87-89` already carry the (c) tri-state correctly                          |
-| **`preset-fold.ts`** | new                                                                                                                                                                                                                                                                                                                                 |
+| module                      | change                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `latin-variants.ts`         | `VariantOverlay` added; `InstanceVariants` retyped to `ReadonlyMap<string, VariantOverlay>`; `mergeVariantTables` exported; `applyVariantOverlay` added; `resolveVariantTable` gains a third `defaults?: VariantOverlay` parameter and becomes a three-tier apply; `WILDCARD_LAYOUT` (`:65`) deleted (it moves to `custom-layout-fold.ts`) |
+| `layout-meta.ts`            | **doc only** — `:61-66` (`InstanceLayoutMeta` provenance names `instanceLayouts`) and `:75-76` (the "`variants` is not resolved here … that tier is `instanceVariants`" sentence). No code change: `resolveLayoutMeta` `:78-84` and `isSecondaryLayout` `:87-89` already carry the (c) tri-state correctly                                 |
+| **`custom-layout-fold.ts`** | new                                                                                                                                                                                                                                                                                                                                        |
 
 `WILDCARD_LAYOUT`'s other usages today are `latin-variants.ts:104` and the four tests (`latin-variants.qunit.ts:4,180,195`; `latin-variants.test.ts:5,163,172`) — nothing else in `src/`.
 
@@ -1287,9 +1337,9 @@ Import graph, verified framework-free: `preset-fold` → `latin-variants` (value
 `packages/kiosk-keyboard-webc/src/KioskKeyboard.ts` — delete the four `@property({type: Object})` blocks (`:514-592`), the `MemoMapView` block (`:1290-1332`) and its import (`:39`), `_readLayoutInput` (`:1334-1352`), the `instanceMiddleware` `onInvalidation` branch (`:1019-1027`). Add the `@slot`, the lazy fold, `_reportDiagnostics`, `_ensureMiddleware`, the `customLayouts` `onInvalidation` branch, and the **missing registry check on the `layout` property** at `:962-965` (Stage 0). Rewrite reads at `:1218-1219, 1239, 1251, 1255, 1269, 1658, 1774, 1795` and JSDoc at `:272, 278, 387, 501, 634`.
 
 `packages/kiosk-keyboard/src/library.ts` — see surface §1.
-Both `types.ts` — delete `LayoutSpec` / `LayoutInput`, add `LayoutPresetSpec`; webc `types.ts` additionally houses `LayoutRole` / `LayoutFacet`.
-`packages/kiosk-keyboard-webc/src/bundle.esm.ts` — add `export { default as LayoutPreset } from "./LayoutPreset.js";` and `LayoutPresetSpec` / `LayoutRole` / `LayoutFacet` to the type re-exports; remove `LayoutSpec` / `LayoutInput` (`:16-17`).
-`packages/kiosk-keyboard-webc/package.json` — add `"./dist/LayoutPreset.js"` to `sideEffects` and a `"./LayoutPreset"` entry to `exports`.
+Both `types.ts` — delete `LayoutSpec` / `LayoutInput`, add `CustomLayoutSpec`; webc `types.ts` additionally houses `LayoutRole` / `LayoutFacet`.
+`packages/kiosk-keyboard-webc/src/bundle.esm.ts` — add `export { default as CustomLayout } from "./CustomLayout.js";` and `CustomLayoutSpec` / `LayoutRole` / `LayoutFacet` to the type re-exports; remove `LayoutSpec` / `LayoutInput` (`:16-17`).
+`packages/kiosk-keyboard-webc/package.json` — add `"./dist/CustomLayout.js"` to `sideEffects` and a `"./CustomLayout"` entry to `exports`.
 
 ## `tools/check-twin-drift.mjs`
 
@@ -1297,22 +1347,22 @@ Both `types.ts` — delete `LayoutSpec` / `LayoutInput`, add `LayoutPresetSpec`;
 const CORE_MODULES = [
   "grapheme", "auto-repeat", "shift-state", "composition-utils", "key-token",
   "key-action-meta", "layout-constraint", "latin-variants", "layout-meta",
-  "preset-fold",
+  "custom-layout-fold",
 ];
 ...
 const EXPECTED_PAIR_COUNT = 28;   // LAYOUTS(18) + CORE_MODULES(10)
 ```
 
-Both edits in one commit — the guard at `:220-223` fails if they disagree, and `reconcile()` at `:262` fails if `preset-fold` exists in both directories without being listed. Also refresh the stale header comment at `:26-29` ("registry is static-class-based in webc" — false at HEAD; both are module-scoped `const Map`s). Baseline verified green right now: 27 pairs in sync, style-twin 40/44, dom-contract in parity.
+Both edits in one commit — the guard at `:220-223` fails if they disagree, and `reconcile()` at `:262` fails if `custom-layout-fold` exists in both directories without being listed. Also refresh the stale header comment at `:26-29` ("registry is static-class-based in webc" — false at HEAD; both are module-scoped `const Map`s). Baseline verified green right now: 27 pairs in sync, style-twin 40/44, dom-contract in parity.
 
 ## Generated artifacts
 
 | artifact                                                                                                      | status                                                                        | requirement                                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/kiosk-keyboard/src/KioskKeyboard.gen.d.ts`                                                          | committed, `linguist-generated`                                               | regenerate; the 47 occurrences at `:5-8, 96, 155-215, 510, 531, 682-852` collapse to the aggregation's nine accessors                                                                                                                                                                                                                                                                               |
-| `packages/kiosk-keyboard/src/LayoutPreset.gen.d.ts`                                                           | **new, committed**                                                            | CLAUDE.md's deciding principle applies verbatim — the class uses `$LayoutPresetSettings` without importing it, so the IDE and a bare `tsc --noEmit` need it on disk, and kiosk ships `src/` to npm. `.gitattributes` already globs it. Do **not** import it as `"./LayoutPreset.gen"`: these are ambient `declare module "./X"` augmentations (`KioskKeyboard.gen.d.ts:13`), not importable modules |
-| `packages/kiosk-keyboard-webc/src/generated/**`                                                               | gitignored (`.gitignore:10`)                                                  | no action; `LayoutPreset` needs no i18n or theme entry                                                                                                                                                                                                                                                                                                                                              |
-| `packages/kiosk-keyboard-webc/dist/custom-elements.json` (+ `vscode.html-custom-data.json`, `web-types.json`) | gitignored (`.gitignore:2`), asserted present by `check-package-smoke.mjs:40` | must newly report `slots: [{name: "customLayouts"}]` on `kiosk-keyboard` and a second declaration for `kiosk-keyboard-preset`                                                                                                                                                                                                                                                                       |
+| `packages/kiosk-keyboard/src/CustomLayout.gen.d.ts`                                                           | **new, committed**                                                            | CLAUDE.md's deciding principle applies verbatim — the class uses `$CustomLayoutSettings` without importing it, so the IDE and a bare `tsc --noEmit` need it on disk, and kiosk ships `src/` to npm. `.gitattributes` already globs it. Do **not** import it as `"./CustomLayout.gen"`: these are ambient `declare module "./X"` augmentations (`KioskKeyboard.gen.d.ts:13`), not importable modules |
+| `packages/kiosk-keyboard-webc/src/generated/**`                                                               | gitignored (`.gitignore:10`)                                                  | no action; `CustomLayout` needs no i18n or theme entry                                                                                                                                                                                                                                                                                                                                              |
+| `packages/kiosk-keyboard-webc/dist/custom-elements.json` (+ `vscode.html-custom-data.json`, `web-types.json`) | gitignored (`.gitignore:2`), asserted present by `check-package-smoke.mjs:40` | must newly report `slots: [{name: "customLayouts"}]` on `kiosk-keyboard` and a second declaration for `kiosk-keyboard-custom-layout`                                                                                                                                                                                                                                                                |
 
 **There is no DEF-6 analogue on the webc twin** — every generated manifest is gitignored, matching CLAUDE.md's asymmetry rule.
 
@@ -1322,7 +1372,7 @@ Both edits in one commit — the guard at `:220-223` fails if they disagree, and
 
 ## Design
 
-The catalogue lives in the **byte-compared** `preset-fold.ts` as structured data plus a vocabulary-injected formatter, so the two twins cannot disagree on facts while still spelling their own surface names. It contains zero `Log.` / `console.`. There is no free-text `detail` field — everything is structured, so `describeDiagnostic` is total.
+The catalogue lives in the **byte-compared** `custom-layout-fold.ts` as structured data plus a vocabulary-injected formatter, so the two twins cannot disagree on facts while still spelling their own surface names. It contains zero `Log.` / `console.`. There is no free-text `detail` field — everything is structured, so `describeDiagnostic` is total.
 
 ```ts
 export type DiagnosticCode =
@@ -1340,7 +1390,7 @@ export type DiagnosticCode =
 
 export interface LayoutDiagnostic {
   readonly code: DiagnosticCode;
-  /** The layout the offending preset names; "" for the `*` preset or an unnamed one. */
+  /** The layout the offending custom layout names; "" for the `*` custom layout or an unnamed one. */
   readonly layout: string;
   /** The facet involved, for the codes that report one. */
   readonly facet?: string;
@@ -1356,8 +1406,8 @@ export interface DiagnosticVocabulary {
   readonly accentVariants: string;
   /** `"customLayouts aggregation"` / `"customLayouts slot"`. */
   readonly customLayouts: string;
-  /** `"<kiosk:LayoutPreset>"` / `"<kiosk-keyboard-preset>"`. */
-  readonly preset: string;
+  /** `"<kiosk:CustomLayout>"` / `"<kiosk-keyboard-custom-layout>"`. */
+  readonly custom layout: string;
   /** Every built-in layout name, for the "did you mean" tail of `unknown-target`. */
   readonly builtInLayouts: readonly string[];
 }
@@ -1367,19 +1417,19 @@ export function describeDiagnostic(d: LayoutDiagnostic, vocab: DiagnosticVocabul
 
 ## The catalogue — 11 fold codes
 
-| code                   | trigger                                                                                                               | message                                                                                                              | remediation                                                                                                                                                                                        | today                                                                                                                          |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `empty-name`           | a preset whose `name` is empty after trim                                                                             | _"A {preset} in the {customLayouts} declares no name, so nothing resolves it."_                                      | _"Set `name` to the layout it declares or overlays, or `\*` to address every layout."_                                                                                                             | silent                                                                                                                         |
-| `invalid-rows`         | `rows` declared, fails `isValidLayoutDefinition`                                                                      | _"`rows` on the {preset} for \"X\" is not a layout definition."_                                                     | _"Expected a non-empty array of non-empty rows where every key has a non-empty string `value`. The preset's other facets still apply."_                                                            | warns **and drops the whole entry** (`:1134`)                                                                                  |
-| `invalid-variants`     | `variants` declared, fails `isValidVariantTable`                                                                      | _"`variants` on the {preset} for \"X\" is not a variant table."_                                                     | _"Expected a non-empty object mapping lowercase base letters to arrays of non-empty glyph strings; an empty array suppresses that letter. To opt \"X\" out entirely use `suppress=\"Variants\"`."_ | warns (`:1268`)                                                                                                                |
-| `invalid-middleware`   | `middleware` declared, not a function                                                                                 | _"`middleware` on the {preset} for \"X\" is not a function."_                                                        | _"Supply a factory returning a `CompositionMiddleware`; to disable the built-in use `suppress=\"Middleware\"`."_                                                                                   | **silent** (`_toMiddlewareMap:1254` skips non-functions)                                                                       |
-| `invalid-locale`       | a `locales` token empty after trim                                                                                    | _"`locales` on the {preset} for \"X\" contains an empty entry."_                                                     | _"Every entry must be a non-empty BCP-47 prefix, e.g. `pl` or `de-at`."_                                                                                                                           | **silent** (`:1243-1244`)                                                                                                      |
-| `unknown-target`       | a preset declares facets but no `rows`, and `name` is neither a built-in nor declared with `rows` by any other preset | _"The {preset} for \"X\" declares facets but no `rows`, and no layout of that name exists, so nothing resolves it."_ | _"Add `rows`, or correct the name — the built-ins are: {builtInLayouts}."_                                                                                                                         | **silent** — the flagship                                                                                                      |
-| `unknown-suppress`     | a `suppress` token outside `SUPPRESSIBLE_FACETS`                                                                      | _"`suppress` on the {preset} for \"X\" names \"Y\", which is not a suppressible facet."_                             | _"Valid facets are: Variants, Middleware. Rows cannot be suppressed: a preset shadows a built-in layout, it never removes it."_                                                                    | n/a                                                                                                                            |
-| `duplicate-rows`       | two presets declare `rows` for one name                                                                               | _"Two presets declare `rows` for \"X\"; the later one wins."_                                                        | _"Remove one, or give them different names."_                                                                                                                                                      | unrepresentable                                                                                                                |
-| `duplicate-middleware` | two presets declare `middleware` for one name                                                                         | same shape                                                                                                           | same                                                                                                                                                                                               | unrepresentable                                                                                                                |
-| `duplicate-locale`     | two presets claim one BCP-47 prefix for different layouts                                                             | _"Both \"X\" and \"Y\" claim the locale \"pl\"; \"Y\" wins."_                                                        | _"Remove the prefix from one of them."_                                                                                                                                                            | unrepresentable (an object literal cannot repeat a key) — **a hazard the N-preset fold introduces, so this code is mandatory** |
-| `wildcard-field`       | a `*` preset declares `rows`, `lang`, `layoutRole`, `locales` or `middleware`, or `suppress="Middleware"`             | _"A `\*` preset applies to every layout, so it cannot declare `<facet>`."_                                           | _"Move it to a preset that names one layout."_                                                                                                                                                     | today those fields are silently meaningless under `"*"`                                                                        |
+| code                   | trigger                                                                                                                             | message                                                                                                                     | remediation                                                                                                                                                                                        | today                                                                                                                                 |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `empty-name`           | a custom layout whose `name` is empty after trim                                                                                    | _"A {custom layout} in the {customLayouts} declares no name, so nothing resolves it."_                                      | _"Set `name` to the layout it declares or overlays, or `\*` to address every layout."_                                                                                                             | silent                                                                                                                                |
+| `invalid-rows`         | `rows` declared, fails `isValidLayoutDefinition`                                                                                    | _"`rows` on the {custom layout} for \"X\" is not a layout definition."_                                                     | _"Expected a non-empty array of non-empty rows where every key has a non-empty string `value`. The custom layout's other facets still apply."_                                                     | warns **and drops the whole entry** (`:1134`)                                                                                         |
+| `invalid-variants`     | `variants` declared, fails `isValidVariantTable`                                                                                    | _"`variants` on the {custom layout} for \"X\" is not a variant table."_                                                     | _"Expected a non-empty object mapping lowercase base letters to arrays of non-empty glyph strings; an empty array suppresses that letter. To opt \"X\" out entirely use `suppress=\"Variants\"`."_ | warns (`:1268`)                                                                                                                       |
+| `invalid-middleware`   | `middleware` declared, not a function                                                                                               | _"`middleware` on the {custom layout} for \"X\" is not a function."_                                                        | _"Supply a factory returning a `CompositionMiddleware`; to disable the built-in use `suppress=\"Middleware\"`."_                                                                                   | **silent** (`_toMiddlewareMap:1254` skips non-functions)                                                                              |
+| `invalid-locale`       | a `locales` token empty after trim                                                                                                  | _"`locales` on the {custom layout} for \"X\" contains an empty entry."_                                                     | _"Every entry must be a non-empty BCP-47 prefix, e.g. `pl` or `de-at`."_                                                                                                                           | **silent** (`:1243-1244`)                                                                                                             |
+| `unknown-target`       | a custom layout declares facets but no `rows`, and `name` is neither a built-in nor declared with `rows` by any other custom layout | _"The {custom layout} for \"X\" declares facets but no `rows`, and no layout of that name exists, so nothing resolves it."_ | _"Add `rows`, or correct the name — the built-ins are: {builtInLayouts}."_                                                                                                                         | **silent** — the flagship                                                                                                             |
+| `unknown-suppress`     | a `suppress` token outside `SUPPRESSIBLE_FACETS`                                                                                    | _"`suppress` on the {custom layout} for \"X\" names \"Y\", which is not a suppressible facet."_                             | _"Valid facets are: Variants, Middleware. Rows cannot be suppressed: a custom layout shadows a built-in layout, it never removes it."_                                                             | n/a                                                                                                                                   |
+| `duplicate-rows`       | two custom layouts declare `rows` for one name                                                                                      | _"Two custom layouts declare `rows` for \"X\"; the later one wins."_                                                        | _"Remove one, or give them different names."_                                                                                                                                                      | unrepresentable                                                                                                                       |
+| `duplicate-middleware` | two custom layouts declare `middleware` for one name                                                                                | same shape                                                                                                                  | same                                                                                                                                                                                               | unrepresentable                                                                                                                       |
+| `duplicate-locale`     | two custom layouts claim one BCP-47 prefix for different layouts                                                                    | _"Both \"X\" and \"Y\" claim the locale \"pl\"; \"Y\" wins."_                                                               | _"Remove the prefix from one of them."_                                                                                                                                                            | unrepresentable (an object literal cannot repeat a key) — **a hazard the N-custom layout fold introduces, so this code is mandatory** |
+| `wildcard-field`       | a `*` custom layout declares `rows`, `lang`, `layoutRole`, `locales` or `middleware`, or `suppress="Middleware"`                    | _"A `\*` custom layout applies to every layout, so it cannot declare `<facet>`."_                                           | _"Move it to a custom layout that names one layout."_                                                                                                                                              | today those fields are silently meaningless under `"*"`                                                                               |
 
 `unknown-target` subsumes and improves on `resolveLocaleMappedLayout` returning `null` without a word (`layout-registry.ts:79-84`): it fires once at authoring time instead of silently on every locale resolution, which is why `layout-registry.ts` needs no code change.
 
@@ -1391,7 +1441,7 @@ export function describeDiagnostic(d: LayoutDiagnostic, vocab: DiagnosticVocabul
 
 ## Host-side codes (not fold diagnostics)
 
-- **`disarmed-variants`** survives where it is (kiosk `:1937-1945`, webc `:1283-1288`) with its own once-per-instance boolean: its trigger reads `accentVariants`, a host property the fold cannot see. Trigger re-expressed as `fold.variants !== undefined || fold.defaultVariants !== undefined`. It gains the ability to name the offending presets.
+- **`disarmed-variants`** survives where it is (kiosk `:1937-1945`, webc `:1283-1288`) with its own once-per-instance boolean: its trigger reads `accentVariants`, a host property the fold cannot see. Trigger re-expressed as `fold.variants !== undefined || fold.defaultVariants !== undefined`. It gains the ability to name the offending custom layouts.
 - **`unregistered-layout`** exists on kiosk (`:1071-1077`) and is **missing entirely on webc** (`:962-965` has no registry check). Adding it is Stage 0, independent of this design. The structured vocabulary also fixes an existing divergence: kiosk's message names the remedy, webc's does not.
 
 ## Where diagnostics are logged, and the emission cap
@@ -1403,7 +1453,7 @@ The fold is pure and returns every diagnostic; each host owns the cap.
 
 Cap: **once per control per distinct diagnostic**, keyed `${code}|${layout}|${facet}|${other}|${value}` in a per-instance `Set`, cleared when a fold produces zero diagnostics so a fault re-introduced later is reported again. This generalises the existing `_warnDisarmedVariants` boolean.
 
-**Ordering is guaranteed structurally, not by the cap.** `unknown-target` and the `duplicate-*` codes are second-pass properties of the _complete_ preset list: an overlay preset added before the preset that declares its rows would produce a spurious `unknown-target`, and a dedupe set cannot retract a warning. The kiosk two-phase `applySettings` folds exactly once, after phase 1 has added every child; the webc lazy fold reads the fully-populated slot array. Neither ever folds a prefix during construction. For genuinely incremental imperative authoring (`kb.addCustomLayout(a)`, render, `kb.addCustomLayout(b)`) a transient `unknown-target` is correct and clears itself when `b` lands.
+**Ordering is guaranteed structurally, not by the cap.** `unknown-target` and the `duplicate-*` codes are second-pass properties of the _complete_ custom layout list: an overlay custom layout added before the custom layout that declares its rows would produce a spurious `unknown-target`, and a dedupe set cannot retract a warning. The kiosk two-phase `applySettings` folds exactly once, after phase 1 has added every child; the webc lazy fold reads the fully-populated slot array. Neither ever folds a prefix during construction. For genuinely incremental imperative authoring (`kb.addCustomLayout(a)`, render, `kb.addCustomLayout(b)`) a transient `unknown-target` is correct and clears itself when `b` lands.
 
 ## `library.ts:197-200` policy change, stated deliberately
 
@@ -1447,7 +1497,7 @@ Independently valuable and independently revertable.
 
 6. Refresh the stale twin-drift header comment at `tools/check-twin-drift.mjs:26-29`.
 7. Delete the two stray untracked probe files `packages/kiosk-keyboard-webc/test/unit/zz-probe-managedslots.test.ts` and `zz-probe2.test.ts`.
-8. Add `src/LayoutPreset.gen.d.ts` to `tools/check-package-smoke.mjs`'s kiosk `requiredFiles` (`:25-30`) — do this in Stage 3, when the file exists.
+8. Add `src/CustomLayout.gen.d.ts` to `tools/check-package-smoke.mjs`'s kiosk `requiredFiles` (`:25-30`) — do this in Stage 3, when the file exists.
 9. **Do NOT touch `instance-property-types.tsd.ts` here.** Its polarity is correct against HEAD's metadata; it only inverts when the metadata changes.
 
 ## Stage 1 — D3: `*` becomes the lower variant tier. Cannot be split across packages.
@@ -1458,15 +1508,15 @@ Tests: rename `latin-variants.qunit.ts:192` / `latin-variants.test.ts:170` to wh
 
 Run the §7 adversarial pass (H1) before trusting this stage.
 
-## Stage 2 — `preset-fold.ts` in both packages, unwired. Cannot be split across packages.
+## Stage 2 — `custom-layout-fold.ts` in both packages, unwired. Cannot be split across packages.
 
-New byte-compared pair; `CORE_MODULES` + `EXPECTED_PAIR_COUNT` 27 → 28 in one edit. `LayoutPresetSpec` added to both `types.ts` alongside the still-shipping `LayoutSpec`. Two new unit suites (`preset-fold.qunit.ts`, `preset-fold.test.ts`) covering document order, every per-facet rule, `suppress` at each tier, `*`-field rejection, and **every diagnostic code**. Nothing else changes, so nothing can regress. Adversarial pass required before Stage 3 — the fold is the single point where every semantic is enforced.
+New byte-compared pair; `CORE_MODULES` + `EXPECTED_PAIR_COUNT` 27 → 28 in one edit. `CustomLayoutSpec` added to both `types.ts` alongside the still-shipping `LayoutSpec`. Two new unit suites (`custom-layout-fold.qunit.ts`, `custom-layout-fold.test.ts`) covering document order, every per-facet rule, `suppress` at each tier, `*`-field rejection, and **every diagnostic code**. Nothing else changes, so nothing can regress. Adversarial pass required before Stage 3 — the fold is the single point where every semantic is enforced.
 
 ## Stage 3 — kiosk cutover. Atomic within the kiosk package; webc untouched and green.
 
 Files, exhaustively:
 
-- **new** `src/LayoutPreset.ts`; `npm run generate`; **commit both** `src/KioskKeyboard.gen.d.ts` and `src/LayoutPreset.gen.d.ts`
+- **new** `src/CustomLayout.ts`; `npm run generate`; **commit both** `src/KioskKeyboard.gen.d.ts` and `src/CustomLayout.gen.d.ts`
 - `src/library.ts` (enums, types, `elements`, deleted `createType`s and aliases)
 - `src/KioskKeyboard.ts` (aggregation, lazy fold, `invalidate`, two-phase `applySettings`, six read sites, JSDoc at `:185, 299, 628-629, 668, 676, 726, 742`)
 - `src/types.ts` (delete `LayoutSpec` / `LayoutInput`)
@@ -1480,7 +1530,7 @@ Files, exhaustively:
 - the ~13 incidental suites: `KioskKeyboard-renderer-blackbox.qunit.ts` (16), `FKeys.qunit.ts` (5), `NavKeys.qunit.ts` (4), `Grapheme.qunit.ts` (4), `keyboard-type-middleware.qunit.ts` (3), `custom-keys.qunit.ts` (2), plus 1 each in `unknown-token`, `KioskKeyboard`, `KioskKeyboard-reset`, `KioskKeyboard-capslock-shiftvalue`, `KioskKeyboard-capslock-sharp-s`, `KioskKeyboard-autotype-mobile`
 - `test/e2e/visual/init.js:121,127,133,138,144,215` (plain JS — object literals here work via `defaultClass`)
 - **new** `test/qunit/customLayouts-xml.qunit.ts` (below)
-- `tools/check-package-smoke.mjs` (`src/LayoutPreset.gen.d.ts`)
+- `tools/check-package-smoke.mjs` (`src/CustomLayout.gen.d.ts`)
 - the demo-app rewrite (below)
 
 **Demo app.** 3 files / 6 occurrences; **zero i18n keys** (`webapp/i18n/i18n.properties` is 2 lines), **zero fragments**, **zero manifest entries touching the properties** (only the name-only route `manifest.json:153-157` and target `:260-264`). `deploy-pages.yml:89` copies all of `packages/demo-app/dist/.` and `tools/trim-pages-dist.mjs` prunes only `resources/sap/*`, so all 21 routes ship including `#/kiosk/custom-layouts`.
@@ -1488,44 +1538,44 @@ Files, exhaustively:
 - `webapp/view/KioskCustomLayouts.view.xml` — rewritten as the headline declarative example (see the surface section's XML snippet), plus the prose `<Text>` at `:14`
 - **new** `webapp/layouts/custom-layouts.ts` — the five `LayoutDefinition` constants moved out of the controller (`:7-107`) so they can feed a `JSONModel`
 - **new** `webapp/middleware/warehouse.ts` — a real `CompositionMiddleware` factory (port the emoticon one already in `packages/kiosk-keyboard-webc/test/pages/index.js:104-135`), so `middleware="Warehouse.createMiddleware"` resolves
-- **new** `webapp/preset/PlWarehousePreset.ts` — `extends LayoutPreset`, `static metadata = { library: "demo.hotkeys" }`, demonstrating the "ship a preset as a named unit" claim rather than asserting it
+- **new** `webapp/customLayout/PlWarehouseCustomLayout.ts` — `extends CustomLayout`, `static metadata = { library: "demo.hotkeys" }`, demonstrating the "ship a custom layout as a named unit" claim rather than asserting it
 - `webapp/Component.ts` — register the `layouts>` JSONModel
 - `webapp/controller/KioskCustomLayouts.controller.ts` — delete `CUSTOM_LAYOUTS` (`:121-127`), the `kb.setInstanceLayouts(...)` call (`:139`), the `LayoutInput` import (`:3`); keep `LAYOUT_DESCRIPTIONS` (`:109-119`)
 - `webapp/controller/KioskProgrammatic.controller.ts` (`:3, 107-108, 119-120, 140, 152-153, 187-194`) — the aggregation removes the read-modify-write of a whole record
 
-**Demo guardrail gap, closed in this stage.** `packages/demo-app` is covered in `check:base` by `typecheck:demo` and `lint:ui5` **only**: `flp-lifecycle.spec.ts` is in `SEPARATE_CONFIG_SPECS` (`playwright.config.ts:93,98`), `test:e2e:flp` uses a separate config and is not in CI, and no spec references `custom-layouts`. A broken aggregation name in XML would fail silently on GitHub Pages. `packages/kiosk-keyboard/test/qunit/customLayouts-xml.qunit.ts` uses `XMLView.create({ definition })` — the pattern already at `KioskKeyboard-focus.qunit.ts:317,349,428,464` — and runs inside `check:base`. It asserts: (1) a preset node lands in the aggregation and its rows render; (2) `locales="pl,pl-PL"` comma-splits and drives the construction-time default layout; (3) `middleware="Mw.create"` under `core:require` resolves to the actual function; (4) `suppress="Variants"` reaches the fold; (5) `layoutRole="Base"` promotes the built-in `numeric`; (6) `suppress="Varients"` throws.
+**Demo guardrail gap, closed in this stage.** `packages/demo-app` is covered in `check:base` by `typecheck:demo` and `lint:ui5` **only**: `flp-lifecycle.spec.ts` is in `SEPARATE_CONFIG_SPECS` (`playwright.config.ts:93,98`), `test:e2e:flp` uses a separate config and is not in CI, and no spec references `custom-layouts`. A broken aggregation name in XML would fail silently on GitHub Pages. `packages/kiosk-keyboard/test/qunit/customLayouts-xml.qunit.ts` uses `XMLView.create({ definition })` — the pattern already at `KioskKeyboard-focus.qunit.ts:317,349,428,464` — and runs inside `check:base`. It asserts: (1) a custom layout node lands in the aggregation and its rows render; (2) `locales="pl,pl-PL"` comma-splits and drives the construction-time default layout; (3) `middleware="Mw.create"` under `core:require` resolves to the actual function; (4) `suppress="Variants"` reaches the fold; (5) `layoutRole="Base"` promotes the built-in `numeric`; (6) `suppress="Varients"` throws.
 
 ## Stage 4 — webc cutover. Atomic within the webc package; kiosk green.
 
-`src/LayoutPreset.ts`; `src/types.ts` (enums, `LayoutPresetSpec`, delete `LayoutSpec`/`LayoutInput`); `src/KioskKeyboard.ts` (slot, lazy fold, `onInvalidation` branch, `_ensureMiddleware`, eight read sites); `src/core/middleware-registry.ts` (hand-mirror of Stage 3); `src/core/layout-registry.ts` (comments); **delete** `src/core/memo-map-view.ts` + `test/unit/memo-map-view.test.ts`; `bundle.esm.ts`; `package.json` (`exports`, `sideEffects`); `test/component/instance-overrides.test.ts` (2 describes / 24 `it` / 409 lines) → **`custom-layouts.test.ts`**, rewritten, with `:372` → `layout-role="Base"` and `:358` as its negative half; **new** `test/component/custom-layouts-first-paint.test.ts`; the ~10 incidental suites (`variant-popup.test.ts` 8, `kiosk-keyboard.test.ts` 7, `kiosk-keyboard-icon-label.test.ts` 4, `keyboard-type-middleware.test.ts` 3, `variant-composition-seed.test.ts` 2, plus 1 each in `variant-composition-flush.test.ts`, `test/helpers/fixtures.ts:33`, `test/helpers/seed-compose-middleware.ts:21`, `test/pages/visual.js:120`, `test/pages/key-style-demo.js:38`); `test/pages/index.js:73,140,146,155` and `index.html:431,433,533,535,548,550,553` — **simultaneously the deployed public "Raw Web Components Demo" and the `component.spec.ts:8` e2e fixture**; `test/unit/latin-variants.test.ts`, `layout-registry.test.ts`, `layout-meta.test.ts`, `middleware-registry.test.ts`; add `expect(code).toContain("kiosk-keyboard-preset")` to `test/unit/bundle-tree-shaking.test.ts`; rebuild and verify `dist/custom-elements.json`.
+`src/CustomLayout.ts`; `src/types.ts` (enums, `CustomLayoutSpec`, delete `LayoutSpec`/`LayoutInput`); `src/KioskKeyboard.ts` (slot, lazy fold, `onInvalidation` branch, `_ensureMiddleware`, eight read sites); `src/core/middleware-registry.ts` (hand-mirror of Stage 3); `src/core/layout-registry.ts` (comments); **delete** `src/core/memo-map-view.ts` + `test/unit/memo-map-view.test.ts`; `bundle.esm.ts`; `package.json` (`exports`, `sideEffects`); `test/component/instance-overrides.test.ts` (2 describes / 24 `it` / 409 lines) → **`custom-layouts.test.ts`**, rewritten, with `:372` → `layout-role="Base"` and `:358` as its negative half; **new** `test/component/custom-layouts-first-paint.test.ts`; the ~10 incidental suites (`variant-popup.test.ts` 8, `kiosk-keyboard.test.ts` 7, `kiosk-keyboard-icon-label.test.ts` 4, `keyboard-type-middleware.test.ts` 3, `variant-composition-seed.test.ts` 2, plus 1 each in `variant-composition-flush.test.ts`, `test/helpers/fixtures.ts:33`, `test/helpers/seed-compose-middleware.ts:21`, `test/pages/visual.js:120`, `test/pages/key-style-demo.js:38`); `test/pages/index.js:73,140,146,155` and `index.html:431,433,533,535,548,550,553` — **simultaneously the deployed public "Raw Web Components Demo" and the `component.spec.ts:8` e2e fixture**; `test/unit/latin-variants.test.ts`, `layout-registry.test.ts`, `layout-meta.test.ts`, `middleware-registry.test.ts`; add `expect(code).toContain("kiosk-keyboard-custom-layout")` to `test/unit/bundle-tree-shaking.test.ts`; rebuild and verify `dist/custom-elements.json`.
 
-**Why 3 and 4 can genuinely land separately:** `latin-variants.ts` and `layout-meta.ts` are byte-compared, so any edit to them must be a both-package commit — which is exactly why D3 is pulled out into Stage 1 and `preset-fold.ts` into Stage 2. With those pre-landed, Stages 3 and 4 touch only unchecked-tier and package-local files.
+**Why 3 and 4 can genuinely land separately:** `latin-variants.ts` and `layout-meta.ts` are byte-compared, so any edit to them must be a both-package commit — which is exactly why D3 is pulled out into Stage 1 and `custom-layout-fold.ts` into Stage 2. With those pre-landed, Stages 3 and 4 touch only unchecked-tier and package-local files.
 
 ## Stage 5 — docs and stability surface
 
 - `packages/kiosk-keyboard/README.md` — `80, 327, 331-334, 340, 342, 344, 363-366, 423, 484, 601, 603, 610, 626, 630, 649, 673, 710, 721, 732, 858, 910, 916-917, 1487`. `:325-344` becomes "Custom Layouts" with the field → merge-rule table and the diagnostic catalogue; `:363-366` loses four property rows and gains an Aggregations table; `:596-630` carries the D3 break; `:732` `bindAggregation("customLayouts", { path, factory })`.
 - `packages/kiosk-keyboard-webc/README.md` — `25, 34, 240, 269, 278, 299-302, 348, 397, 403, 425, 442, 476, 479, 491, 493, 497, 512, 516, 520, 524-527, 535, 620, 630, 647, 658, 682, 701, 763, 828`. `:535`'s "read by object identity" caveat is deleted for the collection — a real DX win worth stating.
-- `docs/shared/API-STABILITY.md` — `:33, 38, 40, 42, 45, 61, 66, 67, 77, 80`; **add** `ui5/kiosk/LayoutPreset` and `kiosk-keyboard-webc/LayoutPreset` to the stable-surface lists and record `<kiosk-keyboard-preset>` as a public tag.
+- `docs/shared/API-STABILITY.md` — `:33, 38, 40, 42, 45, 61, 66, 67, 77, 80`; **add** `ui5/kiosk/CustomLayout` and `kiosk-keyboard-webc/CustomLayout` to the stable-surface lists and record `<kiosk-keyboard-custom-layout>` as a public tag.
 - `docs/kiosk/ARCHITECTURE.md` — `:259-263` (a verbatim `applySettings` snippet, already stale: it names `_toLayoutMap`), `:280, 284, 569, 596-597`.
 - `docs/kiosk-webc/ARCHITECTURE.md` — `:17, 28, 36` (delete the `memo-map-view.ts` line), `:147-152, 303-310, 317, 328, 550`.
 - `docs/kiosk-webc/CONSUMPTION.md` `:173,182,189,203`; `docs/GLOSSARY.md` `:123,135,161`; `docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md` `:49,116,133,157-160`; `docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md` `:69` + the closing "declares no array-typed properties" claim + a new slots section.
-- Two new dated specs, indexed in `docs/specs/README.md`: `docs/specs/2026-08-03-layout-preset-design.md` and the adversarial record below.
+- Two new dated specs, indexed in `docs/specs/README.md`: `docs/specs/2026-08-03-layout-custom layout-design.md` and the adversarial record below.
 - **Frozen, do not touch:** `docs/specs/2026-07-26-issue-187-variant-extensibility.md`, `2026-08-01-layout-meta-lang-adversarial-hypotheses.md`, `2026-07-03-keyboard-key-action-model-design.md`, `2026-04-08-middleware-instance-isolation.md`.
 
 ---
 
 ## Guardrails: exactly what breaks
 
-| guardrail                      | breaks?                                                                                                                                                     | action                                                                                                                                                                             |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `check-twin-drift.mjs`         | **yes, twice** — `latin-variants` / `layout-meta` are `CORE_MODULES` (one-sided landing red); `preset-fold` trips `reconcile()` at `:262` unless registered | add `"preset-fold"` and bump `EXPECTED_PAIR_COUNT` 27→28 **in one edit** (`:220-223` fails if they disagree)                                                                       |
-| `ci.yml:57-63` generate gate   | **yes** (DEF-6 + the untracked hole)                                                                                                                        | Stage 0                                                                                                                                                                            |
-| `ci.yml:51-52` typecheck       | **yes** — `instance-property-types.tsd.ts` inverted polarity                                                                                                | rewrite in the same commit as the kiosk metadata                                                                                                                                   |
-| `check-style-twin-drift.mjs`   | no — CSS custom-property names only, zero overlap                                                                                                           | none                                                                                                                                                                               |
-| `check-dom-contract-drift.mjs` | no — no new DOM key; `LayoutPreset` renders nothing                                                                                                         | none                                                                                                                                                                               |
-| `check-package-smoke.mjs`      | no, if the new artifacts land                                                                                                                               | add `src/LayoutPreset.gen.d.ts` to `requiredFiles` (Stage 3)                                                                                                                       |
-| `lint:ui5`                     | possibly — a new `sap.ui.core.Element` subclass and new XML aggregation nodes are new input                                                                 | run it in Stage 3 before pushing                                                                                                                                                   |
-| visual baselines (118 PNGs)    | **no**                                                                                                                                                      | every affected fixture is a constructor-settings rewrite producing identical DOM; no `<slot>` is added to the template. **Do not run `*:update`** — a diff means a real regression |
+| guardrail                      | breaks?                                                                                                                                                            | action                                                                                                                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `check-twin-drift.mjs`         | **yes, twice** — `latin-variants` / `layout-meta` are `CORE_MODULES` (one-sided landing red); `custom-layout-fold` trips `reconcile()` at `:262` unless registered | add `"custom-layout-fold"` and bump `EXPECTED_PAIR_COUNT` 27→28 **in one edit** (`:220-223` fails if they disagree)                                                                |
+| `ci.yml:57-63` generate gate   | **yes** (DEF-6 + the untracked hole)                                                                                                                               | Stage 0                                                                                                                                                                            |
+| `ci.yml:51-52` typecheck       | **yes** — `instance-property-types.tsd.ts` inverted polarity                                                                                                       | rewrite in the same commit as the kiosk metadata                                                                                                                                   |
+| `check-style-twin-drift.mjs`   | no — CSS custom-property names only, zero overlap                                                                                                                  | none                                                                                                                                                                               |
+| `check-dom-contract-drift.mjs` | no — no new DOM key; `CustomLayout` renders nothing                                                                                                                | none                                                                                                                                                                               |
+| `check-package-smoke.mjs`      | no, if the new artifacts land                                                                                                                                      | add `src/CustomLayout.gen.d.ts` to `requiredFiles` (Stage 3)                                                                                                                       |
+| `lint:ui5`                     | possibly — a new `sap.ui.core.Element` subclass and new XML aggregation nodes are new input                                                                        | run it in Stage 3 before pushing                                                                                                                                                   |
+| visual baselines (118 PNGs)    | **no**                                                                                                                                                             | every affected fixture is a constructor-settings rewrite producing identical DOM; no `<slot>` is added to the template. **Do not run `*:update`** — a diff means a real regression |
 
 Baseline confirmed green at HEAD: `check-twin-drift` 27 pairs in sync; `check-style-twin-drift` 40 kiosk / 44 webc; `check-dom-contract-drift` in parity.
 
@@ -1535,24 +1585,24 @@ Baseline confirmed green at HEAD: `check-twin-drift` 27 pairs in sync; `check-st
 
 ### Rewritten (the capability is shipped and must stay green in its new spelling)
 
-`KioskKeyboard-layout.qunit.ts:1517` ("a descriptor shadowing a built-in can un-mark its secondary flag", asserting `kb.getBaseLayout() === "numeric"`) → `new LayoutPreset({ name: "numeric", layoutRole: LayoutRole.Base, rows: SYMBOL_SURFACE })`, same assertion. `instance-overrides.test.ts:372` → `<kiosk-keyboard-preset name="numeric" layout-role="Base">`, same assertion. Their inherit-siblings (`:1498`, `:358`) are the negative half of the tri-state and must be kept adjacent — together they are the only proof the three states are distinct.
+`KioskKeyboard-layout.qunit.ts:1517` ("a descriptor shadowing a built-in can un-mark its secondary flag", asserting `kb.getBaseLayout() === "numeric"`) → `new CustomLayout({ name: "numeric", layoutRole: LayoutRole.Base, rows: SYMBOL_SURFACE })`, same assertion. `instance-overrides.test.ts:372` → `<kiosk-keyboard-custom-layout name="numeric" layout-role="Base">`, same assertion. Their inherit-siblings (`:1498`, `:358`) are the negative half of the tri-state and must be kept adjacent — together they are the only proof the three states are distinct.
 
 ### New
 
-1. **`preset-fold` unit suites** (Stage 2) — document order; every per-facet rule; `suppress` at each tier; `*`-field rejection; every diagnostic code.
+1. **`custom-layout-fold` unit suites** (Stage 2) — document order; every per-facet rule; `suppress` at each tier; `*`-field rejection; every diagnostic code.
 2. **D3 re-layering** — the four changed cases and the three newly-expressible ones from the semantics table, per twin, plus the identity and null-prototype invariants.
 3. **All three `layoutRole` states** against the built-in secondary `numeric`: omitted → secondary, `Base` → base, `Secondary` → secondary; plus `Base` on a custom name with no built-in.
-4. **`suppress="Variants"`** on a layout inheriting the Latin table → no long-press affordance; with a `*` table present → still nothing; **with a `variants` table on the same preset** → exactly that table, no built-in and no `*` letters.
+4. **`suppress="Variants"`** on a layout inheriting the Latin table → no long-press affordance; with a `*` table present → still nothing; **with a `variants` table on the same custom layout** → exactly that table, no built-in and no `*` letters.
 5. **`suppress="Middleware"`** on `ko-hangul` → uncomposed jamo, proving `getMiddlewareFactory` no longer falls through `??`. **This capability does not exist at HEAD**, so a green run before the feature lands means the test asserts nothing.
 6. **Separator round-trip** — `suppress="Variants,Middleware"` (kiosk XML) and `suppress="Variants Middleware"` (webc) both yield the two-member array; `suppress="Varients"` **throws** on kiosk and emits `unknown-suppress` on webc.
 7. **XML authoring** — `customLayouts-xml.qunit.ts`, the only CI guard on D1.
 8. **DEF-1 first paint (webc)** — build the whole subtree **before** `appendChild`, wrap `onAfterRendering` to capture paints, assert on `paints[0]`, not the settled state. Plus the locale variant (`locales="pl"`, no `layout`), which `onEnterDOM` cannot rescue because it runs at `:225`, after `renderImmediately` at `:222`.
-9. **DEF-3 (kiosk)** — spy `foldPresets`: exactly **two** calls during `new KioskKeyboard({layout, customLayouts:[a,b,c]})` (the cold `EMPTY_FOLD` in `init()` and the real one between the phases), and exactly **one** `Log.warning` for a fixture with one bad preset among three, with an overlay placed before its rows-declaring sibling and **zero** `unknown-target`.
-10. **Cache liveness (kiosk)** — `preset.setRows(x)` refolds once, a second read does not; `removeCustomLayout` / `destroyCustomLayouts` / `preset.destroy()` each make the next resolution fall back.
+9. **DEF-3 (kiosk)** — spy `foldCustomLayouts`: exactly **two** calls during `new KioskKeyboard({layout, customLayouts:[a,b,c]})` (the cold `EMPTY_FOLD` in `init()` and the real one between the phases), and exactly **one** `Log.warning` for a fixture with one bad custom layout among three, with an overlay placed before its rows-declaring sibling and **zero** `unknown-target`.
+10. **Cache liveness (kiosk)** — `custom layout.setRows(x)` refolds once, a second read does not; `removeCustomLayout` / `destroyCustomLayouts` / `custom layout.destroy()` each make the next resolution fall back.
 11. **Construction ordering** — `new KioskKeyboard({layout:"pl-warehouse", customLayouts:[…]})` with `layout` written first sets the layout with no warning; `kb.clone().getLayout()` matches with no warning.
-12. **Coercion parity** — `locales: "pl"` on a literal and `new LayoutPreset({locales:["pl"]})` produce the same construction-time layout.
-13. **DEF-4 IME safety** — mid-composition, `preset.setLang("pl")` on an _unrelated_ preset: the preedit survives; then change the middleware for the _resolved_ layout: the buffer was **committed to the target**, not reset.
-14. **Tree-shaking (webc)** — `expect(code).toContain("kiosk-keyboard-preset")`.
+12. **Coercion parity** — `locales: "pl"` on a literal and `new CustomLayout({locales:["pl"]})` produce the same construction-time layout.
+13. **DEF-4 IME safety** — mid-composition, `custom layout.setKeycapLang("pl")` on an _unrelated_ custom layout: the preedit survives; then change the middleware for the _resolved_ layout: the buffer was **committed to the target**, not reset.
+14. **Tree-shaking (webc)** — `expect(code).toContain("kiosk-keyboard-custom-layout")`.
 
 ---
 
@@ -1564,15 +1614,15 @@ File: `docs/specs/2026-08-03-custom-layouts-adversarial-hypotheses.md`, written 
 
 **H2 — the `instance-property-types.tsd.ts` inverted-polarity trap.** **Red proof:** change the kiosk metadata without touching the tsd file; `typecheck:kiosk:test` must fail with six "Unused '@ts-expect-error'" errors. After rewriting, delete one directive and confirm the positive direction also fails.
 
-**H3 — the locale facet is covered vacuously.** At HEAD `instanceLocaleLayouts`'s only reader is the `applySettings` pre-population (`:805,810`), making it the facet most likely asserted without being exercised. **Red proof:** delete the `locales` branch from `foldPresets` and confirm at least one kiosk and one webc test fails. If both stay green, the coverage is fake.
+**H3 — the locale facet is covered vacuously.** At HEAD `instanceLocaleLayouts`'s only reader is the `applySettings` pre-population (`:805,810`), making it the facet most likely asserted without being exercised. **Red proof:** delete the `locales` branch from `foldCustomLayouts` and confirm at least one kiosk and one webc test fails. If both stay green, the coverage is fake.
 
 **H4 — DEF-1: the first-render fold is empty.** _The existing webc component suite is structurally blind here — every case in `instance-overrides.test.ts` assigns config after `fixture()` and awaits `nextRender()` (`:38-39,46-47,60-61`)._ **Red proof:** move the fold behind the `onInvalidation` slot branch only; the connect-time-children test must go red. If it stays green, the test is asserting after an extra microtask and is not testing first paint.
 
 **H5 — DEF-3: N folds, N diagnostics.** **Red proof:** call `_getFold()` eagerly from an `addCustomLayout` override; the "exactly two folds, one warning, zero `unknown-target`" test must go red.
 
-**H6 — DEF-4: a property write tears down an IME buffer.** **Red proof:** put `this._getFold()` inside `invalidate()`; the "edit an unrelated preset mid-composition" test must go red with a lost preedit.
+**H6 — DEF-4: a property write tears down an IME buffer.** **Red proof:** put `this._getFold()` inside `invalidate()`; the "edit an unrelated custom layout mid-composition" test must go red with a lost preedit.
 
-**H7 — the `layoutRole` tri-state actually collapses.** **Red proof:** replace `layoutRole` with `secondary: { type: "boolean", defaultValue: false }` and confirm the "absent inherits the built-in" test goes red — `numeric` must stay secondary when the preset declares nothing. This is `ManagedObject.js:1611-1614` being exercised directly.
+**H7 — the `layoutRole` tri-state actually collapses.** **Red proof:** replace `layoutRole` with `secondary: { type: "boolean", defaultValue: false }` and confirm the "absent inherits the built-in" test goes red — `numeric` must stay secondary when the custom layout declares nothing. This is `ManagedObject.js:1611-1614` being exercised directly.
 
 **H8 — `suppress` is a no-op.** **Red proof:** make `toSpec()` drop `suppress`; both the variants-suppress and middleware-suppress tests must go red. The middleware one is the sharper probe.
 
@@ -1582,58 +1632,48 @@ File: `docs/specs/2026-08-03-custom-layouts-adversarial-hypotheses.md`, written 
 
 **H11 — visual baselines are not actually compared.** The "no baseline changes" claim is load-bearing. **Red proof:** corrupt one committed PNG and confirm `test:e2e` (not `test:e2e:ci`, which passes `--ignore-snapshots`) goes red; revert.
 
-**H12 — the twin-drift count guard is inert.** **Red proof, both directions:** bump `EXPECTED_PAIR_COUNT` to 28 without adding `preset-fold` to `CORE_MODULES` (must fail at `:220-223`); then add the module without bumping the count (must fail at `:262`).
+**H12 — the twin-drift count guard is inert.** **Red proof, both directions:** bump `EXPECTED_PAIR_COUNT` to 28 without adding `custom-layout-fold` to `CORE_MODULES` (must fail at `:220-223`); then add the module without bumping the count (must fail at `:262`).
 
-**H13 — the CI generate gate is blind to a new file.** **Already probed red-worthy:** untracked `*.gen.d.ts` passes a plain `git diff`. **Red proof:** with the staged form in place, delete `LayoutPreset.gen.d.ts` from git, regenerate, and confirm CI fails.
+**H13 — the CI generate gate is blind to a new file.** **Already probed red-worthy:** untracked `*.gen.d.ts` passes a plain `git diff`. **Red proof:** with the staged form in place, delete `CustomLayout.gen.d.ts` from git, regenerate, and confirm CI fails.
 
 **H14 — a variants assertion passes because the popup never opened.** **Red proof:** flip the assertion in each of the suppress tests once and confirm red; a test that reads an empty popup can pass for the wrong reason.
 
-## Open decisions
+## Decisions, closed
 
-Five things the repo owner must still choose. Each is stated as an either/or with one named recommendation; nothing below blocks an implementer from starting, and each is a local edit if reversed.
-
-**1. `*` as a reserved name vs a dedicated `layoutDefaults` collection.**
-Either the wildcard tier stays a `LayoutPreset` named `*` in the single `customLayouts` collection (specified above), or it moves to a `layoutDefaults` 0..1 aggregation / named slot carrying the same class.
-**Recommendation: keep `*`.** D3 describes the wildcard tier as an existing, README-documented concept being re-layered rather than renamed; the second collection is a second public surface name and a second idiom in both twins for one tier of one concern. The special-casing it removes is one `if (name === WILDCARD_LAYOUT) { … continue; }` at the top of the fold loop, which already prevents a `*` preset's rows from reaching `fold.layouts`, plus the `wildcard-field` diagnostic that answers the "position lies" objection out loud instead of silently ignoring the field. If the owner takes `layoutDefaults` instead, the change is contained: delete that branch and the diagnostic, add a second metadata entry and a second slot, and pass a second `readonly LayoutPresetSpec[]` argument to `foldPresets`. Nothing below `toSpec()` moves.
-
-**2. `suppress: LayoutFacet[]` vs two booleans `noVariants` / `noMiddleware`.**
-**Recommendation: the enum list.** CLAUDE.md §2 genuinely argues for the two booleans at two call sites, and I am reporting that rather than burying it; D4 overrides §2, because two booleans become three and a fourth, whereas a third facet is one enum member and one array entry. If the owner prefers §2's default, the booleans are a drop-in: `LayoutPresetSpec.suppress` becomes `noVariants?: boolean` / `noMiddleware?: boolean`, the fold's `readSuppress` disappears, and the `unknown-suppress` code goes with it. The `layoutRole` decision is independent and stands either way.
-
-**3. Which facets `LayoutFacet` admits today.**
-Specified: `Variants` and `Middleware` only. The semantics cluster showed that `Lang`, `Locales` and `Secondary` fall out of the same machinery for free.
-**Recommendation: ship the two.** CLAUDE.md §1 — every changed line traces to the request, and nothing in #216 or D1–D4 asks to disable a layout's inherited keycap language. Adding a member later costs one line in `library.ts`, one in `SUPPRESSIBLE_FACETS`, one branch in the fold, and — for `Lang`/`Secondary` — widening `LayoutMeta` to `| null`, which is a byte-compared change to `layout-meta.ts` that the current design deliberately avoids. Note that `Secondary` would duplicate `layoutRole="Base"`; if it is ever added, retire one of the two spellings rather than shipping both.
-
-**4. Whether the demo ships `PlWarehousePreset` (a `LayoutPreset` subclass) as a named unit.**
-Either the demo demonstrates "hand a teammate one tag" with a real subclass in `packages/demo-app/webapp/preset/` plus its webc counterpart, or the XML/HTML examples stay attribute-only.
-**Recommendation: ship it.** It is the only thing that makes the "a preset is an authoring unit, not a bag of properties" claim checkable rather than asserted, it exercises the `instanceof LayoutPreset` path in `invalidate()` against a subclass, and it costs one small file per twin. If it is dropped, add a test that a subclassed preset still satisfies `instanceof LayoutPreset` (kiosk) and `isLayoutPreset` (webc) — that path must not go uncovered either way.
-
-**5. Whether to hand-widen the aggregation's generated type for object literals.**
-`@ui5/ts-interface-generator` 0.11.1 does not model `defaultClass`, so `customLayouts?: LayoutPreset[] | LayoutPreset | AggregationBindingInfo | \`{${string}}\`` — an object literal that works at runtime is a TypeScript error. The workaround would be a hand-written declaration merging a wider union onto `$KioskKeyboardSettings`.
-**Recommendation: do not.** It would be a second hand-maintained shape sitting next to a file CLAUDE.md forbids hand-editing, for an ergonomic that no TypeScript consumer in this repo uses — every TS fixture and the demo construct `new LayoutPreset(...)`. `defaultClass` is still kept, because it is what makes the plain-JS call sites (`packages/kiosk-keyboard/test/e2e/visual/init.js`) and `applySettings`phase 1 work. Document the asymmetry in the kiosk README's aggregation section: "JavaScript callers may pass object literals; TypeScript callers construct`LayoutPreset`."
-
-**One thing I decided rather than deferred, flagged because two clusters disagreed and the loser had a real argument.** The child class is named `LayoutPreset` (tag `kiosk-keyboard-preset`), not `CustomLayout` / `KioskKeyboardCustomLayout`. The losing argument — that the class should share the collection's noun — is legitimate; it lost because `getCustomLayouts()[0] instanceof CustomLayout` reads worse than `instanceof LayoutPreset`, and because a class and a collection with the same name make the XML nesting (`<kiosk:customLayouts><kiosk:LayoutPreset/>`) ambiguous to skim. If the owner reverses this, it is a mechanical rename across the two new source files, the two new fold modules' spec-type name, the tag, the marker property, the bundle export and the docs — do it before Stage 3, not after.
+The six questions this document once left open are decided and recorded as D5–D10 in "Decisions taken by the repo owner" at the top. Two were resolved against the original draft: the child class is `CustomLayout`, not `LayoutPreset` (D5), and the defaults tier is the host property `defaultVariants`, not a reserved `name="*"` (D6). The reasoning and the accepted costs are stated there.
 
 ## Review notes
 
-A review pass against the UI5 TypeScript-conversion guidance, a slop pass over the code sketches, and the modern-web-guidance corpus. This is not the refutation pass the status banner still asks for.
+A review pass against the UI5 TypeScript-conversion guidance, a slop pass over the code sketches, and the modern-web-guidance corpus, followed by the two-critic refutation pass.
 
 ### Corrected in this document
 
-`LayoutPreset` was sketched without three things every control-like class in this repo carries, all of them load-bearing for `@ui5/ts-interface-generator`:
+`CustomLayout` was sketched without three things every control-like class in this repo carries, all of them load-bearing for `@ui5/ts-interface-generator`:
 
 - **`@namespace ui5.kiosk`** and **`@extends sap.ui.core.Element`** in the class doc-block. The namespace annotation is what the transformer reads to build the runtime class name; `KioskKeyboard.ts:101-102` carries the same pair.
-- **The three generated constructor overloads.** Without them TypeScript sees only `Element`'s constructor, so `new LayoutPreset({ name: "pl-warehouse", … })` — the form this design tells TypeScript consumers to use, since `defaultClass` object literals are not modelled by the generator — would not compile. Copied in the shape `KioskKeyboard.ts:117-122` already uses, including the `oxlint-disable` for the otherwise-useless constructor body. `$LayoutPresetSettings` is referenced without an import, matching the rule in CLAUDE.md and the existing `$KioskKeyboardSettings` usage.
+- **The three generated constructor overloads.** Without them TypeScript sees only `Element`'s constructor, so `new CustomLayout({ name: "pl-warehouse", … })` — the form this design tells TypeScript consumers to use, since `defaultClass` object literals are not modelled by the generator — would not compile. Copied in the shape `KioskKeyboard.ts:117-122` already uses, including the `oxlint-disable` for the otherwise-useless constructor body. `$CustomLayoutSettings` is referenced without an import, matching the rule in CLAUDE.md and the existing `$KioskKeyboardSettings` usage.
 - **`static readonly metadata: MetadataOptions`**, with `import type { MetadataOptions } from "sap/ui/core/Element"`. Untyped metadata is what lets a subclass silently restate an inherited property.
 
 ### Guidance that does NOT apply here
 
 Generic UI5 library guidance says every enum must be attached to the global library object via `ObjectPath.get(...)`, calling it critical for runtime type validation and an XSS risk otherwise. **Do not apply it to `LayoutRole` or `LayoutFacet`.** CLAUDE.md records the verified position for this repo: with `Lib.init({ apiVersion: 2 })` plus `DataType.registerEnum`, the auto-attachment is skipped by design (`sap/ui/core/Lib.js`), XML `core:require` binds to the module's named exports, and runtime validation resolves through the `DataType` registry rather than the global namespace. The existing enums in `library.ts` already follow the registry-only form; a future implementer reading the generic guidance should not "fix" them back.
 
-### Reconciling with the Stage 0 fix already on `main`
+### Reconciling with the fix already on `main`
 
-The middleware data-loss bug was fixed independently of this design (`fix(keyboard): keep a composition alive across an unrelated middleware swap`). That fix compares the factory the resolved layout reads on either side of the property assignment and needs no cached field, because the setter has both values in hand.
+The middleware data-loss bug was fixed independently of this design (`fix(keyboard): keep a composition alive across an unrelated middleware swap`, `5a5f2c2f`). That fix compares the factory the resolved layout reads on either side of the property assignment and needs no cached field, because the setter has both values in hand.
 
-This document's `_middlewareFactory` is a different mechanism, not a contradiction. Under `customLayouts` the setter disappears, so the check moves to the next composition-affecting key press (`_tryCompositionMiddleware`), where there is no before-and-after to compare and the previously-used factory must be remembered. It also strictly improves on the shipped fix: nothing ends a composition from inside a setter, an invalidation or a render pass. When Stage 4 lands, the shipped setter-local comparison is superseded rather than merged.
+This document's `_middlewareFactory` is a different mechanism, and — stated plainly, because an earlier revision claimed otherwise — **it changes observable timing.** Under `customLayouts` the setter disappears, so the check moves to the next composition-affecting key press (`_tryCompositionMiddleware`), where there is no before-and-after to compare and the previously-used factory must be remembered. The shipped fix commits **at the swap**; this design commits **at the next composition-affecting key**.
+
+Two tests that landed with `5a5f2c2f` pin the shipped timing and will go red:
+
+- `packages/kiosk-keyboard/test/qunit/instance-overrides.qunit.ts:467`, asserting `first.calls.commits === 1` at `:485` immediately after `kb.setInstanceMiddleware(…)`, with no key press in between;
+- `packages/kiosk-keyboard-webc/test/component/instance-overrides.test.ts:176`, asserting `calls.commits === 1` at `:198`.
+
+Both must be **rewritten to the new timing**, not deleted, and both belong in the Stage 3 / Stage 4 rewrite lists.
+
+**Why the change is acceptable, and what would make it unacceptable.** It is not a return of the data-loss bug. `commit()` finalises a preedit that `commitPreedit(target)` has _already written into the input_ (`packages/kiosk-keyboard/src/middleware/hangul-compose.ts:309-317`); the bug `5a5f2c2f` fixed was `reset()`, which _erases_ it via `updateComposition(target, "")` (`:319-325`). Under deferral the preedit stays visible in the target and is still committed by the next key, a layout switch, a target switch or a keyboardType switch. No path drops it.
+
+**One ordering consequence the §A.7 sketch gets wrong.** `_tryCompositionMiddleware` early-returns on `!this._keyAffectsComposition(keyValue)` _before_ the factory check, so a non-composition key pressed after a swap would skip the commit entirely and leave a stale composition attached to a middleware the resolved layout no longer reads. The factory-identity check must run **before** the `_keyAffectsComposition` gate, not after it. The same applies to webc's `_ensureMiddleware` call site.
 
 ### Slop pass
 
