@@ -11,3 +11,5 @@ Dated design specifications and adversarial-validation records, kept for context
 | [Playwright / ui5-test-runner Migration](./2026-06-01-playwright-migration-adversarial-hypotheses.md) | Adversarial validation of the Playwright and ui5-test-runner test migration.     |
 | [Extensible Custom Keys](./2026-06-11-extensible-keys-enriched-keypress.md)                           | Custom key tokens via an enriched `keyPress` contract.                           |
 | [Twin-Drift Check](./2026-06-11-twin-drift-check-adversarial-hypotheses.md)                           | Adversarial validation of the twin-drift checker (`tools/check-twin-drift.mjs`). |
+| [`customLayouts` Design (#216)](./2026-08-03-issue-216-custom-layouts-design.md)                      | The `CustomLayout` aggregation and slot replacing the four `instance*` maps.     |
+| [`customLayouts` Adversarial Hypotheses](./2026-08-03-custom-layouts-adversarial-hypotheses.md)       | Adversarial validation plan for the `customLayouts` migration, per CLAUDE.md §7. |
