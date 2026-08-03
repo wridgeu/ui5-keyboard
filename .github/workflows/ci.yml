@@ -51,14 +51,21 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # The kiosk interface is committed (see CONTRIBUTING.md "Generated files in
-      # version control"); regenerate it and fail on drift so the silent JSDoc-strip
+      # The kiosk interfaces are committed (see CONTRIBUTING.md "Generated files in
+      # version control"); regenerate them and fail on drift so the silent JSDoc-strip
       # class (#142/#143/#149) is a red build, not a stripped diff in a commit.
-      - name: Verify generated interface is in sync
+      # The glob covers every *.gen.d.ts, not one path literal: `npm run generate` is
+      # project-wide, so a newly added control produces a second interface that a
+      # literal would not watch.
+      # `git add -A` first: `git diff` alone is blind to a generated file that was
+      # never committed, so a brand-new *.gen.d.ts would pass an unstaged check with
+      # exit 0 -- the exact case the glob is being widened for.
+      - name: Verify generated interfaces are in sync
         run: |
           npm run generate -w packages/kiosk-keyboard
-          if ! git diff --exit-code -- packages/kiosk-keyboard/src/KioskKeyboard.gen.d.ts; then
-            echo "::error::KioskKeyboard.gen.d.ts is out of sync (see diff above). Run 'npm run generate -w packages/kiosk-keyboard' and commit the result."
+          git add -A -- packages/kiosk-keyboard/src
+          if ! git diff --cached --exit-code -- ':(glob)packages/kiosk-keyboard/src/**/*.gen.d.ts'; then
+            echo "::error::A generated interface under packages/kiosk-keyboard/src is out of sync (see diff above). Run 'npm run generate -w packages/kiosk-keyboard' and commit the result."
             exit 1
           fi
 
