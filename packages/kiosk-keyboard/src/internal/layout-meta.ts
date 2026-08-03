@@ -66,11 +66,11 @@ export const BUILTIN_LAYOUT_META: ReadonlyMap<string, LayoutMeta> = new Map<stri
 export type InstanceLayoutMeta = ReadonlyMap<string, LayoutMeta>;
 
 /**
- * The metadata in effect for `name`, resolved per attribute: an instance layout
- * declares the attributes it cares about and the built-in of the same name supplies
- * the rest, so overriding `arabic` with different rows keeps announcing them as
- * Arabic until the descriptor says otherwise. Bare rows declare nothing and so
- * resolve to the built-in outright.
+ * The metadata in effect for `name`, resolved per attribute: a custom layout declares
+ * the attributes it cares about and the built-in of the same name supplies the rest,
+ * so overriding `arabic` with different rows keeps announcing them as Arabic until the
+ * custom layout declares its own `keycapLang`. One that declares neither attribute
+ * resolves to the built-in outright.
  *
  * `variants` is not resolved here. This table holds only the attributes that fall
  * back per attribute; the variant tiers layer over the built-in table by name in

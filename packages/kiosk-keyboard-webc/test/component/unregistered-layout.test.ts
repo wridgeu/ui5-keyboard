@@ -1,4 +1,5 @@
 import { fixture, html, expect } from "@open-wc/testing";
+import { withCapturedWarnings } from "../helpers/console.js";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type { LayoutDefinition } from "../../src/types.js";
@@ -17,19 +18,6 @@ function readDataKeys(el: KioskKeyboard): string[][] {
 const layoutA: LayoutDefinition = [[{ value: "ax" }, { value: "bx" }]];
 
 /** Runs `body` with `console.warn` captured into the array it receives, restoring it afterwards. */
-async function withCapturedWarnings(body: (messages: string[]) => Promise<void>): Promise<void> {
-  const original = console.warn;
-  const messages: string[] = [];
-  console.warn = (message: unknown): void => {
-    messages.push(String(message));
-  };
-  try {
-    await body(messages);
-  } finally {
-    console.warn = original;
-  }
-}
-
 describe("kiosk-keyboard - unregistered layout", () => {
   it("warns and keeps the current layout when `layout` names nothing registered", async () => {
     await withCapturedWarnings(async (messages) => {

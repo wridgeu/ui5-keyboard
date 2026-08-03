@@ -502,7 +502,7 @@ interface KeyDefinition {
 | `variants`   | _(none)_      | `VariantTable`     | additive per base letter; a letter mapped to `[]` drops it                  | built-in → `defaultVariants` → custom layout |
 | `suppress`   | `suppress`    | token `string`     | discards the inherited value of each listed facet at this layout's position | -                                            |
 
-Custom layouts apply in **DOM order**. `layoutRole` is a tri-state: `Inherit` (the default) takes the built-in layout of the same name's role, `Base` un-marks a built-in's secondary flag, `Secondary` marks an auxiliary surface; the attribute is not validated, so any other value reads as `Base`. `suppress` is how a facet is turned _off_ rather than replaced - a value the same custom layout declares still applies, so `suppress="Variants"` plus a `variants` table stands that table alone.
+Custom layouts apply in **DOM order**. `layoutRole` is a tri-state: `Inherit` (the default) takes the built-in layout of the same name's role, `Base` un-marks a built-in's secondary flag, `Secondary` marks an auxiliary surface. Nothing can throw on an attribute here, so an unrecognised value inherits rather than promoting the layout to a base surface. `suppress` is how a facet is turned _off_ rather than replaced - a value the same custom layout declares still applies, so `suppress="Variants"` plus a `variants` table stands that table alone.
 
 `locales` and `suppress` are token strings rather than arrays, split on commas and whitespace alike: `locales="pl,pl-PL"` and `locales="pl pl-PL"` are the same declaration, as are `suppress="Variants,Middleware"` and `suppress="Variants Middleware"`.
 

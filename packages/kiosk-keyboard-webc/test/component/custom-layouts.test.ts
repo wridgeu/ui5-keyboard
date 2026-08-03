@@ -1,4 +1,5 @@
 import { fixture, expect } from "@open-wc/testing";
+import { withCapturedWarnings } from "../helpers/console.js";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 // VariantTable through the element module, the re-export consumers get.
@@ -64,19 +65,6 @@ const otherFactory = (): CompositionMiddleware => ({
 });
 
 /** Runs `body` with `console.warn` captured into the array it receives, restoring it afterwards. */
-async function withCapturedWarnings(body: (messages: string[]) => Promise<void>): Promise<void> {
-  const original = console.warn;
-  const messages: string[] = [];
-  console.warn = (message: unknown): void => {
-    messages.push(String(message));
-  };
-  try {
-    await body(messages);
-  } finally {
-    console.warn = original;
-  }
-}
-
 describe("kiosk-keyboard - custom layouts", () => {
   it("renders a custom layout that is not in the built-in registry", async () => {
     const el = await mount({ layout: "warehouse-pos" }, customLayout({ name: "warehouse-pos", rows: layoutA }));

@@ -66,7 +66,7 @@ Item 1's setter-local comparison is **changed, not superseded**, by the key-pres
 | shared fold      | `src/internal/custom-layout-fold.ts`                                     | `src/core/custom-layout-fold.ts`                                                                        |
 | shared spec type | `CustomLayoutSpec` in `types.ts`                                         | same, byte-identical text                                                                               |
 
-**Picked `CustomLayout` over `CustomLayout` / `KioskKeyboardCustomLayout`** (the tristate + blast-radius clusters vs the webc-lifecycle + semantics clusters). Deciding reason: it is the chosen design's own name, it does not collide with the _aggregation_ name `customLayouts` (a class and a collection called the same thing reads badly in `getCustomLayouts()[0] instanceof CustomLayout`), and it keeps the child/collection distinction visible in XML (`<kiosk:customLayouts><kiosk:CustomLayout/></kiosk:customLayouts>`).
+**Picked `CustomLayout` over `LayoutPreset` / `KioskKeyboardCustomLayout`** (the tristate + blast-radius clusters vs the webc-lifecycle + semantics clusters). Deciding reason: it is the chosen design's own name, it does not collide with the _aggregation_ name `customLayouts` (a class and a collection called the same thing reads badly in `getCustomLayouts()[0] instanceof CustomLayout`), and it keeps the child/collection distinction visible in XML (`<kiosk:customLayouts><kiosk:CustomLayout/></kiosk:customLayouts>`).
 
 Both files sit at `src/` top level, **not** in `internal/` / `core/`: `tools/check-twin-drift.mjs:261-262` reconciles only the intersection of those two directories' basenames, and two deliberately framework-specific classes must never be paired.
 
@@ -488,7 +488,7 @@ import { isCustomLayout, type ICustomLayout } from "./CustomLayout.js";
 
 ```ts
 /**
- * What one layout custom layout declares. A custom layout without `rows` overlays the layout its
+ * What one custom layout declares. A custom layout without `rows` overlays the layout its
  * `name` already resolves to. The tier applied under every layout is the host's
  * `defaultVariants` property, not a member of this collection.
  */
@@ -611,7 +611,7 @@ The generated interface reads `layoutRole?: LayoutRole | PropertyBindingInfo | \
 import CustomLayout from "kiosk-keyboard-webc/CustomLayout";
 import customElement from "@ui5/webcomponents-base/dist/decorators/customElement.js";
 
-@customElement({ tag: "acme-pl-warehouse-custom layout" })
+@customElement({ tag: "acme-pl-warehouse-layout" })
 class PlWarehouseCustomLayout extends CustomLayout {
   name = "pl-warehouse";
   locales = "pl,pl-PL";
@@ -625,7 +625,7 @@ PlWarehouseCustomLayout.define();
 
 ```html
 <kiosk-keyboard accent-variants>
-  <acme-pl-warehouse-custom layout slot="customLayouts"></acme-pl-warehouse-custom layout>
+  <acme-pl-warehouse-layout slot="customLayouts"></acme-pl-warehouse-layout>
 </kiosk-keyboard>
 ```
 
@@ -1098,7 +1098,7 @@ Every field at `KioskKeyboard.ts:149-173` already follows this form. The one exc
    * off the element list here, because `removeAggregation` (ManagedObject.js:2434),
    * `removeAllAggregation` (:2495) and `destroyAggregation` (:2587) invalidate without
    * naming a child. Content - a property write inside a parented custom layout - arrives as
-   * `invalidate(custom layout)` and drops the cache there.
+   * `invalidate(customLayout)` and drops the cache there.
    *
    * Never call this from `invalidate`.
    */
@@ -1107,7 +1107,7 @@ Every field at `KioskKeyboard.ts:149-173` already follows this form. The one exc
     if (this._fold && this._sameChildren(children)) return this._fold;
     this._foldChildren = children;
     this._fold = foldCustomLayouts(
-      children.map((custom layout) => custom layout.toSpec()),
+      children.map((child) => child.toSpec()),
       registryIsBuiltInLayout,
     );
     this._reportDiagnostics(this._fold.diagnostics);
@@ -1212,7 +1212,7 @@ Canon: `sap.ui.table.Table.prototype.applySettings` (`sap.ui.table/1.136.0/src/s
 
 **Rejected alternatives:** (i) normalizing inside a pre-read — constructing throwaway `CustomLayout`s duplicates any author-supplied `id` and throws on the second construction, while hand-mirroring the coercions means keeping a normalizer permanently in sync with `validateProperty`'s `string[]` widening, `null` collapse and array `slice`; (ii) resolving the locale default lazily at `onBeforeRendering` — `new KioskKeyboard({customLayouts:[…]}).getLayout()` would return `"qwerty"` until first paint and the unregistered-layout warning would move to a render that may never happen; (iii) a read-only pre-read — the divergence is a coercion problem, not a diagnostics problem.
 
-**Behaviour delta: none observable.** `getLayout()` immediately after `new` still returns the locale-derived name; the unregistered-layout warning still fires at construction; `instance-overrides.qunit.ts:198/217/236/260/366/385` and `KioskKeyboard-layout.qunit.ts:912/935/952/1154` keep their answers. Residual cost, stated: the view settings-preprocessor (`ManagedObject.js:1274`, installed by `View.js:562`) runs twice when phase 1 fires. It is idempotent, and SAP ships the identical exposure. Phase 1 is skipped entirely when no `customLayouts` is given, so the no-custom layout path is a single `super` call.
+**Behaviour delta: none observable.** `getLayout()` immediately after `new` still returns the locale-derived name; the unregistered-layout warning still fires at construction; `instance-overrides.qunit.ts:198/217/236/260/366/385` and `KioskKeyboard-layout.qunit.ts:912/935/952/1154` keep their answers. Residual cost, stated: the view settings-preprocessor (`ManagedObject.js:1274`, installed by `View.js:562`) runs twice when phase 1 fires. It is idempotent, and SAP ships the identical exposure. Phase 1 is skipped entirely when no `customLayouts` is given, so the no-custom-layout path is a single `super` call.
 
 ### A.5 DEF-3 — dead by arithmetic
 
@@ -1498,7 +1498,7 @@ export interface DiagnosticVocabulary {
   /** `"customLayouts aggregation"` / `"customLayouts slot"`. */
   readonly customLayouts: string;
   /** `"<kiosk:CustomLayout>"` / `"<kiosk-keyboard-custom-layout>"`. */
-  readonly custom layout: string;
+  readonly customLayout: string;
   /** Every built-in layout name, for the "did you mean" tail of `unknown-target`. */
   readonly builtInLayouts: readonly string[];
 }
@@ -1519,7 +1519,7 @@ export function describeDiagnostic(d: LayoutDiagnostic, vocab: DiagnosticVocabul
 | `unknown-suppress`     | a `suppress` token outside `SUPPRESSIBLE_FACETS`                                                                                    | _"`suppress` on the {custom layout} for \"X\" names \"Y\", which is not a suppressible facet."_                             | _"Valid facets are: Variants, Middleware. Rows cannot be suppressed: a custom layout shadows a built-in layout, it never removes it."_                                                             | n/a                                                                                                                                   |
 | `duplicate-rows`       | two custom layouts declare `rows` for one name                                                                                      | _"Two custom layouts declare `rows` for \"X\"; the later one wins."_                                                        | _"Remove one, or give them different names."_                                                                                                                                                      | unrepresentable                                                                                                                       |
 | `duplicate-middleware` | two custom layouts declare `middleware` for one name                                                                                | same shape                                                                                                                  | same                                                                                                                                                                                               | unrepresentable                                                                                                                       |
-| `duplicate-locale`     | two custom layouts claim one BCP-47 prefix for different layouts                                                                    | _"Both \"X\" and \"Y\" claim the locale \"pl\"; \"Y\" wins."_                                                               | _"Remove the prefix from one of them."_                                                                                                                                                            | unrepresentable (an object literal cannot repeat a key) — **a hazard the N-custom layout fold introduces, so this code is mandatory** |
+| `duplicate-locale`     | two custom layouts claim one BCP-47 prefix for different layouts                                                                    | _"Both \"X\" and \"Y\" claim the locale \"pl\"; \"Y\" wins."_                                                               | _"Remove the prefix from one of them."_                                                                                                                                                            | unrepresentable (an object literal cannot repeat a key) — **a hazard the N-custom-layout fold introduces, so this code is mandatory** |
 
 `unknown-target` subsumes and improves on `resolveLocaleMappedLayout` returning `null` without a word (`layout-registry.ts:79-84`): it fires once at authoring time instead of silently on every locale resolution, which is why `layout-registry.ts` needs no code change.
 
@@ -1657,7 +1657,7 @@ Files, exhaustively:
 - `docs/kiosk/ARCHITECTURE.md` — `:259-263` (a verbatim `applySettings` snippet, already stale: it names `_toLayoutMap`), `:280, 284, 569, 596-597`.
 - `docs/kiosk-webc/ARCHITECTURE.md` — `:17, 28, 36` (delete the `memo-map-view.ts` line), `:147-152, 303-310, 317, 328, 550`.
 - `docs/kiosk-webc/CONSUMPTION.md` `:173,182,189,203`; `docs/GLOSSARY.md` `:123,135,161`; `docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md` `:49,116,133,157-160`; `docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md` `:69` + the closing "declares no array-typed properties" claim + a new slots section.
-- Two new dated specs, indexed in `docs/specs/README.md`: `docs/specs/2026-08-03-layout-custom layout-design.md` and the adversarial record below.
+- Two new dated specs, indexed in `docs/specs/README.md`: `docs/specs/2026-08-03-issue-216-custom-layouts-design.md` and the adversarial record below.
 - **Frozen, do not touch:** `docs/specs/2026-07-26-issue-187-variant-extensibility.md`, `2026-08-01-layout-meta-lang-adversarial-hypotheses.md`, `2026-07-03-keyboard-key-action-model-design.md`, `2026-04-08-middleware-instance-isolation.md`.
 
 ---
@@ -1696,10 +1696,10 @@ Baseline confirmed green at HEAD: `check-twin-drift` 27 pairs in sync; `check-st
 7. **XML authoring** — `customLayouts-xml.qunit.ts`, the only CI guard on D1.
 8. **DEF-1 first paint (webc)** — build the whole subtree **before** `appendChild`, wrap `onAfterRendering` to capture paints, assert on `paints[0]`, not the settled state. Plus the locale variant (`locales="pl"`, no `layout`), which `onEnterDOM` cannot rescue because it runs at `:225`, after `renderImmediately` at `:222`.
 9. **DEF-3 (kiosk)** — exactly **one** fold during `new KioskKeyboard({layout, customLayouts:[a,b,c]})`, and exactly **one** `Log.warning` for a fixture with one bad custom layout among three, with an overlay placed before its rows-declaring sibling and **zero** `unknown-target`. Two corrections to an earlier revision of this item. The count is one, not two: `init()` only assigns `this._fold = null` and never calls `_getFold()`, so the only fold is the one between the `applySettings` phases. And it **cannot be observed by spying `foldCustomLayouts`** — the UI5 AMD transpile captures named imports into module-scope consts at define time (`dist/resources/ui5/kiosk/internal/latin-variants-dbg.js:17`, `const BUILTIN_LAYOUT_META = ___layout_meta["BUILTIN_LAYOUT_META"];`), so `sinon.stub(mod, "foldCustomLayouts")` cannot intercept the caller's binding. Observe it through `sandbox.stub(Log, "warning")` instead, which the repo already does elsewhere; exporting a call counter from the fold would violate CLAUDE.md §4.
-10. **Cache liveness (kiosk)** — `custom layout.setRows(x)` refolds once, a second read does not; `removeCustomLayout` / `destroyCustomLayouts` / `custom layout.destroy()` each make the next resolution fall back.
+10. **Cache liveness (kiosk)** — `customLayout.setRows(x)` refolds once, a second read does not; `removeCustomLayout` / `destroyCustomLayouts` / `customLayout.destroy()` each make the next resolution fall back.
 11. **Construction ordering** — `new KioskKeyboard({layout:"pl-warehouse", customLayouts:[…]})` with `layout` written first sets the layout with no warning; `kb.clone().getLayout()` matches with no warning.
 12. **Coercion parity** — `locales: "pl"` on a literal and `new CustomLayout({locales:["pl"]})` produce the same construction-time layout.
-13. **DEF-4 IME safety** — mid-composition, `custom layout.setKeycapLang("pl")` on an _unrelated_ custom layout: the preedit survives; then change the middleware for the _resolved_ layout: the buffer was **committed to the target**, not reset.
+13. **DEF-4 IME safety** — mid-composition, `customLayout.setKeycapLang("pl")` on an _unrelated_ custom layout: the preedit survives; then change the middleware for the _resolved_ layout: the buffer was **committed to the target**, not reset.
 14. **Tree-shaking (webc)** — `expect(code).toContain("kiosk-keyboard-custom-layout")`.
 
 ---

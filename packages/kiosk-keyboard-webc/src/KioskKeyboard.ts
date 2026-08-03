@@ -1300,6 +1300,8 @@ class KioskKeyboard extends UI5Element {
     this._foldedEpoch = this._foldEpoch;
 
     const specs: CustomLayoutSpec[] = [];
+    // The slot admits any element at runtime, so a foreign child is reachable even
+    // though the declared type is narrower.
     for (const child of children as readonly HTMLElement[]) {
       if (isCustomLayout(child)) specs.push(child.toSpec());
       else

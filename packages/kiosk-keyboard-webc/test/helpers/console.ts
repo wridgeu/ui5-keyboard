@@ -22,3 +22,22 @@ export async function captureConsole(
   }
   return messages;
 }
+
+/**
+ * The callback form of {@link captureConsole} for `console.warn`: the body receives the
+ * messages as they arrive, so a test can assert on them alongside the element it mounted
+ * without hoisting that element out of the block.
+ */
+export async function withCapturedWarnings(body: (messages: string[]) => Promise<void>): Promise<void> {
+  const method: PatchableConsoleMethod = "warn";
+  const messages: string[] = [];
+  const original = console[method];
+  console[method] = (...args: unknown[]) => {
+    messages.push(args.map(String).join(" "));
+  };
+  try {
+    await body(messages);
+  } finally {
+    console[method] = original;
+  }
+}

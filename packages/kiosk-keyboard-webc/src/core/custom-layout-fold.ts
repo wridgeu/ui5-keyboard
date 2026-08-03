@@ -283,14 +283,14 @@ export function describeDiagnostic(d: LayoutDiagnostic, vocab: DiagnosticVocabul
         `"rows" ${on} is not a layout definition. Expected a non-empty array of non-empty rows ` +
         `where every key has a non-empty string "value". The custom layout's other facets still apply.`
       );
-    case "invalid-variants":
+    case "invalid-variants": {
+      const shape =
+        `is not a variant table. Expected a non-empty object mapping lowercase base letters ` +
+        `to arrays of non-empty glyph strings; an empty array suppresses that letter.`;
       // The host raises this code for its own `defaultVariants`, which names no layout.
-      return (
-        (d.layout ? `"variants" ${on}` : `"defaultVariants"`) +
-        ` is not a variant table. Expected a non-empty object mapping lowercase base letters ` +
-        `to arrays of non-empty glyph strings; an empty array suppresses that letter.` +
-        (d.layout ? ` To opt "${d.layout}" out entirely use suppress="Variants".` : "")
-      );
+      if (!d.layout) return `"defaultVariants" ${shape}`;
+      return `"variants" ${on} ${shape} To opt "${d.layout}" out entirely use suppress="Variants".`;
+    }
     case "invalid-middleware":
       return (
         `"middleware" ${on} is not a function. Supply a factory returning a CompositionMiddleware; ` +

@@ -1118,7 +1118,7 @@ export default class KioskKeyboard extends Control {
     // `getAggregation` hands back a fresh array each call, so this needs no copy.
     this._foldChildren = children;
     this._fold = foldCustomLayouts(
-      children.map((child: CustomLayout) => child.toSpec()),
+      children.map((child) => child.toSpec()),
       registryIsBuiltIn,
     );
     this._reportDiagnostics(this._fold.diagnostics);
