@@ -18,8 +18,8 @@ import qwertyEs from "../layouts/qwerty-es";
 /**
  * Built-in keyboard layouts shipped with the library. The map is sealed
  * at module load: there is no public mutation API. Consumers customize
- * per control via the `instanceLayouts` constructor setting / setter,
- * which shadows entries here without mutating shared state.
+ * per control via the `customLayouts` aggregation, which shadows entries
+ * here without mutating shared state.
  */
 const BUILTIN_LAYOUTS: ReadonlyMap<string, LayoutDefinition> = new Map([
   ["qwerty", qwerty],
@@ -38,7 +38,7 @@ const BUILTIN_LAYOUTS: ReadonlyMap<string, LayoutDefinition> = new Map([
 
 /**
  * Built-in BCP-47 prefix → layout name. Sealed at module load. Per-app
- * customization is done via the `instanceLocaleLayouts` setting.
+ * customization is done with the `locales` of a `customLayouts` entry.
  */
 const BUILTIN_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([
   ["de", "qwertz-de"],

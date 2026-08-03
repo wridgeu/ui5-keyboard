@@ -99,12 +99,13 @@ const indicStressLayout = [
   ],
 ];
 
-// Apply the visual stress layouts as per-instance overrides on every
-// kiosk-keyboard rendered on the page. Pages are mounted before this script
-// runs in the bundle.esm.ts entry, so simply iterate the existing elements.
+// Declare the visual stress layouts as custom layouts on every kiosk-keyboard
+// rendered on the page. Pages are mounted before this script runs in the
+// bundle.esm.ts entry, so simply iterate the existing elements. Each host needs
+// its own child elements: a DOM node lives in one parent only.
 customElements.whenDefined("kiosk-keyboard").then(() => {
   const qwerty = customElements.get("kiosk-keyboard").getRegisteredLayout("qwerty");
-  const overrides = {
+  const layouts = {
     "glyph-stress": glyphStressLayout,
     "icon-label-variations": iconLabelVariationsLayout,
     "indic-stress": indicStressLayout,
@@ -117,6 +118,12 @@ customElements.whenDefined("kiosk-keyboard").then(() => {
     "qwerty-fk-compact": [...fkeyRowCompact, ...qwerty],
   };
   document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
-    kb.instanceLayouts = overrides;
+    for (const [name, rows] of Object.entries(layouts)) {
+      const customLayout = document.createElement("kiosk-keyboard-custom-layout");
+      customLayout.slot = "customLayouts";
+      customLayout.name = name;
+      customLayout.rows = rows;
+      kb.appendChild(customLayout);
+    }
   });
 });

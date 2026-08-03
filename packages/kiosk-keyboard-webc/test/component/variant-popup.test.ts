@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import type Popover from "@ui5/webcomponents/dist/Popover.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-import type { LayoutDefinition, LayoutSpec } from "../../src/types.js";
+import type { LayoutDefinition } from "../../src/types.js";
 import { requireKey, setupWithLayout } from "../helpers/fixtures.js";
 import { getText, setI18nResolver } from "../../src/core/i18n.js";
 import { LATIN_DIACRITIC_VARIANTS } from "../../src/core/latin-variants.js";
@@ -27,11 +27,8 @@ const VARIANT_LAYOUT: LayoutDefinition = [
   [{ value: "{shift}", type: "modifier" }],
 ];
 
-/** A layout whose keycaps are Arabic, declared through the descriptor form. */
-const LANG_VARIANT_LAYOUT: LayoutSpec = {
-  rows: [[{ value: "ا", variants: ["أ", "إ", "آ"] }]],
-  lang: "ar",
-};
+/** A layout whose keycaps are Arabic; the custom layout declares `keycapLang="ar"`. */
+const LANG_VARIANT_LAYOUT: LayoutDefinition = [[{ value: "ا", variants: ["أ", "إ", "آ"] }]];
 
 /** A key whose shifted glyph is an explicit `shiftValue`, not the uppercased value. */
 const SHIFT_VALUE_LAYOUT: LayoutDefinition = [
@@ -570,18 +567,17 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(false);
   });
 
-  it("instanceVariants extends the built-in table and drives the popup", async () => {
-    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
+  it("a custom layout's variants extend the built-in table and drive the popup", async () => {
+    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]], { variants: { b: ["ḃ", "ƀ"] } });
     kb.accentVariants = true;
-    kb.instanceVariants = { spike: { b: ["ḃ", "ƀ"] } };
     await renderFinished();
 
-    expect(requireKey(kb, "b").hasAttribute(DOM.attributes.hasVariants), "'b' gains the instance variants").to.equal(
+    expect(requireKey(kb, "b").hasAttribute(DOM.attributes.hasVariants), "'b' gains the declared variants").to.equal(
       true,
     );
     expect(
       requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants),
-      "'a' retained: an instance table merges, not replaces",
+      "'a' retained: a declared table merges, not replaces",
     ).to.equal(true);
 
     await holdOpen(requireKey(kb, "b"));
@@ -589,24 +585,24 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     pointerUp();
   });
 
-  it("an instanceVariants entry overrides one built-in letter's popup glyphs", async () => {
-    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
+  it("a custom layout's variants override one built-in letter's popup glyphs", async () => {
+    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]], { variants: { a: ["ā"] } });
     kb.accentVariants = true;
-    kb.instanceVariants = { spike: { a: ["ā"] } };
     await renderFinished();
 
     await holdOpen(requireKey(kb, "a"));
-    expect(optionGlyphs(kb), "the named letter takes the entry's glyphs").to.deep.equal(["ā"]);
+    expect(optionGlyphs(kb), "the named letter takes the declared glyphs").to.deep.equal(["ā"]);
     pointerUp();
   });
 
   it("a full-size table restating the built-in entries validates and applies", async () => {
-    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
-    kb.accentVariants = true;
     // A consumer who builds a table from LATIN_DIACRITIC_VARIANTS instead of naming
     // only the letters they change: every one of its entries has to clear validation,
     // and the letters it does change still have to win over the built-in list.
-    kb.instanceVariants = { spike: { ...LATIN_DIACRITIC_VARIANTS, a: ["ā"], b: ["ḃ"] } };
+    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]], {
+      variants: { ...LATIN_DIACRITIC_VARIANTS, a: ["ā"], b: ["ḃ"] },
+    });
+    kb.accentVariants = true;
     await renderFinished();
     expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants), "the full table validates").to.equal(true);
     expect(requireKey(kb, "b").hasAttribute(DOM.attributes.hasVariants), "added 'b' present").to.equal(true);
@@ -616,10 +612,9 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     pointerUp();
   });
 
-  it("a null instanceVariants entry opts the layout out of the built-in table", async () => {
-    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]]);
+  it("suppress=Variants opts the layout out of the built-in table", async () => {
+    const { kb } = await setupWithLayout([[{ value: "a" }, { value: "b" }]], { suppress: "Variants" });
     kb.accentVariants = true;
-    kb.instanceVariants = { spike: null };
     await renderFinished();
     expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(false);
   });
@@ -630,9 +625,9 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(false);
   });
 
-  it("the '*' wildcard re-enables variants on an excluded non-Latin layout", async () => {
+  it("defaultVariants re-enables variants on an excluded non-Latin layout", async () => {
     const kb = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="ja-romaji" accent-variants></kiosk-keyboard>`);
-    kb.instanceVariants = { "*": { a: ["ä"] } };
+    kb.defaultVariants = { a: ["ä"] };
     await renderFinished();
     expect(requireKey(kb, "a").hasAttribute(DOM.attributes.hasVariants)).to.equal(true);
   });
@@ -1014,7 +1009,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
   // root rather than a descendant, so it inherits no lang and declares its own.
 
   it("declares the layout's keycap language on the option toolbar", async () => {
-    const { kb } = await setupWithLayout(LANG_VARIANT_LAYOUT);
+    const { kb } = await setupWithLayout(LANG_VARIANT_LAYOUT, { keycapLang: "ar" });
     await holdOpen(requireKey(kb, "ا"));
 
     expect(optionGlyphs(kb).length, "the popup opened with options").to.be.above(0);

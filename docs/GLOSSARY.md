@@ -120,7 +120,7 @@ A **composition middleware** is a module that intercepts key presses for a speci
 
 ### How it works
 
-1. Built-in middleware factories are registered by direct import into a sealed module-level map, keyed by layout name (no self-registration; see #108). Per-app middleware is supplied via the `instanceMiddleware` property.
+1. Built-in middleware factories are registered by direct import into a sealed module-level map, keyed by layout name (no self-registration; see #108). Per-app middleware is supplied by the `middleware` property of a custom layout.
 2. When the associated layout becomes active, the keyboard lazily instantiates the middleware via the factory function.
 3. On each key press, the middleware's `handleKey()` method is called first. It can consume the key (returning `true`), compose multiple keys into a single output character, or pass through to default handling (returning `false`).
 4. When the layout is deactivated, `reset()` is called to clear any pending composition state.
@@ -132,7 +132,7 @@ A **composition middleware** is a module that intercepts key presses for a speci
 
 ### Consumer API
 
-Consumers supply custom middleware per element via the `instanceMiddleware` property, a `Record<layoutName, () => CompositionMiddleware>`. The `CompositionMiddleware` interface requires three methods: `handleKey()`, `commit()`, and `reset()`. An entry in `instanceMiddleware` shadows the built-in factory for the same layout.
+Consumers supply custom middleware per element on the custom layout for that layout name: `middleware` is a `() => CompositionMiddleware` factory. The `CompositionMiddleware` interface requires three methods: `handleKey()`, `commit()`, and `reset()`. A declared `middleware` shadows the built-in factory for the same layout, and `suppress="Middleware"` leaves that layout with none.
 
 ## Subpath Imports (WebC)
 
@@ -144,6 +144,7 @@ The `kiosk-keyboard-webc` package exposes subpath imports for different consumpt
 | ---------------------------------- | ------------------------------------------------------------------- |
 | `kiosk-keyboard-webc`              | Component with all built-in layouts and middleware                  |
 | `kiosk-keyboard-webc/bundle`       | Everything: component, Assets, all built-in layouts, all middleware |
+| `kiosk-keyboard-webc/CustomLayout` | The `<kiosk-keyboard-custom-layout>` configuration element          |
 | `kiosk-keyboard-webc/layouts/*`    | Individual layout-definition modules (data for custom composition)  |
 | `kiosk-keyboard-webc/middleware/*` | Individual middleware-factory modules (data for custom composition) |
 | `kiosk-keyboard-webc/variants`     | Built-in LATIN_DIACRITIC_VARIANTS table and the VariantTable type   |
@@ -158,7 +159,7 @@ import "kiosk-keyboard-webc/Assets";
 import KioskKeyboard from "kiosk-keyboard-webc";
 ```
 
-The `layouts/*` and `middleware/*` subpaths are for composing **custom** keys: import a layout definition or middleware factory as data and pass it per-element via `instanceLayouts` / `instanceMiddleware`. There is no self-registration step (built-ins are bundled via direct imports; see #108).
+The `layouts/*` and `middleware/*` subpaths are for composing **custom** keys: import a layout definition or middleware factory as data and pass it per-element as the `rows` / `middleware` of a `<kiosk-keyboard-custom-layout>` in the `customLayouts` slot. There is no self-registration step (built-ins are bundled via direct imports; see #108).
 
 ## composedPath()
 

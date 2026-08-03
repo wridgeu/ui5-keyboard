@@ -22,7 +22,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **SAP theming**: Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
 - **UI5 app integration**: consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
 - **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana, Arabic, Korean Hangul, Spanish, Numeric, Numpad, Special, F-keys, Navigation. Composite variants (e.g., QWERTY + F-key row) are trivial to compose from building block rows.
-- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`, `ko` → `ko-hangul`, `es` → `qwerty-es`). Set `instanceLocaleLayouts={ ja: "ja-kana" }` on an element to switch the Japanese default to kana input for that instance.
+- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`, `ko` → `ko-hangul`, `es` → `qwerty-es`). Slot a `<kiosk-keyboard-custom-layout name="ja-kana" locales="ja">` into an element to switch the Japanese default to kana input for that instance.
 - **Shift / Caps Lock**: single-click for one-shot shift, double-click for caps lock
 - **Docked mode**: fixed-position keyboard at bottom of viewport with slide animation
 - **Auto-show**: opens/closes automatically when target inputs receive/lose focus
@@ -31,7 +31,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **Grapheme-aware**: correct backspace/navigation for emoji and multi-code-unit characters
 - **Accessible**: ARIA roles, labels, live region announcements, roving tabindex, keyboard navigation, `prefers-reduced-motion`, `forced-colors`
 - **i18n**: built-in English/German/Japanese/Arabic, extensible via custom resolver
-- **Custom layouts**: per-instance overrides via `instanceLayouts` / `instanceLocaleLayouts` / `instanceMiddleware` / `instanceVariants` properties
+- **Custom layouts in markup**: `<kiosk-keyboard-custom-layout>` children of the `customLayouts` slot carry a layout's rows, locales, keycap language, middleware and long-press variants, scoped to that one element
 
 ## Keyboard Overview
 
@@ -237,7 +237,7 @@ Use the bridge when you want predictable XML view metadata, typed UI5 events, or
 | **Target inputs** | `controls` property + `setControls()` + `getActiveControl()` | `controls` attribute + `setTargetElement()` + `getActiveTargetElement()` |
 | **Density**       | UI5 content density (`sapUiSizeCompact`)                     | `data-ui5-compact-size` attribute                                        |
 
-Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinition`), the same per-instance customization properties (`instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, `instanceVariants`), and the same special-key syntax (`{shift}`, `{backspace}`, `{layout:name}`). Custom layouts work identically across both.
+Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinition`), the same custom-layout model (one element per layout carrying its rows, locales, keycap language, role, middleware and variants, plus a `defaultVariants` table on the host), and the same special-key syntax (`{shift}`, `{backspace}`, `{layout:name}`). The UI5 control collects those elements in a `customLayouts` aggregation, the web component in a `customLayouts` slot; the fields, their merge rules and the diagnostics are identical.
 
 Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 control vs `key-press` (kebab-case) in the web component. Event payloads are structurally identical.
 
@@ -248,7 +248,15 @@ See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPON
 Recommended stable consumer entry points and imports:
 
 ```ts
-import { KioskKeyboard, FKeyMode, KeyboardType, MobileKeyboard } from "kiosk-keyboard-webc/bundle";
+import {
+  KioskKeyboard,
+  CustomLayout,
+  FKeyMode,
+  KeyboardType,
+  LayoutFacet,
+  LayoutRole,
+  MobileKeyboard,
+} from "kiosk-keyboard-webc/bundle";
 
 import type {
   KeyPressEventDetail,
@@ -258,15 +266,16 @@ import type {
   KeyDefinition,
   KeyRow,
   LayoutDefinition,
+  CustomLayoutSpec,
   KeyWidth,
   KeyType,
   SpecialKeyValue,
 } from "kiosk-keyboard-webc/bundle";
 ```
 
-For most applications, prefer `kiosk-keyboard-webc/bundle`. The bare `kiosk-keyboard-webc` entry point is also supported for advanced setups when paired with `kiosk-keyboard-webc/Assets`.
+For most applications, prefer `kiosk-keyboard-webc/bundle`. The bare `kiosk-keyboard-webc` entry point is also supported for advanced setups when paired with `kiosk-keyboard-webc/Assets`. Both register `<kiosk-keyboard-custom-layout>` alongside `<kiosk-keyboard>`; `kiosk-keyboard-webc/CustomLayout` is the subpath for the element class on its own.
 
-Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` properties. The remaining static methods on `KioskKeyboard` are read-only inspectors (`getRegisteredLayout`, `getRegisteredLayoutNames`, `isBuiltInLayout`, `isSecondaryLayout`, `getLocaleLayout`) plus the global `setI18nResolver`. Import the class and call them directly:
+Customization is per element via the `customLayouts` slot and the `defaultVariants` property. The remaining static methods on `KioskKeyboard` are read-only inspectors (`getRegisteredLayout`, `getRegisteredLayoutNames`, `isBuiltInLayout`, `isSecondaryLayout`, `getLocaleLayout`) plus the global `setI18nResolver`. Import the class and call them directly:
 
 ```js
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
@@ -275,31 +284,34 @@ const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
 KioskKeyboard.setI18nResolver((key) => undefined);
 ```
 
-Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `instanceLayouts` property. The shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/fkey-row-compact`, `kiosk-keyboard-webc/layouts/nav-row`, `kiosk-keyboard-webc/layouts/nav-row-compact`) are stable imports for composing custom variant layouts. Their keys are declared as `type: "modifier"` (the transparent Lite button style); override `type` on individual keys if you want the default bordered style instead. `nav-row-compact` seats the same eight nav keys as two rows of four, for keyboards narrower than about 20rem where one row of eight leaves each key around 30px wide; `fkey-row-compact` does the same for the twelve function keys, as two rows of six.
+Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `rows` of a `<kiosk-keyboard-custom-layout>`. The shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/fkey-row-compact`, `kiosk-keyboard-webc/layouts/nav-row`, `kiosk-keyboard-webc/layouts/nav-row-compact`) are stable imports for composing custom variant layouts. Their keys are declared as `type: "modifier"` (the transparent Lite button style); override `type` on individual keys if you want the default bordered style instead. `nav-row-compact` seats the same eight nav keys as two rows of four, for keyboards narrower than about 20rem where one row of eight leaves each key around 30px wide; `fkey-row-compact` does the same for the twelve function keys, as two rows of six.
 
 > [!NOTE]
 > See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
 
 ## Attributes / Properties
 
-| Attribute             | Property                | Type                                                  | Default     | Description                                                                                                                                                                                                                                                                                     |
-| --------------------- | ----------------------- | ----------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`              | `layout`                | `string`                                              | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.                                                                                                                                                                                                                      |
-| `keyboard-type`       | `keyboardType`          | `string`                                              | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                                                                                                                                                                                                                                           |
-| `open`                | `open`                  | `boolean`                                             | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.                                                                                                                                                                                                                             |
-| `docked`              | `docked`                | `boolean`                                             | `false`     | Fixed-position mode at bottom of viewport.                                                                                                                                                                                                                                                      |
-| `auto-show`           | `autoShow`              | `boolean`                                             | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).                                                                                                                                                                                                                         |
-| `auto-type`           | `autoType`              | `boolean`                                             | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                                                                                                                                                                                                                                  |
-| `disabled`            | `disabled`              | `boolean`                                             | `false`     | Disables all key interaction.                                                                                                                                                                                                                                                                   |
-| `controls`            | `controls`              | `string`                                              | `""`        | Comma-separated IDs of target elements. Supports single or multiple inputs.                                                                                                                                                                                                                     |
-| `accessible-name`     | `accessibleName`        | `string`                                              | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".                                                                                                                                                                                                                      |
-| `mobile-keyboard`     | `mobileKeyboard`        | `string`                                              | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                                                                                                                                                                                                                                 |
-| `f-key-mode`          | `fKeyMode`              | `string`                                              | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                                                                                                                                                                                                |
-| `accent-variants`     | `accentVariants`        | `boolean`                                             | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The four non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts).                                 |
-| _(programmatic only)_ | `instanceLayouts`       | `Record<string, LayoutInput> \| null`                 | `null`      | Per-instance layout overrides; shadow the built-in registry. Each entry is the layout's rows, or a `LayoutSpec` (`{ rows, lang, secondary }`) declaring its attributes too. See [Per-Instance Customization](#per-instance-customization).                                                      |
-| _(programmatic only)_ | `instanceLocaleLayouts` | `Record<string, string> \| null`                      | `null`      | Per-instance locale-to-layout mappings; shadow the built-in locale map.                                                                                                                                                                                                                         |
-| _(programmatic only)_ | `instanceMiddleware`    | `Record<string, () => CompositionMiddleware> \| null` | `null`      | Per-instance composition middleware factories keyed by layout name.                                                                                                                                                                                                                             |
-| _(programmatic only)_ | `instanceVariants`      | `Record<string, VariantTable \| null> \| null`        | `null`      | Per-instance accent-variant tables keyed by layout name (or `"*"`). Effective only with `accent-variants`. Layered built-in → `"*"` → named, each merged onto the one below per base letter; a `null` named entry opts that layout out. See [Accent variants](#accent-variants-german-umlauts). |
+| Attribute             | Property          | Type                   | Default     | Description                                                                                                                                                                                                                                                     |
+| --------------------- | ----------------- | ---------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`              | `layout`          | `string`               | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.                                                                                                                                                                                      |
+| `keyboard-type`       | `keyboardType`    | `string`               | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                                                                                                                                                                                                           |
+| `open`                | `open`            | `boolean`              | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.                                                                                                                                                                                             |
+| `docked`              | `docked`          | `boolean`              | `false`     | Fixed-position mode at bottom of viewport.                                                                                                                                                                                                                      |
+| `auto-show`           | `autoShow`        | `boolean`              | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).                                                                                                                                                                                         |
+| `auto-type`           | `autoType`        | `boolean`              | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                                                                                                                                                                                                  |
+| `disabled`            | `disabled`        | `boolean`              | `false`     | Disables all key interaction.                                                                                                                                                                                                                                   |
+| `controls`            | `controls`        | `string`               | `""`        | Comma-separated IDs of target elements. Supports single or multiple inputs.                                                                                                                                                                                     |
+| `accessible-name`     | `accessibleName`  | `string`               | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".                                                                                                                                                                                      |
+| `mobile-keyboard`     | `mobileKeyboard`  | `string`               | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                                                                                                                                                                                                 |
+| `f-key-mode`          | `fKeyMode`        | `string`               | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                                                                                                                                                                |
+| `accent-variants`     | `accentVariants`  | `boolean`              | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The four non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts). |
+| _(programmatic only)_ | `defaultVariants` | `VariantTable \| null` | `null`      | Long-press variants applied under **every** layout, merged per base letter beneath anything a slotted `<kiosk-keyboard-custom-layout>` declares. Effective only with `accent-variants`. See [Accent variants](#accent-variants-german-umlauts).                 |
+
+### Slots
+
+| Slot            | Accepts                          | Description                                                                                                                             |
+| --------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `customLayouts` | `<kiosk-keyboard-custom-layout>` | Per-element layouts and overlays, applied in DOM order. Never projected, so they render nothing. See [Custom Layouts](#custom-layouts). |
 
 ### Keyboard type override via `data-keyboard-type`
 
@@ -345,7 +357,7 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Static API
 
-The static surface is read-only. Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` properties (see [Per-Instance Customization](#per-instance-customization)).
+The static surface is read-only. Customization is per element via the `customLayouts` slot (see [Custom Layouts](#custom-layouts)).
 
 | Method                                     | Description                                                                                                            |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
@@ -394,54 +406,72 @@ trivial compositions - see [Layout Composition](#layout-composition) above.
 
 ## Custom Layouts
 
-Custom layouts are scoped to a single `<kiosk-keyboard>` element via the `instanceLayouts` property:
+Everything one layout _is_ - its rows, the locales that select it, its keycap language, whether it is an auxiliary surface, its composition middleware and its long-press variants - is declared together on a `<kiosk-keyboard-custom-layout>` element in the `customLayouts` slot of a `<kiosk-keyboard>`. It shadows the built-in registry for that element only, without touching module-level state.
 
-```ts
-import "kiosk-keyboard-webc/bundle";
+A custom layout that declares `rows` declares a layout. One **without** rows overlays the layout its `name` already resolves to, so a built-in can be given different variants, a different middleware or a different locale binding without restating its keys.
 
-const el = document.createElement("kiosk-keyboard");
-el.instanceLayouts = {
-  "my-layout": [
-    [{ value: "a" }, { value: "b" }, { value: "c" }, { value: "{backspace}", type: "action" }],
-    [
-      { value: " ", width: "space", type: "space" },
-      { value: "{enter}", type: "action" },
-    ],
-  ],
-};
-el.layout = "my-layout";
-el.setAttribute("controls", "my-input");
-document.body.appendChild(el);
-```
-
-Or in plain HTML, set the property after the element is defined:
+`name`, `keycap-lang`, `locales`, `layout-role` and `suppress` are string attributes, so an overlay is a plain markup declaration:
 
 ```html
 <script type="module">
   import "kiosk-keyboard-webc/bundle";
-
-  customElements.whenDefined("kiosk-keyboard").then(() => {
-    const el = document.querySelector("kiosk-keyboard");
-    el.instanceLayouts = {
-      "pin-pad": [
-        [{ value: "1" }, { value: "2" }, { value: "3" }],
-        [{ value: "4" }, { value: "5" }, { value: "6" }],
-        [{ value: "7" }, { value: "8" }, { value: "9" }],
-        [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
-      ],
-    };
-    el.layout = "pin-pad";
-  });
 </script>
 
 <input id="my-input" type="text" />
-<kiosk-keyboard controls="my-input"></kiosk-keyboard>
+<kiosk-keyboard controls="my-input" accent-variants>
+  <!-- Point the Japanese locale at the BUILT-IN kana layout. -->
+  <kiosk-keyboard-custom-layout slot="customLayouts" name="ja-kana" locales="ja"></kiosk-keyboard-custom-layout>
+
+  <!-- Opt a layout out of accents entirely. -->
+  <kiosk-keyboard-custom-layout slot="customLayouts" name="arabic" suppress="Variants"></kiosk-keyboard-custom-layout>
+
+  <!-- Type the Hangul keycaps directly, without the built-in composer. -->
+  <kiosk-keyboard-custom-layout
+    slot="customLayouts"
+    name="ko-hangul"
+    suppress="Middleware"
+  ></kiosk-keyboard-custom-layout>
+</kiosk-keyboard>
 ```
 
-> [!NOTE]
-> `instanceLayouts` accepts a JS object, not a string, so it cannot be set via an HTML attribute. Assign it programmatically before connecting the element (or before the next render cycle). Layouts assigned this way are scoped to the element that owns them.
+Every child carries `slot="customLayouts"`. The children render nothing: the shadow template has no `<slot name="customLayouts">` for them, so a custom layout is never projected and never affects layout or styling.
 
-Each key is a `KeyDefinition`:
+`rows`, `variants` and `middleware` are object-typed properties with no attribute, so a full layout is assembled in script:
+
+```ts
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+import type CustomLayout from "kiosk-keyboard-webc/CustomLayout";
+import { createKanaDakutenMiddleware } from "kiosk-keyboard-webc/middleware/kana-dakuten";
+import warehousePos from "./warehouse-pos-layout";
+
+const kb = document.createElement("kiosk-keyboard") as KioskKeyboard;
+kb.setAttribute("controls", "my-input");
+kb.accentVariants = true;
+kb.layout = "warehouse-pos";
+
+const pos = document.createElement("kiosk-keyboard-custom-layout") as CustomLayout;
+pos.slot = "customLayouts";
+pos.name = "warehouse-pos";
+pos.rows = warehousePos;
+pos.locales = "de,de-AT";
+pos.keycapLang = "de";
+pos.variants = { s: ["ś", "š"] };
+
+// Rows-less overlay: give the built-in kana layout a different middleware.
+const kana = document.createElement("kiosk-keyboard-custom-layout") as CustomLayout;
+kana.slot = "customLayouts";
+kana.name = "ja-kana";
+kana.middleware = createKanaDakutenMiddleware;
+
+kb.append(pos, kana);
+document.body.appendChild(kb);
+```
+
+Assemble the subtree before mounting the host, as above, and a slotted layout resolves on the keyboard's first paint. Afterwards the slot stays live: adding, removing, reordering or editing a custom layout re-folds the maps and re-renders.
+
+No teardown is needed: the custom layouts are children of the element and are released with it. The component maintains no window-global mutable customization state, so multiple apps sharing the same page (Fiori Launchpad, micro-frontends) cannot pollute each other through the keyboard.
+
+Each key of a `rows` array is a `KeyDefinition`:
 
 ```ts
 interface KeyDefinition {
@@ -459,6 +489,108 @@ interface KeyDefinition {
 }
 ```
 
+### Fields and how they resolve
+
+| Property     | Attribute     | Type               | Across custom layouts with the same name                                    | Across tiers                                 |
+| ------------ | ------------- | ------------------ | --------------------------------------------------------------------------- | -------------------------------------------- |
+| `name`       | `name`        | `string`           | matched after trim + lowercase; duplicates are the overlay mechanism        | -                                            |
+| `rows`       | _(none)_      | `LayoutDefinition` | last declaration wins                                                       | custom layout → built-in                     |
+| `keycapLang` | `keycap-lang` | `string`           | last declaration wins                                                       | custom layout → built-in                     |
+| `layoutRole` | `layout-role` | `LayoutRole`       | last declaration wins                                                       | `Inherit` takes the built-in's               |
+| `locales`    | `locales`     | token `string`     | additive union; per prefix, last wins                                       | custom layouts → built-in map                |
+| `middleware` | _(none)_      | `() => …`          | last declaration wins                                                       | custom layout → built-in                     |
+| `variants`   | _(none)_      | `VariantTable`     | additive per base letter; a letter mapped to `[]` drops it                  | built-in → `defaultVariants` → custom layout |
+| `suppress`   | `suppress`    | token `string`     | discards the inherited value of each listed facet at this layout's position | -                                            |
+
+Custom layouts apply in **DOM order**. `layoutRole` is a tri-state: `Inherit` (the default) takes the built-in layout of the same name's role, `Base` un-marks a built-in's secondary flag, `Secondary` marks an auxiliary surface; the attribute is not validated, so any other value reads as `Base`. `suppress` is how a facet is turned _off_ rather than replaced - a value the same custom layout declares still applies, so `suppress="Variants"` plus a `variants` table stands that table alone.
+
+`locales` and `suppress` are token strings rather than arrays, split on commas and whitespace alike: `locales="pl,pl-PL"` and `locales="pl pl-PL"` are the same declaration, as are `suppress="Variants,Middleware"` and `suppress="Variants Middleware"`.
+
+`rows` and `variants` are read by object identity: assign a new array or object to change them; mutating in place is not observed.
+
+### What the element reports
+
+A misconfiguration is logged once per element per distinct complaint, naming the layout and the remedy, rather than resolving silently to nothing:
+
+| Code                   | Trigger                                                                |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `empty-name`           | a custom layout whose `name` is empty after trim                       |
+| `invalid-rows`         | `rows` that are not a layout definition (the other facets still apply) |
+| `invalid-variants`     | `variants` (or `defaultVariants`) that are not a variant table         |
+| `invalid-middleware`   | `middleware` that is not a function                                    |
+| `invalid-locale`       | a `locales` token that is empty after trim                             |
+| `unknown-target`       | facets declared with no `rows`, for a name no layout has               |
+| `unknown-suppress`     | a `suppress` token outside `Variants` / `Middleware`                   |
+| `duplicate-rows`       | two custom layouts declare `rows` for one name                         |
+| `duplicate-middleware` | two custom layouts declare `middleware` for one name                   |
+| `duplicate-locale`     | two custom layouts claim one BCP-47 prefix for different layouts       |
+
+Any other element in the slot is ignored with a warning naming its tag, so a stray child cannot quietly take part in the fold.
+
+### In a framework
+
+The string attributes work the same in every framework; only the three object-typed properties need the framework's escape hatch for setting a DOM property rather than an attribute.
+
+**React** - reach the element with a ref and assign the property in an effect:
+
+```tsx
+import { useEffect, useRef } from "react";
+import "kiosk-keyboard-webc/bundle";
+import type CustomLayout from "kiosk-keyboard-webc/CustomLayout";
+import warehousePos from "./warehouse-pos-layout";
+
+export function Keyboard() {
+  const custom = useRef<CustomLayout>(null);
+
+  useEffect(() => {
+    if (custom.current) custom.current.rows = warehousePos;
+  }, []);
+
+  return (
+    <kiosk-keyboard layout="warehouse-pos" controls="my-input">
+      <kiosk-keyboard-custom-layout
+        ref={custom}
+        slot="customLayouts"
+        name="warehouse-pos"
+        keycap-lang="de"
+        locales="de"
+      />
+    </kiosk-keyboard>
+  );
+}
+```
+
+**Vue** - the `.prop` modifier binds a DOM property; `markRaw` keeps the rows out of Vue's reactivity system, since the element reads them by identity and would otherwise receive a proxy:
+
+```vue
+<script setup lang="ts">
+import { markRaw } from "vue";
+import "kiosk-keyboard-webc/bundle";
+import warehousePos from "./warehouse-pos-layout";
+
+const rows = markRaw(warehousePos);
+</script>
+
+<template>
+  <kiosk-keyboard layout="warehouse-pos" controls="my-input">
+    <kiosk-keyboard-custom-layout slot="customLayouts" name="warehouse-pos" keycap-lang="de" :rows.prop="rows" />
+  </kiosk-keyboard>
+</template>
+```
+
+**Angular** - property binding already writes a DOM property, so `[rows]` is enough (declare `CUSTOM_ELEMENTS_SCHEMA` on the component or module):
+
+```html
+<kiosk-keyboard layout="warehouse-pos" controls="my-input">
+  <kiosk-keyboard-custom-layout
+    slot="customLayouts"
+    name="warehouse-pos"
+    keycap-lang="de"
+    [rows]="warehousePos"
+  ></kiosk-keyboard-custom-layout>
+</kiosk-keyboard>
+```
+
 ## Accent variants (German umlauts)
 
 The `qwertz-de` layout ships dedicated **ä / ö / ü** keys and **ß**, and a German-locale page selects it automatically (`de` → `qwertz-de`). To reach accented letters from _any_ Latin layout, a key can carry a long-press popup of variants.
@@ -473,70 +605,56 @@ The `qwertz-de` layout ships dedicated **ä / ö / ü** keys and **ß**, and a G
 <kiosk-keyboard accent-variants controls="my-input"></kiosk-keyboard>
 ```
 
-**Per-key `variants`.** Author or override the popup for a single key with the `variants` field on its `KeyDefinition` (supplied via `instanceLayouts`). An explicit `variants` always wins over the built-in table; the key's own `value` stays the tap default and is not repeated in the list:
+**Per-key `variants`.** Author or override the popup for a single key with the `variants` field on its `KeyDefinition`. An explicit `variants` always wins over the built-in table; the key's own `value` stays the tap default and is not repeated in the list:
 
 ```ts
-el.instanceLayouts = {
-  "my-layout": [
-    [
-      { value: "a", variants: ["ä", "à", "á", "â"] },
-      { value: "o", variants: ["ö", "ø"] },
-    ],
+import type { LayoutDefinition } from "kiosk-keyboard-webc/bundle";
+
+const myRows: LayoutDefinition = [
+  [
+    { value: "a", variants: ["ä", "à", "á", "â"] },
+    { value: "o", variants: ["ö", "ø"] },
   ],
-};
+];
 ```
 
 Because an explicit `variants` wins, declaring `variants: []` suppresses the popup on a single key the built-in table would otherwise cover, e.g. to skip a diacritic already reachable as its own dedicated key on the layout.
 
-**Per-layout variant tables (`instanceVariants`).**
+**Per-layout variant tables.**
 
-With `accent-variants` on, the built-in Latin table is resolved through the per-element `instanceVariants` map before it is applied, keyed by layout name (or `"*"` for every layout). The tiers are layered **built-in → `"*"` → named**, each **merged onto** the one below per base letter, so an entry extends the tier under it rather than replacing it and only the letters it names change:
+With `accent-variants` on, the built-in Latin table is resolved through two further tiers before it is applied: the host's `defaultVariants` table, which applies under every layout, and the `variants` of the custom layouts naming that layout. The tiers are layered **built-in → `defaultVariants` → custom layout**, each **merged onto** the one below per base letter, so a tier extends the one under it rather than replacing it and only the letters it names change. This targets a locale's layout without editing layout data, e.g. Polish variants on the layout the current locale resolves to:
 
 ```ts
-el.accentVariants = true;
-el.instanceVariants = {
-  [KioskKeyboard.getLocaleLayout()]: { s: ["ś", "š"], z: ["ż", "ź", "ž"] },
-};
+import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+import type CustomLayout from "kiosk-keyboard-webc/CustomLayout";
+
+const kb = document.querySelector("kiosk-keyboard") as KioskKeyboard;
+kb.accentVariants = true;
+
+const polish = document.createElement("kiosk-keyboard-custom-layout") as CustomLayout;
+polish.slot = "customLayouts";
+polish.name = KioskKeyboard.getLocaleLayout();
+polish.variants = { s: ["ś", "š"], z: ["ż", "ź", "ž"] };
+kb.appendChild(polish);
 ```
 
 Base letters must be **lowercase**; a mis-keyed letter is logged and the entry skipped, rather than silently arming nothing.
 
 Three levels of opt-out, narrowest first:
 
-| Recipe                              | Effect                                                   |
-| ----------------------------------- | -------------------------------------------------------- |
-| `{ "<layout>": { s: [] } }`         | Drops one base letter, leaving the rest of the table     |
-| `{ "<layout>": null }`              | Opts that layout out of variants entirely                |
-| `variants: []` on a `KeyDefinition` | Suppresses the popup on that one key, whatever the table |
+| Recipe                                    | Effect                                                   |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `variants = { s: [] }` on a custom layout | Drops one base letter, leaving the rest of the table     |
+| `suppress="Variants"` on a custom layout  | Opts that layout out of variants entirely                |
+| `variants: []` on a `KeyDefinition`       | Suppresses the popup on that one key, whatever the table |
 
-The `"*"` tier only ever adds, so `{ "*": null }` applies nothing rather than opting every layout out. Turn the whole affordance off by leaving `accent-variants` unset, which is the default.
+The `defaultVariants` tier only ever adds; it has no suppression spelling. Turn the whole affordance off by leaving `accent-variants` unset, which is the default.
 
-The four non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `arabic`, `ko-hangul`) resolve the built-in table to nothing, so `accent-variants` adds no popups there; supply an `instanceVariants` entry (or a `"*"` table) to opt one back in, and because there is no built-in tier to merge onto, those tiers stand alone. That exclusion list is only the shipped default for those built-ins; it never locks you out. A **custom** layout whose Latin-looking keys should _not_ surface accent popups (a transliteration IME, say) opts out with a `null` entry: `el.instanceVariants = { "my-ime": null }`, which discards the `"*"` tier along with the built-in one. Action, modifier, and space keys never take table variants even when a table is keyed to their value.
+The four non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `arabic`, `ko-hangul`) resolve the built-in table to nothing, so `accent-variants` adds no popups there; supply a `variants` table on a custom layout (or a `defaultVariants` table) to opt one back in, and because there is no built-in tier to merge onto, those tiers stand alone. That exclusion list is only the shipped default for those built-ins; it never locks you out. A **custom** layout whose Latin-looking keys should _not_ surface accent popups (a transliteration IME, say) opts out with `suppress="Variants"`, which discards `defaultVariants` along with the built-in tier. Action, modifier, and space keys never take table variants even when a table is keyed to their value.
 
 `LATIN_DIACRITIC_VARIANTS` is exported from the `kiosk-keyboard-webc/variants` subpath for inspection (to read what the defaults are, or to build a table from them); merging means you no longer need to spread it to extend the defaults.
 
-Setting `instanceVariants` while `accent-variants` is off applies nothing, and logs a warning saying so.
-
-## Per-Instance Customization
-
-Every `<kiosk-keyboard>` accepts four programmatic-only properties that override the built-in registry for that element only: `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants`. Resolution order is **instance map → built-in**, so an entry on the element wins without mutating module-level state.
-
-```ts
-const el = document.createElement("kiosk-keyboard");
-el.instanceLayouts = { "warehouse-pos": warehousePosLayout };
-el.instanceLocaleLayouts = { de: "warehouse-pos-de" };
-el.instanceMiddleware = { "ja-kana": kanaDakutenFactory };
-el.instanceVariants = { "warehouse-pos": { s: ["ś", "š"] } };
-el.accentVariants = true;
-el.layout = "warehouse-pos";
-document.body.appendChild(el);
-```
-
-These properties accept JS objects, not strings, so they cannot be set via HTML attributes - assign them programmatically before connecting the element (or before the next render cycle).
-
-All four are read by object identity: assign a new object to change a map. Mutating the object already assigned is not observed.
-
-No teardown is needed: the overrides live on the element and are released when the host application removes it. The component does not maintain any window-global mutable customization state, so multiple apps sharing the same page (Fiori Launchpad, micro-frontends) cannot pollute each other through the keyboard.
+Declaring a variant table while `accent-variants` is off applies nothing, and logs a warning saying so.
 
 ## Function Keys (F1-F12)
 
@@ -601,6 +719,7 @@ The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The pac
 | Import                                  | Description                                                                                                                  |
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `kiosk-keyboard-webc`                   | Full entry (all built-in layouts)                                                                                            |
+| `kiosk-keyboard-webc/CustomLayout`      | The `<kiosk-keyboard-custom-layout>` element class and its type                                                              |
 | `kiosk-keyboard-webc/layouts/<name>`    | Built-in layout definitions (data for custom composition)                                                                    |
 | `kiosk-keyboard-webc/middleware/<name>` | Composition middleware                                                                                                       |
 | `kiosk-keyboard-webc/variants`          | Built-in accent-variant table (`LATIN_DIACRITIC_VARIANTS`) and its `VariantTable` type                                       |
@@ -616,29 +735,39 @@ compositions consumers can build:
 
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+import type CustomLayout from "kiosk-keyboard-webc/CustomLayout";
 import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
-const el = document.createElement("kiosk-keyboard");
-el.instanceLayouts = { "my-qwerty-fk": KioskKeyboard.composeLayout([fkeyRow], "qwerty") };
+const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+const composed = document.createElement("kiosk-keyboard-custom-layout") as CustomLayout;
+composed.slot = "customLayouts";
+composed.name = "my-qwerty-fk";
+composed.rows = KioskKeyboard.composeLayout([fkeyRow], "qwerty");
+el.appendChild(composed);
 el.layout = "my-qwerty-fk";
 document.body.appendChild(el);
 ```
 
 `composeLayout` splices its sources in order: a string names a built-in layout and contributes its rows, anything else contributes rows directly.
 
-An entry can also declare the layout's own attributes instead of just its rows, which is how a custom layout marks itself an auxiliary surface or states the language of its keycaps:
+A custom layout declares its own attributes alongside its rows, which is how it marks itself an auxiliary surface or states the language of its keycaps:
 
-```ts
-el.instanceLayouts = {
-  "ar-symbols": {
-    rows: KioskKeyboard.composeLayout([symbolRow], "arabic"),
-    lang: "ar",
-    secondary: true,
-  },
-};
+```html
+<kiosk-keyboard-custom-layout
+  id="ar-symbols"
+  slot="customLayouts"
+  name="ar-symbols"
+  keycap-lang="ar"
+  layout-role="Secondary"
+></kiosk-keyboard-custom-layout>
 ```
 
-An attribute the descriptor leaves out falls back to the built-in layout of the same name, so overriding a built-in keeps its attributes until the descriptor says otherwise.
+```ts
+const arSymbols = document.getElementById("ar-symbols") as CustomLayout;
+arSymbols.rows = KioskKeyboard.composeLayout([symbolRow], "arabic");
+```
+
+An attribute left out falls back to the built-in layout of the same name, so overriding a built-in keeps its attributes until the custom layout says otherwise.
 
 ## Composition Middleware
 
@@ -646,7 +775,7 @@ Some scripts require processing between key press and text insertion. For exampl
 
 Composition middleware handles this automatically. The built-in kana and Hangul middleware are **bundled with the component**: no import or configuration is needed. Each activates automatically when its associated layout (`ja-kana` / `ko-hangul`) is active and deactivates (committing any in-progress composition) on layout switch.
 
-The `kiosk-keyboard-webc/middleware/*` subpaths export the middleware **factories as data**, so you can reuse or override a built-in on a specific element via the [`instanceMiddleware`](#per-instance-customization) property; importing them has no side effect on the bundled defaults.
+The `kiosk-keyboard-webc/middleware/*` subpaths export the middleware **factories as data**, so you can reuse or override a built-in on a specific element via the `middleware` property of a [custom layout](#custom-layouts); importing them has no side effect on the bundled defaults.
 
 ### Built-in Middleware
 
@@ -657,10 +786,11 @@ The `kiosk-keyboard-webc/middleware/*` subpaths export the middleware **factorie
 
 ### Custom Middleware
 
-Implement the `CompositionMiddleware` interface and supply the factory via the per-instance `instanceMiddleware` property keyed by layout name:
+Implement the `CompositionMiddleware` interface and supply the factory on the custom layout for that layout:
 
 ```ts
 import type { CompositionMiddleware } from "kiosk-keyboard-webc";
+import type CustomLayout from "kiosk-keyboard-webc/CustomLayout";
 import "kiosk-keyboard-webc/bundle";
 
 function createMyMiddleware(): CompositionMiddleware {
@@ -681,8 +811,13 @@ function createMyMiddleware(): CompositionMiddleware {
 }
 
 const el = document.createElement("kiosk-keyboard");
-el.instanceMiddleware = { "my-layout": createMyMiddleware };
-el.layout = "my-layout";
+const custom = document.createElement("kiosk-keyboard-custom-layout") as CustomLayout;
+custom.slot = "customLayouts";
+custom.name = "my-layout";
+custom.rows = myRows;
+custom.middleware = createMyMiddleware;
+el.appendChild(custom);
+el.setAttribute("layout", "my-layout");
 document.body.appendChild(el);
 ```
 
@@ -700,7 +835,7 @@ Middleware lifecycle:
 - **Focus change**: `commit()` is called to avoid orphaned preedit text.
 
 > [!NOTE]
-> An entry in `instanceMiddleware` shadows the built-in factory for the same layout (for example, set `{ "ja-kana": myFactory }` to replace the bundled kana-dakuten middleware on that element).
+> A `middleware` on a custom layout shadows the built-in factory for the same layout (for example, `name="ja-kana"` with a `middleware` of your own replaces the bundled kana-dakuten middleware on that element), and `suppress="Middleware"` disables the built-in composer for that layout so its keycaps type directly.
 
 ## Icon + Label Rendering
 
@@ -762,9 +897,7 @@ registerIcon("my-search", {
   collection: "SAP-icons-v5",
 });
 
-el.instanceLayouts = {
-  "my-layout": [[{ value: "{find}", icon: "sap-icon://my-search", label: "", ariaLabel: "Find" }]],
-};
+custom.rows = [[{ value: "{find}", icon: "sap-icon://my-search", label: "", ariaLabel: "Find" }]];
 ```
 
 The registry key is `` `${collection}/${name}` ``, and the effective collection follows the theme family - `SAP-icons-v5` under Horizon, `SAP-icons-v4` under the legacy themes - so register the same name into both if the app can switch families. Registering an existing name replaces that icon application-wide, not only inside the keyboard. `unsafeRegisterIcon()` (since 2.14.0) takes a raw SVG string via `customTemplateAsString` instead; per its own documentation that string is not sanitized, and improperly sanitized SVG can lead to XSS.
@@ -827,7 +960,7 @@ This behavior is driven by a CSS `@container` query on individual keys (`contain
 - **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
 - **Icons** always have `aria-hidden="true"`. They are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.
 - **Accent-variant keys.** A key carrying variants advertises them with `aria-haspopup="dialog"`. Keyboard users open the popup with the context-menu gesture (the Menu key, or Shift+F10) on the focused key, arrow/Home/End to choose, Enter or Space to insert, and Escape to dismiss and return focus to the key. The key carries no `aria-expanded`: its own Enter/Space types the base character rather than toggling the popup.
-- **Language of keycaps.** Keycaps written in a script other than the UI language carry a `lang` attribute on their label, so a screen reader announces them with that language's pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts). The built-in `arabic`, `ja-kana` and `ko-hangul` layouts declare `ar` / `ja` / `ko`; `ja-romaji` declares none, because its keycaps are Latin letters and JIS punctuation and only the text they compose is Japanese. The attribute sits on the key label alone, since the keyboard's own label and its live region are UI-language text. Only a key that types a character carries the layout's script: space and the action keys take their label from i18n, and a layout-switch key is a control affordance rather than keycap content. A custom layout declares its own with the `lang` field of an `instanceLayouts` descriptor.
+- **Language of keycaps.** Keycaps written in a script other than the UI language carry a `lang` attribute on their label, so a screen reader announces them with that language's pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts). The built-in `arabic`, `ja-kana` and `ko-hangul` layouts declare `ar` / `ja` / `ko`; `ja-romaji` declares none, because its keycaps are Latin letters and JIS punctuation and only the text they compose is Japanese. The attribute sits on the key label alone, since the keyboard's own label and its live region are UI-language text. Only a key that types a character carries the layout's script: space and the action keys take their label from i18n, and a layout-switch key is a control affordance rather than keycap content. A custom layout declares its own with the `keycap-lang` attribute of a `<kiosk-keyboard-custom-layout>`.
 - **Target size.** Keys hold a 24x24 CSS px floor on both axes, meeting the WCAG 2.5.8 minimum touch target size, and grow with the root font size. The inline half is lifted below a 20rem-wide keyboard, where the densest rows cannot fit a full set of floored keys: keys shrink to fit there so that every key stays reachable rather than being clipped off the edge of a center-justified row. Below that width the 24x24 minimum is therefore not met. The block half holds at every width, so a `--kiosk-keyboard-key-height` set below 24px is raised to it, and a keyboard in a height-capped container clips rather than shrinking past the floor.
 
 ### Built-in icons
@@ -1190,6 +1323,7 @@ npm run typecheck
 src/
 ├── KioskKeyboard.ts          # Main web component class
 ├── KioskKeyboardTemplate.tsx  # JSX template
+├── CustomLayout.ts            # <kiosk-keyboard-custom-layout> configuration element
 ├── Assets.ts                  # Theme + i18n asset registration
 ├── bundle.esm.ts              # ESM entry point with re-exports
 ├── types.ts                   # Public type definitions

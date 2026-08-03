@@ -14,8 +14,8 @@ export type InstanceMiddleware = ReadonlyMap<string, (() => CompositionMiddlewar
  *
  * Built eagerly from direct factory imports and sealed at module load: each
  * factory is genuinely referenced here, so a bundler cannot drop it. There is
- * no public mutation API: per-app middleware is supplied via the
- * `instanceMiddleware` setting on the control.
+ * no public mutation API: per-app middleware is supplied by the `middleware` of a
+ * `customLayouts` entry on the control.
  */
 const BUILTIN_FACTORIES: ReadonlyMap<string, () => CompositionMiddleware> = new Map([
   ["ja-kana", createKanaDakutenMiddleware],

@@ -2,6 +2,7 @@ import { fixture, html, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type { LayoutDefinition } from "../../src/types.js";
+import { customLayout } from "../helpers/fixtures.js";
 
 const DOM = KioskKeyboard.DOM;
 const nextRender = renderFinished;
@@ -45,10 +46,12 @@ describe("kiosk-keyboard - unregistered layout", () => {
     });
   });
 
-  it("does not warn when `layout` names a layout supplied through the instance map", async () => {
+  it("does not warn when `layout` names a layout supplied through a custom layout", async () => {
     await withCapturedWarnings(async (messages) => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      el.instanceLayouts = { "warehouse-pos": layoutA };
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.setAttribute("layout", "qwerty");
+      el.appendChild(customLayout({ name: "warehouse-pos", rows: layoutA }));
+      await fixture(el);
       await nextRender();
 
       el.layout = "warehouse-pos";

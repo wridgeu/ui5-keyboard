@@ -9,14 +9,17 @@ KioskKeyboard.ts          Web component class (state, event delegation, target i
                           locale detection, auto-type, mobile keyboard suppression) and
                           all built-in layout imports. Re-exports public types.
 KioskKeyboardTemplate.tsx JSX template: Preact-based, UI5 WC jsxRenderer
+CustomLayout.ts           <kiosk-keyboard-custom-layout> element carrying one layout's rows,
+                          locales, keycap language, role, middleware and variants; renders nothing
 Assets.ts                 Registers theme parameter bundles and i18n loaders
 bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all built-in layouts);
-                          re-exports component class, enums, and public types. Built-in
+                          re-exports component classes, enums, and public types. Built-in
                           middleware (kana/hangul) is bundled and auto-activates by layout
                           name; `kiosk-keyboard-webc/middleware/*` only exposes the factories
-                          as data for custom `instanceMiddleware`.
-types.ts                  KeyDefinition, KeyRow, LayoutDefinition, LayoutSpec, LayoutInput, FKeyMode,
-                          SpecialKeyValue, KeyWidth, KeyType, event detail types
+                          as data for a custom layout's `middleware`.
+types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, FKeyMode,
+                          LayoutRole, LayoutFacet, SpecialKeyValue, KeyWidth, KeyType,
+                          event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
 core/
   dom-utils.ts            Key element IDs, input/textarea resolver (shadow DOM aware)
@@ -25,7 +28,8 @@ core/
   grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
   key-token.ts            Classifies a key's data-key value into its token kind (shift/backspace/enter/layout/fkey/unknown/char)
   layout-registry.ts      Layout registration/reset + locale-based layout resolution
-  layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins, resolved per attribute against an instanceLayouts descriptor
+  layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins, resolved per attribute against the folded custom layouts
+  custom-layout-fold.ts   Folds the customLayouts slot into the per-facet lookup maps the resolution paths read, plus the diagnostics it reports
   input-operations.ts     Target input text operations (insert, backspace, navigation)
   keyboard-type-detector.ts  Auto-type detection (data attributes, inputmode, HTML type)
   fkey-controller.ts      FKeyController: F-key dispatch (Virtual fires key-press + caret nav; Native synthesizes keydown)
@@ -33,7 +37,6 @@ core/
   i18n.ts                 i18n resolution: UI5 WC bundle + custom resolver
   middleware-registry.ts  Middleware factory registration, lazy instantiation, deactivation
   composition-utils.ts    Shared composition utilities (preedit text, CompositionEvent dispatch)
-  memo-map-view.ts        MemoMapView: memoized Map view over a per-instance Record, rebuilt only on source-object identity change
   auto-repeat.ts          AutoRepeater press-and-hold scheduler + BACKSPACE_AUTO_REPEAT timing curve (accelerating cadence)
   backspace-repeat-controller.ts  BackspaceRepeatController: owns press-and-hold Backspace pointer wiring, repeat timer, trailing-click suppression
   announcement-queue.ts   AnnouncementQueue: drains ARIA live-region announcements one entry per fixed interval
@@ -41,7 +44,7 @@ core/
   native-inputmode-suppression.ts  NativeInputModeSuppression: ref-counted inputmode="none" on the target, shared across instances
   physical-key-highlight-controller.ts  PhysicalKeyHighlightController: lights up the matching virtual key on physical keydown and mirrors Shift/CapsLock
   responsive-sizing-controller.ts  ResponsiveSizingController: ResizeObserver-driven height-responsive host cq-tier attribute (short/tiny)
-  latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping; resolveVariantTable resolves the table per layout (instance entry or the WILDCARD_LAYOUT "*" entry merged per base letter onto the built-in tier, null for the layouts whose layout-meta entry declares `variants: null`)
+  latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping; resolveVariantTable layers built-in -> defaultVariants -> custom layout per layout, each merged per base letter, null for the layouts whose layout-meta entry declares `variants: null`
   variant-popup-controller.ts  VariantPopupController: long-press/right-click accent-variant popup orchestration (open, option sizing, commit through the composition path)
 middleware/
   kana-dakuten.ts         Japanese dakuten/handakuten composition middleware (ja-kana layout)
@@ -146,10 +149,7 @@ This design was chosen for:
 
 Programmatic-only reactive properties (`type: Object`, so no HTML attribute; assign a new object to change one, they are read by identity):
 
-- `instanceLayouts`: per-instance layout overrides, keyed by layout name
-- `instanceLocaleLayouts`: per-instance locale-to-layout mappings, keyed by BCP-47 prefix
-- `instanceMiddleware`: per-instance composition-middleware factories, keyed by layout name
-- `instanceVariants`: per-instance accent-variant tables, keyed by layout name or the `"*"` wildcard
+- `defaultVariants`: accent-variant table applied under every layout, merged per base letter beneath anything a custom layout declares
 
 Internal reactive properties (no HTML attribute, trigger re-render):
 
@@ -158,6 +158,14 @@ Internal reactive properties (no HTML attribute, trigger re-render):
 - `_capsLock`: whether caps lock is active
 - `_liveRegionText`: ARIA live-region announcement text
 - `_variantPopup`: open accent-variant popup state (`null` when closed)
+
+### Slots
+
+| Slot            | Accepts                          | Description                                |
+| --------------- | -------------------------------- | ------------------------------------------ |
+| `customLayouts` | `<kiosk-keyboard-custom-layout>` | Per-instance layouts, applied in DOM order |
+
+Each slotted custom layout declares a layout when it carries `rows`, and overlays the one its `name` already resolves to when it does not. For rows, locales, metadata and middleware the last declaration wins; long-press variants accumulate per base letter. The slot is declared with `invalidateOnChildChange: { properties: true, slots: false }`, so a property change on a child re-folds the host. Nothing is projected: the shadow template renders no `<slot name="customLayouts">`, so the children never affect layout or styling.
 
 ### Event Handling
 
@@ -300,22 +308,26 @@ keyboardType    Resolved layout
 
 ### Layout Composition
 
-Composite layouts are composed at consumption time using the shared row modules and supplied to a single element via `instanceLayouts`:
+Composite layouts are composed at consumption time using the shared row modules and supplied to a single element through the `customLayouts` slot:
 
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
 const el = document.createElement("kiosk-keyboard");
-el.instanceLayouts = { "my-qwerty-fk": KioskKeyboard.composeLayout([fkeyRow], "qwerty") };
+const custom = document.createElement("kiosk-keyboard-custom-layout");
+custom.slot = "customLayouts";
+custom.name = "my-qwerty-fk";
+custom.rows = KioskKeyboard.composeLayout([fkeyRow], "qwerty");
+el.appendChild(custom);
 el.layout = "my-qwerty-fk";
 ```
 
 ### Layout Resolution Order
 
 - Built-in layouts are stored in a sealed module-level `Map`, populated by direct data imports of `layouts/*.ts` and never mutated again at runtime
-- Per-element overrides flow through the `instanceLayouts` property (a plain `Record`), validated at assignment: must be a non-empty array of non-empty rows where each key has a string `value`
-- Resolution order: instance map → built-in map → default layout
+- Per-element layouts flow through the `customLayouts` slot, folded into a lookup map and validated there: `rows` must be a non-empty array of non-empty rows where each key has a non-empty string `value`, and a rejected `rows` is reported as `invalid-rows` while the custom layout's other facets still apply
+- Resolution order: folded instance map → built-in map → default layout
 
 ### Locale Auto-Selection
 
@@ -325,7 +337,7 @@ When no explicit `layout` is set, `getLocaleLayout()` resolves the locale throug
 2. Language prefix (e.g., `"de"`)
 3. Fallback to `"qwerty"`
 
-Default locale map: `{ de → qwertz-de, ja → ja-romaji, ar → arabic, ko → ko-hangul, es → qwerty-es }`. Extensible per element via `instanceLocaleLayouts`.
+Default locale map: `{ de → qwertz-de, ja → ja-romaji, ar → arabic, ko → ko-hangul, es → qwerty-es }`. Extensible per element via the `locales` property of the slotted custom layouts.
 
 ## Auto-Type Detection
 
@@ -536,6 +548,7 @@ See [Build Pipeline](./BUILD-PIPELINE.md) for the generate/compile/bundle/CEM st
 ```json
 {
   ".": "dist/KioskKeyboard.js", // all built-in layouts, no Assets
+  "./CustomLayout": "dist/CustomLayout.js", // <kiosk-keyboard-custom-layout> configuration element
   "./bundle": "dist/bundle.esm.js", // Assets + all built-in layouts and middleware
   "./Assets": "dist/Assets.js", // theme + i18n registration only
   "./layouts/*": "dist/layouts/*.js", // layout-definition modules for custom composition
@@ -547,7 +560,7 @@ See [Build Pipeline](./BUILD-PIPELINE.md) for the generate/compile/bundle/CEM st
 }
 ```
 
-All built-in layouts and middleware are bundled with the component (direct imports into sealed module-level maps; there is no self-registration and no opt-in import step). The `./layouts/*` and `./middleware/*` subpaths exist to import layout definitions / middleware factories as **data** for composing custom layouts and middleware, which are supplied per-element via the `instanceLayouts` / `instanceMiddleware` properties.
+All built-in layouts and middleware are bundled with the component (direct imports into sealed module-level maps; there is no self-registration and no opt-in import step). The `./layouts/*` and `./middleware/*` subpaths exist to import layout definitions / middleware factories as **data** for composing custom layouts and middleware, which are supplied per-element as the `rows` / `middleware` of a `<kiosk-keyboard-custom-layout>` in the `customLayouts` slot.
 
 ## Testing Strategy
 

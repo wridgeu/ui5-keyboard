@@ -10,7 +10,7 @@ const DOM = KioskKeyboard.DOM;
 // Layer 2: a committed accent variant must flow through the SAME composition
 // pipeline as a pressed key, so a consumer middleware can SEED composition from
 // it. Driven through a consumer stub (test/helpers) registered via the public
-// instanceMiddleware map: its handleKey opens a bracketed preedit on the seed
+// customLayouts slot: its handleKey opens a bracketed preedit on the seed
 // glyph, so a literal insert (the pre-routing flush) and a routed compose are
 // distinguishable by the input's observable value.
 
@@ -40,9 +40,9 @@ async function holdOpen(keyEl: HTMLElement): Promise<void> {
 
 describe("kiosk-keyboard - committed variant seeds composition", () => {
   it("routes the variant through the middleware so it can start a preedit", async () => {
-    const { kb, input } = await setupWithLayout(SEED_VARIANT_LAYOUT);
-    kb.instanceMiddleware = { spike: createSeedComposeMiddleware("é") };
-    await renderFinished();
+    const { kb, input } = await setupWithLayout(SEED_VARIANT_LAYOUT, {
+      middleware: createSeedComposeMiddleware("é"),
+    });
 
     // Commit the accent variant é via the real long-press variant path.
     await holdOpen(requireKey(kb, "e"));

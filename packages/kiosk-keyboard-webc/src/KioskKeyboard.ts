@@ -26,18 +26,28 @@ import {
   isBuiltInLayout,
   resolveLayoutName,
 } from "./core/layout-registry.js";
-import { getLayoutLang, isSecondaryLayout, type LayoutMeta } from "./core/layout-meta.js";
+import { getLayoutLang, isSecondaryLayout } from "./core/layout-meta.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
+import {
+  EMPTY_FOLD,
+  describeDiagnostic,
+  foldCustomLayouts,
+  isValidVariantTable,
+  type CustomLayoutFold,
+  type DiagnosticVocabulary,
+  type LayoutDiagnostic,
+} from "./core/custom-layout-fold.js";
+import { isCustomLayout, type ICustomLayout } from "./CustomLayout.js";
+import slot from "@ui5/webcomponents-base/dist/decorators/slot-strict.js";
+import type { Slot } from "@ui5/webcomponents-base/dist/UI5Element.js";
 import {
   applyVariantDefaults,
   resolveVariantTable,
   shiftedGlyph,
   toShiftVariants,
-  type VariantOverlay,
   type VariantTable,
 } from "./core/latin-variants.js";
 import { VariantPopupController, type VariantPopupState } from "./core/variant-popup-controller.js";
-import { MemoMapView } from "./core/memo-map-view.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
@@ -56,8 +66,7 @@ import {
   FKeyMode,
   type CompositionMiddleware,
   type LayoutDefinition,
-  type LayoutInput,
-  type LayoutSpec,
+  type CustomLayoutSpec,
   type KeyDefinition,
   type KeyPressEventDetail,
   type LayoutChangeEventDetail,
@@ -270,15 +279,17 @@ class KioskKeyboard extends UI5Element {
    * part-way through composition.
    *
    * @param sources Layout names and row arrays, in the order they should appear.
-   * @returns The composed rows, ready to use as an `instanceLayouts` entry.
+   * @returns The composed rows, ready to use as a custom layout's `rows`.
    *
    * @example A navigation row above the built-in German layout
    * ```ts
    * import navRow from "kiosk-keyboard-webc/layouts/nav-row";
    *
-   * keyboard.instanceLayouts = {
-   *   "nav-qwertz": KioskKeyboard.composeLayout([navRow], "qwertz-de"),
-   * };
+   * const cl = document.createElement("kiosk-keyboard-custom-layout");
+   * cl.slot = "customLayouts";
+   * cl.name = "nav-qwertz";
+   * cl.rows = KioskKeyboard.composeLayout([navRow], "qwertz-de");
+   * keyboard.appendChild(cl);
    * keyboard.layout = "nav-qwertz";
    * ```
    *
@@ -385,7 +396,7 @@ class KioskKeyboard extends UI5Element {
    *
    * When empty, the keyboard resolves the layout from the current locale
    * (see {@link KioskKeyboard.getLocaleLayout getLocaleLayout}). Per-instance
-   * locale overrides can be supplied via the `instanceLocaleLayouts` property.
+   * locale overrides can be supplied with the `locales` of a slotted custom layout.
    *
    * @default ""
    * @public
@@ -499,7 +510,7 @@ class KioskKeyboard extends UI5Element {
    * become reachable without editing layout data.
    *
    * The `ja-romaji`, `ja-kana`, `arabic` and `ko-hangul` built-ins resolve to no
-   * table; give a layout an `instanceVariants` entry to arm it anyway.
+   * table; give a layout a `variants` table on its custom layout to arm it anyway.
    *
    * A per-key `variants` declared in the layout always wins over the table.
    * Attribute name: `accent-variants`.
@@ -514,83 +525,43 @@ class KioskKeyboard extends UI5Element {
   // ── Public programmatic-only properties (no attribute mirror) ──
 
   /**
-   * Per-instance layout overrides. Resolution order is
-   * **instance map -> built-in**, so an entry here shadows the
-   * built-in of the same name for this element only. Use this to
-   * supply a custom layout, or to override a built-in (e.g. swap
-   * the German layout) without affecting other elements.
+   * Long-press variants applied under every layout, merged per base letter beneath
+   * anything a slotted `<kiosk-keyboard-custom-layout>` declares for that layout, so a
+   * house accent set extends the built-in table rather than replacing it and a base
+   * letter mapped to `[]` drops that letter everywhere. Base letters must be lowercase.
+   * Effective only while `accentVariants` is set.
    *
-   * Each entry is either the layout's rows, or a `LayoutSpec`
-   * (`{ rows, lang, secondary }`) declaring the layout's attributes
-   * alongside them.
-   *
-   * Programmatic only: this property accepts a JS object (not a
-   * stringifiable attribute), so it cannot be set via HTML markup.
-   *
-   * Read by object identity: assign a new object to change the layouts.
-   * Mutating the object already assigned is not observed.
-   *
-   * @default null
-   * @public
-   * @since 0.1.0
-   */
-  @property({ type: Object })
-  instanceLayouts: Record<string, LayoutInput> | null = null;
-
-  /**
-   * Per-instance locale-to-layout overrides. Resolution order is
-   * **instance map -> built-in locale map -> default layout**. Keys
-   * are BCP-47 prefixes (e.g. `"de"`, `"de-at"`); values are layout
-   * names.
-   *
-   * Programmatic only: accepts a JS object (`Record<string, string>`).
-   *
-   * Read by object identity: assign a new object to change the mappings.
-   * Mutating the object already assigned is not observed.
-   *
-   * @default null
-   * @public
-   * @since 0.1.0
-   */
-  @property({ type: Object })
-  instanceLocaleLayouts: Record<string, string> | null = null;
-
-  /**
-   * Per-instance composition middleware overrides keyed by layout name.
-   *
-   * Programmatic only: accepts a JS object whose values are factory
-   * functions returning a `CompositionMiddleware`.
-   *
-   * Read by object identity: assign a new object to change the factories.
-   * Mutating the object already assigned is not observed.
-   *
-   * @default null
-   * @public
-   * @since 0.1.0
-   */
-  @property({ type: Object })
-  instanceMiddleware: Record<string, () => CompositionMiddleware> | null = null;
-
-  /**
-   * Per-instance accent-variant table overrides, keyed by layout name (or
-   * `"*"` for every layout). The entry for a layout wins, else the `"*"`
-   * wildcard; either is merged onto the built-in table per base letter, so it
-   * extends the defaults rather than replacing them. A base letter mapped to
-   * `[]` drops that letter, and a `null` entry opts the layout out entirely.
-   * Base letters must be lowercase. Effective only while `accentVariants` is
-   * set.
+   * This tier only ever adds; it has no suppression spelling. To take one layout out of
+   * variants entirely use `suppress="Variants"` on its custom layout, and to take the
+   * whole affordance out leave `accent-variants` unset, which is the default.
    *
    * Programmatic only: accepts a JS object (not a stringifiable attribute).
    *
-   * Read by object identity: assign a new object to change the tables.
-   * Mutating the object already assigned is not observed.
+   * Read by object identity: assign a new object to change the table.
    *
    * @default null
    * @public
    * @since 0.1.0
    */
   @property({ type: Object })
-  instanceVariants: Record<string, VariantTable | null> | null = null;
+  defaultVariants: VariantTable | null = null;
+
+  // ── Slots ──
+
+  /**
+   * Per-instance layouts. Each `<kiosk-keyboard-custom-layout>` declares a layout, or
+   * overlays the one its `name` already resolves to. Applied in DOM order: for rows,
+   * locales, metadata and middleware the last declaration wins; long-press variants
+   * accumulate per base letter.
+   *
+   * Not projected: these are configuration, so the shadow template renders no
+   * `<slot name="customLayouts">` for them and they never affect layout or styling.
+   *
+   * @public
+   * @since 0.1.0
+   */
+  @slot({ type: HTMLElement, invalidateOnChildChange: { properties: true, slots: false } })
+  customLayouts!: Slot<ICustomLayout>;
 
   // ── Internal reactive state (triggers re-render, no attribute) ──
 
@@ -632,7 +603,7 @@ class KioskKeyboard extends UI5Element {
   /** Accessed by the JSX template for highlight class binding - not private. */
   _highlightedKey: string | null = null;
   private _layoutSource: LayoutSource = "external";
-  /** Caps the disarmed-`instanceVariants` diagnostic at one emission per element. */
+  /** Caps the disarmed-variants diagnostic at one emission per element. */
   private _warnedDisarmedVariants = false;
   /** Owns the ARIA live-region announcement queue and its drain timer. */
   private readonly _announcements = new AnnouncementQueue({
@@ -962,9 +933,9 @@ class KioskKeyboard extends UI5Element {
 
     if (name === "layout") {
       const requested = this.layout.trim().toLowerCase();
-      if (!getRegisteredLayout(requested, this._layoutsView.get(this.instanceLayouts))) {
+      if (!getRegisteredLayout(requested, this._getFold().layouts)) {
         console.warn(
-          `[kiosk-keyboard] Layout "${requested}" assigned to the layout property is not registered. Pass it through the instanceLayouts setting.`,
+          `[kiosk-keyboard] Layout "${requested}" assigned to the layout property is not registered. Declare it as a <kiosk-keyboard-custom-layout> in the customLayouts slot.`,
         );
         return;
       }
@@ -1024,25 +995,10 @@ class KioskKeyboard extends UI5Element {
         this._detachEscapeListener();
       }
     }
-    if (name === "instanceMiddleware") {
-      // The active middleware is cached lazily on first key press, so a runtime
-      // swap has to drop it or it would be ignored until the next layout switch.
-      // It only outlives the resolution it came from - every layout, target and
-      // keyboardType switch ends the composition first - so the factory the old
-      // value resolved to is the one that built it, and comparing the two tells
-      // a real change from an edit to an entry this layout never reads.
-      const layout = this._resolvedLayoutName();
-      const previous = getMiddlewareFactory(
-        layout,
-        this._middlewareView.get(changeInfo.oldValue as Record<string, unknown> | null),
-      );
-      const next = getMiddlewareFactory(layout, this._middlewareView.get(this.instanceMiddleware));
-      if (this._middleware && next !== previous) {
-        // Flush rather than discard: the characters already typed are the user's.
-        this._middleware.commit();
-        this._middleware = null;
-      }
-    }
+    // A child property change is folded into a slot change, so this one branch covers
+    // a custom layout being added, removed, reordered or edited. It never fires for the
+    // slot content present at connect time, which is why the fold is read lazily.
+    if (changeInfo.type === "slot" && changeInfo.name === "customLayouts") this._foldEpoch++;
   }
 
   // ── Public API ──
@@ -1232,10 +1188,7 @@ class KioskKeyboard extends UI5Element {
 
   /** Locale-derived default layout name, honoring the per-instance locale and layout overrides. */
   private _localeLayout(): string {
-    return getLocaleLayout(
-      this._localeLayoutsView.get(this.instanceLocaleLayouts),
-      this._layoutsView.get(this.instanceLayouts),
-    );
+    return getLocaleLayout(this._getFold().localeLayouts, this._getFold().layouts);
   }
 
   /**
@@ -1254,7 +1207,7 @@ class KioskKeyboard extends UI5Element {
         ? this._currentLayout
         : (constrainedLayoutName(this.keyboardType) ??
           (this._currentLayout || this._baseLayout || this.layout || this._localeLayout()));
-    return resolveLayoutName(requested, this._layoutsView.get(this.instanceLayouts));
+    return resolveLayoutName(requested, this._getFold().layouts);
   }
 
   /**
@@ -1266,11 +1219,11 @@ class KioskKeyboard extends UI5Element {
    * @internal Read by the template and the variant popup state.
    */
   _getLayoutLang(): string | undefined {
-    return getLayoutLang(this._resolvedLayoutName(), this._layoutMetaView.get(this.instanceLayouts));
+    return getLayoutLang(this._resolvedLayoutName(), this._getFold().layoutMeta);
   }
 
   _getResolvedLayout(): LayoutDefinition {
-    const layoutsMap = this._layoutsView.get(this.instanceLayouts);
+    const layoutsMap = this._getFold().layouts;
     const layoutName = this._resolvedLayoutName();
     const resolved = getLayoutOrDefault(layoutName, layoutsMap);
     const constrainedName = constrainedLayoutName(this.keyboardType);
@@ -1284,7 +1237,7 @@ class KioskKeyboard extends UI5Element {
     // When enabled, fill the resolved accent-variant table onto matching base
     // keys so any layout gains the long-press variants. Author-declared
     // `variants` are preserved (applyVariantDefaults never overrides them).
-    const variantsMap = this._variantsView.get(this.instanceVariants);
+    const variantsMap = this._getFold().variants;
     const defaults = this._defaultVariants();
     if (!this.accentVariants) {
       this._warnDisarmedVariants(variantsMap !== undefined || defaults !== null);
@@ -1295,128 +1248,83 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * The variant tier applied under every layout: the `*` entry of `instanceVariants`.
-   * Silent - `_variantsView` validates the same entry and owns the rejection warning -
-   * and read as a plain table rather than an overlay, because the defaults tier only
-   * ever adds: a `*` of `null` is transparent rather than a global opt-out.
+   * The table applied under every layout, validated here rather than in the fold
+   * because it never enters the slot.
    */
   private _defaultVariants(): VariantTable | null {
-    const table = this.instanceVariants?.["*"];
-    return KioskKeyboard._isValidVariantTable(table) ? table : null;
+    const table = this.defaultVariants;
+    if (table === null) return null;
+    if (isValidVariantTable(table)) return table;
+    this._reportDiagnostics([{ code: "invalid-variants", layout: "" }]);
+    return null;
   }
 
   /**
-   * Warns once when `instanceVariants` carries usable entries while `accentVariants` is
-   * off, the combination in which the tables resolve but nothing applies them.
+   * Warns once when a variant table is declared while `accentVariants` is off, the
+   * combination in which the tables resolve but nothing applies them.
    */
   private _warnDisarmedVariants(hasEntries: boolean): void {
     if (this._warnedDisarmedVariants || !hasEntries) return;
     this._warnedDisarmedVariants = true;
     console.warn(
-      "[kiosk-keyboard] instanceVariants is set but accentVariants is false, so no variant table is applied. Set accent-variants to arm the long-press popups.",
+      "[kiosk-keyboard] A variant table is declared but accentVariants is false, so no variant table is applied. Set accent-variants to arm the long-press popups.",
     );
   }
 
-  // ── Memoized Map views of the instance-* properties ──
-  //
-  // The render pass and the middleware factory lookup read these on every
-  // invocation, so each MemoMapView rebuilds its Map only when the source
-  // object identity changes. Consumers that want a fresh resolution should
-  // assign a new object (the standard React/Lit pattern) rather than
-  // mutating in place. Validators warn on (and skip) invalid entries.
+  // ── The folded view of the customLayouts slot ──
 
-  private readonly _layoutsView = new MemoMapView<LayoutDefinition>((name, entry) => {
-    const spec = KioskKeyboard._readLayoutInput(entry);
-    if (!spec) {
-      console.warn(
-        `[kiosk-keyboard] Invalid instanceLayouts entry "${name}": must be a non-empty array of non-empty rows where each key has a string "value", or an object with such an array as "rows".`,
-      );
-      return undefined;
-    }
-    return spec.rows;
-  });
-
-  // Second view over the same `instanceLayouts` source, holding the attributes the
-  // descriptor entries declare. Silent: `_layoutsView` owns the rejection warning,
-  // so an invalid entry is reported once rather than once per view.
-  private readonly _layoutMetaView = new MemoMapView<LayoutMeta>(
-    (_name, entry) => KioskKeyboard._readLayoutInput(entry)?.meta,
-  );
-
-  private readonly _localeLayoutsView = new MemoMapView<string>((_name, layout) =>
-    typeof layout === "string" ? layout.trim().toLowerCase() : undefined,
-  );
-
-  private readonly _middlewareView = new MemoMapView<() => CompositionMiddleware>((_name, factory) =>
-    typeof factory === "function" ? (factory as () => CompositionMiddleware) : undefined,
-  );
-
-  private readonly _variantsView = new MemoMapView<VariantOverlay>((name, table) => {
-    // `null` is a meaningful entry: it opts the layout out of the built-in table.
-    if (table !== null && !KioskKeyboard._isValidVariantTable(table)) {
-      console.warn(
-        `[kiosk-keyboard] Invalid instanceVariants entry "${name}": must be null, or a non-empty object mapping lowercase base letters to arrays of non-empty glyph strings (an empty array suppresses that letter).`,
-      );
-      return undefined;
-    }
-    // The `*` tier is read by `_defaultVariants` instead: it applies under every layout
-    // rather than at one layout's position, and it cannot suppress.
-    if (name.trim() === "*") return undefined;
-    return { replace: table === null, table };
-  });
+  private _foldCache: CustomLayoutFold = EMPTY_FOLD;
+  private _foldKey: readonly ICustomLayout[] = [];
+  private _foldEpoch = 0;
+  private _foldedEpoch = -1;
+  private _reportedDiagnostics = new Set<string>();
+  private _middlewareFactory: (() => CompositionMiddleware) | null = null;
 
   /**
-   * Reads one `instanceLayouts` entry, in either accepted form, into its rows and
-   * the attributes it declares. Returns `undefined` when the entry is neither form.
+   * The lookup maps the resolution pipeline reads, folded from the `customLayouts` slot.
    *
-   * Undeclared and mistyped attributes are simply absent from the result rather
-   * than rejecting the layout or overwriting with `undefined`: the rows are the
-   * load-bearing part, and an absent attribute resolves to the built-in value.
+   * Read on demand rather than assembled on invalidation: `_invalidate` is suppressed
+   * until the first render completes while `_processChildren` populates the slot before
+   * it, so an invalidation-driven fold would be empty for the whole first frame. The
+   * slot array itself is populated by then, so reading it here is correct from the first
+   * `onBeforeRendering` onward - which is what makes a `<kiosk-keyboard-custom-layout>`
+   * present at connect time honoured on first paint.
+   *
+   * Rebuilt only when the slotted elements change identity or one of them reports a
+   * property change, so diagnostics are emitted once per real change, not once per read.
    */
-  private static _readLayoutInput(entry: unknown): { rows: LayoutDefinition; meta: LayoutMeta } | undefined {
-    // Anything that is not a valid row array is read as a descriptor; the `rows`
-    // check below rejects the shapes that are neither, including a bad array.
-    const spec = KioskKeyboard._isValidLayoutDefinition(entry) ? { rows: entry } : (entry as Partial<LayoutSpec>);
-    if (!spec || !KioskKeyboard._isValidLayoutDefinition(spec.rows)) return undefined;
-    const lang = typeof spec.lang === "string" ? spec.lang.trim() : "";
-    return {
-      rows: spec.rows,
-      meta: { ...(lang && { lang }), ...(typeof spec.secondary === "boolean" && { secondary: spec.secondary }) },
-    };
+  private _getFold(): CustomLayoutFold {
+    const children = this.customLayouts;
+    if (this._foldedEpoch === this._foldEpoch && sameElements(this._foldKey, children)) return this._foldCache;
+    this._foldKey = children;
+    this._foldedEpoch = this._foldEpoch;
+
+    const specs: CustomLayoutSpec[] = [];
+    for (const child of children as readonly HTMLElement[]) {
+      if (isCustomLayout(child)) specs.push(child.toSpec());
+      else
+        console.warn(
+          `[kiosk-keyboard] Ignoring <${child.localName}> in the customLayouts slot: not a <kiosk-keyboard-custom-layout>.`,
+        );
+    }
+    this._foldCache = foldCustomLayouts(specs, isBuiltInLayout);
+    this._reportDiagnostics(this._foldCache.diagnostics);
+    return this._foldCache;
   }
 
-  private static _isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
-    return (
-      Array.isArray(def) &&
-      def.length > 0 &&
-      def.every(
-        (row) =>
-          Array.isArray(row) &&
-          row.length > 0 &&
-          row.every((key) => key && typeof (key as KeyDefinition).value === "string" && (key as KeyDefinition).value),
-      )
-    );
-  }
-
-  /**
-   * A variant table is a non-empty plain object mapping lowercase base letters to glyph
-   * lists. Arrays and exotic objects (`Map`, `Date`) are rejected rather than read as an
-   * empty table, and an uppercased or padded base letter is rejected rather than
-   * normalized: the letters are matched against `key.value.toLowerCase()`, so a mis-keyed
-   * table would arm nothing while shadowing the built-in.
-   */
-  private static _isValidVariantTable(table: unknown): table is VariantTable {
-    if (typeof table !== "object" || table === null || Array.isArray(table)) return false;
-    const entries = Object.entries(table);
-    return (
-      entries.length > 0 &&
-      entries.every(
-        ([base, glyphs]) =>
-          base === base.trim().toLowerCase() &&
-          Array.isArray(glyphs) &&
-          glyphs.every((glyph) => typeof glyph === "string" && glyph),
-      )
-    );
+  /** Logs what the fold rejected, once per distinct complaint per configuration. */
+  private _reportDiagnostics(diagnostics: readonly LayoutDiagnostic[]): void {
+    if (diagnostics.length === 0) {
+      // Everything resolves: a fault re-introduced later is reported again.
+      this._reportedDiagnostics.clear();
+      return;
+    }
+    for (const d of diagnostics) {
+      const key = `${d.code}|${d.layout}|${d.other ?? ""}|${d.value ?? ""}`;
+      if (this._reportedDiagnostics.has(key)) continue;
+      this._reportedDiagnostics.add(key);
+      console.warn(`[kiosk-keyboard] ${describeDiagnostic(d, WEBC_DIAGNOSTIC_VOCABULARY)}`);
+    }
   }
 
   _getKeyLabel(key: KeyDefinition): string {
@@ -1686,13 +1594,17 @@ class KioskKeyboard extends UI5Element {
    * Backspace auto-repeat so both run keys through the same buffer.
    */
   private _ensureMiddleware(): CompositionMiddleware | null {
-    if (!this._middleware) {
-      const factory = getMiddlewareFactory(
-        this._resolvedLayoutName(),
-        this._middlewareView.get(this.instanceMiddleware),
-      );
-      if (factory) this._middleware = factory();
+    const factory = getMiddlewareFactory(this._resolvedLayoutName(), this._getFold().middleware);
+    if (factory !== this._middlewareFactory) {
+      if (this._middleware) {
+        // Commit the buffer to the target: `reset()` would drop a half-typed syllable,
+        // and the preedit `commit()` finalises is already written into the input.
+        this._middleware.commit();
+        this._middleware = null;
+      }
+      this._middlewareFactory = factory;
     }
+    if (!this._middleware && factory) this._middleware = factory();
     return this._middleware;
   }
 
@@ -1805,7 +1717,7 @@ class KioskKeyboard extends UI5Element {
    * silently flip the constraint-override. Returns whether the layout changed.
    */
   private _applyLayout(currentLayout: string, source: "external" | "user"): boolean {
-    if (!isSecondaryLayout(currentLayout, this._layoutMetaView.get(this.instanceLayouts))) {
+    if (!isSecondaryLayout(currentLayout, this._getFold().layoutMeta)) {
       this._baseLayout = currentLayout;
     }
     const changed = currentLayout !== this._currentLayout;
@@ -1826,7 +1738,7 @@ class KioskKeyboard extends UI5Element {
   }
 
   private _handleLayoutSwitch(layoutName: string): void {
-    if (layoutName !== LAYOUT_BASE && !getRegisteredLayout(layoutName, this._layoutsView.get(this.instanceLayouts))) {
+    if (layoutName !== LAYOUT_BASE && !getRegisteredLayout(layoutName, this._getFold().layouts)) {
       console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
       return;
     }
@@ -1993,9 +1905,22 @@ class KioskKeyboard extends UI5Element {
   }
 }
 
+/** Element-wise identity comparison: `_updateSlots` assigns a new array on every run. */
+const sameElements = (a: readonly unknown[], b: readonly unknown[]): boolean =>
+  a.length === b.length && a.every((el, i) => el === b[i]);
+
+/** How this twin spells the surface names a fold diagnostic has to quote. */
+const WEBC_DIAGNOSTIC_VOCABULARY: DiagnosticVocabulary = {
+  customLayouts: "customLayouts slot",
+  customLayout: "<kiosk-keyboard-custom-layout>",
+  get builtInLayouts() {
+    return getRegisteredLayoutNames();
+  },
+};
+
 KioskKeyboard.define();
 
 export default KioskKeyboard;
 
-export type { CompositionMiddleware, LayoutInput, LayoutSpec } from "./types.js";
+export type { CompositionMiddleware, CustomLayoutSpec } from "./types.js";
 export type { VariantTable } from "./core/latin-variants.js";

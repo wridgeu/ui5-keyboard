@@ -20,7 +20,7 @@ import qwertyEs from "../layouts/qwerty-es.js";
 // here, so a bundler cannot drop the definitions. Side-effect imports +
 // `_registerBuiltInLayout` self-registration would instead be tree-shaken out
 // of the production bundle. There is no public mutation API: per-app
-// customization is done via the `instanceLayouts` / `instanceLocaleLayouts`
+// customization is done with the `customLayouts` slot
 // properties on the element.
 const layouts: ReadonlyMap<string, LayoutDefinition> = new Map([
   ["qwerty", qwerty],
@@ -39,7 +39,7 @@ const layouts: ReadonlyMap<string, LayoutDefinition> = new Map([
 
 /**
  * Built-in BCP-47 prefix -> layout name. Sealed at module load. Per-app
- * customization is done via the `instanceLocaleLayouts` property.
+ * customization is done with the `locales` of a slotted custom layout.
  */
 const BUILTIN_LOCALE_LAYOUT_MAP: ReadonlyMap<string, string> = new Map([
   ["de", "qwertz-de"],

@@ -249,25 +249,30 @@ When no explicit `layout` is provided in the constructor settings, the keyboard 
 
 ### applySettings Override
 
-The UI5 ManagedObject constructor flow is: `init()` → `applySettings(mSettings)`. The control overrides `applySettings` to inject the locale layout when no explicit `layout` key is present:
+The UI5 ManagedObject constructor flow is: `init()` → `applySettings(mSettings)`. The control overrides `applySettings` in two phases: `customLayouts` is applied in a pass of its own, then everything else, with the locale layout injected when no explicit `layout` key is present:
 
 ```ts
-applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
-  // Pre-populate the instance Map caches, then default `layout` to the locale
-  // layout. The spread is placed after `layout` so an explicit caller value wins,
-  // and never mutates the caller's settings object.
-  this._instanceLayoutsMap = KioskKeyboard._toLayoutMap(mSettings?.instanceLayouts);
-  this._instanceLocaleLayoutsMap = KioskKeyboard._toStringMap(mSettings?.instanceLocaleLayouts);
-  this._instanceMiddlewareMap = KioskKeyboard._toMiddlewareMap(mSettings?.instanceMiddleware);
-  const merged = {
-    layout: registryGetLocaleLayout(this._instanceLocaleLayoutsMap, this._instanceLayoutsMap),
-    ...mSettings,
+override applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
+  // Destructure rather than `delete`: the caller's settings object is never mutated.
+  const { customLayouts, ...rest } = mSettings ?? {};
+  if (customLayouts !== undefined) {
+    const first: Record<string, unknown> = { customLayouts };
+    super.applySettings(first, oScope);
+  }
+  const fold = this._getFold();
+  // `layout` first so the locale default is the first setting applied; the spread
+  // overwrites its value, not its position, when the caller named a layout.
+  const second: Record<string, unknown> = {
+    layout: registryGetLocaleLayout(fold.localeLayouts, fold.layouts),
+    ...rest,
   };
-  return super.applySettings(merged, oScope);
+  return super.applySettings(second, oScope);
 }
 ```
 
-This is transparent: `<kiosk:KioskKeyboard />` gets the locale layout injected as if the developer had written `layout="qwertz-de"`. An explicit `layout="qwerty"` takes priority because the spread overwrites the default.
+The first phase goes through `super.applySettings` rather than reading `mSettings` directly: that is what makes an object literal and a `CustomLayout` instance the same input, since a literal is constructed through the aggregation's `defaultClass` and each value passes `validateProperty` exactly once. By the time `layout` is applied in the second phase, `setLayout`'s registry validation and the locale default both resolve through the complete set of custom layouts - which also matters for `clone()`, where `ManagedObject` emits properties before aggregations. A `customLayouts` bound to a model populates asynchronously and therefore does not contribute to the layout chosen here.
+
+The locale injection is transparent: `<kiosk:KioskKeyboard />` gets the locale layout injected as if the developer had written `layout="qwertz-de"`. An explicit `layout="qwerty"` takes priority because the spread overwrites the default.
 
 ### Locale Resolution
 
@@ -277,11 +282,11 @@ The returned `LanguageTag` has `.language` (lowercase ISO639, e.g. `"de"`) and `
 
 Resolution checks exact match first (e.g. `"de-at"`), then language prefix (`"de"`), then falls back to `DEFAULT_LAYOUT` (`"qwerty"`). Default mappings: `{ de → qwertz-de, ja → ja-romaji, ar → arabic, ko → ko-hangul, es → qwerty-es }`.
 
-The locale → layout map is extensible per control via the `instanceLocaleLayouts` constructor setting / setter. Resolution checks the instance map first, then the built-in map. No cleanup is needed: the override lives on the control and is released when UI5 destroys it.
+The locale → layout map is extensible per control via the `locales` property of the `customLayouts` entries. Resolution checks the folded instance map first, then the built-in map. No cleanup is needed: the custom layouts are owned by the control and destroyed with it.
 
 ### Impact on \_baseLayout
 
-Works correctly: `setLayout("qwertz-de")` sets `_baseLayout = "qwertz-de"` (not marked `secondary` in `internal/layout-meta.ts`), so `{layout:base}` roundtrips back to it. A layout registered through `instanceLayouts` can mark itself `secondary` in its descriptor and is then tracked the same way.
+Works correctly: `setLayout("qwertz-de")` sets `_baseLayout = "qwertz-de"` (not marked `secondary` in `internal/layout-meta.ts`), so `{layout:base}` roundtrips back to it. A layout declared by a `CustomLayout` can mark itself `layoutRole="Secondary"` and is then tracked the same way.
 
 ## Auto-Type Detection
 
@@ -559,14 +564,20 @@ packages/kiosk-keyboard/
     KioskKeyboard.ts          UI5 Control with state, event handling,
                                locale detection, auto-type, mobile suppression
     KioskKeyboardRenderer.ts  Renderer (apiVersion 4, flat DOM)
-    library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode enums,
-                               plus KeyName constants and the LATIN_DIACRITIC_VARIANTS / VariantTable re-exports
-    types.ts                  KeyDefinition, KeyRow, LayoutDefinition, LayoutSpec, LayoutInput, I18nResolver
+    CustomLayout.ts           Element carrying one layout's rows, locales, keycap language,
+                               role, middleware and variants; the customLayouts aggregation type
+    library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode/
+                               LayoutRole/LayoutFacet enums, the LayoutRows / VariantOverrideTable
+                               property types, plus KeyName constants and the
+                               LATIN_DIACRITIC_VARIANTS / VariantTable re-exports
+    types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, I18nResolver
     internal/layout-registry.ts  Layout registration and locale resolution
     internal/
       types.ts                Internal contracts (TargetElement)
+      custom-layout-fold.ts   Folds the custom layouts into the per-facet lookup maps the
+                               resolution paths read, plus the diagnostics it reports
       layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins,
-                               resolved per attribute against an instanceLayouts descriptor
+                               resolved per attribute against the folded custom layouts
       dom.ts                  DOM/key ID utilities + input resolver
       dom-contract.ts         Zero-dep CSS class / data attribute / selector contract
       i18n-registry.ts        i18n resolution: base bundle + optional I18nResolver callback
@@ -593,8 +604,8 @@ packages/kiosk-keyboard/
       grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
       composition-utils.ts    Composition preedit start/update/end helpers
       latin-variants.ts       Default Latin-diacritic long-press variant table + helpers (CLDR LDML);
-                               resolveVariantTable resolves the table per layout (an instanceVariants entry, or
-                               the "*" wildcard, merged per base letter; null for the non-Latin layouts)
+                               resolveVariantTable layers built-in -> defaultVariants -> custom layout per
+                               layout, each merged per base letter; null for the non-Latin layouts
       middleware-registry.ts  Built-in composition-middleware factories + instance overrides
       renderer-internal-api.ts  RendererInternalApi bridge type
     middleware/

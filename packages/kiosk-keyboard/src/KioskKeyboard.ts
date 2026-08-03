@@ -190,7 +190,10 @@ export default class KioskKeyboard extends Control {
        * <kiosk:KioskKeyboard layout="qwertz-de" controls="myInput" />
        *
        * @example <caption>TypeScript - custom layout</caption>
-       * new KioskKeyboard({ layout: "azerty-fr", instanceLayouts: { "azerty-fr": frenchLayout } });
+       * new KioskKeyboard({
+       *   layout: "azerty-fr",
+       *   customLayouts: [new CustomLayout({ name: "azerty-fr", rows: frenchLayout })],
+       * });
        *
        * @since 0.1.0
        */
@@ -304,8 +307,8 @@ export default class KioskKeyboard extends Control {
        * s, y, z, l, ...) gains a long-press / right-click accent-variant
        * popup, making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
        * from any Latin layout without editing layout data. `ja-romaji` is
-       * excluded with the other non-Latin built-ins; an `instanceVariants`
-       * entry arms it anyway.
+       * excluded with the other non-Latin built-ins; a `variants` table on a
+       * `customLayouts` entry arms it anyway.
        *
        * A per-key `variants` declaration always wins over the default table.
        * When Shift or Caps Lock is active, the popup surfaces the uppercase
@@ -596,10 +599,8 @@ export default class KioskKeyboard extends Control {
   }
 
   // ── Static delegates: layout registry (read-only views) ──
-  // Customization is per-instance: pass `instanceLayouts`,
-  // `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` to the
-  // constructor (or via the corresponding setters). There is no public mutation
-  // API for the global registry; built-ins ship sealed.
+  // Customization is per control: declare `customLayouts` entries on the control.
+  // There is no public mutation API for the global registry; built-ins ship sealed.
 
   /**
    * Get a built-in layout definition by name. Returns `undefined` for
@@ -636,7 +637,7 @@ export default class KioskKeyboard extends Control {
    * part-way through composition.
    *
    * @param aSources Layout names and row arrays, in the order they should appear.
-   * @returns The composed rows, ready to use as an `instanceLayouts` entry.
+   * @returns The composed rows, ready to use as a custom layout's `rows`.
    *
    * @example <caption>A navigation row above the built-in German layout</caption>
    * ```ts
@@ -644,7 +645,9 @@ export default class KioskKeyboard extends Control {
    *
    * new KioskKeyboard({
    *   layout: "nav-qwertz",
-   *   instanceLayouts: { "nav-qwertz": KioskKeyboard.composeLayout([navRow], "qwertz-de") },
+   *   customLayouts: [
+   *     new CustomLayout({ name: "nav-qwertz", rows: KioskKeyboard.composeLayout([navRow], "qwertz-de") }),
+   *   ],
    * });
    * ```
    *
@@ -694,7 +697,7 @@ export default class KioskKeyboard extends Control {
    * layout as the base and returns to it when `{layout:base}` is pressed.
    *
    * Reports on the built-ins only, like every static inspector here. A layout
-   * marked `secondary` through an `instanceLayouts` descriptor is scoped to the
+   * marked secondary through a custom layout's `layoutRole` is scoped to the
    * control that declared it, which this static takes no reference to; the
    * keyboard itself honors it.
    *
@@ -710,7 +713,7 @@ export default class KioskKeyboard extends Control {
   /**
    * Resolve the built-in layout name appropriate for the current UI5
    * locale. Per-app overrides should be supplied via the
-   * `instanceLocaleLayouts` setting on the control instance.
+   * `locales` of a `customLayouts` entry on the control.
    *
    * @public
    * @static
