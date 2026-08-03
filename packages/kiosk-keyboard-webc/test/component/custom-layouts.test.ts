@@ -322,6 +322,18 @@ describe("kiosk-keyboard - custom layouts", () => {
     expect(input.value, "the jamo are typed uncomposed rather than forming 가").to.equal("ㄱㅏ");
   });
 
+  it("reports an overlay whose layout does not exist, listing the built-ins", async () => {
+    await withCapturedWarnings(async (messages) => {
+      await mount({ layout: "qwerty" }, customLayout({ name: "typo-only", locales: "zz" }));
+
+      const reported = messages.find((m) => m.includes("typo-only"));
+      expect(reported, "the overlay that resolves nothing is named").to.not.equal(undefined);
+      // The remedy quotes the real registry rather than a literal, so a vocabulary wired
+      // to nothing would render "the built-ins are: ." and help no one.
+      expect(reported, "and the remedy lists the built-ins it could have meant").to.contain("qwertz-de");
+    });
+  });
+
   it("an invalid variant table is reported and skipped", async () => {
     await withCapturedWarnings(async (messages) => {
       const el = await mount(
