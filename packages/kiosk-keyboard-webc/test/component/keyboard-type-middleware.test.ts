@@ -1,16 +1,16 @@
-import { fixture, html, expect } from "@open-wc/testing";
+import { fixture, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type { CompositionMiddleware } from "../../src/types.js";
-import { requireKey } from "../helpers/fixtures.js";
+import { customLayout, requireKey } from "../helpers/fixtures.js";
 
 const nextRender = renderFinished;
 
 /**
- * Spy middleware factory wired through the public `instanceMiddleware`
- * property. `created` proves whether the keyboard instantiated the middleware
- * at all; `handled` records the keys routed through it; `commits` counts
- * forced commits of an in-progress composition.
+ * Spy middleware factory wired through a slotted `<kiosk-keyboard-custom-layout>`.
+ * `created` proves whether the keyboard instantiated the middleware at all;
+ * `handled` records the keys routed through it; `commits` counts forced commits
+ * of an in-progress composition.
  */
 function spyMiddleware(): {
   calls: { created: number; handled: string[]; commits: number };
@@ -34,16 +34,21 @@ function spyMiddleware(): {
   return { calls, factory };
 }
 
-async function setupHangul(keyboardType?: string): Promise<{ kb: KioskKeyboard; input: HTMLInputElement }> {
-  const container = await fixture(html`
-    <div>
-      <input id="ktm-target" type="text" />
-      <kiosk-keyboard layout="ko-hangul"></kiosk-keyboard>
-    </div>
-  `);
-  const input = container.querySelector<HTMLInputElement>("#ktm-target")!;
-  const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+async function setupHangul(
+  factory: () => CompositionMiddleware,
+  keyboardType?: string,
+): Promise<{ kb: KioskKeyboard; input: HTMLInputElement }> {
+  const container = document.createElement("div");
+  const input = document.createElement("input");
+  input.id = "ktm-target";
+  input.type = "text";
+  const kb = document.createElement("kiosk-keyboard") as KioskKeyboard;
+  kb.setAttribute("layout", "ko-hangul");
   if (keyboardType) kb.setAttribute("keyboard-type", keyboardType);
+  kb.appendChild(customLayout({ name: "ko-hangul", middleware: factory }));
+  container.append(input, kb);
+
+  await fixture(container);
   kb.setTargetElement(input);
   await nextRender();
   return { kb, input };
@@ -51,10 +56,8 @@ async function setupHangul(keyboardType?: string): Promise<{ kb: KioskKeyboard; 
 
 describe("kiosk-keyboard - keyboardType vs composition middleware", () => {
   it("does not instantiate the layout middleware when keyboardType forces the numpad surface", async () => {
-    const { kb, input } = await setupHangul("Numpad");
     const { calls, factory } = spyMiddleware();
-    kb.instanceMiddleware = { "ko-hangul": factory };
-    await nextRender();
+    const { kb, input } = await setupHangul(factory, "Numpad");
 
     // The rendered surface is the numpad; pressing a digit must resolve the
     // middleware for the EFFECTIVE layout (numpad: none), not for the
@@ -65,10 +68,8 @@ describe("kiosk-keyboard - keyboardType vs composition middleware", () => {
   });
 
   it("commits an in-progress composition when a keyboardType change swaps the surface", async () => {
-    const { kb, input } = await setupHangul();
     const { calls, factory } = spyMiddleware();
-    kb.instanceMiddleware = { "ko-hangul": factory };
-    await nextRender();
+    const { kb, input } = await setupHangul(factory);
 
     // Start a composition on the full hangul surface.
     requireKey(kb, "ㄱ").click();

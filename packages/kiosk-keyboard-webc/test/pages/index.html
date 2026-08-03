@@ -428,14 +428,21 @@
             <kiosk-keyboard layout="qwerty" controls="text-input"></kiosk-keyboard>
           </div>
 
-          <!-- 8. Custom Layout (instance registration) -->
+          <!-- 8. Custom Layout (customLayouts slot) -->
           <div class="card">
-            <h2>Custom Layout (instance registration)</h2>
+            <h2>Custom Layout (customLayouts slot)</h2>
             <div class="input-group">
               <label for="custom-layout-input">PIN</label>
               <input id="custom-layout-input" type="text" placeholder="Enter PIN…" />
             </div>
-            <kiosk-keyboard id="kb-custom" layout="demo-pin" controls="custom-layout-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-custom" layout="demo-pin" controls="custom-layout-input">
+              <!-- `rows` is a JS object, so index.js assigns it on this element. -->
+              <kiosk-keyboard-custom-layout
+                id="cl-demo-pin"
+                slot="customLayouts"
+                name="demo-pin"
+              ></kiosk-keyboard-custom-layout>
+            </kiosk-keyboard>
           </div>
 
           <!-- 9. ui5-textarea -->
@@ -530,34 +537,51 @@
             <kiosk-keyboard id="kb-resolver" layout="qwerty" controls="resolver-host"></kiosk-keyboard>
           </div>
 
-          <!-- 16. Custom composition middleware (instanceMiddleware) -->
+          <!-- 16. Custom composition middleware (customLayouts slot) -->
           <div class="card">
-            <h2>Custom Composition Middleware (instanceMiddleware)</h2>
+            <h2>Custom Composition Middleware (customLayouts slot)</h2>
             <p style="font-size: 12px; color: var(--muted-color); margin: 0; line-height: 1.5">
-              A per-instance <code>emoji-compose</code> layout bound to a custom <code>CompositionMiddleware</code>:
-              type <code>:</code> then <code>)</code> → 🙂, <code>:</code> <code>(</code> → 🙁, <code>:</code>
+              An <code>emoji-compose</code> custom layout bound to a custom <code>CompositionMiddleware</code>: type
+              <code>:</code> then <code>)</code> → 🙂, <code>:</code> <code>(</code> → 🙁, <code>:</code>
               <code>D</code> → 😄, <code>;</code> <code>)</code> → 😉.
             </p>
             <div class="input-group">
               <label for="emoji-input">Emoticon input</label>
               <input id="emoji-input" type="text" placeholder="Type :) :( :D ;)" />
             </div>
-            <kiosk-keyboard id="kb-emoji" layout="emoji-compose" controls="emoji-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-emoji" layout="emoji-compose" controls="emoji-input">
+              <!-- `rows` and `middleware` are JS objects, so index.js assigns them here. -->
+              <kiosk-keyboard-custom-layout
+                id="cl-emoji-compose"
+                slot="customLayouts"
+                name="emoji-compose"
+              ></kiosk-keyboard-custom-layout>
+            </kiosk-keyboard>
           </div>
 
-          <!-- 17. Per-instance locale layouts (instanceLocaleLayouts) -->
+          <!-- 17. Per-instance locale layouts (customLayouts slot) -->
           <div class="card">
-            <h2>Per-Instance Locale Layouts (instanceLocaleLayouts)</h2>
+            <h2>Per-Instance Locale Layouts (customLayouts slot)</h2>
             <p style="font-size: 12px; color: var(--muted-color); margin: 0; line-height: 1.5">
-              With no <code>layout</code> attribute, the keyboard derives its default from the browser locale.
-              <code>instanceLocaleLayouts</code> overrides that mapping per instance.
+              With no <code>layout</code> attribute, the keyboard derives its default from the browser locale. A custom
+              layout's <code>locales</code> overrides that mapping per instance.
             </p>
             <p id="locale-status" style="font-size: 11px; color: var(--muted-color); margin: 0"></p>
             <div class="input-group">
               <label for="locale-input">Locale-default input</label>
               <input id="locale-input" type="text" placeholder="Locale-resolved layout…" />
             </div>
-            <kiosk-keyboard id="kb-locale" controls="locale-input"></kiosk-keyboard>
+            <kiosk-keyboard id="kb-locale" controls="locale-input">
+              <!-- No rows: this overlays the built-in `qwertz-de` and claims the listed
+                   locales for it. Declared in markup so it is honoured on the first paint,
+                   before any script runs. -->
+              <kiosk-keyboard-custom-layout
+                id="cl-locale"
+                slot="customLayouts"
+                name="qwertz-de"
+                locales="en, en-gb, en-us, fr, es, it, nl, pt, pl, ja, ko, zh"
+              ></kiosk-keyboard-custom-layout>
+            </kiosk-keyboard>
           </div>
 
           <!-- 18. i18n Resolver -->

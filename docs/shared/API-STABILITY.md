@@ -27,22 +27,23 @@ Use these imports for application code:
 Use these imports for application code:
 
 - `ui5/kiosk/KioskKeyboard`
+- `ui5/kiosk/CustomLayout` - one layout and everything that belongs with it, for the control's `customLayouts` aggregation
 - `ui5/kiosk/library`
 - `ui5/kiosk/types`
 - type-only helper export `KioskKeyboardDomContract` from `ui5/kiosk/KioskKeyboard`
-- `ui5/kiosk/layouts/*` - individual layout-definition modules (e.g. `layouts/qwerty`, `layouts/ja-kana`); import the data to compose custom layouts and pass via `instanceLayouts` (built-ins are already bundled)
+- `ui5/kiosk/layouts/*` - individual layout-definition modules (e.g. `layouts/qwerty`, `layouts/ja-kana`); import the data to compose custom layouts and pass as a `CustomLayout`'s `rows` (built-ins are already bundled)
 - `ui5/kiosk/layouts/fkey-row` - stable shared row for custom layout composition
 - `ui5/kiosk/layouts/fkey-row-compact` - the same twelve function keys as two rows of six, for keyboards too narrow to seat them on one line
 - `ui5/kiosk/layouts/nav-row` - stable shared row for custom layout composition
 - `ui5/kiosk/layouts/nav-row-compact` - the same eight nav keys as two rows of four, for keyboards too narrow to seat them on one line
-- `ui5/kiosk/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware via `instanceMiddleware` (built-ins are already bundled)
+- `ui5/kiosk/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware as a `CustomLayout`'s `middleware` (built-ins are already bundled)
 
-`ui5/kiosk/library` re-exports the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type, for inspecting the defaults; an `instanceVariants` entry merges onto them per base letter, so extending them needs no spread. The module and those exported names are stable, the table's contents are additive: a minor release may add entries, while removing or reordering existing ones is breaking.
+`ui5/kiosk/library` re-exports the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type, for inspecting the defaults; a `variants` table merges onto them per base letter, so extending them needs no spread. It also exports the `LayoutRole` and `LayoutFacet` enums and the `LayoutRows` and `VariantOverrideTable` property types. The module and those exported names are stable, the table's contents are additive: a minor release may add entries, while removing or reordering existing ones is breaking.
 
-Customization is per control via the `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` properties, assigned directly on the control. The static surface is read-only:
+Customization is per control via the `customLayouts` aggregation of `ui5.kiosk.CustomLayout` elements, plus the `defaultVariants` property for the accent table applied under every layout. The static surface is read-only:
 
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
-- `composeLayout` - splices built-in layouts (by name) and row arrays into one layout, for `instanceLayouts` entries
+- `composeLayout` - splices built-in layouts (by name) and row arrays into one layout, for a `CustomLayout`'s `rows`
 - `getLocaleLayout`
 - `setI18nResolver`
 
@@ -53,31 +54,33 @@ Stable runtime hooks on the `KioskKeyboard` class include:
 
 ### `kiosk-keyboard-webc`
 
-The stable consumer surface consists of the package entry points and the `<kiosk-keyboard>` custom element:
+The stable consumer surface consists of the package entry points and the `<kiosk-keyboard>` and `<kiosk-keyboard-custom-layout>` custom elements:
 
-- `kiosk-keyboard-webc/bundle` - ESM entry point that registers the custom element, all built-in layouts, and middleware; re-exports the class and public types
+- `kiosk-keyboard-webc/bundle` - ESM entry point that registers the custom elements, all built-in layouts, and middleware; re-exports the classes and public types
 - `kiosk-keyboard-webc` - bare component class with all built-in layouts and middleware; prefer the bundle entry for most use cases
+- `kiosk-keyboard-webc/CustomLayout` - the `<kiosk-keyboard-custom-layout>` element, one layout and everything that belongs with it, for the host's `customLayouts` slot
 - `kiosk-keyboard-webc/Assets` - supported companion entry for theme and i18n registration when consuming the bare class
-- `kiosk-keyboard-webc/layouts/*` - individual layout-definition modules (e.g. `layouts/qwerty`, `layouts/ja-kana`); import the data to compose custom layouts and pass via `instanceLayouts` (built-ins are already bundled)
+- `kiosk-keyboard-webc/layouts/*` - individual layout-definition modules (e.g. `layouts/qwerty`, `layouts/ja-kana`); import the data to compose custom layouts and pass as a custom layout's `rows` (built-ins are already bundled)
 - `kiosk-keyboard-webc/layouts/fkey-row` - stable shared row for custom layout composition
 - `kiosk-keyboard-webc/layouts/fkey-row-compact` - the same twelve function keys as two rows of six, for keyboards too narrow to seat them on one line
 - `kiosk-keyboard-webc/layouts/nav-row` - stable shared row for custom layout composition
 - `kiosk-keyboard-webc/layouts/nav-row-compact` - the same eight nav keys as two rows of four, for keyboards too narrow to seat them on one line
-- `kiosk-keyboard-webc/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware via `instanceMiddleware` (built-ins are already bundled)
-- `kiosk-keyboard-webc/variants` - the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type, for inspecting the defaults; an `instanceVariants` entry merges onto them per base letter, so extending them needs no spread. `VariantTable` is also re-exported from the element module
+- `kiosk-keyboard-webc/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware as a custom layout's `middleware` (built-ins are already bundled)
+- `kiosk-keyboard-webc/variants` - the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type, for inspecting the defaults; a `variants` table merges onto them per base letter, so extending them needs no spread. `VariantTable` is also re-exported from the element module
 
 For `kiosk-keyboard-webc/variants`, the module and those exported names are stable, the table's contents are additive: a minor release may add entries, while removing or reordering existing ones is breaking.
 
 Stable exports from the bundle entry:
 
 - `KioskKeyboard` class (custom element, tag `<kiosk-keyboard>`)
-- Enum exports: `FKeyMode`, `KeyboardType`, `MobileKeyboard`
-- Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `LayoutSpec`, `LayoutInput`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
+- `CustomLayout` class (custom element, tag `<kiosk-keyboard-custom-layout>`)
+- Enum exports: `FKeyMode`, `KeyboardType`, `LayoutFacet`, `LayoutRole`, `MobileKeyboard`
+- Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `CustomLayoutSpec`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
 
-Customization is per element via the `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware`, and `instanceVariants` properties, assigned directly on the element. The static surface is read-only:
+Customization is per element via the `customLayouts` slot of `<kiosk-keyboard-custom-layout>` elements, plus the `defaultVariants` property for the accent table applied under every layout. The static surface is read-only:
 
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
-- `composeLayout` - splices built-in layouts (by name) and row arrays into one layout, for `instanceLayouts` entries
+- `composeLayout` - splices built-in layouts (by name) and row arrays into one layout, for a custom layout's `rows`
 - `getLocaleLayout`
 - `setI18nResolver`
 

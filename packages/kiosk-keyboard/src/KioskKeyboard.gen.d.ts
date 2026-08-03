@@ -92,8 +92,8 @@ declare module "./KioskKeyboard" {
         s, y, z, l, ...) gains a long-press / right-click accent-variant
         popup, making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
         from any Latin layout without editing layout data. `ja-romaji` is
-        excluded with the other non-Latin built-ins; an `instanceVariants`
-        entry arms it anyway.
+        excluded with the other non-Latin built-ins; a `variants` table on a
+        `customLayouts` entry arms it anyway.
         
         A per-key `variants` declaration always wins over the default table.
         When Shift or Caps Lock is active, the popup surfaces the uppercase
@@ -471,8 +471,8 @@ declare module "./KioskKeyboard" {
         s, y, z, l, ...) gains a long-press / right-click accent-variant
         popup, making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
         from any Latin layout without editing layout data. `ja-romaji` is
-        excluded with the other non-Latin built-ins; an `instanceVariants`
-        entry arms it anyway.
+        excluded with the other non-Latin built-ins; a `variants` table on a
+        `customLayouts` entry arms it anyway.
         
         A per-key `variants` declaration always wins over the default table.
         When Shift or Caps Lock is active, the popup surfaces the uppercase
@@ -492,8 +492,8 @@ declare module "./KioskKeyboard" {
         s, y, z, l, ...) gains a long-press / right-click accent-variant
         popup, making German umlauts (ä/ö/ü) and the sharp S (ß/ẞ) reachable
         from any Latin layout without editing layout data. `ja-romaji` is
-        excluded with the other non-Latin built-ins; an `instanceVariants`
-        entry arms it anyway.
+        excluded with the other non-Latin built-ins; a `variants` table on a
+        `customLayouts` entry arms it anyway.
         
         A per-key `variants` declaration always wins over the default table.
         When Shift or Caps Lock is active, the popup surfaces the uppercase

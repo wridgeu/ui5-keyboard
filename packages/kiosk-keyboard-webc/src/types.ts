@@ -167,72 +167,6 @@ export type KeyRow = KeyDefinition[];
 export type LayoutDefinition = KeyRow[];
 
 /**
- * A layout together with the attributes that belong to it, for `instanceLayouts`
- * entries that need more than rows.
- *
- * The bare `LayoutDefinition` form stays valid everywhere this is accepted; reach
- * for the descriptor only to declare an attribute. Attributes resolve one by one:
- * an attribute the descriptor declares wins, and one it leaves out falls back to
- * the built-in layout of the same name, so overriding `arabic` with different rows
- * keeps announcing them as Arabic until the descriptor says otherwise.
- *
- * Long-press variants are not declared here. They are the one per-layout attribute
- * with its own layered property, `instanceVariants`, which merges over the built-in
- * table per base letter.
- *
- * @example An auxiliary Arabic symbol surface
- * ```ts
- * import KioskKeyboard from "kiosk-keyboard-webc";
- *
- * keyboard.instanceLayouts = {
- *   "ar-symbols": {
- *     rows: KioskKeyboard.composeLayout([symbolRow], "arabic"),
- *     lang: "ar",
- *     secondary: true,
- *   },
- * };
- * ```
- *
- * @public
- * @since 0.1.0
- */
-export interface LayoutSpec {
-  /** The layout's rows. Same shape and validation as a bare {@link LayoutDefinition}. */
-  rows: LayoutDefinition;
-  /**
-   * BCP-47 language of the keycaps, emitted as `lang` on the key labels so assistive
-   * tech announces them with the script's own pronunciation rules (WCAG 2.2 SC 3.1.2
-   * Language of Parts). Omit when the keycaps are in the UI language, as Latin
-   * keycaps are: declaring a language they are not written in mis-announces them and
-   * pulls them into that script's font fallback.
-   *
-   * One exception to that advice: under a name that shadows a built-in layout,
-   * omitting this inherits the built-in's language rather than clearing it, so an
-   * entry that replaces `arabic` with Latin rows should name its own language.
-   */
-  lang?: string;
-  /**
-   * Marks an auxiliary view (a symbol or numeric surface) rather than a base
-   * alphabetic layout. A secondary layout is never tracked as the base, so
-   * `{layout:base}` returns to the alphabetic layout it was reached from instead of
-   * stranding the keyboard on the auxiliary surface.
-   *
-   * Under a name that shadows a built-in layout, declaring `false` un-marks the
-   * built-in's flag; omitting this inherits it.
-   */
-  secondary?: boolean;
-}
-
-/**
- * What an `instanceLayouts` entry accepts: rows on their own, or a
- * {@link LayoutSpec} carrying the layout's attributes alongside them.
- *
- * @public
- * @since 0.1.0
- */
-export type LayoutInput = LayoutDefinition | LayoutSpec;
-
-/**
  * What one custom layout declares. A custom layout without `rows` overlays the layout its
  * `name` already resolves to. The tier applied under every layout is the host's
  * `defaultVariants` property, not a member of this collection.
@@ -321,6 +255,45 @@ export enum FKeyMode {
   Native = "Native",
   /** Ignore function key presses entirely. */
   None = "None",
+}
+
+/**
+ * Whether a layout is an auxiliary surface or a base alphabetic layout. A secondary
+ * layout is never tracked as the base, so `{layout:base}` returns to the alphabetic
+ * layout it was reached from.
+ *
+ * @public
+ * @since 0.1.0
+ */
+export enum LayoutRole {
+  /**
+   * Takes the built-in layout of the same name's role, and the base alphabetic role
+   * when there is no built-in of that name.
+   */
+  Inherit = "Inherit",
+  /** A base alphabetic layout, even when the built-in of the same name is secondary. */
+  Base = "Base",
+  /** An auxiliary surface: numbers, symbols, F-keys, navigation. */
+  Secondary = "Secondary",
+}
+
+/**
+ * A per-layout facet whose inherited value a custom layout discards. A listed facet
+ * resolves to nothing at that custom layout's position: the built-in tier and every
+ * earlier custom layout's contribution are dropped, and only a value the same custom
+ * layout declares survives.
+ *
+ * Rows are not listed: the built-in registry is sealed, so a custom layout shadows rows
+ * and never removes them.
+ *
+ * @public
+ * @since 0.1.0
+ */
+export enum LayoutFacet {
+  /** Long-press accent variants. Suppressed, the layout's keys carry no long-press affordance. */
+  Variants = "Variants",
+  /** Composition (IME / dead-key) middleware. Suppressed, the layout's keys type directly. */
+  Middleware = "Middleware",
 }
 
 // ── Event detail types ──

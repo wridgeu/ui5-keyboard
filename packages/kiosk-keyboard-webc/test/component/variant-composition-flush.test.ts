@@ -44,9 +44,9 @@ async function holdOpen(keyEl: HTMLElement): Promise<void> {
 
 describe("kiosk-keyboard - variant commit flushes composition", () => {
   it("finalizes the in-progress composition before inserting the variant", async () => {
-    const { kb, input } = await setupWithLayout(HANGUL_VARIANT_LAYOUT);
-    kb.instanceMiddleware = { spike: createHangulComposeMiddleware };
-    await renderFinished();
+    const { kb, input } = await setupWithLayout(HANGUL_VARIANT_LAYOUT, {
+      middleware: createHangulComposeMiddleware,
+    });
 
     // Compose 가 (ㄱ then ㅏ): a live LV preedit is now in the input.
     requireKey(kb, "ㄱ").click();

@@ -59,9 +59,9 @@ export const BUILTIN_LAYOUT_META: ReadonlyMap<string, LayoutMeta> = new Map<stri
 
 /**
  * Per-instance layout metadata, keyed by normalized layout name. Built from
- * `instanceLayouts`, so a consumer declares a layout's attributes on the layout
- * itself rather than in a parallel map. An entry carries only the attributes its
- * descriptor declared, which is what lets the rest fall back per attribute.
+ * the custom layouts, so a consumer declares a layout's attributes on the layout
+ * itself rather than in a parallel map. An entry carries only the attributes that
+ * custom layout declared, which is what lets the rest fall back per attribute.
  */
 export type InstanceLayoutMeta = ReadonlyMap<string, LayoutMeta>;
 
@@ -72,8 +72,9 @@ export type InstanceLayoutMeta = ReadonlyMap<string, LayoutMeta>;
  * Arabic until the descriptor says otherwise. Bare rows declare nothing and so
  * resolve to the built-in outright.
  *
- * `variants` is not resolved here. Instance layouts declare no variant tier; that
- * tier is `instanceVariants`, which layers over the built-in table by name.
+ * `variants` is not resolved here. This table holds only the attributes that fall
+ * back per attribute; the variant tiers layer over the built-in table by name in
+ * `latin-variants`.
  */
 function resolveLayoutMeta(name: string, instanceMeta?: InstanceLayoutMeta): LayoutMeta | undefined {
   const builtIn = BUILTIN_LAYOUT_META.get(name);

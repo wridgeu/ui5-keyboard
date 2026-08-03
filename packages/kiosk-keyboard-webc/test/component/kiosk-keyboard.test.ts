@@ -2,7 +2,7 @@ import { fixture, html, expect, oneEvent, waitUntil } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import numericLayout from "../../src/layouts/numeric.js";
-import { queryKey } from "../helpers/fixtures.js";
+import { customLayout, queryKey } from "../helpers/fixtures.js";
 import { captureConsole } from "../helpers/console.js";
 
 /** Wait for UI5Element async render cycle. */
@@ -1004,12 +1004,17 @@ describe("kiosk-keyboard", () => {
       // parseKeyAction lowercases the layout target, so a consumer-authored
       // mixed-case {layout:Base} dead duplicate is recognized and stripped like
       // the canonical lowercase form; it must not linger as a misleading "ABC" key.
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numeric"></kiosk-keyboard> `);
-      el.instanceLayouts = {
-        special: [
-          [{ value: "[" }, { value: "{layout:numeric}", label: "123" }, { value: "{layout:Base}", label: "ABC" }],
-        ],
-      };
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.setAttribute("keyboard-type", "Numeric");
+      el.appendChild(
+        customLayout({
+          name: "special",
+          rows: [
+            [{ value: "[" }, { value: "{layout:numeric}", label: "123" }, { value: "{layout:Base}", label: "ABC" }],
+          ],
+        }),
+      );
+      await fixture(el);
       await nextRender();
 
       const toSymbols = oneEvent(el, "layout-change");
@@ -1031,7 +1036,7 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       // The built-in numpad ships no {layout:*} keys; reach the symbols layout
-      // the way a consumer's custom instanceLayouts switch key would.
+      // the way a consumer's custom layout switch key would.
       const fakeKey = document.createElement("div");
       fakeKey.setAttribute("role", "button");
       fakeKey.dataset.key = "{layout:special}";
@@ -1743,17 +1748,21 @@ describe("kiosk-keyboard", () => {
     });
   });
 
-  // ── Per-instance layout overrides ──
+  // ── Per-instance layout declarations ──
 
-  describe("per-instance layouts", () => {
-    it("instanceLayouts makes a custom layout available for rendering", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard></kiosk-keyboard> `);
-      el.instanceLayouts = {
-        "test-pin": [
-          [{ value: "1" }, { value: "2" }, { value: "3" }],
-          [{ value: "4" }, { value: "5" }, { value: "6" }],
-        ],
-      };
+  describe("custom layouts", () => {
+    it("a slotted custom layout makes a layout available for rendering", async () => {
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.appendChild(
+        customLayout({
+          name: "test-pin",
+          rows: [
+            [{ value: "1" }, { value: "2" }, { value: "3" }],
+            [{ value: "4" }, { value: "5" }, { value: "6" }],
+          ],
+        }),
+      );
+      await fixture(el);
       el.layout = "test-pin";
       await nextRender();
 
@@ -1764,17 +1773,14 @@ describe("kiosk-keyboard", () => {
       expect(values).to.have.lengthOf(6);
     });
 
-    it("instanceLayouts on one element does not leak into another", async () => {
-      const container = await fixture(html`
-        <div>
-          <kiosk-keyboard id="kb-a"></kiosk-keyboard>
-          <kiosk-keyboard id="kb-b"></kiosk-keyboard>
-        </div>
-      `);
-      const kbA = container.querySelector<KioskKeyboard>("#kb-a")!;
-      const kbB = container.querySelector<KioskKeyboard>("#kb-b")!;
+    it("a custom layout on one element does not leak into another", async () => {
+      const container = document.createElement("div");
+      const kbA = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      const kbB = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      kbA.appendChild(customLayout({ name: "shared-test", rows: [[{ value: "x" }, { value: "y" }]] }));
+      container.append(kbA, kbB);
+      await fixture(container);
 
-      kbA.instanceLayouts = { "shared-test": [[{ value: "x" }, { value: "y" }]] };
       kbA.layout = "shared-test";
       kbB.layout = "shared-test";
       await nextRender();
@@ -1783,13 +1789,13 @@ describe("kiosk-keyboard", () => {
       expect(valuesA).to.include("x");
       expect(valuesA).to.include("y");
 
-      // kbB has no instance entry for "shared-test" and no built-in registration
-      // exists, so it falls back to the default layout (more than 2 keys).
+      // kbB declares no "shared-test" and no built-in registration exists, so it
+      // falls back to the default layout (more than 2 keys).
       const keysB = queryKeys(kbB);
       expect(keysB.length).to.be.greaterThan(2);
     });
 
-    it("falls back to default when an unknown layout is requested without instanceLayouts", async () => {
+    it("falls back to default when an unknown layout is requested with no custom layouts", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard></kiosk-keyboard> `);
       el.layout = "temp-layout";
       await nextRender();

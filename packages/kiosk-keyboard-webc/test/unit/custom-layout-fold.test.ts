@@ -118,9 +118,11 @@ describe("custom-layout-fold per-facet merge rules", () => {
     expect(f.variants!.get("qwerty")).toEqual({ replace: false, table: { a: ["ą"], z: ["ź"] } });
   });
 
-  it("variants: a letter mapped to an empty list drops it from the accumulated table", () => {
+  it("variants: a letter mapped to an empty list keeps its marker in the overlay", () => {
+    // The overlay is still a patch: the deletion happens when it meets a real table, so
+    // dropping the marker here would lose a suppression aimed at the built-in tier.
     const f = fold({ name: "qwerty", variants: { a: ["ą"], z: ["ź"] } }, { name: "qwerty", variants: { a: [] } });
-    expect(f.variants!.get("qwerty")!.table).toEqual({ z: ["ź"] });
+    expect(f.variants!.get("qwerty")!.table, "the marker survives accumulation").toEqual({ a: [], z: ["ź"] });
   });
 });
 
@@ -235,7 +237,9 @@ describe("describeDiagnostic", () => {
       "duplicate-middleware",
       "duplicate-locale",
     ];
-    expect([...new Set(codes(f))].toSorted(), "the fixture triggers all ten codes").toEqual([...expected].toSorted());
+    const seen = new Set(codes(f));
+    for (const code of expected) expect(seen.has(code), `${code} is triggered by the fixture`).toBe(true);
+    expect(seen.size, "and the fixture triggers nothing else").toBe(expected.length);
     for (const d of f.diagnostics) {
       const message = describeDiagnostic(d, VOCAB);
       expect(message.endsWith("."), `${d.code} renders a complete sentence`).toBe(true);

@@ -4,7 +4,7 @@ import KioskKeyboard from "../../src/KioskKeyboard.js";
 import navRow from "../../src/layouts/nav-row.js";
 import qwerty from "../../src/layouts/qwerty.js";
 import type { KeyDefinition, LayoutDefinition } from "../../src/types.js";
-import { requireKey as queryKey } from "../helpers/fixtures.js";
+import { customLayout, requireKey as queryKey } from "../helpers/fixtures.js";
 import { captureConsole } from "../helpers/console.js";
 
 const nextRender = renderFinished;
@@ -19,8 +19,10 @@ function queryKeyLabel(keyEl: HTMLElement): HTMLElement | null {
 }
 
 async function createKeyboard(layout: LayoutDefinition): Promise<KioskKeyboard> {
-  const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="test-icon-label"></kiosk-keyboard> `);
-  el.instanceLayouts = { "test-icon-label": layout };
+  const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+  el.setAttribute("layout", "test-icon-label");
+  el.appendChild(customLayout({ name: "test-icon-label", rows: layout }));
+  await fixture(el);
   await nextRender();
   return el;
 }
@@ -367,10 +369,10 @@ describe("icon + label rendering", () => {
     const wrapper = document.createElement("div");
     wrapper.style.width = "320px";
 
-    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="test-icon-bump"></kiosk-keyboard> `, {
-      parentNode: wrapper,
-    });
-    el.instanceLayouts = { "test-icon-bump": [navRow, ...qwerty] };
+    const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+    el.setAttribute("layout", "test-icon-bump");
+    el.appendChild(customLayout({ name: "test-icon-bump", rows: [navRow, ...qwerty] }));
+    await fixture(el, { parentNode: wrapper });
     await nextRender();
 
     const shift = queryKey(el, "{shift}");
@@ -587,16 +589,20 @@ describe("icon + label rendering", () => {
     // remounting it. The invariant is that a key reached by switching is
     // indistinguishable from the same key mounted directly; writing the attribute
     // unconditionally is what holds it, since this renderer cannot express removal.
-    const fresh = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="plain"></kiosk-keyboard> `);
-    fresh.instanceLayouts = { plain: [[{ value: "y" }]] };
+    const fresh = document.createElement("kiosk-keyboard") as KioskKeyboard;
+    fresh.setAttribute("layout", "plain");
+    fresh.appendChild(customLayout({ name: "plain", rows: [[{ value: "y" }]] }));
+    await fixture(fresh);
     await nextRender();
     const freshTitle = queryKey(fresh, "y").getAttribute("title");
 
-    const switched = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="tooltipped"></kiosk-keyboard> `);
-    switched.instanceLayouts = {
-      tooltipped: [[{ value: "x", label: "Custom" }]],
-      plain: [[{ value: "y" }]],
-    };
+    const switched = document.createElement("kiosk-keyboard") as KioskKeyboard;
+    switched.setAttribute("layout", "tooltipped");
+    switched.append(
+      customLayout({ name: "tooltipped", rows: [[{ value: "x", label: "Custom" }]] }),
+      customLayout({ name: "plain", rows: [[{ value: "y" }]] }),
+    );
+    await fixture(switched);
     await nextRender();
     expect(queryKey(switched, "x").getAttribute("title"), "the first layout sets a tooltip").to.equal("Custom");
 

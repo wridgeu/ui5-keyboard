@@ -43,10 +43,12 @@ The same reasoning retires the F-key wrap. Preserving source order is not suffic
 
 ```ts
 const narrow = window.matchMedia("(max-width: 20rem)");
+const navLayout = new CustomLayout({ name: "qwerty-nav" });
+kb.addCustomLayout(navLayout);
 
 function applyNavRow(kb: KioskKeyboard): void {
   const rows = narrow.matches ? navRowCompact : [navRow];
-  kb.setInstanceLayouts({ "qwerty-nav": KioskKeyboard.composeLayout(rows, "qwerty") });
+  navLayout.setRows(KioskKeyboard.composeLayout(rows, "qwerty"));
   kb.setLayout("qwerty-nav");
 }
 
@@ -113,12 +115,13 @@ The responsive `min()` caps in the built-in queries preserve any consumer value 
 
 ## Switching Layouts Per Device Size
 
-CSS custom properties handle visual tuning, but some scenarios require structural layout changes: different keys, different row counts, different key arrangements. Supply alternate layouts via the per-instance `instanceLayouts` property and switch with `setLayout()`.
+CSS custom properties handle visual tuning, but some scenarios require structural layout changes: different keys, different row counts, different key arrangements. Supply alternate layouts through the `customLayouts` aggregation and switch with `setLayout()`.
 
 ### Pattern: Supply a Compact Variant, Switch at a Breakpoint
 
 ```ts
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 
 // 1. Define a compact layout (fewer keys per row, adapted for narrow screens)
 const kanaCompact: LayoutDefinition = [
@@ -130,7 +133,7 @@ const kanaCompact: LayoutDefinition = [
 
 // 2. Supply it on the control
 const keyboard = this.byId("myKeyboard") as KioskKeyboard;
-keyboard.setInstanceLayouts({ "ja-kana-compact": kanaCompact });
+keyboard.addCustomLayout(new CustomLayout({ name: "ja-kana-compact", rows: kanaCompact }));
 
 // 3. Switch based on container/viewport width
 const mq = window.matchMedia("(max-width: 400px)");
@@ -154,10 +157,10 @@ applyLayout(mq);
 | ---------------------------------------- | ---------------------------------------------------------------- |
 | Adjust key size, gap, font, padding      | CSS custom properties in `@container` rules                      |
 | Hide labels, change icon size            | CSS custom properties (`--ui5KioskKeyboard-dualDirection`, etc.) |
-| Change which keys exist                  | `instanceLayouts` + `setLayout()`                                |
-| Change row structure (key count per row) | `instanceLayouts` + `setLayout()`                                |
+| Change which keys exist                  | `customLayouts` + `setLayout()`                                  |
+| Change row structure (key count per row) | `customLayouts` + `setLayout()`                                  |
 | Wrap a row at narrow widths, same order  | CSS `flex-wrap` on `data-row-kind` (if applicable)               |
-| Regroup a row's keys at narrow widths    | A second layout + `instanceLayouts` + `setLayout()`              |
+| Regroup a row's keys at narrow widths    | A second layout + `customLayouts` + `setLayout()`                |
 
 ## Worked Example: Custom Row Wrapping
 

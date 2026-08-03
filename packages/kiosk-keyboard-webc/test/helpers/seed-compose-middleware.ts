@@ -17,8 +17,8 @@ import {
  * routing is observable: a literal insert would show the bare glyph, whereas
  * composition shows the bracketed buffer.
  *
- * Genuine test scaffolding (CLAUDE.md §4): registered through the element's
- * public `instanceMiddleware` map; the production modules gain no exports.
+ * Genuine test scaffolding (CLAUDE.md §4): declared on a slotted
+ * `<kiosk-keyboard-custom-layout>`; the production modules gain no exports.
  */
 export function createSeedComposeMiddleware(seed: string): () => CompositionMiddleware {
   return function seedComposeMiddleware(): CompositionMiddleware {

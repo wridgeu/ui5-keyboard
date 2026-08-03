@@ -67,17 +67,16 @@ document.getElementById("toggle-docked").addEventListener("click", () => {
   else docked.show();
 });
 
-// Custom layout via per-instance override
-const kbCustom = document.getElementById("kb-custom");
-if (kbCustom) {
-  kbCustom.instanceLayouts = {
-    "demo-pin": [
-      [{ value: "1" }, { value: "2" }, { value: "3" }],
-      [{ value: "4" }, { value: "5" }, { value: "6" }],
-      [{ value: "7" }, { value: "8" }, { value: "9" }],
-      [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
-    ],
-  };
+// Custom layout: the <kiosk-keyboard-custom-layout> is declared in index.html;
+// only `rows` has to be assigned, since it is a JS object rather than an attribute.
+const clDemoPin = document.getElementById("cl-demo-pin");
+if (clDemoPin) {
+  clDemoPin.rows = [
+    [{ value: "1" }, { value: "2" }, { value: "3" }],
+    [{ value: "4" }, { value: "5" }, { value: "6" }],
+    [{ value: "7" }, { value: "8" }, { value: "9" }],
+    [{ value: "{backspace}", type: "action" }, { value: "0" }, { value: "{enter}", type: "action" }],
+  ];
 }
 
 // Auto-type toggle
@@ -100,7 +99,7 @@ if (kbResolver) {
   });
 }
 
-// 2) instanceMiddleware: emoticon composition on a custom per-instance layout.
+// 2) middleware: emoticon composition on a custom layout.
 // Mirrors the built-in middleware contract: consume the closing key and replace
 // the already-typed opening char with the composed emoji.
 function createEmoticonMiddleware() {
@@ -135,28 +134,22 @@ function createEmoticonMiddleware() {
     },
   };
 }
-const kbEmoji = document.getElementById("kb-emoji");
-if (kbEmoji) {
-  kbEmoji.instanceLayouts = {
-    "emoji-compose": [
-      [{ value: ":" }, { value: ")" }, { value: "(" }],
-      [{ value: "D" }, { value: ";" }, { value: "{backspace}", type: "action" }],
-    ],
-  };
-  kbEmoji.instanceMiddleware = { "emoji-compose": () => createEmoticonMiddleware() };
+const clEmoji = document.getElementById("cl-emoji-compose");
+if (clEmoji) {
+  clEmoji.rows = [
+    [{ value: ":" }, { value: ")" }, { value: "(" }],
+    [{ value: "D" }, { value: ";" }, { value: "{backspace}", type: "action" }],
+  ];
+  clEmoji.middleware = () => createEmoticonMiddleware();
 }
 
-// 3) instanceLocaleLayouts: override the browser-locale default layout. The
-// keyboard has no `layout` attribute, so it resolves its default from the
-// locale map (matched by lang-region then lang prefix, lowercase).
-const kbLocale = document.getElementById("kb-locale");
-if (kbLocale) {
-  const lang = (navigator.language || "en").toLowerCase().split("-")[0];
-  kbLocale.instanceLocaleLayouts = { [lang]: "qwertz-de" };
-  const localeStatus = document.getElementById("locale-status");
-  if (localeStatus) {
-    localeStatus.textContent = `navigator.language = "${navigator.language}" → default layout "qwertz-de" (note the ß / ä / ö keys).`;
-  }
+// 3) locales: the kb-locale card's custom layout claims the browser locale for
+// "qwertz-de" declaratively (see index.html); the locale binding has to be in the
+// markup so it is folded before the keyboard resolves its default on first paint.
+// Only the status line is filled in here.
+const localeStatus = document.getElementById("locale-status");
+if (localeStatus) {
+  localeStatus.textContent = `navigator.language = "${navigator.language}" → default layout "qwertz-de" (note the ß / ä / ö keys).`;
 }
 
 // ── i18n Resolver demo ──

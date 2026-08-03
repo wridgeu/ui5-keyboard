@@ -20,7 +20,11 @@ import navRow from "./nav-row.js";
  * ```ts
  * import navRowCompact from "kiosk-keyboard-webc/layouts/nav-row-compact";
  *
- * kb.instanceLayouts = { "nav-qwerty": [...navRowCompact, ...qwerty] };
+ * const cl = document.createElement("kiosk-keyboard-custom-layout");
+ * cl.slot = "customLayouts";
+ * cl.name = "nav-qwerty";
+ * cl.rows = [...navRowCompact, ...qwerty];
+ * kb.appendChild(cl);
  * ```
  *
  * @public

@@ -285,7 +285,7 @@ export type KeyRow = KeyDefinition[];
  * Complete layout definition - an ordered array of rows.
  *
  * Each entry is a row of keys rendered top-to-bottom. Pass values of this
- * type through the `instanceLayouts` setting to expose custom layouts to
+ * type through the `customLayouts` aggregation to expose custom layouts to
  * a single keyboard instance.
  *
  * **Accessibility:** Keys with visible text labels get their accessible name
@@ -312,84 +312,19 @@ export type KeyRow = KeyDefinition[];
  *   ],
  * ];
  *
- * new KioskKeyboard({ layout: "pinpad", instanceLayouts: { pinpad } });
+ * new KioskKeyboard({
+ *   layout: "pinpad",
+ *   customLayouts: [new CustomLayout({ name: "pinpad", rows: pinpad })],
+ * });
  * ```
  *
- * Or in XML, after assigning `instanceLayouts` on the controller:
- * `<kiosk:KioskKeyboard layout="pinpad" instanceLayouts="{/customLayouts}" />`
+ * Or in XML, with the rows bound from a model:
+ * `<kiosk:CustomLayout name="pinpad" rows="{layouts>/pinpad}" />`
  *
  * @public
  * @since 0.1.0
  */
 export type LayoutDefinition = KeyRow[];
-
-/**
- * A layout together with the attributes that belong to it, for `instanceLayouts`
- * entries that need more than rows.
- *
- * The bare `LayoutDefinition` form stays valid everywhere this is accepted; reach
- * for the descriptor only to declare an attribute. Attributes resolve one by one:
- * an attribute the descriptor declares wins, and one it leaves out falls back to
- * the built-in layout of the same name, so overriding `arabic` with different rows
- * keeps announcing them as Arabic until the descriptor says otherwise.
- *
- * Long-press variants are not declared here. They are the one per-layout attribute
- * with its own layered property, `instanceVariants`, which merges over the built-in
- * table per base letter.
- *
- * @example An auxiliary Arabic symbol surface
- * ```ts
- * import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
- *
- * new KioskKeyboard({
- *   instanceLayouts: {
- *     "ar-symbols": {
- *       rows: KioskKeyboard.composeLayout([symbolRow], "arabic"),
- *       lang: "ar",
- *       secondary: true,
- *     },
- *   },
- * });
- * ```
- *
- * @public
- * @since 0.1.0
- */
-export interface LayoutSpec {
-  /** The layout's rows. Same shape and validation as a bare {@link LayoutDefinition}. */
-  rows: LayoutDefinition;
-  /**
-   * BCP-47 language of the keycaps, emitted as `lang` on the key labels so assistive
-   * tech announces them with the script's own pronunciation rules (WCAG 2.2 SC 3.1.2
-   * Language of Parts). Omit when the keycaps are in the UI language, as Latin
-   * keycaps are: declaring a language they are not written in mis-announces them and
-   * pulls them into that script's font fallback.
-   *
-   * One exception to that advice: under a name that shadows a built-in layout,
-   * omitting this inherits the built-in's language rather than clearing it, so an
-   * entry that replaces `arabic` with Latin rows should name its own language.
-   */
-  lang?: string;
-  /**
-   * Marks an auxiliary view (a symbol or numeric surface) rather than a base
-   * alphabetic layout. A secondary layout is never tracked as the base, so
-   * `{layout:base}` returns to the alphabetic layout it was reached from instead of
-   * stranding the keyboard on the auxiliary surface.
-   *
-   * Under a name that shadows a built-in layout, declaring `false` un-marks the
-   * built-in's flag; omitting this inherits it.
-   */
-  secondary?: boolean;
-}
-
-/**
- * What an `instanceLayouts` entry accepts: rows on their own, or a
- * {@link LayoutSpec} carrying the layout's attributes alongside them.
- *
- * @public
- * @since 0.1.0
- */
-export type LayoutInput = LayoutDefinition | LayoutSpec;
 
 /**
  * What one custom layout declares. A custom layout without `rows` overlays the layout its

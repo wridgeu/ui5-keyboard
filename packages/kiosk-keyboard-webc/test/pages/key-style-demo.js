@@ -29,11 +29,18 @@ document.querySelectorAll(".theme-controls button").forEach((btn) => {
   });
 });
 
-// Apply demo layouts as per-instance overrides on every kiosk-keyboard on the page.
+// Declare the demo layouts as custom layouts on every kiosk-keyboard on the page.
+// Each host needs its own child elements: a DOM node lives in one parent only.
 const demoLayouts = {
   "demo-default": [[{ value: "F5", label: "F5" }]],
   "demo-modifier": [[{ value: "F5", label: "F5", type: "modifier" }]],
 };
 document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
-  kb.instanceLayouts = demoLayouts;
+  for (const [name, rows] of Object.entries(demoLayouts)) {
+    const customLayout = document.createElement("kiosk-keyboard-custom-layout");
+    customLayout.slot = "customLayouts";
+    customLayout.name = name;
+    customLayout.rows = rows;
+    kb.appendChild(customLayout);
+  }
 });

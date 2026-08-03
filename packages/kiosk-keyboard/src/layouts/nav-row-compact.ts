@@ -22,7 +22,9 @@ import navRow from "./nav-row";
  *
  * new KioskKeyboard({
  *   layout: "nav-qwerty",
- *   instanceLayouts: { "nav-qwerty": KioskKeyboard.composeLayout(navRowCompact, "qwerty") },
+ *   customLayouts: [
+ *     new CustomLayout({ name: "nav-qwerty", rows: KioskKeyboard.composeLayout(navRowCompact, "qwerty") }),
+ *   ],
  * });
  * ```
  *

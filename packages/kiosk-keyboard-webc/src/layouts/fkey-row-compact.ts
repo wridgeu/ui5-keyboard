@@ -15,7 +15,11 @@ import fkeyRow from "./fkey-row.js";
  * ```ts
  * import fkeyRowCompact from "kiosk-keyboard-webc/layouts/fkey-row-compact";
  *
- * kb.instanceLayouts = { "fk-qwerty": [...fkeyRowCompact, ...qwerty] };
+ * const cl = document.createElement("kiosk-keyboard-custom-layout");
+ * cl.slot = "customLayouts";
+ * cl.name = "fk-qwerty";
+ * cl.rows = [...fkeyRowCompact, ...qwerty];
+ * kb.appendChild(cl);
  * ```
  *
  * @public

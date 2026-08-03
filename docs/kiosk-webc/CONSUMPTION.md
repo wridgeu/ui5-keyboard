@@ -169,24 +169,29 @@ built-in layouts. There is no separate `./core` export: the class lives in a
 single file, so the default entry already is the lean entry.
 
 Consumers who want selective layout loading can import individual layouts via
-subpath imports and pass any custom layouts through the per-element
-`instanceLayouts` property:
+subpath imports and slot any custom layouts into the per-element
+`customLayouts` slot:
 
 ```typescript
 import KioskKeyboard from "kiosk-keyboard-webc";
+import "kiosk-keyboard-webc/CustomLayout";
 import qwerty from "kiosk-keyboard-webc/layouts/qwerty";
 import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
 const el = document.createElement("kiosk-keyboard");
 // Use a built-in as a base: prepend the shared F-key row to QWERTY.
-el.instanceLayouts = { "qwerty-fk": [fkeyRow, ...qwerty] };
+const custom = document.createElement("kiosk-keyboard-custom-layout");
+custom.slot = "customLayouts";
+custom.name = "qwerty-fk";
+custom.rows = [fkeyRow, ...qwerty];
+el.appendChild(custom);
 el.layout = "qwerty-fk";
 document.body.appendChild(el);
 ```
 
 Stable layout subpaths: `kiosk-keyboard-webc/layouts/<name>` (e.g., `qwerty`,
 `numeric`, `arabic`, `ja-kana`, `ko-hangul`) - import a built-in to use as a base
-or to pass via `instanceLayouts`. The shared building-block rows
+or to pass as a custom layout's `rows`. The shared building-block rows
 `kiosk-keyboard-webc/layouts/fkey-row` and `kiosk-keyboard-webc/layouts/nav-row`
 are stable imports for composing custom variant layouts.
 
@@ -198,11 +203,16 @@ input methods to edit the target:
 
 ```typescript
 import KioskKeyboard from "kiosk-keyboard-webc";
+import "kiosk-keyboard-webc/CustomLayout";
 
 const el = document.createElement("kiosk-keyboard");
-el.instanceLayouts = {
-  pad: [[{ value: "{paste}", label: "", icon: "sap-icon://paste", ariaLabel: "Paste from clipboard" }, { value: "1" }]],
-};
+const pad = document.createElement("kiosk-keyboard-custom-layout");
+pad.slot = "customLayouts";
+pad.name = "pad";
+pad.rows = [
+  [{ value: "{paste}", label: "", icon: "sap-icon://paste", ariaLabel: "Paste from clipboard" }, { value: "1" }],
+];
+el.appendChild(pad);
 el.addEventListener("key-press", (e) => {
   if (e.detail.key === "{paste}") {
     e.preventDefault(); // claim this key

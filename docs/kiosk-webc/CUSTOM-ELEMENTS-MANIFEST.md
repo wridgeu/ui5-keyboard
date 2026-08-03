@@ -1,6 +1,6 @@
 # Custom Elements Manifest (CEM)
 
-The `kiosk-keyboard-webc` package generates a [Custom Elements Manifest](https://github.com/webcomponents/custom-elements-manifest) that machine-describes the `<kiosk-keyboard>` component's public API: properties, attributes, events, methods, and type information.
+The `kiosk-keyboard-webc` package generates a [Custom Elements Manifest](https://github.com/webcomponents/custom-elements-manifest) that machine-describes the public API of the `<kiosk-keyboard>` and `<kiosk-keyboard-custom-layout>` components: properties, attributes, slots, events, methods, and type information.
 
 ## What CEM Enables
 
@@ -66,11 +66,19 @@ The analyzer describes the component's input surface, the `@property`-decorated 
 
 ## Object-Typed Properties Listed as Attributes
 
-The inverse gap. `instanceLayouts`, `instanceLocaleLayouts`, `instanceMiddleware` and `instanceVariants` are `@property({ type: Object })`, and the framework never gives an `Object`-typed property an attribute: `UI5ElementMetadata.hasAttribute` returns `false` on the type alone, so `instance-layouts` and its siblings are neither observed nor reflected. The generated files list them regardless — the analyzer plugin pushes every public member into the `attributes` array gated only on privacy — so `custom-elements.json`, `vscode.html-custom-data.json` and `web-types.json` all offer `instance-layouts` in IDE completion, where setting it in markup does nothing. Assign these properties from JS; each one's JSDoc says so, and that text is carried into the manifest entry's description.
+The inverse gap. `defaultVariants` on `<kiosk-keyboard>` and `rows`, `variants` and `middleware` on `<kiosk-keyboard-custom-layout>` are `@property({ type: Object })`, and the framework never gives an `Object`-typed property an attribute: `UI5ElementMetadata.hasAttribute` returns `false` on the type alone, so `default-variants` and its siblings are neither observed nor reflected. The generated files list them regardless — the analyzer plugin pushes every public member into the `attributes` array gated only on privacy — so `custom-elements.json`, `vscode.html-custom-data.json` and `web-types.json` all offer `default-variants` in IDE completion, where setting it in markup does nothing. Assign these properties from JS; each one's JSDoc says so, and that text is carried into the manifest entry's description. The custom layout's string-typed properties (`name`, `keycap-lang`, `locales`, `layout-role`, `suppress`) are real attributes and are settable in markup.
 
 `noAttribute: true` does not suppress the entry. The plugin records it as `_ui5noAttribute` in `custom-elements-internal.json` only, and the public `attributes` array never consults it. SAP ships the same shape for its own object-typed properties: `accessibility-attributes` is listed as an attribute on `ui5-button`, `ui5-link` and `ui5-li` in `@ui5/webcomponents` 2.22.0.
 
-`Array` is not covered by the framework rule that makes this harmless for `Object`. `hasAttribute` excludes `Object` only, and the default converter JSON-stringifies array values, so a public `@property({ type: Array })` does get a live, reflected, JSON-encoded attribute and needs an explicit `noAttribute: true` to avoid one. This component declares no array-typed properties.
+`Array` is not covered by the framework rule that makes this harmless for `Object`. `hasAttribute` excludes `Object` only, and the default converter JSON-stringifies array values, so a public `@property({ type: Array })` does get a live, reflected, JSON-encoded attribute and needs an explicit `noAttribute: true` to avoid one. Neither element declares an array-typed property.
+
+## Slots in the Manifest
+
+A `@slot`-decorated member takes a different path than a `@property` one: the plugin splices it out of `members` and into the class's `slots` array before the attribute push can see it, so it is described as a slot and never as a phantom attribute. `customLayouts` on `<kiosk-keyboard>` is the one entry.
+
+Two details of that conversion show up in the output. The member's `type` and `privacy` are moved to `_ui5type` and `_ui5privacy` (slots carry neither in the CEM schema), so a slot still needs `@public` in its JSDoc to survive `processPublicAPI`. And the declared type text is rewritten by `formatSlotTypes`, which turns `Slot<T>` and `DefaultSlot<T>` into `Array<T>` — `customLayouts` is therefore published as `Array<ICustomLayout>`.
+
+Slot JSDoc takes no `@default`: the missing-default check runs on the property branch only.
 
 ## How It Works
 

@@ -17,7 +17,9 @@ import fkeyRow from "./fkey-row";
  *
  * new KioskKeyboard({
  *   layout: "fk-qwerty",
- *   instanceLayouts: { "fk-qwerty": KioskKeyboard.composeLayout(fkeyRowCompact, "qwerty") },
+ *   customLayouts: [
+ *     new CustomLayout({ name: "fk-qwerty", rows: KioskKeyboard.composeLayout(fkeyRowCompact, "qwerty") }),
+ *   ],
  * });
  * ```
  *

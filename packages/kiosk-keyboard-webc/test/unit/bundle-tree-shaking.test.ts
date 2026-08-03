@@ -68,6 +68,11 @@ describe("standalone bundle tree-shaking guard (issue #108)", () => {
       expect(code, `built-in layout "${name}" missing from bundle`).toContain(`"${name}"`);
     }
 
+    // The custom-layout element is the only way to declare a per-instance layout,
+    // so a bundle that dropped it would define no `<kiosk-keyboard-custom-layout>`
+    // and every slotted declaration would be ignored.
+    expect(code, "custom-layout element missing from bundle").toContain("kiosk-keyboard-custom-layout");
+
     // Composition middleware must be wired in too (it was previously never
     // registered in production: only tests imported it). These literals are
     // unique to the middleware modules: U+3071 ("ぱ") only appears in the

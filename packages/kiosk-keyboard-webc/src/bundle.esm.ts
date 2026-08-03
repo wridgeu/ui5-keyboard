@@ -3,7 +3,8 @@
 import "./Assets.js";
 
 export { default as KioskKeyboard } from "./KioskKeyboard.js";
-export { FKeyMode, KeyboardType, MobileKeyboard } from "./types.js";
+export { default as CustomLayout } from "./CustomLayout.js";
+export { FKeyMode, KeyboardType, LayoutFacet, LayoutRole, MobileKeyboard } from "./types.js";
 export type {
   KeyPressEventDetail,
   LayoutChangeEventDetail,
@@ -13,8 +14,7 @@ export type {
   KeyDefinition,
   KeyRow,
   LayoutDefinition,
-  LayoutSpec,
-  LayoutInput,
+  CustomLayoutSpec,
   KeyWidth,
   KeyType,
   SpecialKeyValue,
