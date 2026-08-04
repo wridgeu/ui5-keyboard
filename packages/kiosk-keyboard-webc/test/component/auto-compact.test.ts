@@ -3,21 +3,12 @@ import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type CustomLayout from "../../src/CustomLayout.js";
 import type { LayoutChangeEventDetail, LayoutDefinition } from "../../src/types.js";
-import { customLayout, requireKey } from "../helpers/fixtures.js";
-
-const DOM = KioskKeyboard.DOM;
+import { customLayout, readDataKeys, requireKey } from "../helpers/fixtures.js";
 
 // The default threshold is 22rem, so 320px is narrow and 600px is not on any
 // root font-size this suite runs at.
 const NARROW_PX = 320;
 const WIDE_PX = 600;
-
-function readDataKeys(el: KioskKeyboard): string[][] {
-  const rows = el.shadowRoot!.querySelectorAll(DOM.selectors.row);
-  return Array.from(rows).map((row) =>
-    Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)).map((k) => k.dataset.key!),
-  );
-}
 
 interface Mounted {
   el: KioskKeyboard;

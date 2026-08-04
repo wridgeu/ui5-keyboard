@@ -11,7 +11,6 @@ const DEFAULT_THRESHOLD_REM = 22;
 export interface AutoCompactHost {
   /** Whether `autoCompact` is on. */
   isEnabled(): boolean;
-  /** Applies the tier. The host owns which layout that resolves to. */
   /**
    * Applies the tier. The host owns which layout that resolves to. `crossed` is
    * whether this verdict replaces a known previous one, which is what separates a
@@ -133,15 +132,16 @@ export class AutoCompactController {
     const root = this._observedRoot;
     if (!root || !this._host.isEnabled() || this._observedInline === null) return;
 
+    // A box of zero is an element that lost its layout (a display:none ancestor,
+    // a collapsed panel), not a narrow keyboard; tiering on it would swap while
+    // invisible and swap back on reveal.
+    if (this._observedInline <= 0) return;
+
     const raw = getComputedStyle(root).getPropertyValue("--kiosk-keyboard-auto-compact-threshold").trim();
     const rem = Number.parseFloat(raw);
     const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const threshold = (Number.isNaN(rem) ? DEFAULT_THRESHOLD_REM : rem) * remPx;
 
-    // A box of zero is an element that lost its layout (a display:none ancestor,
-    // a collapsed panel), not a narrow keyboard; tiering on it would swap while
-    // invisible and swap back on reveal.
-    if (this._observedInline <= 0) return;
     const narrow = this._observedInline <= threshold;
     if (narrow === this._appliedNarrow) return;
     const crossed = this._appliedNarrow !== null;

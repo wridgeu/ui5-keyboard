@@ -175,7 +175,8 @@ function isDeclaredRole(role: string): boolean {
  * view works verbatim here.
  */
 function splitTokens(value: string): string[] {
-  return value.trim() ? value.trim().split(/[\s,]+/) : [];
+  const trimmed = value.trim();
+  return trimmed ? trimmed.split(/[\s,]+/) : [];
 }
 
 CustomLayout.define();

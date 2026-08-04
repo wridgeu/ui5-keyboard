@@ -7,17 +7,10 @@ import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type { VariantTable } from "../../src/KioskKeyboard.js";
 import type CustomLayout from "../../src/CustomLayout.js";
 import type { CompositionMiddleware, LayoutDefinition } from "../../src/types.js";
-import { customLayout, requireKey } from "../helpers/fixtures.js";
+import { customLayout, readDataKeys, requireKey } from "../helpers/fixtures.js";
 
 const DOM = KioskKeyboard.DOM;
 const nextRender = renderFinished;
-
-function readDataKeys(el: KioskKeyboard): string[][] {
-  const rows = el.shadowRoot!.querySelectorAll(DOM.selectors.row);
-  return Array.from(rows).map((row) =>
-    Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)).map((k) => k.dataset.key!),
-  );
-}
 
 function tapKey(el: KioskKeyboard, value: string): void {
   requireKey(el, value).click();

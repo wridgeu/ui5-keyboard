@@ -2096,9 +2096,7 @@ const sameElements = (a: readonly unknown[], b: readonly unknown[]): boolean =>
 const WEBC_DIAGNOSTIC_VOCABULARY: DiagnosticVocabulary = {
   customLayouts: "customLayouts slot",
   customLayout: "<kiosk-keyboard-custom-layout>",
-  get builtInLayouts() {
-    return getRegisteredLayoutNames();
-  },
+  builtInLayouts: getRegisteredLayoutNames(),
 };
 
 KioskKeyboard.define();

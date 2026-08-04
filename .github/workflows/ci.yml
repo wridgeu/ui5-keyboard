@@ -54,12 +54,11 @@ jobs:
       # The kiosk interfaces are committed (see CONTRIBUTING.md "Generated files in
       # version control"); regenerate them and fail on drift so the silent JSDoc-strip
       # class (#142/#143/#149) is a red build, not a stripped diff in a commit.
-      # The glob covers every *.gen.d.ts, not one path literal: `npm run generate` is
-      # project-wide, so a newly added control produces a second interface that a
-      # literal would not watch.
-      # `git add -A` first: `git diff` alone is blind to a generated file that was
-      # never committed, so a brand-new *.gen.d.ts would pass an unstaged check with
-      # exit 0 -- the exact case the glob is being widened for.
+      # The glob covers every *.gen.d.ts rather than one path literal: `npm run
+      # generate` is project-wide, so a newly added control produces a second
+      # interface a literal would not watch. `git add -A` first because `git diff`
+      # alone is blind to a generated file that was never committed, so a brand-new
+      # *.gen.d.ts would pass an unstaged check with exit 0.
       - name: Verify generated interfaces are in sync
         run: |
           npm run generate -w packages/kiosk-keyboard

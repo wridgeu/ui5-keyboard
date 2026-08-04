@@ -81,7 +81,7 @@ export type InstanceVariants = ReadonlyMap<string, VariantOverlay>;
  * result has a null prototype, so a table keyed `__proto__` contributes an own property
  * rather than reassigning the prototype.
  */
-export function mergeVariantTables(base: VariantTable | null, overrides: VariantTable): VariantTable {
+function mergeVariantTables(base: VariantTable | null, overrides: VariantTable): VariantTable {
   const merged: Record<string, readonly string[]> = Object.create(null);
   Object.assign(merged, base);
   for (const [letter, glyphs] of Object.entries(overrides)) {

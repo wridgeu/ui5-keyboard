@@ -23,6 +23,8 @@ const LAYOUT_DESCRIPTIONS: Record<string, string> = {
  * @namespace demo.hotkeys.controller
  */
 export default class KioskCustomLayouts extends BaseController {
+  private _initialLayoutApplied = false;
+
   /**
    * The gallery's rows arrive through a `layouts>` model binding, and a control is
    * constructed before it joins the view, so those rows do not exist yet in `onInit`.
@@ -35,8 +37,6 @@ export default class KioskCustomLayouts extends BaseController {
     this._switchLayout("emoji");
     this._switchVariantLayout("qwerty");
   }
-
-  private _initialLayoutApplied = false;
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
     this.getStateModel().setProperty("/customLastKey", this.formatKeyPress(event));

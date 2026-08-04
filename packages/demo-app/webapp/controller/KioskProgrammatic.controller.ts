@@ -105,8 +105,8 @@ export default class KioskProgrammatic extends BaseController {
 
   onUseQwertyNav(): void {
     const kb = this._getKeyboard();
-    if (!this._hasInstanceLayout(kb, "qwerty-nav")) {
-      this._addInstanceLayout(kb, "qwerty-nav", KioskKeyboard.composeLayout([navRow], "qwerty"));
+    if (!this._hasCustomLayout(kb, "qwerty-nav")) {
+      this._addCustomLayout(kb, "qwerty-nav", KioskKeyboard.composeLayout([navRow], "qwerty"));
       this._addLayoutOption("qwerty-nav");
     }
 
@@ -117,8 +117,8 @@ export default class KioskProgrammatic extends BaseController {
 
   onUseQwertyNavCompact(): void {
     const kb = this._getKeyboard();
-    if (!this._hasInstanceLayout(kb, "qwerty-nav-compact")) {
-      this._addInstanceLayout(kb, "qwerty-nav-compact", KioskKeyboard.composeLayout(navRowCompact, "qwerty"));
+    if (!this._hasCustomLayout(kb, "qwerty-nav-compact")) {
+      this._addCustomLayout(kb, "qwerty-nav-compact", KioskKeyboard.composeLayout(navRowCompact, "qwerty"));
       this._addLayoutOption("qwerty-nav-compact");
     }
 
@@ -138,7 +138,7 @@ export default class KioskProgrammatic extends BaseController {
         { value: "{enter}", label: "", type: "action" },
       ],
     ];
-    this._addInstanceLayout(this._getKeyboard(), "pinpad", pinpad);
+    this._addCustomLayout(this._getKeyboard(), "pinpad", pinpad);
     MessageToast.show("Pinpad layout registered");
   }
 
@@ -151,7 +151,7 @@ export default class KioskProgrammatic extends BaseController {
 
   onRegisterQwertyFkNav(): void {
     const qwertyFkNav = KioskKeyboard.composeLayout([fkeyRow, navRow], "qwerty");
-    this._addInstanceLayout(this._getKeyboard(), "qwerty-fk-nav-demo", qwertyFkNav);
+    this._addCustomLayout(this._getKeyboard(), "qwerty-fk-nav-demo", qwertyFkNav);
     this._addLayoutOption("qwerty-fk-nav-demo");
 
     MessageToast.show("qwerty-fk-nav-demo layout registered");
@@ -185,13 +185,11 @@ export default class KioskProgrammatic extends BaseController {
     this.getRouter().navTo(Scope.KioskHub);
   }
 
-  private _hasInstanceLayout(kb: KioskKeyboard, name: string): boolean {
+  private _hasCustomLayout(kb: KioskKeyboard, name: string): boolean {
     return kb.getCustomLayouts().some((layout) => layout.getName() === name);
   }
 
-  private _addInstanceLayout(kb: KioskKeyboard, name: string, rows: LayoutDefinition): void {
-    // The aggregation appends, so registering one more layout no longer means
-    // reading the whole record back and writing a rebuilt copy of it.
+  private _addCustomLayout(kb: KioskKeyboard, name: string, rows: LayoutDefinition): void {
     kb.addCustomLayout(new CustomLayout({ name, rows }));
   }
 
