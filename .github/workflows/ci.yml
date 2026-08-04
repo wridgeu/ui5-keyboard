@@ -146,8 +146,17 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps --only-shell chromium
 
-      - name: Tests
-        run: npm run test:qunit && npm run test:kiosk-webc && npm run test:kiosk-webc:component
+      # One step per runner, not an `&&` chain: the step boundary is what makes
+      # GitHub report which suite failed and how long each took. Semantics are
+      # unchanged -- a failing step still fails the job and skips the rest.
+      - name: QUnit suites (hotkeys + kiosk)
+        run: npm run test:qunit
+
+      - name: Web component unit suite (vitest)
+        run: npm run test:kiosk-webc
+
+      - name: Web component suite (web-test-runner)
+        run: npm run test:kiosk-webc:component
 
   # Behavioral e2e assertions are platform-independent; visual snapshots are
   # not (baselines carry no platform suffix), so they are ignored here. This
