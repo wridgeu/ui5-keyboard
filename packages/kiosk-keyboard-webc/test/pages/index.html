@@ -559,6 +559,28 @@
             </kiosk-keyboard>
           </div>
 
+          <!-- 17. Layout role (customLayouts slot, attributes only) -->
+          <div class="card">
+            <h2>Layout Role (customLayouts slot)</h2>
+            <p style="font-size: 12px; color: var(--muted-color); margin: 0; line-height: 1.5">
+              <code>numeric</code> is a built-in auxiliary surface, so returning to base from it lands on the alphabetic
+              layout. A rows-less custom layout with <code>layout-role="Base"</code> promotes it: tap
+              <strong>123</strong> to reach it, then <strong>ABC</strong> - the keyboard stays on <code>numeric</code>,
+              because it is now the base. No JavaScript configures this keyboard.
+            </p>
+            <div class="input-group">
+              <ui5-label for="role-input" show-colon>Promoted numeric</ui5-label>
+              <ui5-input id="role-input" placeholder="Tap 123 then ABC…"></ui5-input>
+            </div>
+            <kiosk-keyboard id="kb-role" layout="qwerty" controls="role-input">
+              <kiosk-keyboard-custom-layout
+                slot="customLayouts"
+                name="numeric"
+                layout-role="Base"
+              ></kiosk-keyboard-custom-layout>
+            </kiosk-keyboard>
+          </div>
+
           <!-- 17. Variant tiers (customLayouts slot) -->
           <div class="card">
             <h2>Variant Tiers (customLayouts slot)</h2>

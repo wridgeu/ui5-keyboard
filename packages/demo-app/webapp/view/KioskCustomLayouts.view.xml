@@ -13,7 +13,7 @@
                 <Panel headerText="Layout Switcher">
                     <VBox class="sapUiSmallMargin">
                         <Text text="Five layouts are declared on the keyboard as &lt;kiosk:CustomLayout&gt; child elements, with no controller code configuring them. They demonstrate KeyDefinition options such as width, type, icon, unicode values, label overrides, and dual icon+label rendering. The Arabic pad ships as its own element, &lt;demo:ArabicDigitsCustomLayout&gt;, carrying its rows and keycap language together." />
-                        <HBox class="sapUiSmallMarginTop">
+                        <HBox class="sapUiSmallMarginTop" wrap="Wrap">
                             <Button
                                 text="Emoji Picker"
                                 press=".onUseEmoji"
@@ -69,7 +69,7 @@
             <Panel headerText="Variant Tiers" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
                     <Text text="Long-press a key (or right-click) to see the accent popup. Variants resolve in three tiers, each merged onto the one below per base letter: the built-in Latin table, the keyboard's defaultVariants house set, then whatever the layout's own CustomLayout declares. QWERTY overlays the built-in with Polish accents; QWERTZ suppresses the facet entirely." />
-                    <HBox class="sapUiSmallMarginTop">
+                    <HBox class="sapUiSmallMarginTop" wrap="Wrap">
                         <Button
                             text="QWERTY (built-in + house + own)"
                             press=".onUseVariantQwerty"
