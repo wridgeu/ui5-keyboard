@@ -45,12 +45,16 @@
       "css": true,
       "content": {
         "controls": ["ui5.kiosk.KioskKeyboard"],
-        "elements": [],
+        "elements": ["ui5.kiosk.CustomLayout"],
         "types": [
           "ui5.kiosk.KeyboardLayout",
           "ui5.kiosk.KeyboardType",
           "ui5.kiosk.MobileKeyboard",
-          "ui5.kiosk.FKeyMode"
+          "ui5.kiosk.FKeyMode",
+          "ui5.kiosk.LayoutRole",
+          "ui5.kiosk.LayoutFacet",
+          "ui5.kiosk.LayoutRows",
+          "ui5.kiosk.VariantOverrideTable"
         ],
         "interfaces": []
       }
