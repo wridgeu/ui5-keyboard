@@ -10,7 +10,7 @@ contributors and for evaluating upstream tooling improvements.
 The `kiosk-keyboard-webc` package provides the `<kiosk-keyboard>` custom element,
 built on the UI5 Web Components framework (`UI5Element`). Unlike `@ui5/webcomponents`
 (which ships dozens of independent components), our package is a single component
-with a pluggable layout system: 12 built-in keyboard layouts bundled via direct
+with a pluggable layout system: 13 built-in keyboard layouts bundled via direct
 imports, plus 2 shared building-block rows for composing custom variants.
 
 This "one component, many plugins" pattern is unusual in the web components

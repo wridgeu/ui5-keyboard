@@ -47,7 +47,7 @@ core/
   latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping; resolveVariantTable layers built-in -> defaultVariants -> custom layout per layout, each merged per base letter, null for the layouts whose layout-meta entry declares `variants: null`
   variant-popup-controller.ts  VariantPopupController: long-press/right-click accent-variant popup orchestration (open, option sizing, commit through the composition path)
 middleware/
-  kana-dakuten.ts         Japanese dakuten/handakuten composition middleware (ja-kana layout)
+  kana-dakuten.ts         Japanese dakuten/handakuten composition middleware (ja-kana, ja-kana-compact layouts)
   hangul-compose.ts       Korean Hangul jamo composition middleware (ko-hangul layout)
 layouts/
   default-layout.ts       Default layout name constant: "qwerty"
@@ -62,6 +62,7 @@ layouts/
   nav-row.ts              Shared navigation row (import and prepend to compose custom variants)
   ja-romaji.ts            Japanese Romaji layout
   ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
+  ja-kana-compact.ts      Japanese Kana rearranged for narrow keyboards
   arabic.ts               Arabic layout
   ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
   qwerty-es.ts            Spanish QWERTY layout

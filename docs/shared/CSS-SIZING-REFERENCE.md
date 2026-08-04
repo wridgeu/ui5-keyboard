@@ -324,7 +324,7 @@ Below the 7rem per-key threshold described under [Dual Icon + Label Keys](#dual-
 
 Neither package reflows a row at a breakpoint. `classifyRow()` still sets `data-row-kind` (`fkey` / `nav`) on the row as a consumer styling hook, but no built-in rule wraps or reorders it.
 
-The reason is navigation rather than typography: arrow-key grid navigation steps by index into the resolved layout's row array, so a row wrapped in CSS remains one logical row however it renders, and a vertical move from the first key leaves the row instead of reaching the key drawn beneath it. Narrow-width arrangements are therefore shipped as layout data, `layouts/fkey-row-compact` (F1-F6 over F7-F12) and `layouts/nav-row-compact` (position cluster over arrows); see [Responsive Layout Patterns](../kiosk/RESPONSIVE-LAYOUT-PATTERNS.md#rows-choose-the-arrangement-dont-reflow-it).
+The reason is navigation rather than typography: arrow-key grid navigation steps by index into the resolved layout's row array, so a row wrapped in CSS remains one logical row however it renders, and a vertical move from the first key leaves the row instead of reaching the key drawn beneath it. Narrow-width arrangements are therefore shipped as layout data, `layouts/fkey-row-compact` (F1-F6 over F7-F12), `layouts/nav-row-compact` (position cluster over arrows) and the whole-layout `ja-kana-compact` (the action keys off the kana rows); see [Responsive Layout Patterns](../kiosk/RESPONSIVE-LAYOUT-PATTERNS.md#rows-choose-the-arrangement-dont-reflow-it).
 
 ## Accent-Variant Hint and Popup
 
@@ -381,6 +381,16 @@ The three popup properties are WebC only: they tune the layout of the option row
 ```
 
 These thresholds are read by the ResizeObserver in JavaScript to set the `cq-tier` attribute (`short` / `tiny`) on the host element. Exposing them as CSS custom properties allows consumers to adjust when the height breakpoints trigger without modifying JavaScript. See [Height-Responsive Breakpoints](#height-responsive-breakpoints) for the sizing values at each tier.
+
+## Auto-Compact Width Threshold
+
+```css
+--kiosk-keyboard-auto-compact-threshold: 22rem;
+```
+
+The keyboard width at or below which the `auto-compact` attribute (`autoCompact` on the UI5 control) renders the resolved layout's declared compact counterpart instead of the layout itself. Like the height thresholds it is read by a ResizeObserver in JavaScript rather than by a `@container` rule, because no CSS rule can substitute layout data; unlike them it is dormant until the property is switched on.
+
+22rem (352px) is where the [row gap](#width-responsive-row-gap) already starts tightening, and it sits clear of the ~20.5rem (328px) at which the densest built-in rows drop under the 24 CSS px key-centre spacing WCAG 2.5.8 accepts in place of a 24px target.
 
 ## Script-Specific Font Stacks
 
@@ -467,6 +477,7 @@ All public CSS custom properties defined on `:host`, listed with their default v
 | `--kiosk-keyboard-variant-popup-max-width` | `92vw`                                          | [Accent-Variant Hint and Popup](#accent-variant-hint-and-popup)                 |
 | `--kiosk-keyboard-cq-short-threshold`      | `16rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
 | `--kiosk-keyboard-cq-tiny-threshold`       | `12rem`                                         | [Height-Responsive Threshold Variables](#height-responsive-threshold-variables) |
+| `--kiosk-keyboard-auto-compact-threshold`  | `22rem`                                         | [Auto-Compact Width Threshold](#auto-compact-width-threshold)                   |
 | `--kiosk-keyboard-cjk-font-family`         | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
 | `--kiosk-keyboard-hangul-font-family`      | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |
 | `--kiosk-keyboard-indic-font-family`       | not declared                                    | [Script-Specific Font Stacks](#script-specific-font-stacks)                     |

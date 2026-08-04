@@ -37,9 +37,9 @@ Up therefore sits directly above Down with Left and Right flanking it.
 
 **Why this is data and not a `@container` rule.** Arrow-key grid navigation moves on the resolved layout's row/column coordinates, not on rendered geometry. Wrapping one 8-key row into two visual rows with `flex-wrap` leaves it a single logical row of eight, so ArrowDown from Up skips the whole nav row instead of reaching Down; adding a CSS `order` regroup to place the arrows makes visual and logical order disagree outright, which is also a [WCAG 2.4.3 Focus Order](https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html) problem. Expressing the arrangement as rows keeps DOM order, visual order and navigation order the same thing. `reading-flow: flex-visual` is the CSS-side answer to this class of mismatch, but it is not yet Baseline.
 
-The same reasoning retires the F-key wrap. Preserving source order is not sufficient: it rescues ArrowLeft/Right and reading order, but vertical moves still step by index into the logical row array, so a 1x12 F-key row wrapped to a visual 2x6 leaves ArrowDown from F1 skipping the function keys entirely instead of reaching the F7 rendered directly beneath it. [APG's layout-grid guidance](https://www.w3.org/WAI/ARIA/apg/patterns/grid/examples/layout-grids/) permits wrapping a single logical set of cells, but it describes the ARIA model rather than the 2D arrow behaviour this control implements. `layouts/fkey-row-compact` is the F-key counterpart to `nav-row-compact`, and the built-in `fkeys` layout is built from it.
+The same reasoning retires the F-key wrap. Preserving source order is not sufficient: it rescues ArrowLeft/Right and reading order, but vertical moves still step by index into the logical row array, so a 1x12 F-key row wrapped to a visual 2x6 leaves ArrowDown from F1 skipping the function keys entirely instead of reaching the F7 rendered directly beneath it. [APG's layout-grid guidance](https://www.w3.org/WAI/ARIA/apg/patterns/grid/examples/layout-grids/) permits wrapping a single logical set of cells, but it describes the ARIA model rather than the 2D arrow behaviour this control implements. `layouts/fkey-row-compact` is the F-key counterpart to `nav-row-compact`, and the built-in `fkeys` layout is built from it. A whole layout can need the same treatment: `ja-kana-compact` is the kana counterpart, rearranged rather than reflowed for the same reason (see [Switching Layouts Per Device Size](#switching-layouts-per-device-size)).
 
-**Switching between them.** The keyboard does not swap layout data on its own; the consumer picks the arrangement, which keeps the choice explicit and lets a custom nav row use its own compact form:
+**Switching between them.** The keyboard swaps layout data on its own only between a whole layout and the compact counterpart that layout declares (see [Switching Layouts Per Device Size](#switching-layouts-per-device-size)). A row composed into a layout of your own is picked by you, which keeps the choice explicit and lets a custom nav row use its own compact form:
 
 ```ts
 const narrow = window.matchMedia("(max-width: 20rem)");
@@ -115,41 +115,77 @@ The responsive `min()` caps in the built-in queries preserve any consumer value 
 
 ## Switching Layouts Per Device Size
 
-CSS custom properties handle visual tuning, but some scenarios require structural layout changes: different keys, different row counts, different key arrangements. Supply alternate layouts through the `customLayouts` aggregation and switch with `setLayout()`.
+CSS custom properties handle visual tuning, but some scenarios require structural layout changes: different keys, different row counts, different key arrangements. A layout that declares a compact counterpart yields to it on its own once `autoCompact` is on; every other switch is a `setLayout()` call on layouts supplied through the `customLayouts` aggregation.
 
-### Pattern: Supply a Compact Variant, Switch at a Breakpoint
+### Pattern: Switch to a Compact Variant at a Breakpoint
+
+Kana is the built-in case. `ja-kana` follows a physical JIS keyboard, which puts Backspace on the digit row and Shift and Enter on the lower kana row; at 1.5x each those rows come to 12.5 and 13 key widths. Below 20rem the inline target-size floor is lifted so a row fits at all (see [the width breakpoints](#width-breakpoints)), and at that density the keys fall under the 24 CSS px spacing [WCAG 2.2 SC 2.5.8](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html) accepts in place of a 24px target. `ja-kana-compact` collects those three keys into a row of their own and returns ー and ろ to their JIS positions, holding every row to twelve widths:
+
+| Keyboard width | `ja-kana` | `ja-kana-compact` |
+| -------------- | --------- | ----------------- |
+| 400px          | 30.5px    | 31.7px            |
+| 352px          | 28.0px    | 28.0px            |
+| 320px          | 23.4px    | 24.7px            |
+| 312px          | 22.8px    | 24.0px            |
+
+(Measured spacing between the closest pair of key centres, at the default 16px root font size; 24px is the criterion. Both packages measure the same figures.) The wide form holds the criterion down to a 328px keyboard and the compact form down to 312px; one pixel narrower and each falls under. No kana layout clears it below that, since the JIS upper and home rows are twelve keys on their own.
+
+The 320px row is the premise the compact layout exists for, and is held to a measurement by `ja-kana falls under 24px key spacing in a 320px keyboard, where ja-kana-compact clears it` in each package's `test/e2e/invariants.spec.ts`; the 352px row by `both kana forms clear 24px key spacing at the 22rem autoCompact threshold` beside it. Both assert which side of 24px each form is on rather than the figure itself. The 400px and 312px rows and the two crossover widths are point measurements, asserted nowhere.
+
+The two are declared as a pair, so the switch is a property rather than code:
+
+```xml
+<kiosk:KioskKeyboard id="kanaKeyboard" layout="ja-kana" autoCompact="true" controls="kanaInput" />
+```
+
+The keyboard's own box is what is measured, so an embedded keyboard tiers on the room it was granted rather than on the viewport, and the compact form is taken at or below 22rem (352px) and given back above it. Override that with the `--ui5KioskKeyboard-autoCompactThreshold` custom property (`--kiosk-keyboard-auto-compact-threshold` on the web component, where the attribute is `auto-compact`). The property is off by default and dormant while off: the observer behind it is not constructed until it is switched on.
+
+A swap never overrides an explicit choice. The layout you set stays the one the tier resolves against, so a `setLayout` call or a `{layout:*}` key still wins and is re-tiered from there - the romaji layout's かな key names the wide form, and on a narrow keyboard the tier immediately takes it back to `ja-kana-compact`. `layoutChange` fires with `autoDetected: true` for a swap and `false` for a request, so a listener can tell the two apart.
+
+A layout of your own names its counterpart with the `compact` property of a `customLayouts` entry, which may point at a built-in or at another custom layout:
+
+```xml
+<kiosk:customLayouts>
+  <kiosk:CustomLayout name="warehouse" rows="{layouts>/warehouseWide}" compact="warehouse-narrow" />
+  <kiosk:CustomLayout name="warehouse-narrow" rows="{layouts>/warehouseNarrow}" />
+</kiosk:customLayouts>
+```
+
+#### Driving the switch yourself
+
+`autoCompact` resolves one declared pair at one threshold. Drive the switch from your own observer when that is not the shape you need: more than two arrangements, two layouts that are not declared as a pair, a threshold that differs per layout, or a choice that depends on something other than the keyboard's width.
 
 ```ts
-import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
-import CustomLayout from "ui5/kiosk/CustomLayout";
+import type KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 
-// 1. Define a compact layout (fewer keys per row, adapted for narrow screens)
-const kanaCompact: LayoutDefinition = [
-  // 10 keys per row instead of 12
-  [/* ... hiragana row 1, 10 keys ... */],
-  [/* ... hiragana row 2, 10 keys ... */],
-  // ...
-];
+// Clear of the 328px below which `ja-kana` falls under the criterion.
+const KANA_COMPACT_WIDTH = 352;
+let width = Infinity;
 
-// 2. Supply it on the control
-const keyboard = this.byId("myKeyboard") as KioskKeyboard;
-keyboard.addCustomLayout(new CustomLayout({ name: "ja-kana-compact", rows: kanaCompact }));
+const keyboard = this.byId("kanaKeyboard") as KioskKeyboard;
 
-// 3. Switch based on container/viewport width
-const mq = window.matchMedia("(max-width: 400px)");
-
-function applyLayout(e: MediaQueryList | MediaQueryListEvent) {
-  const current = keyboard.getLayout();
-  if (e.matches && current === "ja-kana") {
+function applyKanaLayout(): void {
+  const compact = width <= KANA_COMPACT_WIDTH;
+  const layout = keyboard.getLayout();
+  if (compact && layout === "ja-kana") {
     keyboard.setLayout("ja-kana-compact");
-  } else if (!e.matches && current === "ja-kana-compact") {
+  } else if (!compact && layout === "ja-kana-compact") {
     keyboard.setLayout("ja-kana");
   }
 }
 
-mq.addEventListener("change", applyLayout);
-applyLayout(mq);
+const observer = new ResizeObserver(([entry]) => {
+  if (!entry) return;
+  width = entry.contentRect.width;
+  applyKanaLayout();
+});
+observer.observe(keyboard.getDomRef()!);
+// The romaji layout's かな key names the wide form, so a round trip through it
+// lands back on `ja-kana` however narrow the keyboard is.
+keyboard.attachLayoutChange(applyKanaLayout);
 ```
+
+Three things this shape gets right, and `autoCompact` gets right for you. It observes the element, not the viewport, which matters wherever the keyboard can be narrower than the window (a panel on a wide screen); the renderer uses semantic rendering, so the root it hands you is patched in place and stays the node you observed. It re-resolves on `layoutChange` as well as on resize, because a layout-switch key can name the wide form from elsewhere and the width will not have changed. And it leaves any layout that is not one of the two alone, so a trip to `numeric` or `fkeys` is not hijacked. Disconnect the observer in `onExit`. The same shape works for a layout of your own: supply it through `customLayouts` and name it in the `setLayout` call.
 
 ### When to Use CSS vs Layout Switching
 
@@ -160,7 +196,7 @@ applyLayout(mq);
 | Change which keys exist                  | `customLayouts` + `setLayout()`                                  |
 | Change row structure (key count per row) | `customLayouts` + `setLayout()`                                  |
 | Wrap a row at narrow widths, same order  | CSS `flex-wrap` on `data-row-kind` (if applicable)               |
-| Regroup a row's keys at narrow widths    | A second layout + `customLayouts` + `setLayout()`                |
+| Regroup a row's keys at narrow widths    | A second layout named by `compact` + `autoCompact`               |
 
 ## Worked Example: Custom Row Wrapping
 

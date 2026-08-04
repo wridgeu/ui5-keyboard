@@ -623,6 +623,7 @@ packages/kiosk-keyboard/
       nav-row.ts              Shared navigation row for consumer-composed variants
       ja-romaji.ts            Japanese Romaji layout
       ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
+      ja-kana-compact.ts      Japanese Kana rearranged for narrow keyboards
       arabic.ts               Arabic layout
       ko-hangul.ts            Korean Hangul Dubeolsik layout (KS X 5002)
       qwerty-es.ts            Spanish QWERTY layout
