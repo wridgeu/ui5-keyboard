@@ -9,9 +9,12 @@ on:
 
 permissions: {}
 
-# The pipeline is split into parallel jobs (static / unit / e2e) that each start
-# from the shared setup action, so the slowest job (not their sum) sets the
-# wall-clock. They are independent: no job consumes another's build output.
+# The pipeline is split into parallel jobs (static / unit-qunit / unit-webc /
+# e2e) that each start from the shared setup action, so the slowest job (not
+# their sum) sets the wall-clock. They are independent: no job consumes
+# another's build output. The two unit jobs are split by browser stack, not just
+# for parallelism: each then provisions one of puppeteer / playwright rather
+# than both.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -99,9 +102,14 @@ jobs:
       - name: Stylesheet twin-drift check
         run: npm run test:style-twin-drift
 
-  # Unit + component suites: QUnit (puppeteer chromium) for the two UI5 libs,
-  # vitest (jsdom) and web-test-runner (playwright chromium) for the web component.
-  unit:
+  # QUnit for the two UI5 libraries, on the puppeteer backend ui5-test-runner
+  # drives. Split from the web-component suites below so each leg provisions one
+  # browser stack instead of both: this job never touches ~/.cache/ms-playwright.
+  # Consolidating the two stacks was evaluated and declined -- ui5-test-runner's
+  # bundled `$/playwright.js` shells out to a bare `npx playwright install` on
+  # every run, which fetches headed chromium, firefox and webkit and would undo
+  # the --only-shell narrowing below.
+  unit-qunit:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -128,6 +136,37 @@ jobs:
       - name: Ensure puppeteer Chrome
         run: node node_modules/puppeteer/install.mjs
 
+      # `install-deps`, not `install --with-deps`: puppeteer's Chrome needs the
+      # same OS libraries Playwright's chromium does, and this leg has to keep
+      # installing them now that it no longer installs a Playwright browser to
+      # carry them in. Downloads no browser, so the ms-playwright cache is not
+      # needed here at all.
+      - name: Install chromium OS dependencies
+        run: npx playwright install-deps chromium
+
+      - name: QUnit suites (hotkeys + kiosk)
+        run: npm run test:qunit
+
+  # vitest (jsdom) and web-test-runner (playwright chromium) for the web
+  # component. Never launches puppeteer, so it neither caches nor downloads it.
+  unit-webc:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    # puppeteer is a root devDependency, so a node_modules cache miss would run
+    # its postinstall and pull ~170 MB of Chrome this job never launches. The
+    # browser lands in ~/.cache/puppeteer, not node_modules, so skipping it
+    # leaves the shared node_modules cache identical to the other jobs'.
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
       - name: Cache Playwright browsers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -135,10 +174,6 @@ jobs:
           key: playwright-shell-${{ hashFiles('package-lock.json') }}
           restore-keys: playwright-shell-
 
-      # Installs the OS libraries chromium needs (shared by the web-test-runner
-      # playwright chromium and the puppeteer QUnit backend) plus Playwright's
-      # chromium for the component suite. The puppeteer Chrome comes from
-      # npm ci's postinstall or the "Ensure puppeteer Chrome" step above.
       # --only-shell: `install chromium` fetches the full headed build and the
       # headless shell, and a headless launch resolves to the shell, so the headed
       # build is downloaded and cached for nothing. Every browser CI starts is
@@ -149,9 +184,6 @@ jobs:
       # One step per runner, not an `&&` chain: the step boundary is what makes
       # GitHub report which suite failed and how long each took. Semantics are
       # unchanged -- a failing step still fails the job and skips the rest.
-      - name: QUnit suites (hotkeys + kiosk)
-        run: npm run test:qunit
-
       - name: Web component unit suite (vitest)
         run: npm run test:kiosk-webc
 
