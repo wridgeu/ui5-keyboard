@@ -23,9 +23,20 @@ const LAYOUT_DESCRIPTIONS: Record<string, string> = {
  * @namespace demo.hotkeys.controller
  */
 export default class KioskCustomLayouts extends BaseController {
-  override onInit(): void {
+  /**
+   * The gallery's rows arrive through a `layouts>` model binding, and a control is
+   * constructed before it joins the view, so those rows do not exist yet in `onInit`.
+   * The opening selection therefore waits for the first render, by which point the
+   * model has propagated and every custom layout resolves.
+   */
+  override onAfterRendering(): void {
+    if (this._initialLayoutApplied) return;
+    this._initialLayoutApplied = true;
     this._switchLayout("emoji");
+    this._switchVariantLayout("qwerty");
   }
+
+  private _initialLayoutApplied = false;
 
   onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
     this.getStateModel().setProperty("/customLastKey", this.formatKeyPress(event));
@@ -51,8 +62,21 @@ export default class KioskCustomLayouts extends BaseController {
     this._switchLayout("arabic-digits");
   }
 
+  onUseVariantQwerty(): void {
+    this._switchVariantLayout("qwerty");
+  }
+
+  onUseVariantQwertz(): void {
+    this._switchVariantLayout("qwertz-de");
+  }
+
   onNavBack(): void {
     this.getRouter().navTo(Scope.KioskHub);
+  }
+
+  private _switchVariantLayout(name: string): void {
+    (this.byId("variantKeyboard") as KioskKeyboard).setLayout(name);
+    this.getStateModel().setProperty("/variantLayout", name);
   }
 
   private _switchLayout(name: string): void {

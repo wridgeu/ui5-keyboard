@@ -101,3 +101,21 @@ export const ARABIC_DIGITS_LAYOUT: LayoutDefinition = [
   [{ value: "٧" }, { value: "٨" }, { value: "٩" }],
   [{ value: "٠" }, { value: "٫", label: "٫" }, { value: "{backspace}", width: "1.5", type: "action" }],
 ];
+
+/**
+ * A house accent set, applied under every layout through the keyboard's
+ * `defaultVariants`. Letters the built-in Latin table does not cover.
+ */
+export const HOUSE_ACCENTS: Record<string, string[]> = {
+  q: ["ǫ", "ɋ"],
+  w: ["ŵ"],
+};
+
+/**
+ * One layout's own accents, merged over the tiers below per base letter, so `a` takes
+ * this list instead of the built-in one while every letter it omits keeps theirs.
+ */
+export const POLISH_ACCENTS: Record<string, string[]> = {
+  a: ["ą"],
+  s: ["ś", "š"],
+};

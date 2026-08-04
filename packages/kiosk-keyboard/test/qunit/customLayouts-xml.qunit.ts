@@ -1,6 +1,7 @@
 import XMLView from "sap/ui/core/mvc/XMLView";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import Log from "sap/base/Log";
 import CustomLayout from "ui5/kiosk/CustomLayout";
 import Mw from "./customlayouts-middleware";
 import { waitForRender, getRenderedLayoutKeys, getRequiredKeyElement } from "./test-helpers";
@@ -11,6 +12,7 @@ import { waitForRender, getRenderedLayoutKeys, getRequiredKeyElement } from "./t
 // XML path can break silently and only surface on GitHub Pages.
 
 const DOM = KioskKeyboard.DOM;
+const sandbox = sinon.createSandbox();
 
 async function view(definition: string): Promise<XMLView> {
   const v = await XMLView.create({ definition });
@@ -22,6 +24,7 @@ async function view(definition: string): Promise<XMLView> {
 
 QUnit.module("customLayouts-xml", {
   afterEach() {
+    sandbox.restore();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -48,6 +51,29 @@ QUnit.test("a CustomLayout node lands in the aggregation and its bound rows rend
   v.placeAt("qunit-fixture");
   await waitForRender();
   assert.deepEqual(getRenderedLayoutKeys(kb), [["w"]], "and the layout renders them");
+
+  v.destroy();
+});
+
+QUnit.test("a bound rows reports nothing while the model is still propagating", async (assert) => {
+  // The control is constructed before it joins the view, so a model-bound `rows` is null
+  // for the first fold. That is the documented XML form, so it must not warn: reporting
+  // `unknown-target` here would make every declarative example noisy on load.
+  const warn = sandbox.stub(Log, "warning");
+  const v = await view(`<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:kiosk="ui5.kiosk">
+    <kiosk:KioskKeyboard id="kb">
+      <kiosk:customLayouts>
+        <kiosk:CustomLayout name="warehouse" rows="{layouts>/warehouse}" />
+      </kiosk:customLayouts>
+    </kiosk:KioskKeyboard>
+  </mvc:View>`);
+  const kb = v.byId("kb") as KioskKeyboard;
+
+  assert.notOk(
+    warn.getCalls().some((call) => String(call.args[0]).includes("nothing resolves it")),
+    "the pending binding is not reported as an unresolvable name",
+  );
+  assert.deepEqual(kb.getCustomLayouts()[0]!.getRows(), [[{ value: "w" }]], "and the rows arrive");
 
   v.destroy();
 });

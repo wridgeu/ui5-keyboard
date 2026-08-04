@@ -273,3 +273,14 @@ document.querySelectorAll(".i18n-lang-btn").forEach((btn) => {
     updateAriaInspector();
   });
 });
+
+// Variant tiers: the house set applies under every layout, the slotted custom layout's
+// own table merges over it per base letter. The suppressed twin needs no JavaScript.
+const kbVariants = document.getElementById("kb-variants");
+if (kbVariants) {
+  kbVariants.defaultVariants = { q: ["ǫ", "ɋ"], w: ["ŵ"] };
+}
+const clVariants = document.getElementById("cl-variants");
+if (clVariants) {
+  clVariants.variants = { a: ["ą"], s: ["ś", "š"] };
+}

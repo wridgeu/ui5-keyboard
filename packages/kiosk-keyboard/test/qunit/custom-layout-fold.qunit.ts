@@ -207,6 +207,16 @@ QUnit.test("unknown-target: an overlay on a layout that does not exist", (assert
   assert.deepEqual(codes(f), ["unknown-target"], "the flagship diagnostic");
 });
 
+QUnit.test("unknown-target: rows still waiting on a binding are declared, not unresolvable", (assert) => {
+  // A control is constructed before it joins a view, so a model-bound `rows` is null on
+  // the first fold. Reporting that as unresolvable would make the documented XML form
+  // warn on every construction.
+  const f = fold({ name: "bound-layout", rowsPending: true, keycapLang: "pl" });
+  assert.deepEqual(codes(f), [], "the pending declaration silences unknown-target");
+  assert.strictEqual(f.layouts, undefined, "and registers no layout until the value lands");
+  assert.strictEqual(f.layoutMeta!.get("bound-layout")!.lang, "pl", "its other facets still apply");
+});
+
 QUnit.test("unknown-target: resolvability is read from the complete list, not the prefix", (assert) => {
   const f = fold({ name: "x", locales: ["pl"] }, { name: "x", rows: ROWS });
   assert.deepEqual(codes(f), [], "an overlay may precede the custom layout that declares its rows");

@@ -42,6 +42,30 @@
                 </VBox>
             </Panel>
 
+            <Panel class="sapUiSmallMarginBottom" headerText="Korean Hangul, Composer Suppressed">
+                <VBox class="sapUiSmallMargin">
+                    <Label text="Uncomposed Jamo Input" labelFor="hangulDirectInput" />
+                    <Input
+                        id="hangulDirectInput"
+                        placeholder="ㄱㅏㄴ"
+                        width="100%" />
+                    <kiosk:KioskKeyboard
+                        id="hangulDirectKeyboard"
+                        layout="ko-hangul"
+                        autoType="true"
+                        controls="hangulDirectInput"
+                        class="sapUiSmallMarginTop">
+                        <kiosk:customLayouts>
+                            <!-- Rows-less overlay: same built-in keys, no composer. -->
+                            <kiosk:CustomLayout name="ko-hangul" suppress="Middleware" />
+                        </kiosk:customLayouts>
+                    </kiosk:KioskKeyboard>
+                    <Text
+                        text="The same built-in layout with suppress=&quot;Middleware&quot;: jamo are typed straight into the field instead of composing into syllables. Type the same keys as above to compare."
+                        class="sapUiSmallMarginTop" />
+                </VBox>
+            </Panel>
+
             <Panel class="sapUiSmallMarginBottom" headerText="Arabic">
                 <VBox class="sapUiSmallMargin">
                     <Label text="Arabic Input" labelFor="arabicInput" />

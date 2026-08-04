@@ -1,6 +1,7 @@
 import { fixture, expect } from "@open-wc/testing";
 import { withCapturedWarnings } from "../helpers/console.js";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
+import { setLanguage } from "@ui5/webcomponents-base/dist/config/Language.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 // VariantTable through the element module, the re-export consumers get.
 import type { VariantTable } from "../../src/KioskKeyboard.js";
@@ -308,6 +309,59 @@ describe("kiosk-keyboard - custom layouts", () => {
     tapKey(el, "ㅏ");
 
     expect(input.value, "the jamo are typed uncomposed rather than forming 가").to.equal("ㄱㅏ");
+  });
+
+  it("picks up a child edit made while a language change is pending", async () => {
+    // The host is `languageAware`, and UI5Element drops an invalidation entirely while a
+    // language change is in flight. A fold keyed off the host's own hook would miss the
+    // edit and stay stale for good, because the recovery re-render does not replay it.
+    const el = await mount({ layout: "probe" }, customLayout({ name: "probe", rows: [[{ value: "old" }]] }));
+    const child = el.querySelector("kiosk-keyboard-custom-layout") as CustomLayout;
+    expect(readDataKeys(el).flat()).to.deep.equal(["old"]);
+
+    const pending = setLanguage("de");
+    child.rows = [[{ value: "new" }]];
+    await pending;
+    await nextRender();
+    await nextRender();
+
+    expect(readDataKeys(el).flat(), "the edit survives the suppressed invalidation").to.deep.equal(["new"]);
+    await setLanguage(null as unknown as string);
+  });
+
+  it("accepts a layout appended and selected in the same task", async () => {
+    // `_processChildren` fills the slot a microtask later, so a registry check at
+    // assignment time would reject a name that is about to be perfectly valid - and
+    // silently leave the previous layout rendering while `layout` claimed otherwise.
+    const el = await mount({ layout: "qwertz-de" });
+    await withCapturedWarnings(async (messages) => {
+      el.appendChild(customLayout({ name: "warehouse-pos", rows: [[{ value: "ax" }, { value: "bx" }]] }));
+      el.layout = "warehouse-pos";
+      await nextRender();
+      await nextRender();
+      expect(
+        messages.filter((m) => m.includes("not registered")),
+        "nothing is reported",
+      ).to.deep.equal([]);
+    });
+
+    expect(el.layout, "the property holds the assignment").to.equal("warehouse-pos");
+    expect(readDataKeys(el).flat(), "and the appended layout is what renders").to.deep.equal(["ax", "bx"]);
+  });
+
+  it("reports a layout that stays unregistered once the slot has settled", async () => {
+    await withCapturedWarnings(async (messages) => {
+      const el = await mount({ layout: "qwertz-de" });
+      el.layout = "no-such-layout";
+      await nextRender();
+      await nextRender();
+
+      expect(
+        messages.some((m) => m.includes("no-such-layout") && m.includes("is not registered")),
+        "the fallback is reported once the fold is authoritative",
+      ).to.equal(true);
+      expect(readDataKeys(el).flat(), "and the fallback layout renders").to.contain("q");
+    });
   });
 
   it("reports an overlay whose layout does not exist, listing the built-ins", async () => {

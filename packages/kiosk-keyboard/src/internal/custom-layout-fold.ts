@@ -211,6 +211,11 @@ export function foldCustomLayouts(
       rowsDeclared.add(name);
       if (!isValidLayoutDefinition(spec.rows)) diagnostics.push({ code: "invalid-rows", layout: name });
       else layouts.set(name, spec.rows);
+    } else if (spec.rowsPending) {
+      // Declared, but the binding has not delivered. Registering nothing is right - there
+      // are no rows to resolve yet - while still counting the name as addressed, because
+      // the author did declare it and the value arrives on the next fold.
+      rowsDeclared.add(name);
     }
 
     const lang = typeof spec.keycapLang === "string" ? spec.keycapLang.trim() : "";

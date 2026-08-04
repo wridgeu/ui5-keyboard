@@ -932,15 +932,12 @@ class KioskKeyboard extends UI5Element {
     const { name } = changeInfo;
 
     if (name === "layout") {
-      const requested = this.layout.trim().toLowerCase();
-      if (!getRegisteredLayout(requested, this._getFold().layouts)) {
-        console.warn(
-          `[kiosk-keyboard] Layout "${requested}" assigned to the layout property is not registered. Declare it as a <kiosk-keyboard-custom-layout> in the customLayouts slot.`,
-        );
-        return;
-      }
-      // A programmatic layout change is external-sourced and re-engages constraints.
-      this._applyLayout(requested, "external");
+      // Applied unconditionally: the slot is populated asynchronously by
+      // `_processChildren`, so a custom layout appended in this same task is not in the
+      // fold yet and a registry check here would reject a name that is about to be
+      // perfectly valid. An unresolvable name is reported from the render pass instead,
+      // where the fold is authoritative.
+      this._applyLayout(this.layout.trim().toLowerCase(), "external");
     }
     if (name === "keyboardType") {
       if (isInvalidEnumValue("keyboardType", this.keyboardType, VALID_KEYBOARD_TYPES)) {
@@ -995,10 +992,6 @@ class KioskKeyboard extends UI5Element {
         this._detachEscapeListener();
       }
     }
-    // A child property change is folded into a slot change, so this one branch covers
-    // a custom layout being added, removed, reordered or edited. It never fires for the
-    // slot content present at connect time, which is why the fold is read lazily.
-    if (changeInfo.type === "slot" && changeInfo.name === "customLayouts") this._foldEpoch++;
   }
 
   // ── Public API ──
@@ -1207,7 +1200,14 @@ class KioskKeyboard extends UI5Element {
         ? this._currentLayout
         : (constrainedLayoutName(this.keyboardType) ??
           (this._currentLayout || this._baseLayout || this.layout || this._localeLayout()));
-    return resolveLayoutName(requested, this._getFold().layouts);
+    const resolved = resolveLayoutName(requested, this._getFold().layouts);
+    if (resolved !== requested && requested && !this._warnedUnregisteredLayouts.has(requested)) {
+      this._warnedUnregisteredLayouts.add(requested);
+      console.warn(
+        `[kiosk-keyboard] Layout "${requested}" is not registered, so "${resolved}" renders instead. Declare it as a <kiosk-keyboard-custom-layout> in the customLayouts slot.`,
+      );
+    }
+    return resolved;
   }
 
   /**
@@ -1275,9 +1275,10 @@ class KioskKeyboard extends UI5Element {
 
   private _foldCache: CustomLayoutFold = EMPTY_FOLD;
   private _foldKey: readonly ICustomLayout[] = [];
-  private _foldEpoch = 0;
-  private _foldedEpoch = -1;
+  private _foldRevisions: readonly number[] = [];
   private _reportedDiagnostics = new Set<string>();
+  /** Caps the unregistered-layout warning at one per distinct name. */
+  private _warnedUnregisteredLayouts = new Set<string>();
   private _middlewareFactory: (() => CompositionMiddleware) | null = null;
 
   /**
@@ -1290,14 +1291,17 @@ class KioskKeyboard extends UI5Element {
    * `onBeforeRendering` onward - which is what makes a `<kiosk-keyboard-custom-layout>`
    * present at connect time honoured on first paint.
    *
-   * Rebuilt only when the slotted elements change identity or one of them reports a
-   * property change, so diagnostics are emitted once per real change, not once per read.
+   * Rebuilt only when the slotted elements change identity or one of them bumps its
+   * revision, so diagnostics are emitted once per real change, not once per read. The
+   * revision is read off the children rather than delivered to `onInvalidation`, which
+   * a pending language change suppresses on a `languageAware` host.
    */
   private _getFold(): CustomLayoutFold {
     const children = this.customLayouts;
-    if (this._foldedEpoch === this._foldEpoch && sameElements(this._foldKey, children)) return this._foldCache;
+    const revisions = children.map((child) => child.revision);
+    if (sameElements(this._foldKey, children) && sameElements(this._foldRevisions, revisions)) return this._foldCache;
     this._foldKey = children;
-    this._foldedEpoch = this._foldEpoch;
+    this._foldRevisions = revisions;
 
     const specs: CustomLayoutSpec[] = [];
     // The slot admits any element at runtime, so a foreign child is reachable even
