@@ -292,7 +292,7 @@ test("autoCompact puts a 320px kana keyboard on the rows that clear 24px key spa
 // floor still holds there and both kana forms clear the criterion on target size
 // alone - which is what puts the default threshold clear of the width at which
 // the wide form starts relying on spacing and losing it.
-test("both kana forms clear 24px key spacing at the 22rem auto-compact threshold", async ({ page }) => {
+test("both kana forms clear 24px key spacing at the 22rem autoCompact threshold", async ({ page }) => {
   await pinKeyboardWidth(page, ["kb-ja-kana", "kb-ja-kana-compact"], AUTO_COMPACT_THRESHOLD_PX);
   const wide = await readGeometry(page, "kb-ja-kana");
   const compact = await readGeometry(page, "kb-ja-kana-compact");
