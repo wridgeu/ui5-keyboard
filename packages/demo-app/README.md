@@ -133,12 +133,29 @@ Landing page linking to all kiosk demos.
 
 ### Custom Layouts Gallery (`#/kiosk/custom-layouts`)
 
-- Four custom `LayoutDefinition` examples:
-  - Emoji picker
-  - IP address pad
-  - Currency pad
-  - Icon + Label (dual icon+label rendering, capsLock overrides)
-- Demonstrates key width, action keys, icons, label overrides, and dual icon+label rendering
+Five layouts declared as `<kiosk:CustomLayout>` children in the view, with no controller
+code configuring them:
+
+- Emoji picker
+- IP address pad
+- Currency pad
+- Icon + Label (dual icon+label rendering, capsLock overrides)
+- Arabic digits, shipped as its own element (`<demo:ArabicDigitsCustomLayout>`) carrying
+  its rows and `keycapLang` together
+
+Demonstrates key width, action keys, icons, label overrides, and dual icon+label
+rendering. Rows arrive through a `layouts>` JSON model, which is why the opening
+selection waits for the first render: a control is built before it joins its view, so a
+bound `rows` has not resolved during `onInit`.
+
+The **Variant Tiers** section on the same page shows how long-press accents resolve.
+The keyboard sets `accentVariants` and a `defaultVariants` house set; one custom layout
+overlays the built-in `qwerty` with its own `variants`, and another declares
+`suppress="Variants"` on `qwertz-de`:
+
+- QWERTY arms `a`/`s` from the layout's own table, `q`/`w` from the house set, and the
+  rest from the built-in Latin table - the three tiers composing per base letter
+- QWERTZ arms nothing at all, because a suppressed facet discards every tier below it
 
 ### Component-Level Keyboard (`#/kiosk/component`)
 
@@ -159,6 +176,10 @@ Landing page linking to all kiosk demos.
 
 - Multi-language script input demo with composition middleware
 - Arabic, Japanese Kana, Korean Hangul layouts with live input
+- A second Hangul keyboard with `suppress="Middleware"` on a rows-less
+  `<kiosk:CustomLayout>`: the same built-in layout with its composer turned off, so jamo
+  are typed straight into the field instead of composing into syllables. Type the same
+  keys into both fields to compare.
 
 ### Web Component (`#/kiosk/web-component-tooling`)
 
