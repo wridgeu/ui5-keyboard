@@ -19,9 +19,12 @@
                         id="kanaKeyboard"
                         layout="ja-kana"
                         autoType="true"
+                        autoCompact="true"
                         controls="kanaInput"
                         class="sapUiSmallMarginTop" />
-                    <Text text="Dakuten/handakuten composition middleware active" class="sapUiSmallMarginTop" />
+                    <Text
+                        text="Dakuten/handakuten composition middleware active. autoCompact=&quot;true&quot; hands the keyboard to its ja-kana-compact rows at or below 352px and back above it; ja-kana declares that layout as its compact counterpart. Narrow the window to watch it swap."
+                        class="sapUiSmallMarginTop" />
                 </VBox>
             </Panel>
 

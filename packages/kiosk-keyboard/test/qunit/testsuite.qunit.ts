@@ -106,6 +106,12 @@ sap.ui.define([], () => {
       "KioskKeyboard-responsive": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Responsive Sizing",
       },
+      "KioskKeyboard-autocompact": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard autoCompact",
+      },
+      "auto-compact-behavior": {
+        title: "QUnit tests for ui5.kiosk - AutoCompactBehavior",
+      },
       "shift-state": {
         title: "QUnit tests for ui5.kiosk - ShiftState",
       },

@@ -345,6 +345,12 @@ export interface CustomLayoutSpec {
   readonly rowsPending?: boolean;
   readonly keycapLang?: string;
   /**
+   * The layout rendered instead of this one on a keyboard too narrow to seat its rows,
+   * read only when `autoCompact` is on. Matched after trim and lowercase, like any layout
+   * name. Absent takes the built-in of the same name's counterpart.
+   */
+  readonly compact?: string;
+  /**
    * Whether the layout is an auxiliary surface rather than a base alphabetic layout.
    * Absent takes the built-in of the same name's value, and the base alphabetic role
    * when there is no built-in of that name.

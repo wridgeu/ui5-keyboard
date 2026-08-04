@@ -5,7 +5,7 @@ import type { MetadataOptions } from "sap/ui/core/Element";
 import syncStyleClass from "sap/ui/core/syncStyleClass";
 import Popover from "sap/m/Popover";
 import { PlacementType } from "sap/m/library";
-import { getLayoutLang as metaGetLayoutLang, isSecondaryLayout as metaIsSecondaryLayout } from "./internal/layout-meta";
+import { getLayoutMeta } from "./internal/layout-meta";
 import type { LayoutDefinition, CompositionMiddleware } from "./types";
 import CustomLayout from "./CustomLayout";
 import {
@@ -22,7 +22,13 @@ import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
-import { resolveWithCustomResolver, isParticipating, KEY_ID_SUFFIX_RE, type TargetResolverFn } from "./internal/dom";
+import {
+  resolveWithCustomResolver,
+  isParticipating,
+  keyElementId,
+  KEY_ID_SUFFIX_RE,
+  type TargetResolverFn,
+} from "./internal/dom";
 import {
   applyVariantDefaults,
   resolveVariantTable,
@@ -57,6 +63,7 @@ import NativeKeyboardSuppression from "./internal/native-keyboard-suppression";
 import AutoShowBehavior, { type KeyboardTypeSource } from "./internal/auto-show-behavior";
 import BackspaceRepeatBehavior from "./internal/backspace-repeat-behavior";
 import ResponsiveSizingController from "./internal/responsive-sizing-controller";
+import AutoCompactBehavior from "./internal/auto-compact-behavior";
 import FKeyController from "./internal/fkey-controller";
 import ControlsDelegationController from "./internal/controls-delegation-controller";
 import { getKeyLabel, getKeyAriaLabel, clearLabelWarnings } from "./internal/key-labels";
@@ -175,6 +182,15 @@ export default class KioskKeyboard extends Control {
   private _warnedDisarmedVariants!: boolean;
   /** Owns the ResizeObserver-driven height-responsive class application. */
   private _responsiveSizing!: ResponsiveSizingController;
+  private _autoCompact!: AutoCompactBehavior;
+  /**
+   * The layout last asked for, by `setLayout`, a `{layout:*}` key or the locale
+   * default. `autoCompact` resolves its tier against this rather than against the
+   * effective layout, so a swap it made is never mistaken for a request.
+   */
+  private _requestedLayout!: string;
+  /** Live-region text for a width-driven swap, held until the render it triggers is done. */
+  private _pendingLayoutAnnouncement: string | null = null;
   /** Owns `fKeyMode`-driven F-key dispatch (native keydown + caret navigation). */
   private _fKeyController!: FKeyController;
   static readonly metadata: MetadataOptions = {
@@ -295,6 +311,34 @@ export default class KioskKeyboard extends Control {
        * @since 0.1.0
        */
       autoType: {
+        type: "boolean",
+        defaultValue: false,
+        group: "Behavior",
+      },
+      /**
+       * When `true`, a layout that declares a compact counterpart yields to it on a
+       * keyboard too narrow to seat its rows, and takes it back when the room returns.
+       *
+       * Layout data is the one responsive dimension CSS cannot reach: a `@container`
+       * rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
+       * on the resolved layout rather than on rendered geometry. Of the built-ins only
+       * `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+       * with the `compact` property of a `customLayouts` entry.
+       *
+       * The swap fires `layoutChange` with `autoDetected: true` and never overrides an
+       * explicit choice: the layout you set stays the one it resolves against, so a
+       * `setLayout` or a `{layout:*}` key still wins and is re-tiered from there.
+       *
+       * The width is taken from the keyboard's own box, so an embedded keyboard tiers
+       * on the room it was granted rather than on the viewport. Override the threshold
+       * with the `--ui5KioskKeyboard-autoCompactThreshold` custom property.
+       *
+       * @example <caption>XML view - kana that fits a 320px phone</caption>
+       * <kiosk:KioskKeyboard layout="ja-kana" autoCompact="true" controls="myInput" />
+       *
+       * @since 0.1.0
+       */
+      autoCompact: {
         type: "boolean",
         defaultValue: false,
         group: "Behavior",
@@ -498,6 +542,8 @@ export default class KioskKeyboard extends Control {
         parameters: {
           /** The name of the newly active layout. */
           layout: { type: "string" },
+          /** Whether this change was the `autoCompact` width tier resolving, rather than a request. */
+          autoDetected: { type: "boolean" },
         },
       },
       /**
@@ -705,7 +751,7 @@ export default class KioskKeyboard extends Control {
    * @since 0.1.0
    */
   static isSecondaryLayout(sName: string): boolean {
-    return metaIsSecondaryLayout(sName);
+    return getLayoutMeta(sName)?.secondary === true;
   }
 
   /**
@@ -854,6 +900,7 @@ export default class KioskKeyboard extends Control {
     this._middleware = null;
     this._rendererApi = null;
     this._responsiveSizing = new ResponsiveSizingController(this);
+    this._autoCompact = new AutoCompactBehavior(this);
     this._fKeyController = new FKeyController({
       getFKeyMode: () => this.getFKeyMode(),
       getTargetFocusDomRef: () => this._getTargetElement()?.getFocusDomRef() ?? null,
@@ -866,6 +913,7 @@ export default class KioskKeyboard extends Control {
     // applySettings re-resolves once the instance maps are known.
     const localeLayout = registryGetLocaleLayout();
     this._baseLayout = localeLayout;
+    this._requestedLayout = localeLayout;
     if (localeLayout !== DEFAULT_LAYOUT) {
       this.setLayout(localeLayout);
     }
@@ -881,6 +929,14 @@ export default class KioskKeyboard extends Control {
     this._keyGridNav.setRootRef(this.getDomRef() as HTMLElement | null);
     this._syncDockedDomState();
 
+    // The live region's text belongs to the renderer (shift/caps state, or
+    // nothing), so the patch a layout swap triggers overwrites anything written
+    // before it. The swap's announcement is written after that patch instead.
+    if (this._pendingLayoutAnnouncement !== null) {
+      this._announceLiveRegion(this._pendingLayoutAnnouncement);
+      this._pendingLayoutAnnouncement = null;
+    }
+
     for (const ext of this._extensions) ext.onAfterRendering?.();
 
     // Point the ResizeObserver at the current DOM element, then defer responsive
@@ -893,6 +949,7 @@ export default class KioskKeyboard extends Control {
       this._responsiveSizing.syncObserver(dom);
       this._responsiveSizing.scheduleClassUpdate();
     }
+    this._autoCompact.syncObserver(dom);
 
     this._controlsDelegation.sync();
   }
@@ -927,6 +984,7 @@ export default class KioskKeyboard extends Control {
     this._controlsDelegation.teardown();
     this._physicalKeyHighlight.detach();
     this._responsiveSizing.destroy();
+    this._autoCompact.destroy();
     this._variantPopup.destroy();
     this._clearPressedKeyState();
     for (const ext of this._extensions) ext.destroy();
@@ -1051,11 +1109,65 @@ export default class KioskKeyboard extends Control {
       );
       return false;
     }
+    this._requestedLayout = name;
+    // A request supersedes any tier announcement still waiting on a render, which
+    // would otherwise name the layout this switch just replaced.
+    this._pendingLayoutAnnouncement = null;
     const changed = this._applyLayout(name, source);
     if (changed) {
-      this.fireLayoutChange({ layout: name });
+      this.fireLayoutChange({ layout: name, autoDetected: false });
     }
+    // A new request re-opens the tier question at an unchanged width, which no
+    // resize would report.
+    this._autoCompact.reapply();
     return changed;
+  }
+
+  /**
+   * Applies the `autoCompact` width tier: the requested layout's compact counterpart
+   * while the keyboard is too narrow for it, the requested layout itself once the room
+   * returns. Called from {@link AutoCompactBehavior} on a frame of its own, never from
+   * the observation callback.
+   *
+   * Deliberately not routed through {@link _performLayoutSwitch}: this is not a request
+   * and must leave `_requestedLayout` alone, or the first swap would erase the layout it
+   * has to swap back to. An unregistered counterpart resolves to no swap rather than to
+   * the default layout, since a consumer who names a missing one should keep the layout
+   * they asked for.
+   */
+  _applyCompactTier(narrow: boolean, crossed: boolean): void {
+    // Numpad and Numeric pin the rendered surface to their own layout, so tiering
+    // would fire `layoutChange` naming a layout that is not the one on screen.
+    if (constrainedLayoutName(this.getKeyboardType()) !== null) return;
+
+    const requested = this._requestedLayout;
+    const compact = narrow ? getLayoutMeta(requested, this._getFold().layoutMeta)?.compact : undefined;
+    const target = compact ?? requested;
+    if (target === this.getLayout()) return;
+    if (!registryGetLayout(target, this._getFold().layouts)) return;
+
+    // The tier is an arrangement, not a request, so it must not become the base:
+    // `{layout:base}`, `resetLayout()` and `reset()` all return to the layout that
+    // was asked for. `_applyLayout` promotes any non-secondary name it applies, so
+    // the base is restored around it.
+    const baseLayout = this._baseLayout;
+    const changed = this._applyLayout(target, this._layoutSource);
+    this._baseLayout = baseLayout;
+    if (changed) {
+      // Announced only when a width the user crossed rearranged the keyboard under
+      // them: the one layout change with no interaction behind it, and so the only
+      // one a screen reader user has no other way of learning about. The first
+      // resolution of a keyboard that was always this narrow rearranged nothing they
+      // had seen, and a requested switch re-seats focus onto the key it followed,
+      // which announces itself; announcing either would speak over the interaction.
+      if (crossed) {
+        this._pendingLayoutAnnouncement = getText("ARIA_LAYOUT_CHANGED", "Keyboard layout changed to {0}").replace(
+          "{0}",
+          target,
+        );
+      }
+      this.fireLayoutChange({ layout: target, autoDetected: true });
+    }
   }
 
   /**
@@ -1069,10 +1181,11 @@ export default class KioskKeyboard extends Control {
    * so a no-op re-selection can't silently flip the constraint-override.
    */
   private _applyLayout(name: string, source: "external" | "user"): boolean {
-    if (!metaIsSecondaryLayout(name, this._getFold().layoutMeta)) {
+    if (getLayoutMeta(name, this._getFold().layoutMeta)?.secondary !== true) {
       this._baseLayout = name;
     }
     const changed = name !== this.getLayout();
+    const anchorValue = changed ? this._focusAnchorValue() : null;
     if (changed) {
       this._layoutSource = source;
       // A real layout switch ends any in-progress composition so the next key
@@ -1082,6 +1195,9 @@ export default class KioskKeyboard extends Control {
     }
     this._shiftState.reset();
     this.setProperty("layout", name);
+    if (changed) {
+      this._reseatFocusAnchor(anchorValue);
+    }
     return changed;
   }
 
@@ -1692,6 +1808,54 @@ export default class KioskKeyboard extends Control {
     element.focus({ preventScroll });
   }
 
+  /**
+   * The `data-key` value the roving tab stop currently sits on, or `null` when
+   * the keyboard has no tab stop to carry over. A key holding DOM focus wins over
+   * the remembered one, since arrow navigation is not the only way onto a key.
+   */
+  private _focusAnchorValue(): string | null {
+    const dom = this.getDomRef();
+    if (!dom) return null;
+
+    const active = document.activeElement;
+    const focused =
+      active instanceof HTMLElement && active.classList.contains(KIOSK_KEYBOARD_DOM.classes.key) && dom.contains(active)
+        ? active
+        : null;
+    const lastFocusedKeyId = this._keyGridNav.getLastFocusedKeyId();
+    const anchor = focused ?? (lastFocusedKeyId ? document.getElementById(lastFocusedKeyId) : null);
+    return anchor?.getAttribute(KIOSK_KEYBOARD_DOM.attributes.key) ?? null;
+  }
+
+  /**
+   * Re-seats the roving tab stop onto the key that carries `value` in the layout
+   * now resolved, or onto the first key when the new arrangement has no such key.
+   *
+   * Key elements are identified by their grid position, so a layout change hands
+   * the same element to whatever key the new arrangement seats there. Following
+   * the key by value keeps a keyboard user on the key they were on, and this runs
+   * for every layout change - a `{layout:*}` press, `setLayout()` and an
+   * `autoCompact` width swap alike - so the arrangement a width picks is no
+   * different to navigate than one that was asked for.
+   *
+   * DOM focus follows on its own: the recorded id is what the renderer gives
+   * `tabindex="0"` and what `applyFocusInfo` restores focus to, and the framework
+   * only calls `applyFocusInfo` when focus was inside the control before the
+   * patch. Focus on the target input, the ordinary case for a pointer user, is
+   * therefore never moved.
+   */
+  private _reseatFocusAnchor(value: string | null): void {
+    const layout = value === null ? [] : this._getResolvedLayout();
+    for (let row = 0; row < layout.length; row++) {
+      const col = layout[row]!.findIndex((key) => key.value === value);
+      if (col !== -1) {
+        this._keyGridNav.setLastFocusedKeyId(keyElementId(this.getId(), row, col));
+        return;
+      }
+    }
+    this._keyGridNav.setLastFocusedKeyId(null);
+  }
+
   // ── Accessibility ──
 
   override getAccessibilityInfo(): {
@@ -1779,7 +1943,7 @@ export default class KioskKeyboard extends Control {
    * pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts).
    */
   private _getLayoutLang(): string | undefined {
-    return metaGetLayoutLang(this._resolvedLayoutName(), this._getFold().layoutMeta);
+    return getLayoutMeta(this._resolvedLayoutName(), this._getFold().layoutMeta)?.lang;
   }
 
   /** Resolve the effective layout used by the renderer. */

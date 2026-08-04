@@ -1899,6 +1899,60 @@ describe("kiosk-keyboard", () => {
       expect(region.textContent ?? "", "Caps Lock release must not announce shift-off").to.not.match(/shift\s*off/i);
     });
 
+    it("follows the focused key to its new seat across a layout switch", async () => {
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+      await nextRender();
+      const backspace = queryKey(el, "{backspace}")!;
+      expect(backspace.dataset.rowIndex, "qwerty seats Backspace on the number row").to.equal("0");
+      expect(backspace.dataset.keyIndex).to.equal("10");
+      backspace.focus();
+
+      el.layout = "numeric";
+      await nextRender();
+
+      // The numeric number row is ten keys, so (0,10) is unmounted; without the
+      // follow, focus falls to the document body and Tab restarts at the top.
+      const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+      expect(focused, "focus was not dropped to the document").to.not.be.null;
+      expect(focused!.dataset.key, "focus is still on Backspace").to.equal("{backspace}");
+    });
+
+    it("anchors on the first key when a layout switch drops the focused key", async () => {
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+      await nextRender();
+      // The numeric layout has no "q", but it does have a key at q's seat (1,0),
+      // where focus would otherwise come back meaning "-".
+      queryKey(el, "q")!.focus();
+
+      el.layout = "numeric";
+      await nextRender();
+
+      const focused = el.shadowRoot!.activeElement as HTMLElement | null;
+      expect(focused, "focus was not dropped to the document").to.not.be.null;
+      expect(focused!.dataset.key, "it anchored on the first key").to.equal("1");
+    });
+
+    it("leaves focus outside the keyboard alone across a layout switch", async () => {
+      const host = document.createElement("div");
+      const input = document.createElement("input");
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.setAttribute("layout", "qwerty");
+      host.append(input, el);
+      await fixture(host);
+      await nextRender();
+      // Arrow onto a key first, so the keyboard remembers a tab stop: a remembered
+      // tab stop is not focus, and must not pull focus back off the input.
+      const q = queryKey(el, "q")!;
+      q.focus();
+      q.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, composed: true }));
+      input.focus();
+
+      el.layout = "numeric";
+      await nextRender();
+
+      expect(document.activeElement, "the target input keeps focus through the switch").to.equal(input);
+    });
+
     it("exactly one key has tabindex=0 (roving tabindex)", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();

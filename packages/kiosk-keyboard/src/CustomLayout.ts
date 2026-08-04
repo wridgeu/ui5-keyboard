@@ -57,6 +57,13 @@ export default class CustomLayout extends Element {
        * Language of Parts). Empty takes the built-in layout's value.
        */
       keycapLang: { type: "string", defaultValue: "", group: "Behavior" },
+      /**
+       * The layout rendered instead of this one on a keyboard too narrow to seat its
+       * rows, read only when the control's `autoCompact` is on. Names the same key set in
+       * a denser arrangement, matched after trim and lowercase. Empty takes the built-in
+       * layout's counterpart.
+       */
+      compact: { type: "string", defaultValue: "", group: "Behavior" },
       /** Whether the layout is an auxiliary surface or a base alphabetic layout. */
       layoutRole: { type: "ui5.kiosk.LayoutRole", defaultValue: "Inherit", group: "Behavior" },
       /**
@@ -92,6 +99,7 @@ export default class CustomLayout extends Element {
   toSpec(): CustomLayoutSpec {
     const rows = this.getRows();
     const keycapLang = this.getKeycapLang();
+    const compact = this.getCompact();
     const role = this.getLayoutRole();
     const locales = this.getLocales();
     const middleware = this.getMiddleware() as (() => CompositionMiddleware) | null;
@@ -107,6 +115,7 @@ export default class CustomLayout extends Element {
       // unresolvable.
       ...(rows === null && this.getBindingInfo("rows") !== undefined && { rowsPending: true }),
       ...(keycapLang && { keycapLang }),
+      ...(compact && { compact }),
       ...(role !== "Inherit" && { secondary: role === "Secondary" }),
       ...(locales.length > 0 && { locales }),
       ...(middleware !== null && { middleware }),

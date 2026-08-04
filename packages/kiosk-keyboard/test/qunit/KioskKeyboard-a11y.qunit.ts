@@ -185,6 +185,85 @@ QUnit.test("Live region announces open and close", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Live region stays silent for a requested layout switch", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwerty" });
+  await placeAndWait(kb);
+
+  const liveRegion = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
+  assert.strictEqual(liveRegion(), "", "nothing is announced on first paint");
+
+  kb.setLayout("numeric");
+  await waitForRender();
+
+  // A switch the user asked for is its own feedback, and it moves focus onto the
+  // key it followed, which announces itself.
+  assert.strictEqual(liveRegion(), "", "a requested switch adds no announcement");
+
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Focus order across a layout switch
+// ──────────────────────────────────────────────
+
+QUnit.test("A layout switch follows the focused key to its new seat", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwerty" });
+  await placeAndWait(kb);
+
+  const backspace = getRequiredKeyElement(kb, "{backspace}");
+  assert.strictEqual(backspace.id, `${kb.getId()}-key-0-10`, "qwerty seats Backspace at the end of the number row");
+  backspace.focus();
+
+  kb.setLayout("numeric");
+  await waitForRender();
+
+  const focused = document.activeElement as HTMLElement;
+  assert.strictEqual(focused.dataset.key, "{backspace}", "focus is still on Backspace");
+  assert.strictEqual(focused.id, `${kb.getId()}-key-2-6`, "at the seat the numeric layout gives it");
+
+  kb.destroy();
+});
+
+QUnit.test("A layout switch that drops the focused key anchors on the first key", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwerty" });
+  await placeAndWait(kb);
+
+  // The numeric layout has no "q", but it does have a key at q's seat (1,0),
+  // where focus would otherwise come back meaning "-".
+  tapKey(kb, "q");
+  getRequiredKeyElement(kb, "q").focus();
+
+  kb.setLayout("numeric");
+  await waitForRender();
+
+  const focused = document.activeElement as HTMLElement;
+  assert.notStrictEqual(focused, document.body, "focus was not dumped to the document");
+  assert.strictEqual(focused.dataset.key, "1", "it anchored on the first key");
+
+  kb.destroy();
+});
+
+QUnit.test("A layout switch leaves focus outside the keyboard alone", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ layout: "qwerty" });
+  await placeAndWait(kb);
+
+  // Tap a key first, so the keyboard remembers a tab stop: a remembered tab stop
+  // is not focus, and must not pull focus back off the input.
+  tapKey(kb, "q");
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+
+  kb.setLayout("numeric");
+  await waitForRender();
+
+  assert.strictEqual(document.activeElement, inputDom, "the target input keeps focus through the switch");
+
+  kb.destroy();
+  input.destroy();
+});
+
 // ──────────────────────────────────────────────
 // ARIA Associations
 // ──────────────────────────────────────────────

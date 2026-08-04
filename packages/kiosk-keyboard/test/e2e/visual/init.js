@@ -217,5 +217,11 @@ sap.ui.define(
 
     // 35. Spanish (QWERTY-ES)
     new KioskKeyboard({ layout: "qwerty-es" }).placeAt("kb-qwerty-es");
+
+    // 36. Japanese Kana, compact rows, in a 320px keyboard box
+    new KioskKeyboard({ layout: "ja-kana-compact" }).placeAt("kb-ja-kana-compact");
+
+    // 37. Japanese Kana asked for wide, in the same 320px box, left to tier itself
+    new KioskKeyboard({ layout: "ja-kana", autoCompact: true }).placeAt("kb-ja-kana-auto");
   },
 );

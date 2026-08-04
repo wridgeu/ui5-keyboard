@@ -33,6 +33,10 @@ const TARGET_SIZE = 23.99;
 const EDGE_EPSILON = 0.5;
 /** Container tier at or below which the inline floor yields to reachability (see the LESS). */
 const NARROW_TIER_REM = 20;
+/** The keyboard box the kana spacing claim is made about: a docked keyboard on a 320px screen. */
+const KANA_PREMISE_PX = 320;
+/** The `autoCompact` default threshold, 22rem at the default root font size. */
+const AUTO_COMPACT_THRESHOLD_PX = 352;
 
 interface KeyBox {
   key: string;
@@ -106,6 +110,50 @@ async function measureKeyboard(page: Page, containerId: string): Promise<Keyboar
     },
     { keySelector: DOM.selectors.key, narrowTierRem: NARROW_TIER_REM },
   );
+}
+
+/**
+ * The closest pair of key centres, which is the quantity SC 2.5.8's spacing
+ * exception is about: the 24px-diameter circles it draws around two keys may not
+ * intersect, which puts their centres at least 24px apart. Every pair, not just
+ * row neighbours - the criterion is about circles, so a key in the row below
+ * counts as much as the one beside it.
+ */
+function closestKeyCentres(geometry: KeyboardGeometry): { distance: number; pair: string } {
+  const centre = (box: KeyBox) => ({ x: (box.left + box.right) / 2, y: (box.top + box.bottom) / 2 });
+  let closest = { distance: Infinity, pair: "" };
+  for (let i = 0; i < geometry.keys.length; i++) {
+    for (let j = i + 1; j < geometry.keys.length; j++) {
+      const a = centre(geometry.keys[i]);
+      const b = centre(geometry.keys[j]);
+      const distance = Math.hypot(a.x - b.x, a.y - b.y);
+      if (distance < closest.distance) {
+        closest = { distance, pair: `'${geometry.keys[i].key}' and '${geometry.keys[j].key}'` };
+      }
+    }
+  }
+  return closest;
+}
+
+/** Asserts every key centre keeps SC 2.5.8's 24px from every other one. */
+function expectKeyCentresApart(geometry: KeyboardGeometry, id: string): void {
+  const closest = closestKeyCentres(geometry);
+  expect(closest.distance, `${id}: keys ${closest.pair} keep 24px between their centres`).toBeGreaterThanOrEqual(
+    TARGET_SIZE,
+  );
+}
+
+/**
+ * Give a fixture the keyboard box the assertion names, padding included, so the
+ * measurement is of the width under discussion rather than of whatever the
+ * viewport leaves a fixture on the device projects.
+ */
+async function pinKeyboardWidth(page: Page, containerIds: string[], px: number): Promise<void> {
+  await page.addStyleTag({
+    content: containerIds.map((id) => `#${id} { width: ${px}px; padding: 0; }`).join("\n"),
+  });
+  // Container queries resolve during layout, so let the resize settle first.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
 /** A navigation key by the `{fkey:*}` token it carries as its data-key. */
@@ -191,6 +239,92 @@ test("keys hold the target-size floor, or stay reachable below the tier", async 
       }
     }
   }
+});
+
+// The premise `ja-kana-compact` and the `autoCompact` property both exist for,
+// held to a measurement. Below the 20rem tier the inline target-size floor is
+// lifted, so SC 2.5.8 is met there only through its spacing exception: a 24px
+// circle centred on a key may not reach another key's. `ja-kana` follows a
+// physical JIS keyboard, whose Backspace row and shift/enter row come to 12.5
+// and 13 key widths, and leaves less than that in a 320px keyboard;
+// `ja-kana-compact` holds every row to 12 widths and clears it. Both are
+// measured in the same box, so what is compared is the two layouts and not two
+// widths.
+//
+// A red on the `ja-kana` assertion is not a defect report and is not to be
+// relaxed. It says the premise changed - those rows now get more room than they
+// did - so the compact layout and the `autoCompact` property have to be
+// re-justified, and the spacing table in
+// docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md re-measured, before anything here
+// moves.
+test("ja-kana falls under 24px key spacing in a 320px keyboard, where ja-kana-compact clears it", async ({ page }) => {
+  await pinKeyboardWidth(page, ["kb-ja-kana", "kb-ja-kana-compact"], KANA_PREMISE_PX);
+  const wide = await measureKeyboard(page, "kb-ja-kana");
+  const compact = await measureKeyboard(page, "kb-ja-kana-compact");
+
+  expect(wide.keys.length, "the wide fixture rendered its keys").toBeGreaterThan(0);
+  expect(compact.keys.length, "the compact fixture rendered its keys").toBeGreaterThan(0);
+  expect(wide.right - wide.left, `the wide form is measured in a ${KANA_PREMISE_PX}px keyboard`).toBeCloseTo(
+    KANA_PREMISE_PX,
+    1,
+  );
+  expect(
+    Math.abs(wide.contentInline - compact.contentInline),
+    "both forms are measured in the same box",
+  ).toBeLessThanOrEqual(EDGE_EPSILON);
+  expect(wide.narrowTier, "the box sits below the tier that lifts the inline floor").toBe(true);
+
+  const widest = closestKeyCentres(wide);
+  const closest = closestKeyCentres(compact);
+  expect(
+    widest.distance,
+    `ja-kana leaves keys ${widest.pair} under 24px apart (${widest.distance.toFixed(2)}px)`,
+  ).toBeLessThan(TARGET_SIZE);
+  expect(
+    closest.distance,
+    `ja-kana-compact keeps keys ${closest.pair} 24px apart (${closest.distance.toFixed(2)}px)`,
+  ).toBeGreaterThanOrEqual(TARGET_SIZE);
+  expect(closest.distance, "the compact rows buy spacing over the rows they replace").toBeGreaterThan(widest.distance);
+});
+
+// The same criterion, reached by the `autoCompact` property rather than by naming
+// the compact layout: the fixture asks for `ja-kana` and is given a 320px box, so
+// the counterpart is what has to be on screen for the spacing to hold.
+test("autoCompact puts a 320px kana keyboard on the rows that clear 24px key spacing", async ({ page }) => {
+  await pinKeyboardWidth(page, ["kb-ja-kana-auto", "kb-ja-kana-compact"], KANA_PREMISE_PX);
+  const auto = await measureKeyboard(page, "kb-ja-kana-auto");
+  const compact = await measureKeyboard(page, "kb-ja-kana-compact");
+  const wide = await measureKeyboard(page, "kb-ja-kana");
+  const rendered = (geometry: KeyboardGeometry) => geometry.keys.map((box) => box.key);
+
+  expect(auto.keys.length, "the fixture rendered its keys").toBeGreaterThan(0);
+  expect(auto.narrowTier, "the fixture sits below the tier that lifts the inline floor").toBe(true);
+  expect(rendered(auto), "the compact rows are what rendered").toEqual(rendered(compact));
+  expect(rendered(auto), "and not the rows the fixture asked for").not.toEqual(rendered(wide));
+
+  expectKeyCentresApart(auto, "kb-ja-kana-auto");
+});
+
+// The other side of the premise above, at the width `autoCompact` takes the
+// compact form on. 22rem is above the 20rem tier, so the inline target-size
+// floor still holds there and both kana forms clear the criterion on target
+// size alone - which is what puts the default threshold clear of the width at
+// which the wide form starts relying on spacing and losing it.
+test("both kana forms clear 24px key spacing at the 22rem autoCompact threshold", async ({ page }) => {
+  await pinKeyboardWidth(page, ["kb-ja-kana", "kb-ja-kana-compact"], AUTO_COMPACT_THRESHOLD_PX);
+  const wide = await measureKeyboard(page, "kb-ja-kana");
+  const compact = await measureKeyboard(page, "kb-ja-kana-compact");
+
+  expect(wide.keys.length, "the wide fixture rendered its keys").toBeGreaterThan(0);
+  expect(compact.keys.length, "the compact fixture rendered its keys").toBeGreaterThan(0);
+  expect(wide.right - wide.left, `the wide form is measured in a ${AUTO_COMPACT_THRESHOLD_PX}px keyboard`).toBeCloseTo(
+    AUTO_COMPACT_THRESHOLD_PX,
+    1,
+  );
+  expect(wide.narrowTier, "the threshold sits above the tier that lifts the inline floor").toBe(false);
+
+  expectKeyCentresApart(wide, "kb-ja-kana");
+  expectKeyCentresApart(compact, "kb-ja-kana-compact");
 });
 
 // Rows are flex containers, so the compact navigation rows mirror with the
