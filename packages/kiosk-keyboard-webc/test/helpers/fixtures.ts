@@ -12,6 +12,8 @@ export interface CustomLayoutOptions {
   name?: string;
   rows?: LayoutDefinition;
   keycapLang?: string;
+  /** Name of the layout this one yields to under `autoCompact`. */
+  compact?: string;
   /** Comma- or space-separated BCP-47 prefixes. */
   locales?: string;
   layoutRole?: `${LayoutRole}`;
@@ -32,6 +34,7 @@ export function customLayout(options: CustomLayoutOptions): CustomLayout {
   el.name = options.name ?? "";
   if (options.rows !== undefined) el.rows = options.rows;
   if (options.keycapLang !== undefined) el.keycapLang = options.keycapLang;
+  if (options.compact !== undefined) el.compact = options.compact;
   if (options.locales !== undefined) el.locales = options.locales;
   if (options.layoutRole !== undefined) el.layoutRole = options.layoutRole;
   if (options.suppress !== undefined) el.suppress = options.suppress;

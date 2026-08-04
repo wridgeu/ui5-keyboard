@@ -51,6 +51,12 @@
       #kb-narrow-short {
         width: 320px;
       }
+      /* No padding of its own: the keyboard itself is the 320px box, which is
+         what a docked keyboard gets on a 320px viewport. */
+      #kb-ja-kana-compact,
+      #kb-ja-kana-auto {
+        width: 320px;
+      }
       #kb-container-fixed,
       #kb-height-constrained,
       #kb-height-tiny {
@@ -299,6 +305,16 @@
     <div class="section">
       <h2>35. Spanish (QWERTY-ES)</h2>
       <div class="keyboard-container" id="kb-qwerty-es"></div>
+    </div>
+
+    <div class="section">
+      <h2>36. Japanese Kana Compact (320px keyboard)</h2>
+      <div id="kb-ja-kana-compact"></div>
+    </div>
+
+    <div class="section">
+      <h2>37. Japanese Kana, autoCompact (320px keyboard)</h2>
+      <div id="kb-ja-kana-auto"></div>
     </div>
   </body>
 </html>

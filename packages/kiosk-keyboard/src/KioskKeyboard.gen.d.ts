@@ -87,6 +87,28 @@ declare module "./KioskKeyboard" {
         autoType?: boolean | PropertyBindingInfo | `{${string}}`;
 
         /**
+         * When `true`, a layout that declares a compact counterpart yields to it on a
+        keyboard too narrow to seat its rows, and takes it back when the room returns.
+        
+        Layout data is the one responsive dimension CSS cannot reach: a `@container`
+        rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
+        on the resolved layout rather than on rendered geometry. Of the built-ins only
+        `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+        with the `compact` property of a `customLayouts` entry.
+        
+        The swap fires `layoutChange` with `autoDetected: true` and never overrides an
+        explicit choice: the layout you set stays the one it resolves against, so a
+        `setLayout` or a `{layout:*}` key still wins and is re-tiered from there.
+        
+        The width is taken from the keyboard's own box, so an embedded keyboard tiers
+        on the room it was granted rather than on the viewport. Override the threshold
+        with the `--ui5KioskKeyboard-autoCompactThreshold` custom property.
+         *
+         * @since 0.1.0
+         */
+        autoCompact?: boolean | PropertyBindingInfo | `{${string}}`;
+
+        /**
          * When `true`, a built-in Latin-diacritics table is merged onto the
         resolved layout so every matching base letter (a, e, i, o, u, c, n,
         s, y, z, l, ...) gains a long-press / right-click accent-variant
@@ -460,6 +482,63 @@ declare module "./KioskKeyboard" {
          * @returns Reference to "this" in order to allow method chaining
          */
         setAutoType(autoType: boolean): this;
+
+        // property: autoCompact
+
+        /**
+         * Gets current value of property "autoCompact".
+         *
+         * When `true`, a layout that declares a compact counterpart yields to it on a
+        keyboard too narrow to seat its rows, and takes it back when the room returns.
+        
+        Layout data is the one responsive dimension CSS cannot reach: a `@container`
+        rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
+        on the resolved layout rather than on rendered geometry. Of the built-ins only
+        `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+        with the `compact` property of a `customLayouts` entry.
+        
+        The swap fires `layoutChange` with `autoDetected: true` and never overrides an
+        explicit choice: the layout you set stays the one it resolves against, so a
+        `setLayout` or a `{layout:*}` key still wins and is re-tiered from there.
+        
+        The width is taken from the keyboard's own box, so an embedded keyboard tiers
+        on the room it was granted rather than on the viewport. Override the threshold
+        with the `--ui5KioskKeyboard-autoCompactThreshold` custom property.
+         *
+         * @since 0.1.0
+         * Default value is: false
+         * @returns Value of property "autoCompact"
+         */
+        getAutoCompact(): boolean;
+
+        /**
+         * Sets a new value for property "autoCompact".
+         *
+         * When `true`, a layout that declares a compact counterpart yields to it on a
+        keyboard too narrow to seat its rows, and takes it back when the room returns.
+        
+        Layout data is the one responsive dimension CSS cannot reach: a `@container`
+        rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
+        on the resolved layout rather than on rendered geometry. Of the built-ins only
+        `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+        with the `compact` property of a `customLayouts` entry.
+        
+        The swap fires `layoutChange` with `autoDetected: true` and never overrides an
+        explicit choice: the layout you set stays the one it resolves against, so a
+        `setLayout` or a `{layout:*}` key still wins and is re-tiered from there.
+        
+        The width is taken from the keyboard's own box, so an embedded keyboard tiers
+        on the room it was granted rather than on the viewport. Override the threshold
+        with the `--ui5KioskKeyboard-autoCompactThreshold` custom property.
+         *
+         * @since 0.1.0
+         * When called with a value of "null" or "undefined", the default value of the property will be restored.
+         *
+         * Default value is: false
+         * @param [autoCompact=false] New value for property "autoCompact"
+         * @returns Reference to "this" in order to allow method chaining
+         */
+        setAutoCompact(autoCompact: boolean): this;
 
         // property: accentVariants
 
@@ -1033,6 +1112,8 @@ declare module "./KioskKeyboard" {
          * @param parameters Parameters to pass along with the event
          * @param [mParameters.layout] Fired when the active layout changes (via a `{layout:name}` key
         or programmatic `setLayout()` call).
+         * @param [mParameters.autoDetected] Fired when the active layout changes (via a `{layout:name}` key
+        or programmatic `setLayout()` call).
          *
          * @returns Reference to "this" in order to allow method chaining
          */
@@ -1326,6 +1407,7 @@ declare module "./KioskKeyboard" {
      */
     export interface KioskKeyboard$LayoutChangeEventParameters {
         layout?: string;
+        autoDetected?: boolean;
     }
 
     /**

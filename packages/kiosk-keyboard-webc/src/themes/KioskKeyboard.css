@@ -60,6 +60,7 @@
   --kiosk-keyboard-border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
   --kiosk-keyboard-cq-short-threshold: 16rem;
   --kiosk-keyboard-cq-tiny-threshold: 12rem;
+  --kiosk-keyboard-auto-compact-threshold: 22rem;
 
   /* Accent-variant long-press popup. The floating container is a `ui5-popover`
      (top-layer, unclipped) and the options are themed `ui5-button`s; these props

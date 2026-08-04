@@ -50,6 +50,18 @@ class CustomLayout extends UI5Element {
   @property() keycapLang = "";
 
   /**
+   * The layout rendered instead of this one on a keyboard too narrow to seat its rows,
+   * read only when the host's `autoCompact` is on. Names the same key set in a denser
+   * arrangement, matched after trim and lowercase. Empty takes the built-in layout's
+   * counterpart.
+   *
+   * @default ""
+   * @public
+   * @since 0.1.0
+   */
+  @property() compact = "";
+
+  /**
    * BCP-47 prefixes that select this layout when the element has no explicit `layout`,
    * comma- or space-separated, e.g. `locales="pl,pl-PL"`.
    *
@@ -137,6 +149,7 @@ class CustomLayout extends UI5Element {
       name: this.name,
       ...(this.rows !== null && { rows: this.rows }),
       ...(this.keycapLang && { keycapLang: this.keycapLang }),
+      ...(this.compact && { compact: this.compact }),
       ...(isDeclaredRole(this.layoutRole) && { secondary: this.layoutRole === "Secondary" }),
       ...(locales.length > 0 && { locales }),
       ...(this.middleware !== null && { middleware: this.middleware }),

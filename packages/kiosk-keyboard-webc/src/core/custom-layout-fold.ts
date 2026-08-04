@@ -47,6 +47,7 @@ export type DiagnosticCode =
   | "invalid-locale"
   | "unknown-target"
   | "unknown-suppress"
+  | "unknown-compact"
   | "duplicate-rows"
   | "duplicate-middleware"
   | "duplicate-locale";
@@ -192,6 +193,7 @@ export function foldCustomLayouts(
   const middlewareDeclared = new Set<string>();
   const localeOwner = new Map<string, string>();
   const addressed = new Set<string>();
+  const compactTargets = new Map<string, string>();
 
   for (const spec of specs) {
     const name = spec.name.trim().toLowerCase();
@@ -219,11 +221,15 @@ export function foldCustomLayouts(
     }
 
     const lang = typeof spec.keycapLang === "string" ? spec.keycapLang.trim() : "";
+    // Names a layout, so it is normalized the way every layout name is.
+    const compact = typeof spec.compact === "string" ? spec.compact.trim().toLowerCase() : "";
     const patch: LayoutMeta = {
       ...(lang && { lang }),
+      ...(compact && { compact }),
       ...(typeof spec.secondary === "boolean" && { secondary: spec.secondary }),
     };
     if (Object.keys(patch).length > 0) meta.set(name, { ...meta.get(name), ...patch });
+    if (compact) compactTargets.set(name, compact);
 
     for (const raw of spec.locales ?? []) {
       const tag = raw.trim().toLowerCase();
@@ -258,6 +264,15 @@ export function foldCustomLayouts(
   // layout that declares its rows.
   for (const name of addressed) {
     if (!rowsDeclared.has(name) && !isBuiltIn(name)) diagnostics.push({ code: "unknown-target", layout: name });
+  }
+
+  // A compact counterpart is resolved the same way, and separately: it is a layout this
+  // list points at rather than one it addresses, so reporting it through `addressed` would
+  // name a custom layout the author never wrote.
+  for (const [layout, target] of compactTargets) {
+    if (!rowsDeclared.has(target) && !isBuiltIn(target)) {
+      diagnostics.push({ code: "unknown-compact", layout, value: target });
+    }
   }
 
   return {
@@ -314,6 +329,12 @@ export function describeDiagnostic(d: LayoutDiagnostic, vocab: DiagnosticVocabul
         `"suppress" ${on} names "${d.value}", which is not a suppressible facet. Valid facets are: ` +
         `${SUPPRESSIBLE_FACETS.join(", ")}. Rows cannot be suppressed: a custom layout shadows a ` +
         `built-in layout, it never removes it.`
+      );
+    case "unknown-compact":
+      return (
+        `"compact" ${on} names "${d.value}", and no layout of that name exists, so the keyboard keeps ` +
+        `"${d.layout}" however narrow it gets. Declare "${d.value}" with its own "rows", or correct the ` +
+        `name - the built-ins are: ${vocab.builtInLayouts.join(", ")}.`
       );
     case "duplicate-rows":
       return `Two custom layouts declare "rows" for "${d.layout}"; the later one wins. Remove one, or give them different names.`;

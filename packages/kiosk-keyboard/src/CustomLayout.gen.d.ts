@@ -35,6 +35,14 @@ declare module "./CustomLayout" {
         keycapLang?: string | PropertyBindingInfo;
 
         /**
+         * The layout rendered instead of this one on a keyboard too narrow to seat its
+        rows, read only when the control's `autoCompact` is on. Names the same key set in
+        a denser arrangement, matched after trim and lowercase. Empty takes the built-in
+        layout's counterpart.
+         */
+        compact?: string | PropertyBindingInfo;
+
+        /**
          * Whether the layout is an auxiliary surface or a base alphabetic layout.
          */
         layoutRole?: LayoutRole | PropertyBindingInfo | `{${string}}`;
@@ -158,6 +166,37 @@ declare module "./CustomLayout" {
          * @returns Reference to "this" in order to allow method chaining
          */
         setKeycapLang(keycapLang: string): this;
+
+        // property: compact
+
+        /**
+         * Gets current value of property "compact".
+         *
+         * The layout rendered instead of this one on a keyboard too narrow to seat its
+        rows, read only when the control's `autoCompact` is on. Names the same key set in
+        a denser arrangement, matched after trim and lowercase. Empty takes the built-in
+        layout's counterpart.
+         *
+         * Default value is: ""
+         * @returns Value of property "compact"
+         */
+        getCompact(): string;
+
+        /**
+         * Sets a new value for property "compact".
+         *
+         * The layout rendered instead of this one on a keyboard too narrow to seat its
+        rows, read only when the control's `autoCompact` is on. Names the same key set in
+        a denser arrangement, matched after trim and lowercase. Empty takes the built-in
+        layout's counterpart.
+         *
+         * When called with a value of "null" or "undefined", the default value of the property will be restored.
+         *
+         * Default value is: ""
+         * @param [compact=""] New value for property "compact"
+         * @returns Reference to "this" in order to allow method chaining
+         */
+        setCompact(compact: string): this;
 
         // property: layoutRole
 
