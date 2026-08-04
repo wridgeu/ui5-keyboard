@@ -299,12 +299,13 @@ Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operati
 | `docked`              | `docked`          | `boolean`              | `false`     | Fixed-position mode at bottom of viewport.                                                                                                                                                                                                                      |
 | `auto-show`           | `autoShow`        | `boolean`              | `false`     | Auto open/close when target inputs gain/lose focus (requires `docked`).                                                                                                                                                                                         |
 | `auto-type`           | `autoType`        | `boolean`              | `false`     | Auto-detect keyboard type from focused input's type/inputmode.                                                                                                                                                                                                  |
+| `auto-compact`        | `autoCompact`     | `boolean`              | `false`     | Swap the resolved layout for its compact counterpart while the keyboard is too narrow to seat its rows, and back when the room returns. Of the built-ins only `ja-kana` declares a counterpart; a custom layout names its own with `compact`.                   |
 | `disabled`            | `disabled`        | `boolean`              | `false`     | Disables all key interaction.                                                                                                                                                                                                                                   |
 | `controls`            | `controls`        | `string`               | `""`        | Comma-separated IDs of target elements. Supports single or multiple inputs.                                                                                                                                                                                     |
 | `accessible-name`     | `accessibleName`  | `string`               | `""`        | Custom ARIA label for the keyboard. Falls back to i18n "Virtual Keyboard".                                                                                                                                                                                      |
 | `mobile-keyboard`     | `mobileKeyboard`  | `string`               | `"Auto"`    | `"Auto"` (defer to native on touch), `"Custom"`, or `"Native"`.                                                                                                                                                                                                 |
 | `f-key-mode`          | `fKeyMode`        | `string`               | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                                                                                                                                                                |
-| `accent-variants`     | `accentVariants`  | `boolean`              | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The four non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts). |
+| `accent-variants`     | `accentVariants`  | `boolean`              | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The five non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts). |
 | _(programmatic only)_ | `defaultVariants` | `VariantTable \| null` | `null`      | Long-press variants applied under **every** layout, merged per base letter beneath anything a slotted `<kiosk-keyboard-custom-layout>` declares. Effective only with `accent-variants`. See [Accent variants](#accent-variants-german-umlauts).                 |
 
 ### Slots
@@ -336,7 +337,7 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | `key-press`             | `{ key: string, shiftKey: boolean, char?: string }`                             | Fired on key click. Cancelable. `char` is the resolved character (after shift); `undefined` for action/F-keys.                                                                    |
 | `after-open`            | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the docked keyboard enters the open state. `activeElement` is the input that's now active. State-change hook only; not a CSS transition-end event.                     |
 | `after-close`           | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the docked keyboard enters the closed state. `activeElement` is the input that was active just before closing. State-change hook only; not a CSS transition-end event. |
-| `layout-change`         | `{ layout: string }`                                                            | Fired when layout switches.                                                                                                                                                       |
+| `layout-change`         | `{ layout: string, autoDetected: boolean }`                                     | Fired when layout switches. `autoDetected` marks an `auto-compact` width swap rather than a request.                                                                              |
 | `keyboard-type-change`  | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                                                                                                 |
 | `active-control-change` | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the active control changes (auto-show focus switch or programmatic `setTargetElement`).                                                                                |
 
@@ -386,20 +387,21 @@ The contract is intentionally read-only. It is not the styling API; continue to 
 
 ## Built-in Layouts
 
-| Name        | Description                                        |
-| ----------- | -------------------------------------------------- |
-| `qwerty`    | Standard US QWERTY                                 |
-| `qwertz-de` | German QWERTZ with umlauts and ss                  |
-| `ja-romaji` | Japanese Romaji (QWERTY base with JIS punctuation) |
-| `ja-kana`   | Japanese Kana direct-input (JIS X 6002)            |
-| `arabic`    | Arabic (standard Arabic 101 layout)                |
-| `numeric`   | Numbers + common symbols                           |
-| `special`   | Extended symbols (`#+=`, currencies)               |
-| `numpad`    | Calculator-style number pad                        |
-| `fkeys`     | F1-F12 function keys                               |
-| `nav`       | Navigation keys (arrows, Home, End, etc.)          |
-| `ko-hangul` | Korean Hangul Dubeolsik (KS X 5002)                |
-| `qwerty-es` | Spanish QWERTY with accented vowels and ñ          |
+| Name              | Description                                                        |
+| ----------------- | ------------------------------------------------------------------ |
+| `qwerty`          | Standard US QWERTY                                                 |
+| `qwertz-de`       | German QWERTZ with umlauts and ss                                  |
+| `ja-romaji`       | Japanese Romaji (QWERTY base with JIS punctuation)                 |
+| `ja-kana`         | Japanese Kana direct-input (JIS X 6002)                            |
+| `ja-kana-compact` | Japanese Kana for narrow keyboards, every row at twelve key widths |
+| `arabic`          | Arabic (standard Arabic 101 layout)                                |
+| `numeric`         | Numbers + common symbols                                           |
+| `special`         | Extended symbols (`#+=`, currencies)                               |
+| `numpad`          | Calculator-style number pad                                        |
+| `fkeys`           | F1-F12 function keys                                               |
+| `nav`             | Navigation keys (arrows, Home, End, etc.)                          |
+| `ko-hangul`       | Korean Hangul Dubeolsik (KS X 5002)                                |
+| `qwerty-es`       | Spanish QWERTY with accented vowels and ñ                          |
 
 Combined variants (e.g., QWERTY + F-key row) are not built-in. They are
 trivial compositions - see [Layout Composition](#layout-composition) above.
@@ -410,7 +412,7 @@ Everything one layout _is_ - its rows, the locales that select it, its keycap la
 
 A custom layout that declares `rows` declares a layout. One **without** rows overlays the layout its `name` already resolves to, so a built-in can be given different variants, a different middleware or a different locale binding without restating its keys.
 
-`name`, `keycap-lang`, `locales`, `layout-role` and `suppress` are string attributes, so an overlay is a plain markup declaration:
+`name`, `keycap-lang`, `compact`, `locales`, `layout-role` and `suppress` are string attributes, so an overlay is a plain markup declaration:
 
 ```html
 <script type="module">
@@ -496,6 +498,7 @@ interface KeyDefinition {
 | `name`       | `name`        | `string`           | matched after trim + lowercase; duplicates are the overlay mechanism        | -                                            |
 | `rows`       | _(none)_      | `LayoutDefinition` | last declaration wins                                                       | custom layout → built-in                     |
 | `keycapLang` | `keycap-lang` | `string`           | last declaration wins                                                       | custom layout → built-in                     |
+| `compact`    | `compact`     | `string`           | last declaration wins                                                       | custom layout → built-in                     |
 | `layoutRole` | `layout-role` | `LayoutRole`       | last declaration wins                                                       | `Inherit` takes the built-in's               |
 | `locales`    | `locales`     | token `string`     | additive union; per prefix, last wins                                       | custom layouts → built-in map                |
 | `middleware` | _(none)_      | `() => …`          | last declaration wins                                                       | custom layout → built-in                     |
@@ -503,6 +506,8 @@ interface KeyDefinition {
 | `suppress`   | `suppress`    | token `string`     | discards the inherited value of each listed facet at this layout's position | -                                            |
 
 Custom layouts apply in **DOM order**. `layoutRole` is a tri-state: `Inherit` (the default) takes the built-in layout of the same name's role, `Base` un-marks a built-in's secondary flag, `Secondary` marks an auxiliary surface. Nothing can throw on an attribute here, so an unrecognised value inherits rather than promoting the layout to a base surface. `suppress` is how a facet is turned _off_ rather than replaced - a value the same custom layout declares still applies, so `suppress="Variants"` plus a `variants` table stands that table alone.
+
+`compact` names the layout that renders instead of this one on a keyboard too narrow to seat its rows - the same key set in a denser arrangement, matched after trim and lowercase, and read only while the host's `auto-compact` is on. It may name a built-in (`ja-kana` ships `ja-kana-compact`) or another custom layout. `suppress` cannot turn it off: the suppressible facets are `Variants` and `Middleware`, so an overlay can replace an inherited counterpart but not remove it.
 
 `locales` and `suppress` are token strings rather than arrays, split on commas and whitespace alike: `locales="pl,pl-PL"` and `locales="pl pl-PL"` are the same declaration, as are `suppress="Variants,Middleware"` and `suppress="Variants Middleware"`.
 
@@ -521,6 +526,7 @@ A misconfiguration is logged once per element per distinct complaint, naming the
 | `invalid-locale`       | a `locales` token that is empty after trim                             |
 | `unknown-target`       | facets declared with no `rows`, for a name no layout has               |
 | `unknown-suppress`     | a `suppress` token outside `Variants` / `Middleware`                   |
+| `unknown-compact`      | `compact` that names a layout nothing declares                         |
 | `duplicate-rows`       | two custom layouts declare `rows` for one name                         |
 | `duplicate-middleware` | two custom layouts declare `middleware` for one name                   |
 | `duplicate-locale`     | two custom layouts claim one BCP-47 prefix for different layouts       |
@@ -650,7 +656,7 @@ Three levels of opt-out, narrowest first:
 
 The `defaultVariants` tier only ever adds; it has no suppression spelling. Turn the whole affordance off by leaving `accent-variants` unset, which is the default.
 
-The four non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `arabic`, `ko-hangul`) resolve the built-in table to nothing, so `accent-variants` adds no popups there; supply a `variants` table on a custom layout (or a `defaultVariants` table) to opt one back in, and because there is no built-in tier to merge onto, those tiers stand alone. That exclusion list is only the shipped default for those built-ins; it never locks you out. A **custom** layout whose Latin-looking keys should _not_ surface accent popups (a transliteration IME, say) opts out with `suppress="Variants"`, which discards `defaultVariants` along with the built-in tier. Action, modifier, and space keys never take table variants even when a table is keyed to their value.
+The five non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `ja-kana-compact`, `arabic`, `ko-hangul`) resolve the built-in table to nothing, so `accent-variants` adds no popups there; supply a `variants` table on a custom layout (or a `defaultVariants` table) to opt one back in, and because there is no built-in tier to merge onto, those tiers stand alone. That exclusion list is only the shipped default for those built-ins; it never locks you out. A **custom** layout whose Latin-looking keys should _not_ surface accent popups (a transliteration IME, say) opts out with `suppress="Variants"`, which discards `defaultVariants` along with the built-in tier. Action, modifier, and space keys never take table variants even when a table is keyed to their value.
 
 `LATIN_DIACRITIC_VARIANTS` is exported from the `kiosk-keyboard-webc/variants` subpath for inspection (to read what the defaults are, or to build a table from them); merging means you no longer need to spread it to extend the defaults.
 
@@ -773,16 +779,16 @@ An attribute left out falls back to the built-in layout of the same name, so ove
 
 Some scripts require processing between key press and text insertion. For example, Japanese Kana needs dakuten/handakuten composition (ka + dakuten = ga), and Korean Hangul needs jamo-to-syllable composition (individual consonants and vowels combine into syllable blocks).
 
-Composition middleware handles this automatically. The built-in kana and Hangul middleware are **bundled with the component**: no import or configuration is needed. Each activates automatically when its associated layout (`ja-kana` / `ko-hangul`) is active and deactivates (committing any in-progress composition) on layout switch.
+Composition middleware handles this automatically. The built-in kana and Hangul middleware are **bundled with the component**: no import or configuration is needed. Each activates automatically when its associated layout (`ja-kana`, `ja-kana-compact` / `ko-hangul`) is active and deactivates (committing any in-progress composition) on layout switch.
 
 The `kiosk-keyboard-webc/middleware/*` subpaths export the middleware **factories as data**, so you can reuse or override a built-in on a specific element via the `middleware` property of a [custom layout](#custom-layouts); importing them has no side effect on the bundled defaults.
 
 ### Built-in Middleware
 
-| Module                                          | Layout      | Behavior                                                 |
-| ----------------------------------------------- | ----------- | -------------------------------------------------------- |
-| `kiosk-keyboard-webc/middleware/kana-dakuten`   | `ja-kana`   | Composes base kana + dakuten/handakuten into voiced kana |
-| `kiosk-keyboard-webc/middleware/hangul-compose` | `ko-hangul` | Composes jamo into Hangul syllable blocks with preedit   |
+| Module                                          | Layout                       | Behavior                                                 |
+| ----------------------------------------------- | ---------------------------- | -------------------------------------------------------- |
+| `kiosk-keyboard-webc/middleware/kana-dakuten`   | `ja-kana`, `ja-kana-compact` | Composes base kana + dakuten/handakuten into voiced kana |
+| `kiosk-keyboard-webc/middleware/hangul-compose` | `ko-hangul`                  | Composes jamo into Hangul syllable blocks with preedit   |
 
 ### Custom Middleware
 
@@ -960,7 +966,7 @@ This behavior is driven by a CSS `@container` query on individual keys (`contain
 - **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
 - **Icons** always have `aria-hidden="true"`. They are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.
 - **Accent-variant keys.** A key carrying variants advertises them with `aria-haspopup="dialog"`. Keyboard users open the popup with the context-menu gesture (the Menu key, or Shift+F10) on the focused key, arrow/Home/End to choose, Enter or Space to insert, and Escape to dismiss and return focus to the key. The key carries no `aria-expanded`: its own Enter/Space types the base character rather than toggling the popup.
-- **Language of keycaps.** Keycaps written in a script other than the UI language carry a `lang` attribute on their label, so a screen reader announces them with that language's pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts). The built-in `arabic`, `ja-kana` and `ko-hangul` layouts declare `ar` / `ja` / `ko`; `ja-romaji` declares none, because its keycaps are Latin letters and JIS punctuation and only the text they compose is Japanese. The attribute sits on the key label alone, since the keyboard's own label and its live region are UI-language text. Only a key that types a character carries the layout's script: space and the action keys take their label from i18n, and a layout-switch key is a control affordance rather than keycap content. A custom layout declares its own with the `keycap-lang` attribute of a `<kiosk-keyboard-custom-layout>`.
+- **Language of keycaps.** Keycaps written in a script other than the UI language carry a `lang` attribute on their label, so a screen reader announces them with that language's pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts). The built-in `arabic`, `ja-kana`, `ja-kana-compact` and `ko-hangul` layouts declare `ar` / `ja` / `ja` / `ko`; `ja-romaji` declares none, because its keycaps are Latin letters and JIS punctuation and only the text they compose is Japanese. The attribute sits on the key label alone, since the keyboard's own label and its live region are UI-language text. Only a key that types a character carries the layout's script: space and the action keys take their label from i18n, and a layout-switch key is a control affordance rather than keycap content. A custom layout declares its own with the `keycap-lang` attribute of a `<kiosk-keyboard-custom-layout>`.
 - **Target size.** Keys hold a 24x24 CSS px floor on both axes, meeting the WCAG 2.5.8 minimum touch target size, and grow with the root font size. The inline half is lifted below a 20rem-wide keyboard, where the densest rows cannot fit a full set of floored keys: keys shrink to fit there so that every key stays reachable rather than being clipped off the edge of a center-justified row. Below that width the 24x24 minimum is therefore not met. The block half holds at every width, so a `--kiosk-keyboard-key-height` set below 24px is raised to it, and a keyboard in a height-capped container clips rather than shrinking past the floor.
 
 ### Built-in icons
@@ -1210,6 +1216,7 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-numpad-key-min-width`    | `4rem`                                                                                                                              | Minimum key width in numpad layout                                                                               |
 | `--kiosk-keyboard-cq-short-threshold`      | `16rem`                                                                                                                             | Height threshold for the `cq-tier="short"` host attribute                                                        |
 | `--kiosk-keyboard-cq-tiny-threshold`       | `12rem`                                                                                                                             | Height threshold for the `cq-tier="tiny"` host attribute                                                         |
+| `--kiosk-keyboard-auto-compact-threshold`  | `22rem`                                                                                                                             | Width at or below which `auto-compact` takes the compact layout                                                  |
 | `--kiosk-keyboard-dual-direction`          | `row`                                                                                                                               | Flex direction for dual icon+label keys (`row` or `column`)                                                      |
 | `--kiosk-keyboard-dual-icon-size`          | `1em`                                                                                                                               | Icon font size in dual mode                                                                                      |
 | `--kiosk-keyboard-dual-label-size`         | `1em`                                                                                                                               | Label font size in dual mode (inherits modifier cap)                                                             |
@@ -1338,7 +1345,7 @@ src/
 │   └── shift-state.ts        # Shift / Caps Lock state machine
 ├── layouts/                   # Built-in layout definitions
 │   ├── default-layout.ts     # Default layout name constant
-│   ├── qwerty.ts, qwertz-de.ts, ja-romaji.ts, ja-kana.ts, arabic.ts, ko-hangul.ts, qwerty-es.ts, numeric.ts, special.ts, numpad.ts
+│   ├── qwerty.ts, qwertz-de.ts, ja-romaji.ts, ja-kana.ts, ja-kana-compact.ts, arabic.ts, ko-hangul.ts, qwerty-es.ts, numeric.ts, special.ts, numpad.ts
 │   ├── fkeys.ts, nav.ts      # Standalone F-key/nav layouts
 │   └── fkey-row{,-compact}.ts, nav-row{,-compact}.ts  # Shared rows for composite layouts
 ├── themes/
