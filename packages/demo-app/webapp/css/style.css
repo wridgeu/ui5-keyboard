@@ -33,3 +33,48 @@
 .sapMPage.demoDockedPage > section {
   padding-bottom: 22rem;
 }
+
+/* Phone widths: the nested Page/Panel/VBox chrome costs 96px of a 360px screen,
+   which squeezes a dense layout's keys below the 24px minimum target size
+   (WCAG 2.2 SC 2.5.8). Reclaim the padding and tighten the keyboard's own
+   spacing through its public CSS variables so the keys keep their tap area. */
+@media (max-width: 600px) {
+  .sapMPage.sapUiContentPadding > section {
+    padding: 0.5rem;
+  }
+
+  .sapMPanelContentWrapper {
+    padding: 0.5rem;
+  }
+
+  /* UI5 declares this utility class `!important`, so overriding it needs the same. */
+  .sapUiSmallMargin {
+    margin: 0.5rem !important;
+  }
+
+  .sapMPanelContent .ui5KioskKeyboard {
+    --ui5KioskKeyboard-padding: 0.25rem;
+  }
+}
+
+/* Below 400px a dense layout (the 12-key kana row) needs every pixel the chrome is
+   holding, so the same reclaim goes one step further. A 12-key row cannot reach a
+   24px target on a 320px screen at all - 12 keys plus their gaps is 310px, leaving
+   nothing for the page - which is what the library's compact row variants exist for. */
+@media (max-width: 400px) {
+  .sapMPage.sapUiContentPadding > section {
+    padding: 0.25rem;
+  }
+
+  .sapMPanelContentWrapper {
+    padding: 0.25rem;
+  }
+
+  .sapUiSmallMargin {
+    margin: 0.25rem !important;
+  }
+
+  .sapMPanelContent .ui5KioskKeyboard {
+    --ui5KioskKeyboard-padding: 0.125rem;
+  }
+}

@@ -48,17 +48,28 @@
       }
       body {
         margin: 0;
-        padding: 20px;
+        /* One variable, because the sticky header cancels this padding with a negative
+           margin to span the full width. Change them apart and the header hangs off the
+           side of the page. */
+        --page-pad: 20px;
+        padding: var(--page-pad);
         font-family: "72", Arial, Helvetica, sans-serif;
         background: var(--page-bg);
         color: var(--text-color);
+      }
+      @media (max-width: 400px) {
+        /* 20px each side is a sixth of a 320px screen: the cards would sit past the
+           right edge and the page would scroll sideways. */
+        body {
+          --page-pad: 8px;
+        }
       }
       header {
         position: sticky;
         top: 0;
         z-index: 10;
-        margin: -20px -20px 24px;
-        padding: 12px 20px;
+        margin: calc(-1 * var(--page-pad)) calc(-1 * var(--page-pad)) 24px;
+        padding: 12px var(--page-pad);
         background: var(--page-bg);
         border-bottom: 1px solid var(--border-color);
         display: flex;
@@ -179,6 +190,12 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
+        /* Lets the group shrink inside a grid or flex track rather than forcing it wide. */
+        min-width: 0;
+      }
+      .input-group ui5-input,
+      .input-group ui5-textarea {
+        width: 100%;
       }
       .input-group label {
         font-size: 12px;
@@ -249,7 +266,15 @@
       }
       @media (max-width: 900px) {
         .docked-inputs {
-          grid-template-columns: 1fr 1fr;
+          /* `minmax(0, ...)`, not `1fr`: a bare `1fr` floors the track at the field's
+             min-content width, which is wider than a phone viewport and stretches the
+             whole card past the screen. */
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+      }
+      @media (max-width: 600px) {
+        .docked-inputs {
+          grid-template-columns: minmax(0, 1fr);
         }
       }
     </style>
