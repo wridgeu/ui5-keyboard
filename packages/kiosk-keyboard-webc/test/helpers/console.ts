@@ -1,5 +1,22 @@
 type PatchableConsoleMethod = "warn" | "error";
 
+/** Collects each call to `console[method]` into `messages` for the duration of `fn`. */
+async function patchConsole(
+  method: PatchableConsoleMethod,
+  messages: string[],
+  fn: () => void | Promise<void>,
+): Promise<void> {
+  const original = console[method];
+  console[method] = (...args: unknown[]) => {
+    messages.push(args.map(String).join(" "));
+  };
+  try {
+    await fn();
+  } finally {
+    console[method] = original;
+  }
+}
+
 /**
  * Replaces a console method for the duration of `fn`, collecting each call as
  * a single joined string. Restores the original method afterwards, even when
@@ -11,15 +28,7 @@ export async function captureConsole(
   fn: () => void | Promise<void>,
 ): Promise<string[]> {
   const messages: string[] = [];
-  const original = console[method];
-  console[method] = (...args: unknown[]) => {
-    messages.push(args.map(String).join(" "));
-  };
-  try {
-    await fn();
-  } finally {
-    console[method] = original;
-  }
+  await patchConsole(method, messages, fn);
   return messages;
 }
 
@@ -29,15 +38,6 @@ export async function captureConsole(
  * without hoisting that element out of the block.
  */
 export async function withCapturedWarnings(body: (messages: string[]) => Promise<void>): Promise<void> {
-  const method: PatchableConsoleMethod = "warn";
   const messages: string[] = [];
-  const original = console[method];
-  console[method] = (...args: unknown[]) => {
-    messages.push(args.map(String).join(" "));
-  };
-  try {
-    await body(messages);
-  } finally {
-    console[method] = original;
-  }
+  await patchConsole("warn", messages, () => body(messages));
 }

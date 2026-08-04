@@ -3,21 +3,12 @@ import { withCapturedWarnings } from "../helpers/console.js";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type { LayoutDefinition } from "../../src/types.js";
-import { customLayout } from "../helpers/fixtures.js";
+import { customLayout, readDataKeys } from "../helpers/fixtures.js";
 
-const DOM = KioskKeyboard.DOM;
 const nextRender = renderFinished;
-
-function readDataKeys(el: KioskKeyboard): string[][] {
-  const rows = el.shadowRoot!.querySelectorAll(DOM.selectors.row);
-  return Array.from(rows).map((row) =>
-    Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)).map((k) => k.dataset.key!),
-  );
-}
 
 const layoutA: LayoutDefinition = [[{ value: "ax" }, { value: "bx" }]];
 
-/** Runs `body` with `console.warn` captured into the array it receives, restoring it afterwards. */
 describe("kiosk-keyboard - unregistered layout", () => {
   it("warns and keeps the current layout when `layout` names nothing registered", async () => {
     await withCapturedWarnings(async (messages) => {

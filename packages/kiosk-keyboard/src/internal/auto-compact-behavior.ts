@@ -122,16 +122,17 @@ export default class AutoCompactBehavior extends BaseObject {
 
   private _applyTier(): void {
     const dom = this._host.getDomRef();
-    if (!(dom instanceof HTMLElement) || !this._host.getAutoCompact() || this._observedInline === null) return;
-
-    const raw = getComputedStyle(dom).getPropertyValue("--ui5KioskKeyboard-autoCompactThreshold").trim();
-    const rem = Number.parseFloat(raw);
-    const threshold = (Number.isNaN(rem) ? DEFAULT_THRESHOLD_REM : rem) * Rem.toPx(1);
+    if (!dom || !this._host.getAutoCompact() || this._observedInline === null) return;
 
     // A box of zero is an element that lost its layout (a display:none ancestor,
     // a collapsed panel), not a narrow keyboard; tiering on it would swap while
     // invisible and swap back on reveal.
     if (this._observedInline <= 0) return;
+
+    const raw = getComputedStyle(dom).getPropertyValue("--ui5KioskKeyboard-autoCompactThreshold").trim();
+    const rem = Number.parseFloat(raw);
+    const threshold = (Number.isNaN(rem) ? DEFAULT_THRESHOLD_REM : rem) * Rem.toPx(1);
+
     const narrow = this._observedInline <= threshold;
     if (narrow === this._appliedNarrow) return;
     const crossed = this._appliedNarrow !== null;

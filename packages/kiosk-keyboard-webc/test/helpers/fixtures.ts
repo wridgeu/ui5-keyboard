@@ -43,6 +43,14 @@ export function customLayout(options: CustomLayoutOptions): CustomLayout {
   return el;
 }
 
+/** The `data-key` value of every rendered key, grouped by row. */
+export function readDataKeys(el: KioskKeyboard): string[][] {
+  const rows = el.shadowRoot!.querySelectorAll(DOM.selectors.row);
+  return Array.from(rows).map((row) =>
+    Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)).map((k) => k.dataset.key!),
+  );
+}
+
 /** Find a key element by its data-key value, or null when absent. */
 export function queryKey(el: KioskKeyboard, value: string): HTMLElement | null {
   return el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByValue(value));

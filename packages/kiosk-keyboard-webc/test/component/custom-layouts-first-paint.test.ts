@@ -3,18 +3,9 @@ import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type CustomLayout from "../../src/CustomLayout.js";
 import type { LayoutDefinition } from "../../src/types.js";
-import { customLayout } from "../helpers/fixtures.js";
-
-const DOM = KioskKeyboard.DOM;
+import { customLayout, readDataKeys } from "../helpers/fixtures.js";
 
 const layoutA: LayoutDefinition = [[{ value: "ax" }, { value: "bx" }]];
-
-function readDataKeys(el: KioskKeyboard): string[][] {
-  const rows = el.shadowRoot!.querySelectorAll(DOM.selectors.row);
-  return Array.from(rows).map((row) =>
-    Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)).map((k) => k.dataset.key!),
-  );
-}
 
 /**
  * Builds the whole subtree - host plus its custom layouts - before the host is put
