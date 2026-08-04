@@ -170,10 +170,19 @@ export type LayoutDefinition = KeyRow[];
  * What one custom layout declares. A custom layout without `rows` overlays the layout its
  * `name` already resolves to. The tier applied under every layout is the host's
  * `defaultVariants` property, not a member of this collection.
+ *
+ * @public
+ * @since 0.1.0
  */
 export interface CustomLayoutSpec {
   readonly name: string;
   readonly rows?: LayoutDefinition;
+  /**
+   * `rows` is declared through a binding that has not produced a value yet. The layout
+   * resolves as soon as it does, so the name is not unresolvable and must not be
+   * reported as one.
+   */
+  readonly rowsPending?: boolean;
   readonly keycapLang?: string;
   /**
    * Whether the layout is an auxiliary surface rather than a base alphabetic layout.

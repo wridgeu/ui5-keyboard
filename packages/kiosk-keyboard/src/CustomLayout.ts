@@ -102,6 +102,10 @@ export default class CustomLayout extends Element {
     return {
       name: this.getName(),
       ...(rows !== null && { rows }),
+      // A control is constructed before it joins a view, so a model-bound `rows` is
+      // still null here on the first fold. Say so rather than letting the name read as
+      // unresolvable.
+      ...(rows === null && this.getBindingInfo("rows") !== undefined && { rowsPending: true }),
       ...(keycapLang && { keycapLang }),
       ...(role !== "Inherit" && { secondary: role === "Secondary" }),
       ...(locales.length > 0 && { locales }),

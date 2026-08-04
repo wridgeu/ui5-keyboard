@@ -3,7 +3,14 @@ import Log from "sap/base/Log";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
-import { EMOJI_LAYOUT, IP_ADDRESS_LAYOUT, CURRENCY_LAYOUT, ICON_LABEL_LAYOUT } from "./layouts/custom-layouts";
+import {
+  EMOJI_LAYOUT,
+  IP_ADDRESS_LAYOUT,
+  CURRENCY_LAYOUT,
+  ICON_LABEL_LAYOUT,
+  HOUSE_ACCENTS,
+  POLISH_ACCENTS,
+} from "./layouts/custom-layouts";
 
 /**
  * @name demo.hotkeys.Component
@@ -29,6 +36,8 @@ export default class Component extends UIComponent {
         ipAddress: IP_ADDRESS_LAYOUT,
         currency: CURRENCY_LAYOUT,
         iconLabel: ICON_LABEL_LAYOUT,
+        houseAccents: HOUSE_ACCENTS,
+        polishAccents: POLISH_ACCENTS,
       }),
       "layouts",
     );

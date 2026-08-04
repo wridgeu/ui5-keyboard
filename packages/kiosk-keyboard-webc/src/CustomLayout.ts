@@ -112,6 +112,21 @@ class CustomLayout extends UI5Element {
    */
   @property({ type: Object }) middleware: (() => CompositionMiddleware) | null = null;
 
+  /**
+   * Bumped on every property change. The host folds this into its cache key instead of
+   * listening for the change itself: a host that is `languageAware` has its own
+   * `_invalidate` suppressed while a language change is pending, so a child edit made in
+   * that window would never reach it and the fold would stay stale for good. This
+   * element is not language-aware, so its own hook always runs.
+   *
+   * @private
+   */
+  revision = 0;
+
+  override onInvalidation(): void {
+    this.revision++;
+  }
+
   /** The framework-agnostic record this custom layout declares. The host's fold is its only reader. */
   toSpec(): CustomLayoutSpec {
     const suppress = splitTokens(this.suppress);
@@ -156,6 +171,7 @@ export default CustomLayout;
 /** The host-facing contract, duck-typed so an element from another bundle still matches. */
 export interface ICustomLayout extends HTMLElement {
   readonly isKioskKeyboardCustomLayout: boolean;
+  readonly revision: number;
   toSpec(): CustomLayoutSpec;
 }
 

@@ -205,6 +205,14 @@ describe("custom-layout-fold diagnostics", () => {
     expect(codes(fold({ name: "typo", locales: ["pl"] }))).toEqual(["unknown-target"]);
   });
 
+  it("unknown-target: rows still waiting on a binding are declared, not unresolvable", () => {
+    // Only the UI5 twin can produce this, but the fold is shared, so it is pinned here too.
+    const f = fold({ name: "bound-layout", rowsPending: true, keycapLang: "pl" });
+    expect(codes(f)).toEqual([]);
+    expect(f.layouts).toBeUndefined();
+    expect(f.layoutMeta!.get("bound-layout")!.lang).toBe("pl");
+  });
+
   it("unknown-target: resolvability is read from the complete list, not the prefix", () => {
     const f = fold({ name: "x", locales: ["pl"] }, { name: "x", rows: ROWS });
     expect(codes(f), "an overlay may precede the custom layout declaring its rows").toEqual([]);
