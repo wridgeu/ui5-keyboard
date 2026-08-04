@@ -11,6 +11,7 @@ import fkeys from "../layouts/fkeys";
 import nav from "../layouts/nav";
 import jaRomaji from "../layouts/ja-romaji";
 import jaKana from "../layouts/ja-kana";
+import jaKanaCompact from "../layouts/ja-kana-compact";
 import arabic from "../layouts/arabic";
 import koHangul from "../layouts/ko-hangul";
 import qwertyEs from "../layouts/qwerty-es";
@@ -31,6 +32,7 @@ const BUILTIN_LAYOUTS: ReadonlyMap<string, LayoutDefinition> = new Map([
   ["nav", nav],
   ["ja-romaji", jaRomaji],
   ["ja-kana", jaKana],
+  ["ja-kana-compact", jaKanaCompact],
   ["arabic", arabic],
   ["ko-hangul", koHangul],
   ["qwerty-es", qwertyEs],

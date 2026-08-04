@@ -31,6 +31,7 @@ const BUILTIN_LAYOUTS = [
   "nav",
   "ja-romaji",
   "ja-kana",
+  "ja-kana-compact",
   "arabic",
   "ko-hangul",
   "qwerty-es",

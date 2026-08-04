@@ -2,7 +2,16 @@ import { describe, it, expect, vi } from "vitest";
 import type { LayoutDefinition } from "../../src/types.js";
 import { getRegisteredLayout } from "../../src/core/layout-registry.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-import { BUILTIN_LAYOUT_META, getLayoutLang, isSecondaryLayout, type LayoutMeta } from "../../src/core/layout-meta.js";
+import {
+  BUILTIN_LAYOUT_META,
+  getLayoutMeta,
+  type InstanceLayoutMeta,
+  type LayoutMeta,
+} from "../../src/core/layout-meta.js";
+
+// The module exposes the resolved metadata; these name the two reads under test.
+const isSecondaryLayout = (name: string, meta?: InstanceLayoutMeta) => getLayoutMeta(name, meta)?.secondary === true;
+const getLayoutLang = (name: string, meta?: InstanceLayoutMeta) => getLayoutMeta(name, meta)?.lang;
 
 // Unit coverage for the per-layout attribute table: which built-in layouts are
 // auxiliary surfaces, which ones carry keycaps in a language of their own, and
@@ -15,7 +24,7 @@ describe("BUILTIN_LAYOUT_META", () => {
     for (const name of ["numeric", "special", "fkeys", "nav"]) {
       expect(BUILTIN_LAYOUT_META.get(name)?.secondary, `${name} is secondary`).toBe(true);
     }
-    for (const name of ["ja-romaji", "ja-kana", "arabic", "ko-hangul"]) {
+    for (const name of ["ja-romaji", "ja-kana", "ja-kana-compact", "arabic", "ko-hangul"]) {
       expect(BUILTIN_LAYOUT_META.get(name)?.secondary, `${name} declares no secondary flag`).toBeUndefined();
     }
   });

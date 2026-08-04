@@ -117,7 +117,7 @@ describe("resolveVariantTable", () => {
   });
 
   it("returns null for the built-in non-Latin layouts", () => {
-    for (const name of ["ja-romaji", "ja-kana", "arabic", "ko-hangul"]) {
+    for (const name of ["ja-romaji", "ja-kana", "ja-kana-compact", "arabic", "ko-hangul"]) {
       expect(resolveVariantTable(name), name).toBeNull();
     }
   });

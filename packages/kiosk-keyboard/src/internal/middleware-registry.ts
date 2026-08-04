@@ -19,6 +19,7 @@ export type InstanceMiddleware = ReadonlyMap<string, (() => CompositionMiddlewar
  */
 const BUILTIN_FACTORIES: ReadonlyMap<string, () => CompositionMiddleware> = new Map([
   ["ja-kana", createKanaDakutenMiddleware],
+  ["ja-kana-compact", createKanaDakutenMiddleware],
   ["ko-hangul", createHangulComposeMiddleware],
 ]);
 
