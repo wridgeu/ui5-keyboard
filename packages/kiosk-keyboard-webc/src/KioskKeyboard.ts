@@ -1255,7 +1255,8 @@ class KioskKeyboard extends UI5Element {
 
   /** Locale-derived default layout name, honoring the per-instance locale and layout overrides. */
   private _localeLayout(): string {
-    return getLocaleLayout(this._getFold().localeLayouts, this._getFold().layouts);
+    const fold = this._getFold();
+    return getLocaleLayout(fold.localeLayouts, fold.layouts);
   }
 
   /**
@@ -1297,9 +1298,9 @@ class KioskKeyboard extends UI5Element {
   }
 
   _getResolvedLayout(): LayoutDefinition {
-    const layoutsMap = this._getFold().layouts;
+    const fold = this._getFold();
     const layoutName = this._resolvedLayoutName();
-    const resolved = getLayoutOrDefault(layoutName, layoutsMap);
+    const resolved = getLayoutOrDefault(layoutName, fold.layouts);
     const constrainedName = constrainedLayoutName(this.keyboardType);
     const base =
       constrainedName === null
@@ -1311,13 +1312,12 @@ class KioskKeyboard extends UI5Element {
     // When enabled, fill the resolved accent-variant table onto matching base
     // keys so any layout gains the long-press variants. Author-declared
     // `variants` are preserved (applyVariantDefaults never overrides them).
-    const variantsMap = this._getFold().variants;
     const defaults = this._defaultVariants();
     if (!this.accentVariants) {
-      this._warnDisarmedVariants(variantsMap !== undefined || defaults !== null);
+      this._warnDisarmedVariants(fold.variants !== undefined || defaults !== null);
       return base;
     }
-    const table = resolveVariantTable(layoutName, variantsMap, defaults);
+    const table = resolveVariantTable(layoutName, fold.variants, defaults);
     return table ? applyVariantDefaults(base, table) : base;
   }
 
@@ -1891,11 +1891,12 @@ class KioskKeyboard extends UI5Element {
     // would emit `layout-change` naming a layout that is not the one on screen.
     if (constrainedLayoutName(this.keyboardType) !== null) return;
 
+    const fold = this._getFold();
     const requested = this._requestedLayout;
-    const compact = narrow ? getLayoutMeta(requested, this._getFold().layoutMeta)?.compact : undefined;
+    const compact = narrow ? getLayoutMeta(requested, fold.layoutMeta)?.compact : undefined;
     const target = compact ?? requested;
     if (target === this._resolvedLayoutName()) return;
-    if (!getRegisteredLayout(target, this._getFold().layouts)) return;
+    if (!getRegisteredLayout(target, fold.layouts)) return;
 
     // The tier is an arrangement, not a request, so it must not become the base:
     // a `{layout:base}` key and `_resetToBaseLayout` both return to the layout that

@@ -821,6 +821,8 @@ export default class KioskKeyboard extends Control {
     // Destructure rather than `delete`: the caller's settings object is never mutated.
     const { customLayouts, ...rest } = mSettings ?? {};
     if (customLayouts !== undefined) {
+      // Typed as a record rather than passed as a literal: `applySettings` takes
+      // `$ManagedObjectSettings`, against which a literal is excess-property checked.
       const first: Record<string, unknown> = { customLayouts };
       super.applySettings(first, oScope);
     }
@@ -1140,11 +1142,12 @@ export default class KioskKeyboard extends Control {
     // would fire `layoutChange` naming a layout that is not the one on screen.
     if (constrainedLayoutName(this.getKeyboardType()) !== null) return;
 
+    const fold = this._getFold();
     const requested = this._requestedLayout;
-    const compact = narrow ? getLayoutMeta(requested, this._getFold().layoutMeta)?.compact : undefined;
+    const compact = narrow ? getLayoutMeta(requested, fold.layoutMeta)?.compact : undefined;
     const target = compact ?? requested;
     if (target === this.getLayout()) return;
-    if (!registryGetLayout(target, this._getFold().layouts)) return;
+    if (!registryGetLayout(target, fold.layouts)) return;
 
     // The tier is an arrangement, not a request, so it must not become the base:
     // `{layout:base}`, `resetLayout()` and `reset()` all return to the layout that
