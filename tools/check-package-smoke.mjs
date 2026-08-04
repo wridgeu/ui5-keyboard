@@ -37,6 +37,7 @@ const packages = [
       "README.md",
       "dist/Assets.js",
       "dist/KioskKeyboard.js",
+      "dist/CustomLayout.js",
       "dist/bundle.esm.js",
       "dist/custom-elements.json",
       "dist/kiosk-keyboard.bundle.js",
