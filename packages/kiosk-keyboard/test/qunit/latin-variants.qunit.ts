@@ -129,7 +129,7 @@ QUnit.test("falls back to the built-in Latin table for a layout with no instance
 });
 
 QUnit.test("returns null for the built-in non-Latin layouts", (assert) => {
-  for (const name of ["ja-romaji", "ja-kana", "arabic", "ko-hangul"]) {
+  for (const name of ["ja-romaji", "ja-kana", "ja-kana-compact", "arabic", "ko-hangul"]) {
     assert.strictEqual(resolveVariantTable(name), null, `${name} has no built-in variants`);
   }
 });

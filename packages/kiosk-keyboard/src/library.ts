@@ -32,6 +32,8 @@ export enum KeyboardLayout {
   JaRomaji = "ja-romaji",
   /** Japanese Kana direct-input layout (JIS X 6002). */
   JaKana = "ja-kana",
+  /** Japanese Kana direct-input layout for narrow keyboards, every row at twelve key widths. */
+  JaKanaCompact = "ja-kana-compact",
   /** Arabic keyboard layout (standard Arabic 101). */
   Arabic = "arabic",
   /** Korean Hangul Dubeolsik layout (KS X 5002). */

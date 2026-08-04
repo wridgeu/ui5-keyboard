@@ -47,6 +47,7 @@ test.describe("Visual Regression", () => {
     { id: "kb-part-styled", tag: "webc-part-styled" },
     { id: "kb-ja-romaji", tag: "webc-ja-romaji" },
     { id: "kb-ja-kana", tag: "webc-ja-kana" },
+    { id: "kb-ja-kana-compact", tag: "webc-ja-kana-compact" },
     { id: "kb-arabic", tag: "webc-arabic" },
     { id: "kb-icon-label-variations", tag: "webc-icon-label-variations" },
     { id: "kb-ko-hangul", tag: "webc-ko-hangul" },

@@ -32,6 +32,7 @@ const LAYOUTS = [
   "kb-glyph-stress",
   "kb-ja-romaji",
   "kb-ja-kana",
+  "kb-ja-kana-compact",
   "kb-arabic",
   "kb-ko-hangul",
   "kb-indic-stress",

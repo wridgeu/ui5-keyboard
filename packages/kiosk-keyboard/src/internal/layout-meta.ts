@@ -37,6 +37,14 @@ export interface LayoutMeta {
    * the Latin default in force.
    */
   readonly variants?: VariantTable | null;
+  /**
+   * The layout to render instead on a keyboard too narrow to seat this one's rows,
+   * used only when `autoCompact` is on. Names the same key set in a denser
+   * arrangement, not a different keyboard: the swap is invisible to the consumer
+   * beyond the `layoutChange` it fires. Absent for a layout with no narrow form,
+   * which is every layout that already fits.
+   */
+  readonly compact?: string;
 }
 
 /**
@@ -52,7 +60,8 @@ export const BUILTIN_LAYOUT_META: ReadonlyMap<string, LayoutMeta> = new Map<stri
   // No `lang`: the romaji keycaps are Latin letters and JIS punctuation, and only
   // the text they compose is Japanese.
   ["ja-romaji", { variants: null }],
-  ["ja-kana", { lang: "ja", variants: null }],
+  ["ja-kana", { lang: "ja", variants: null, compact: "ja-kana-compact" }],
+  ["ja-kana-compact", { lang: "ja", variants: null }],
   ["arabic", { lang: "ar", variants: null }],
   ["ko-hangul", { lang: "ko", variants: null }],
 ]);
@@ -76,20 +85,10 @@ export type InstanceLayoutMeta = ReadonlyMap<string, LayoutMeta>;
  * back per attribute; the variant tiers layer over the built-in table by name in
  * `latin-variants`.
  */
-function resolveLayoutMeta(name: string, instanceMeta?: InstanceLayoutMeta): LayoutMeta | undefined {
+export function getLayoutMeta(name: string, instanceMeta?: InstanceLayoutMeta): LayoutMeta | undefined {
   const builtIn = BUILTIN_LAYOUT_META.get(name);
   const instance = instanceMeta?.get(name);
   if (!instance) return builtIn;
   if (!builtIn) return instance;
   return { ...builtIn, ...instance };
-}
-
-/** Whether `name` is a secondary (auxiliary) layout rather than a base alphabetic one. */
-export function isSecondaryLayout(name: string, instanceMeta?: InstanceLayoutMeta): boolean {
-  return resolveLayoutMeta(name, instanceMeta)?.secondary === true;
-}
-
-/** The BCP-47 language of `name`'s keycaps, or `undefined` when they are in the UI language. */
-export function getLayoutLang(name: string, instanceMeta?: InstanceLayoutMeta): string | undefined {
-  return resolveLayoutMeta(name, instanceMeta)?.lang;
 }

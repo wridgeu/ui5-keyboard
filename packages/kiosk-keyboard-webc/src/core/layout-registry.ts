@@ -10,6 +10,7 @@ import fkeys from "../layouts/fkeys.js";
 import nav from "../layouts/nav.js";
 import jaRomaji from "../layouts/ja-romaji.js";
 import jaKana from "../layouts/ja-kana.js";
+import jaKanaCompact from "../layouts/ja-kana-compact.js";
 import arabic from "../layouts/arabic.js";
 import koHangul from "../layouts/ko-hangul.js";
 import qwertyEs from "../layouts/qwerty-es.js";
@@ -31,6 +32,7 @@ const layouts: ReadonlyMap<string, LayoutDefinition> = new Map([
   ["nav", nav],
   ["ja-romaji", jaRomaji],
   ["ja-kana", jaKana],
+  ["ja-kana-compact", jaKanaCompact],
   ["arabic", arabic],
   ["ko-hangul", koHangul],
   ["qwerty-es", qwertyEs],

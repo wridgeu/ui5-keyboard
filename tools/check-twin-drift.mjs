@@ -44,6 +44,11 @@
  *   internal/auto-show-behavior.ts <-> core/auto-show-controller.ts,
  *   internal/native-keyboard-suppression.ts <-> core/native-inputmode-suppression.ts
  *   (the last keys its refcount map by control id in kiosk, by element in webc),
+ *   internal/auto-compact-behavior.ts <-> core/auto-compact-controller.ts (both
+ *   measure the root's inline size off a ResizeObserver entry and apply the
+ *   autoCompact tier from a frame, but kiosk reads a UI5 control's DOM ref and the
+ *   camelCase threshold custom property while webc reads its shadow root and the
+ *   kebab-case one),
  *   internal/fkey-controller.ts <-> core/fkey-controller.ts (kiosk reads the
  *   FKeyMode enum and dispatches via a UI5 target session; webc compares mode
  *   string literals and writes the resolved DOM input directly),
@@ -73,6 +78,7 @@ const LAYOUTS = [
   "fkey-row-compact",
   "fkey-row",
   "fkeys",
+  "ja-kana-compact",
   "ja-kana",
   "ja-romaji",
   "ko-hangul",
@@ -132,7 +138,7 @@ const PAIRS = [
 
 // Guard against the manifest silently shrinking (a dropped entry would make
 // the check pass while comparing fewer pairs).
-const EXPECTED_PAIR_COUNT = 28;
+const EXPECTED_PAIR_COUNT = 29;
 
 /**
  * Removes line and block comments, but ONLY outside string literals: a `//` or

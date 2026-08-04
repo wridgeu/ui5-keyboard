@@ -36,6 +36,7 @@ const BUILTIN_NAMES = [
   "nav",
   "ja-romaji",
   "ja-kana",
+  "ja-kana-compact",
   "arabic",
   "ko-hangul",
   "qwerty-es",
