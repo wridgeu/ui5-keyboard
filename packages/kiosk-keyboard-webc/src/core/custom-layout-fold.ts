@@ -191,7 +191,6 @@ export function foldCustomLayouts(
   const diagnostics: LayoutDiagnostic[] = [];
   const rowsDeclared = new Set<string>();
   const middlewareDeclared = new Set<string>();
-  const localeOwner = new Map<string, string>();
   const addressed = new Set<string>();
   const compactTargets = new Map<string, string>();
 
@@ -237,11 +236,10 @@ export function foldCustomLayouts(
         diagnostics.push({ code: "invalid-locale", layout: name });
         continue;
       }
-      const owner = localeOwner.get(tag);
+      const owner = localeLayouts.get(tag);
       if (owner !== undefined && owner !== name) {
         diagnostics.push({ code: "duplicate-locale", layout: owner, other: name, value: tag });
       }
-      localeOwner.set(tag, name);
       localeLayouts.set(tag, name);
     }
 
