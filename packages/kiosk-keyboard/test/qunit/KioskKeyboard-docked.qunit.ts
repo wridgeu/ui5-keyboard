@@ -305,6 +305,31 @@ QUnit.test("Escape fires afterClose event", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Escape still closes the keyboard on a second open", async (assert) => {
+  const input = new Input("escape-rearm-input");
+  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
+  input.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  // close() detaches the Escape listener by aborting its signal. A signal is
+  // one-shot, so the second show() must mint a fresh controller; reusing the
+  // aborted one attaches nothing and Escape goes dead from here on.
+  kb.show();
+  kb.close();
+  kb.show();
+  assert.ok(kb.isOpen(), "Keyboard is open again");
+
+  const firstKey = getFirstKeyElement(kb);
+  firstKey.setAttribute("tabindex", "0");
+  firstKey.focus();
+  firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+  assert.notOk(kb.isOpen(), "Keyboard closed after Escape on the re-opened keyboard");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Escape does nothing when keyboard is not docked", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
@@ -431,6 +456,27 @@ QUnit.test("setDocked toggles auto-show listener activation", async (assert) => 
   // @ts-expect-error Accessing private field for auto-show state verification
   assert.ok(kb._autoShowBehavior.isActive(), "autoShow listeners are re-attached after re-docking");
 
+  kb.destroy();
+});
+
+QUnit.test("auto-show still opens on focus after an undock/re-dock cycle", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  // Undocking aborts the focus listeners' signal. A signal is one-shot, so
+  // re-docking must mint a fresh controller; reusing the aborted one leaves
+  // isActive() reporting true while nothing is actually attached.
+  kb.setDocked(false);
+  kb.setDocked(true);
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+
+  assert.ok(kb.isOpen(), "Focus opens the keyboard again after re-docking");
+
+  input.destroy();
   kb.destroy();
 });
 

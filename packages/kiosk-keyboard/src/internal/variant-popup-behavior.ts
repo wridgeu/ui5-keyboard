@@ -56,7 +56,7 @@ function variantDensityClass(keyHeightPx: number): string {
 }
 
 /** The effective variants surfaced for a key, already Shift/Caps-mapped. */
-export interface VariantResolution {
+interface VariantResolution {
   /** The tap-default glyph, shown only in the open announcement. */
   base: string;
   /** Ordered alternate glyphs presented as options. */
@@ -64,7 +64,7 @@ export interface VariantResolution {
 }
 
 /** Callbacks the popup behavior needs from the owning control. */
-export interface VariantPopupHost {
+interface VariantPopupHost {
   /**
    * Effective variants for the pressed key, or `null` when it has none (the
    * gesture gate). Both `base` and `glyphs` are already Shift/Caps-mapped.
@@ -104,10 +104,14 @@ export default class VariantPopupBehavior {
   private readonly _host: VariantPopupHost;
   /** The pending single-shot hold timer that opens the popup, or `null` when unarmed. */
   private _holdTimer: ReturnType<typeof setTimeout> | null = null;
-  private readonly _onKeydown: (event: KeyboardEvent) => void;
-  private readonly _onDocTouchMove: (event: TouchEvent) => void;
-  private readonly _onDocTouchEnd: (event: TouchEvent) => void;
   private readonly _onAfterClose: () => void;
+  /**
+   * Detaches every DOM listener of the open session (grid keydown, document
+   * touch tracking), or `null` while closed. An `AbortSignal` is one-shot, so
+   * each open mints a fresh controller; reusing an aborted one would attach
+   * nothing.
+   */
+  private _sessionAbort: AbortController | null = null;
 
   /** The key whose hold is armed but has not yet opened the popup. */
   private _armedKeyEl: HTMLElement | null = null;
@@ -119,8 +123,6 @@ export default class VariantPopupBehavior {
   private _label: InvisibleText | null = null;
   /** One themed button per glyph, in glyph order. */
   private _buttons: Button[] = [];
-  /** The option grid's root element, host of the keyboard-navigation listener. */
-  private _gridDom: HTMLElement | null = null;
   private _activeIndex = 0;
   /** Whether the open popup lays out right-to-left; drives both the option order and the arrow polarity. */
   private _rtl = false;
@@ -156,9 +158,6 @@ export default class VariantPopupBehavior {
 
   constructor(host: VariantPopupHost) {
     this._host = host;
-    this._onKeydown = (event) => this._handleKeydown(event);
-    this._onDocTouchMove = (event) => this._handleDocTouchMove(event);
-    this._onDocTouchEnd = (event) => this._handleDocTouchEnd(event);
     this._onAfterClose = () => {
       if (this._selfClosesPending > 0) {
         // Our own `close()`, whose session `_dismiss` already tore down.
@@ -443,10 +442,11 @@ export default class VariantPopupBehavior {
     // Keyboard navigation lives on the grid: it intercepts Arrow/Home/End/Enter/
     // Space/Escape before the button's own key handling so it can rove focus and
     // commit, and stops them from reaching the docked keyboard behind the popup.
+    this._sessionAbort = new AbortController();
+    const { signal } = this._sessionAbort;
     const gridDom = grid.getDomRef();
     if (gridDom instanceof HTMLElement) {
-      this._gridDom = gridDom;
-      gridDom.addEventListener("keydown", this._onKeydown);
+      gridDom.addEventListener("keydown", (event) => this._handleKeydown(event), { signal });
     }
 
     // Seat the roving focus on the first option immediately (the Popover's own
@@ -456,8 +456,8 @@ export default class VariantPopupBehavior {
 
     // Touch drag-release: while the initiating finger is still down, track it so
     // dragging onto an option and lifting commits it (mouse never fires these).
-    document.addEventListener("touchmove", this._onDocTouchMove, { passive: false });
-    document.addEventListener("touchend", this._onDocTouchEnd);
+    document.addEventListener("touchmove", (event) => this._handleDocTouchMove(event), { passive: false, signal });
+    document.addEventListener("touchend", (event) => this._handleDocTouchEnd(event), { signal });
 
     this._host.announceOpen(labelText);
   }
@@ -599,10 +599,8 @@ export default class VariantPopupBehavior {
       this._consumeRelease = false;
       this._originKeyValue = null;
     }
-    document.removeEventListener("touchmove", this._onDocTouchMove);
-    document.removeEventListener("touchend", this._onDocTouchEnd);
-    this._gridDom?.removeEventListener("keydown", this._onKeydown);
-    this._gridDom = null;
+    this._sessionAbort?.abort();
+    this._sessionAbort = null;
     this._buttons = [];
     this._activeIndex = 0;
   }

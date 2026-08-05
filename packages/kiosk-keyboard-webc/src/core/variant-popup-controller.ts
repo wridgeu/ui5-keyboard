@@ -25,7 +25,7 @@ export interface VariantPopupState {
 }
 
 /** The slice of the host element the controller reads/drives at event time. */
-export interface VariantPopupControllerHost {
+interface VariantPopupControllerHost {
   /** Live shadow root accessor (read at event time, never snapshotted). */
   getShadowRoot(): ShadowRoot | null;
   isDisabled(): boolean;

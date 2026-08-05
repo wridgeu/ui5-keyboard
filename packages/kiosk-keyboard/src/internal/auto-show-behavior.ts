@@ -42,35 +42,36 @@ interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" 
 
 export default class AutoShowBehavior extends BaseObject {
   private _host: AutoShowBehaviorHost;
-  private _active = false;
+  /**
+   * Detaches the document focus listeners for the current armed period, or
+   * `null` while disarmed. An `AbortSignal` is one-shot, so each `enable()`
+   * mints a fresh controller; reusing an aborted one would attach nothing.
+   */
+  private _abort: AbortController | null = null;
   private _deferredCloseId: number | null = null;
-  private _boundFocusIn: (e: FocusEvent) => void;
-  private _boundFocusOut: (e: FocusEvent) => void;
 
   constructor(host: AutoShowBehaviorHost) {
     super();
     this._host = host;
-    this._boundFocusIn = this._onDocumentFocusIn.bind(this);
-    this._boundFocusOut = this._onDocumentFocusOut.bind(this);
   }
 
   enable(): void {
-    if (this._active) return;
-    this._active = true;
-    document.addEventListener("focusin", this._boundFocusIn, true);
-    document.addEventListener("focusout", this._boundFocusOut, true);
+    if (this._abort) return;
+    this._abort = new AbortController();
+    const { signal } = this._abort;
+    document.addEventListener("focusin", (e) => this._onDocumentFocusIn(e), { capture: true, signal });
+    document.addEventListener("focusout", (e) => this._onDocumentFocusOut(e), { capture: true, signal });
   }
 
   disable(): void {
-    if (!this._active) return;
-    this._active = false;
+    if (!this._abort) return;
     this.cancelPendingClose();
-    document.removeEventListener("focusin", this._boundFocusIn, true);
-    document.removeEventListener("focusout", this._boundFocusOut, true);
+    this._abort.abort();
+    this._abort = null;
   }
 
   isActive(): boolean {
-    return this._active;
+    return this._abort !== null;
   }
 
   cancelPendingClose(): void {
@@ -81,7 +82,7 @@ export default class AutoShowBehavior extends BaseObject {
   }
 
   onAfterRendering(): void {
-    if (this._host.getDocked() && this._host.getAutoShow() && !this._active) {
+    if (this._host.getDocked() && this._host.getAutoShow() && !this.isActive()) {
       this.enable();
     }
   }

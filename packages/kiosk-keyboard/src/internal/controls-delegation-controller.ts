@@ -14,7 +14,7 @@ type InputFocusDelegation = {
  * `TargetInputSession` pattern) so the controls-reconciliation logic stays free
  * of UI5 control internals.
  */
-export interface ControlsDelegationHost {
+interface ControlsDelegationHost {
   getControls(): string[];
   /** Parent of the host control, used to resolve view-local control ids. */
   getParent(): ManagedObject | null;
