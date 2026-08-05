@@ -175,8 +175,8 @@ QUnit.test("layoutRole promotes the built-in secondary numeric to a base layout"
 
 QUnit.test("a typo in a closed enum attribute fails loudly rather than silently", async (assert) => {
   // `createEnumType.parseValue` yields `undefined` for an unknown token and
-  // `validateProperty` then throws, which is the direct answer to a surface whose
-  // mis-spellings used to resolve to nothing without a word.
+  // `validateProperty` then throws, so a mis-spelled facet cannot resolve to
+  // nothing without a word.
   const rejected = await view(`<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:kiosk="ui5.kiosk">
     <kiosk:KioskKeyboard id="kb" layout="qwerty">
       <kiosk:customLayouts>

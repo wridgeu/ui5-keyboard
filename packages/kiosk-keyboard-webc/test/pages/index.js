@@ -47,7 +47,7 @@ document.querySelectorAll("kiosk-keyboard").forEach((kb) => {
     appendLog(name, `key-press key="${d.key}" shift=${d.shiftKey}`);
   });
   kb.addEventListener("layout-change", (e) => {
-    appendLog(name, `layout-change layout="${e.detail.layout}"`);
+    appendLog(name, `layout-change layout="${e.detail.layout}" autoDetected=${e.detail.autoDetected}`);
   });
   kb.addEventListener("keyboard-type-change", (e) => {
     appendLog(name, `keyboard-type-change type="${e.detail.keyboardType}"`);
@@ -283,4 +283,19 @@ if (kbVariants) {
 const clVariants = document.getElementById("cl-variants");
 if (clVariants) {
   clVariants.variants = { a: ["ą"], s: ["ś", "š"] };
+}
+
+// autoCompact: report which tier the resized box currently resolves to. The keyboard
+// needs no script - `auto-compact` is an attribute - so this only reads it back out.
+// `effectiveLayout`, not `layout`: the latter is the layout asked for, which a width
+// swap deliberately leaves alone.
+const kbCompact = document.getElementById("kb-compact");
+const compactStatus = document.getElementById("compact-status");
+if (kbCompact && compactStatus) {
+  const report = () => {
+    const width = Math.round(kbCompact.getBoundingClientRect().width);
+    compactStatus.textContent = `keyboard width ${width}px → layout "${kbCompact.effectiveLayout}"`;
+  };
+  kbCompact.addEventListener("layout-change", report);
+  new ResizeObserver(report).observe(kbCompact);
 }

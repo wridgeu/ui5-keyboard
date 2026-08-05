@@ -103,10 +103,17 @@ export class AutoCompactController {
   }
 
   /**
-   * Re-evaluates the tier against the last observed width. The host calls this when
-   * the layout it should resolve against changes, which a resize would not report.
+   * Re-evaluates the tier against the last observed width. The host calls this
+   * whenever an input the tier resolves through changes - the requested layout, the
+   * `keyboardType` constraint, the folded layout table - none of which a resize
+   * reports, because the box never moved.
+   *
+   * Free to call before there is anything to re-evaluate: with no observation on
+   * record the first one still to come carries the verdict, so this costs no frame
+   * while `autoCompact` is off.
    */
   reapply(): void {
+    if (this._observedInline === null) return;
     this._appliedNarrow = null;
     this.scheduleTierUpdate();
   }

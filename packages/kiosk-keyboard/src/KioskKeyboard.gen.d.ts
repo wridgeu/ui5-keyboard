@@ -19,6 +19,13 @@ declare module "./KioskKeyboard" {
         /**
          * Active layout name. Only effective when keyboardType is "Full".
         Auto-detected from the UI5 locale when omitted.
+        
+        This holds the layout on screen, not the last one asked for: a `{layout:*}` key
+        and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
+        writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
+        when it holds a stored preference, or a detected value travels back into the
+        model; take user-driven changes from `layoutChange`, whose `autoDetected`
+        parameter is `false` for exactly those.
          *
          * @since 0.1.0
          */
@@ -259,6 +266,13 @@ declare module "./KioskKeyboard" {
          *
          * Active layout name. Only effective when keyboardType is "Full".
         Auto-detected from the UI5 locale when omitted.
+        
+        This holds the layout on screen, not the last one asked for: a `{layout:*}` key
+        and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
+        writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
+        when it holds a stored preference, or a detected value travels back into the
+        model; take user-driven changes from `layoutChange`, whose `autoDetected`
+        parameter is `false` for exactly those.
          *
          * @since 0.1.0
          * Default value is: "qwerty"
@@ -271,6 +285,13 @@ declare module "./KioskKeyboard" {
          *
          * Active layout name. Only effective when keyboardType is "Full".
         Auto-detected from the UI5 locale when omitted.
+        
+        This holds the layout on screen, not the last one asked for: a `{layout:*}` key
+        and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
+        writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
+        when it holds a stored preference, or a detected value travels back into the
+        model; take user-driven changes from `layoutChange`, whose `autoDetected`
+        parameter is `false` for exactly those.
          *
          * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.

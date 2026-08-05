@@ -332,3 +332,33 @@ The second test was rewritten after its first version passed under injection: th
 wiped by the re-render a request triggers, so a resize-driven version proved nothing. It now
 drives `_applyCompactTier` directly to put the request in the same frame, which is the only way
 to reach the defect.
+
+## Third follow-up: the tier's inputs changing without a resize
+
+Every hypothesis and every follow-up above drove the tier through its own input, the width.
+The review pass over the finished branch asked the inverse question - what else does the tier
+resolve through, and who re-opens the question when one of those moves while the box stands
+still - and found two answers with no path back to `reapply()`:
+
+- A `keyboardType` constraint suppresses the tier (the guard added in the first follow-up), so
+  a keyboard that was narrow under `Numpad` recorded its verdict and swapped nothing. Releasing
+  the constraint - `resetKeyboardType()`, or `autoType` detection following focus from a numeric
+  field to a text one - surfaced the wide layout in a box too narrow for it, which is the exact
+  outcome `autoCompact` exists to prevent, and no resize follows to correct it.
+- The counterpart is resolved through the fold, so a `rows` binding delivering after first paint,
+  or a `<kiosk-keyboard-custom-layout>` appended later, changed the tier's answer with no
+  observation to carry it.
+
+Both are the same defect: `reapply()` was wired only to a layout request. It is now wired to
+every input the tier reads - the request, the constraint, and the fold - and made free to call
+before the first observation lands, so the wiring costs no frame while `autoCompact` is off.
+
+| Defect                                                                                              | Regression test                                                                                                                                                                    | Red seen                        |
+| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| A layout surfacing from under a lifted `keyboardType` constraint kept the wide rows in a narrow box | kiosk `Lifting a keyboardType constraint re-tiers the layout that surfaces`, webc `does not tier while a keyboardType constraint pins the surface, and re-tiers when it is lifted` | yes, written red before the fix |
+| A counterpart registered after first paint was never tiered to                                      | kiosk `A counterpart whose rows arrive from a model re-tiers on arrival`, webc `re-tiers when the counterpart is slotted after first paint`                                        | yes, written red before the fix |
+
+Both webc tests were seen red against the unfixed branch before either `reapply()` call existed
+(`16 passed, 1 failed`, then the second added). The kiosk pair was confirmed live by reintroducing
+the defect afterwards: with all three `reapply()` calls stubbed out the autocompact page ran
+`20/24`, and `24/24` on revert, so the four assertions are load-bearing.

@@ -3,6 +3,8 @@ import type { $KioskKeyboardSettings } from "ui5/kiosk/KioskKeyboard";
 import CustomLayout from "ui5/kiosk/CustomLayout";
 import { KeyboardType } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
+import Log from "sap/base/Log";
+import JSONModel from "sap/ui/model/json/JSONModel";
 import { getRenderedLayoutKeys, getRequiredKeyElement, tapKey, waitForRender } from "./test-helpers";
 
 // The default threshold is 22rem, so 320px is narrow and 600px is not at any
@@ -171,6 +173,67 @@ QUnit.test("Switching autoCompact off gives the requested layout back", async (a
   assert.strictEqual(kb.getLayout(), "home", "disabling restores what was asked for");
 });
 
+// ───────────────────────────────────────────────────
+// Two-way write-back of the tier
+// ───────────────────────────────────────────────────
+
+/** A keyboard whose `layout` is bound to `/layout` of its own model in the given mode. */
+async function mountBound(width: number, mode: "TwoWay" | "OneWay"): Promise<Mounted & { model: JSONModel }> {
+  const model = new JSONModel({ layout: "home" });
+  const mounted = await mount(width, {
+    layout: { path: "/layout", mode } as unknown as string,
+    autoCompact: true,
+    customLayouts: pair(),
+    models: model,
+  } as unknown as $KioskKeyboardSettings);
+  return { ...mounted, model };
+}
+
+QUnit.test("A tier written through a two-way binding is reported once", async (assert) => {
+  const warn = sandbox.stub(Log, "warning");
+  const { kb, resize, model } = await mountBound(WIDE_PX, "TwoWay");
+
+  await resize(NARROW_PX);
+  assert.strictEqual(kb.getLayout(), "home-c", "the tier applied");
+  // The write-back itself is the UI5 contract `sap.f.DynamicPage` follows for
+  // `headerExpanded`, and it stays. What it must not be is silent: two-way is every
+  // JSONModel's default, so an app binding a stored preference never asked for it.
+  assert.strictEqual(model.getProperty("/layout"), "home-c", "the model took the detected value");
+  const hits = () => warn.getCalls().filter((call) => String(call.args[0]).includes("bound two-way"));
+  assert.strictEqual(hits().length, 1, "and the write-back is reported");
+  assert.ok(String(hits()[0]!.args[0]).includes('mode: "OneWay"'), "naming the remedy");
+
+  await resize(WIDE_PX);
+  await resize(NARROW_PX);
+  assert.strictEqual(hits().length, 1, "once per control, not once per crossing");
+});
+
+QUnit.test("A one-way binding takes no write-back and is not reported", async (assert) => {
+  const warn = sandbox.stub(Log, "warning");
+  const { kb, resize, model } = await mountBound(WIDE_PX, "OneWay");
+
+  await resize(NARROW_PX);
+  assert.strictEqual(kb.getLayout(), "home-c", "the tier still applies");
+  assert.strictEqual(model.getProperty("/layout"), "home", "the stored preference is untouched");
+  assert.strictEqual(
+    warn.getCalls().filter((call) => String(call.args[0]).includes("bound two-way")).length,
+    0,
+    "and there is nothing to report",
+  );
+});
+
+QUnit.test("An unbound layout is not reported", async (assert) => {
+  const warn = sandbox.stub(Log, "warning");
+  const { resize } = await mount(WIDE_PX, { layout: "home", autoCompact: true, customLayouts: pair() });
+
+  await resize(NARROW_PX);
+  assert.strictEqual(
+    warn.getCalls().filter((call) => String(call.args[0]).includes("bound two-way")).length,
+    0,
+    "no binding, no write-back, no warning",
+  );
+});
+
 QUnit.test("A keyboardType constraint suppresses the tier", async (assert) => {
   const { kb, changes, resize } = await mount(WIDE_PX, {
     layout: "ja-kana",
@@ -181,6 +244,44 @@ QUnit.test("A keyboardType constraint suppresses the tier", async (assert) => {
   // Numpad pins the rendered surface, so a swap would announce a layout nobody can see.
   assert.deepEqual(changes, [], "no layout change is announced while the surface is constrained");
   assert.strictEqual(kb.getLayout(), "ja-kana", "and the layout under the constraint is untouched");
+});
+
+QUnit.test("Lifting a keyboardType constraint re-tiers the layout that surfaces", async (assert) => {
+  const { kb } = await mount(NARROW_PX, {
+    layout: "ja-kana",
+    autoCompact: true,
+    keyboardType: KeyboardType.Numpad,
+  });
+  assert.strictEqual(kb.getLayout(), "ja-kana", "the constrained keyboard did not tier");
+
+  kb.resetKeyboardType();
+  await settle();
+
+  // The constraint was the only thing holding the swap back, and lifting it is a
+  // change no resize reports - the box never moved.
+  assert.strictEqual(kb.getLayout(), "ja-kana-compact", "the layout tiers as soon as it surfaces");
+});
+
+QUnit.test("A counterpart whose rows arrive from a model re-tiers on arrival", async (assert) => {
+  const model = new JSONModel({});
+  const { kb, changes } = await mount(NARROW_PX, {
+    layout: "home",
+    autoCompact: true,
+    customLayouts: [
+      new CustomLayout({ name: "home", rows: home, compact: "home-c" }),
+      new CustomLayout({ name: "home-c", rows: "{/rows}" as unknown as LayoutDefinition }),
+    ],
+    models: model,
+  } as unknown as $KioskKeyboardSettings);
+  assert.deepEqual(changes, [], "the counterpart has no rows yet, so there is nothing to swap to");
+
+  model.setProperty("/rows", homeCompact);
+  await settle();
+
+  // The rows arriving is a change to what the tier resolves through, and the box
+  // never moved, so no resize reports it.
+  assert.deepEqual(changes, [{ layout: "home-c", autoDetected: true }], "the counterpart took over on arrival");
+  assert.deepEqual(getRenderedLayoutKeys(kb), [["hc"]], "the compact rows render");
 });
 
 QUnit.test("A keyboard that loses its box does not tier", async (assert) => {
@@ -300,21 +401,55 @@ QUnit.test("A swap that drops the focused key falls back to the first key", asyn
   assert.strictEqual(focused.getAttribute("tabindex"), "0", "which carries the tab stop");
 });
 
-QUnit.test("The live region announces the layout a width picked", async (assert) => {
+QUnit.test("The live region announces which way a width moved the layout", async (assert) => {
   const { kb, resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
   const announced = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
   assert.strictEqual(announced(), "", "a keyboard with room to spare announces nothing");
 
   await resize(NARROW_PX);
-  assert.strictEqual(announced(), "Keyboard layout changed to ja-kana-compact", "the swap names what it picked");
+  assert.strictEqual(announced(), "Switched to the compact keyboard layout", "the swap says which way it went");
 
   await resize(WIDE_PX);
   // A distinct text every time: a live region drops a repeat of what it already
   // holds, so alternating swaps would announce only the first.
-  assert.strictEqual(
-    announced(),
-    "Keyboard layout changed to ja-kana",
-    "and the way back names the layout that returned",
+  assert.strictEqual(announced(), "Switched back to the standard keyboard layout", "and so does the way back");
+});
+
+QUnit.test("The announcement names no layout, so it carries no untranslated identifier", async (assert) => {
+  const { kb, resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
+  const announced = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent ?? "";
+
+  // The user never chose the layout a width picks and never sees its name, and the
+  // name would sit untranslated inside a translated sentence.
+  await resize(NARROW_PX);
+  assert.notOk(announced().includes("ja-kana"), "the compacting announcement quotes no layout name");
+
+  await resize(WIDE_PX);
+  assert.notOk(announced().includes("ja-kana"), "and neither does the one restoring it");
+});
+
+QUnit.test("Consecutive announcements alternate, so none is dropped as a repeat", async (assert) => {
+  const { kb, resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
+  const announced = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent ?? "";
+
+  const spoken: string[] = [];
+  for (const width of [NARROW_PX, WIDE_PX, NARROW_PX, WIDE_PX]) {
+    await resize(width);
+    spoken.push(announced());
+  }
+
+  // The live region re-announces only on a text change, so a direction repeating
+  // itself back to back would go unspoken. The tier reports a verdict only when it
+  // differs from the last, which is what keeps them alternating.
+  assert.deepEqual(
+    spoken,
+    [
+      "Switched to the compact keyboard layout",
+      "Switched back to the standard keyboard layout",
+      "Switched to the compact keyboard layout",
+      "Switched back to the standard keyboard layout",
+    ],
+    "every crossing writes a text different from the one before it",
   );
 });
 
@@ -327,7 +462,7 @@ QUnit.test("A keyboard that was always narrow announces nothing on first paint",
   assert.strictEqual(announced(), "", "the first resolution is not a change to announce");
 
   await resize(WIDE_PX);
-  assert.strictEqual(announced(), "Keyboard layout changed to ja-kana", "a width they crossed is announced");
+  assert.strictEqual(announced(), "Switched back to the standard keyboard layout", "a width they crossed is announced");
 });
 
 QUnit.test("A request drops a tier announcement that has not reached the live region yet", async (assert) => {

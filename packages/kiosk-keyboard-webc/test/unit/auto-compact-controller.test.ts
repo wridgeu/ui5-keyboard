@@ -166,6 +166,22 @@ describe("AutoCompactController", () => {
     ]);
   });
 
+  it("reapply() costs nothing before the first observation", async () => {
+    // The host wires this to every input the tier reads, most of which move while
+    // autoCompact is off. With no width on record there is nothing to re-resolve:
+    // the first observation still to come carries the verdict.
+    enabled = false;
+    controller.syncObserver(root);
+    const scheduled = vi.spyOn(globalThis, "requestAnimationFrame");
+
+    controller.reapply();
+
+    expect(scheduled, "no frame was booked").not.toHaveBeenCalled();
+    scheduled.mockRestore();
+    await nextFrame();
+    expect(applyTier).not.toHaveBeenCalled();
+  });
+
   it("drops a pending tier application when autoCompact goes off before the frame", async () => {
     controller.syncObserver(root);
     observer().deliver(300);

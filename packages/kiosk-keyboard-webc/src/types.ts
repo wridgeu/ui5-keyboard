@@ -178,9 +178,11 @@ export interface CustomLayoutSpec {
   readonly name: string;
   readonly rows?: LayoutDefinition;
   /**
-   * `rows` is declared through a binding that has not produced a value yet. The layout
-   * resolves as soon as it does, so the name is not unresolvable and must not be
-   * reported as one.
+   * `rows` are declared but have not been delivered yet, so the name is not unresolvable
+   * and must not be reported as one. Never set here: a `<kiosk-keyboard-custom-layout>`
+   * carries its rows as a plain property, which is either assigned or absent. The field
+   * exists because the fold that reads it is shared verbatim with the UI5 twin, where a
+   * model binding delivers asynchronously.
    */
   readonly rowsPending?: boolean;
   readonly keycapLang?: string;
