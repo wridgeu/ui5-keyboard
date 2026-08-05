@@ -395,11 +395,17 @@ class KioskKeyboard extends UI5Element {
   // ── Public reactive properties (synced with attributes) ──
 
   /**
-   * The active keyboard layout name.
+   * The keyboard layout asked for.
    *
    * When empty, the keyboard resolves the layout from the current locale
    * (see {@link KioskKeyboard.getLocaleLayout getLocaleLayout}). Per-instance
    * locale overrides can be supplied with the `locales` of a slotted custom layout.
+   *
+   * This is the declaration, not the layout on screen: a `{layout:*}` key, a
+   * `keyboard-type` constraint and an `auto-compact` width swap all change what
+   * renders without writing here, the way `src` stays put while the image the
+   * browser picked shows up in `currentSrc`. Read {@link effectiveLayout} for the
+   * one that rendered.
    *
    * @default ""
    * @public
@@ -407,6 +413,22 @@ class KioskKeyboard extends UI5Element {
    */
   @property()
   layout = "";
+
+  /**
+   * The layout actually rendering, after the locale default, a `{layout:*}` key, a
+   * `keyboard-type` constraint and the `auto-compact` width tier have all been
+   * applied. Read-only, and not reflected to an attribute: it is a resolved value,
+   * not a declaration, so it follows `UI5Element.effectiveDir` rather than `layout`.
+   *
+   * Changes to it are announced by `layout-change`; this getter is for reading the
+   * state at any other moment.
+   *
+   * @public
+   * @since 0.1.0
+   */
+  get effectiveLayout(): string {
+    return this._resolvedLayoutName();
+  }
 
   /**
    * The keyboard type variant to display.
@@ -1037,6 +1059,9 @@ class KioskKeyboard extends UI5Element {
         previousKeyboardType,
         autoDetected,
       });
+      // A constraint pins the rendered surface and suppresses the tier, so lifting one
+      // re-opens the tier question for the layout that surfaces from under it.
+      this._autoCompact.reapply();
     }
     if (name === "fKeyMode" && isInvalidEnumValue("fKeyMode", this.fKeyMode, VALID_FKEY_MODES)) {
       this.fKeyMode = "Virtual";
@@ -1389,6 +1414,10 @@ class KioskKeyboard extends UI5Element {
     }
     this._foldCache = foldCustomLayouts(specs, isBuiltInLayout);
     this._reportDiagnostics(this._foldCache.diagnostics);
+    // The width tier resolves the counterpart through this fold, so a rebuild can
+    // change its answer at an unchanged width - a counterpart slotted after first
+    // paint is the ordinary case.
+    this._autoCompact.reapply();
     return this._foldCache;
   }
 
@@ -1912,8 +1941,19 @@ class KioskKeyboard extends UI5Element {
       // resolution of a keyboard that was always this narrow rearranged nothing they
       // had seen, and a requested switch re-seats focus onto the key it followed,
       // which announces itself; announcing either would speak over the interaction.
+      //
+      // The direction is announced rather than the layout's name: the name is an
+      // identifier the user never chose and never sees, and it would enter a
+      // translated sentence untranslated. Two texts rather than one because the live
+      // region is a plain text write, so a repeat of what it already holds is dropped
+      // - and consecutive announcements always alternate direction, since
+      // `AutoCompactController` only reports a verdict that differs from the last.
       if (crossed) {
-        this._announcements.announce(getText("ARIA_LAYOUT_CHANGED", "Keyboard layout changed to {0}", target));
+        this._announcements.announce(
+          narrow
+            ? getText("ARIA_LAYOUT_COMPACTED", "Switched to the compact keyboard layout")
+            : getText("ARIA_LAYOUT_UNCOMPACTED", "Switched back to the standard keyboard layout"),
+        );
       }
       this.fireDecoratorEvent("layout-change", { layout: target, autoDetected: true });
     }

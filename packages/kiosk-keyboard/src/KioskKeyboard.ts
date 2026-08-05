@@ -1,5 +1,7 @@
 import Control from "sap/ui/core/Control";
 import type ManagedObject from "sap/ui/base/ManagedObject";
+import BindingMode from "sap/ui/model/BindingMode";
+import type PropertyBinding from "sap/ui/model/PropertyBinding";
 import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
 import syncStyleClass from "sap/ui/core/syncStyleClass";
@@ -180,6 +182,8 @@ export default class KioskKeyboard extends Control {
   private _middlewareFactory!: (() => CompositionMiddleware) | null;
   /** Caps the disarmed-variants diagnostic at one emission per control. */
   private _warnedDisarmedVariants!: boolean;
+  /** Caps the two-way tier write-back diagnostic at one emission per control. */
+  private _warnedWriteBack!: boolean;
   /** Owns the ResizeObserver-driven height-responsive class application. */
   private _responsiveSizing!: ResponsiveSizingController;
   private _autoCompact!: AutoCompactBehavior;
@@ -190,7 +194,7 @@ export default class KioskKeyboard extends Control {
    */
   private _requestedLayout!: string;
   /** Live-region text for a width-driven swap, held until the render it triggers is done. */
-  private _pendingLayoutAnnouncement: string | null = null;
+  private _pendingLayoutAnnouncement!: string | null;
   /** Owns `fKeyMode`-driven F-key dispatch (native keydown + caret navigation). */
   private _fKeyController!: FKeyController;
   static readonly metadata: MetadataOptions = {
@@ -199,6 +203,13 @@ export default class KioskKeyboard extends Control {
       /**
        * Active layout name. Only effective when keyboardType is "Full".
        * Auto-detected from the UI5 locale when omitted.
+       *
+       * This holds the layout on screen, not the last one asked for: a `{layout:*}` key
+       * and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
+       * writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
+       * when it holds a stored preference, or a detected value travels back into the
+       * model; take user-driven changes from `layoutChange`, whose `autoDetected`
+       * parameter is `false` for exactly those.
        *
        * @example <caption>XML view</caption>
        * <kiosk:KioskKeyboard layout="qwertz-de" controls="myInput" />
@@ -897,7 +908,9 @@ export default class KioskKeyboard extends Control {
     this._foldChildren = [];
     this._reportedDiagnostics = new Set();
     this._middlewareFactory = null;
+    this._pendingLayoutAnnouncement = null;
     this._warnedDisarmedVariants = false;
+    this._warnedWriteBack = false;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
     this._rendererApi = null;
@@ -1163,12 +1176,19 @@ export default class KioskKeyboard extends Control {
       // resolution of a keyboard that was always this narrow rearranged nothing they
       // had seen, and a requested switch re-seats focus onto the key it followed,
       // which announces itself; announcing either would speak over the interaction.
+      //
+      // The direction is announced rather than the layout's name: the name is an
+      // identifier the user never chose and never sees, and it would enter a
+      // translated sentence untranslated. Two texts rather than one because the live
+      // region is a plain `textContent` write, so a repeat of what it already holds
+      // is dropped - and consecutive announcements always alternate direction, since
+      // `AutoCompactBehavior` only reports a verdict that differs from the last.
       if (crossed) {
-        this._pendingLayoutAnnouncement = getText("ARIA_LAYOUT_CHANGED", "Keyboard layout changed to {0}").replace(
-          "{0}",
-          target,
-        );
+        this._pendingLayoutAnnouncement = narrow
+          ? getText("ARIA_LAYOUT_COMPACTED", "Switched to the compact keyboard layout")
+          : getText("ARIA_LAYOUT_UNCOMPACTED", "Switched back to the standard keyboard layout");
       }
+      this._warnTierWriteBack();
       this.fireLayoutChange({ layout: target, autoDetected: true });
     }
   }
@@ -1241,6 +1261,10 @@ export default class KioskKeyboard extends Control {
       registryIsBuiltIn,
     );
     this._reportDiagnostics(this._fold.diagnostics);
+    // The width tier resolves the counterpart through this fold, so a rebuild can
+    // change its answer at an unchanged width - a model-bound `rows` arriving after
+    // first paint is the ordinary case.
+    this._autoCompact.reapply();
     return this._fold;
   }
 
@@ -1491,6 +1515,9 @@ export default class KioskKeyboard extends Control {
     // End any in-progress composition so the next key resolves against the new
     // effective layout (mirrors _applyLayout).
     this._endComposition();
+    // A constraint pins the rendered surface and suppresses the tier, so lifting one
+    // re-opens the tier question for the layout that surfaces from under it.
+    this._autoCompact.reapply();
   }
 
   /**
@@ -1984,6 +2011,40 @@ export default class KioskKeyboard extends Control {
     this._warnedDisarmedVariants = true;
     Log.warning(
       "A variant table is declared but accentVariants is false, so no variant table is applied. Set accentVariants to arm the long-press popups.",
+      undefined,
+      "ui5.kiosk.KioskKeyboard",
+    );
+  }
+
+  /**
+   * Warns once when a width the `autoCompact` tier resolved is about to travel back
+   * into a two-way bound `layout`.
+   *
+   * `layout` holds the effective layout, so the tier writes it the way
+   * `sap.f.DynamicPage` writes `headerExpanded` on a scroll-driven collapse. That is
+   * the UI5 contract and it stays; what it cannot do is stay quiet, because two-way is
+   * every model's default binding mode, so an app binding a stored preference gets the
+   * write-back without asking for it. There is no supported way to write a property
+   * while skipping the model update - suspending the binding would push the model value
+   * straight back on resume, undoing the tier - so the remedy is the caller's to apply.
+   *
+   * Only the tier is reported. A `{layout:*}` tap is the user choosing, and an app that
+   * persists that choice is doing the right thing.
+   *
+   * `keyboardType` needs no counterpart: `autoType`'s detection is gated on the type
+   * not having been set explicitly, and a property binding delivers its value through
+   * `setKeyboardType`, which marks it exactly that. Binding the property is therefore
+   * what turns the detection off, so it can never write through the binding.
+   */
+  private _warnTierWriteBack(): void {
+    if (this._warnedWriteBack) return;
+    const binding = this.getBinding("layout") as PropertyBinding | undefined;
+    if (binding?.getBindingMode() !== BindingMode.TwoWay) return;
+    this._warnedWriteBack = true;
+    Log.warning(
+      `"layout" is bound two-way, so the layout autoCompact resolved for the keyboard's own width is written back ` +
+        `into the model. Bind it { path: "...", mode: "OneWay" } if it holds a stored preference, and take ` +
+        `user-driven changes from the layoutChange event instead - its "autoDetected" parameter is false for those.`,
       undefined,
       "ui5.kiosk.KioskKeyboard",
     );

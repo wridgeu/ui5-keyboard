@@ -4,7 +4,7 @@ Standalone pages for manual testing, screenshot generation, visual inspection, a
 
 ## Pages
 
-- `index.html`: main standalone demo with native inputs, UI5 Web Components inputs, docked mode, accent-variant long-press popup, the `customLayouts` slot (custom rows, per-instance locales, composition middleware, and the built-in -> `defaultVariants` -> custom-layout variant tiers with a `suppress="Variants"` twin, and `layout-role="Base"` promoting the built-in `numeric`), and event logging
+- `index.html`: main standalone demo with native inputs, UI5 Web Components inputs, docked mode, accent-variant long-press popup, the `customLayouts` slot (custom rows, per-instance locales, composition middleware, and the built-in -> `defaultVariants` -> custom-layout variant tiers with a `suppress="Variants"` twin, and `layout-role="Base"` promoting the built-in `numeric`), the `auto-compact` width tier in a resizable box, and event logging
 - `key-style-demo.html`: key type comparison page used for README screenshots
 - `visual.html`: visual regression matrix used by the Playwright visual suite
 - `visual-themes.html`: focused theme preview page for theme-specific visual checks

@@ -31,16 +31,15 @@ const [digitRow, upperRow, homeRow, lowerRow, bottomRow] = jaKana as [KeyRow, Ke
  * Arrow-key grid navigation follows the resolved layout, so focus moves between
  * the keys a user sees adjacent.
  *
- * @example <caption>Switching to the compact form on a narrow keyboard</caption>
+ * `ja-kana` declares this as its compact counterpart, so a keyboard does not have to
+ * pick between the two itself: `autoCompact` hands over to this form while the
+ * keyboard is too narrow to seat the wide rows and takes `ja-kana` back when the room
+ * returns, measuring the keyboard's own box rather than the viewport. Naming this
+ * layout outright pins it at every width.
+ *
+ * @example <caption>Letting the width pick the form</caption>
  * ```ts
- * const narrow = window.matchMedia("(max-width: 20rem)");
- *
- * function applyKana(kb: KioskKeyboard): void {
- *   kb.setLayout(narrow.matches ? "ja-kana-compact" : "ja-kana");
- * }
- *
- * applyKana(kb);
- * narrow.addEventListener("change", () => applyKana(kb));
+ * new KioskKeyboard({ layout: "ja-kana", autoCompact: true, controls: "myInput" });
  * ```
  *
  * @see {@link https://github.com/microsoft/Windows-driver-samples/blob/main/input/layout/fe_kbds/jpn/106/kbd106.c | Microsoft kbd106.c}

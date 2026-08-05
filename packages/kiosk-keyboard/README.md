@@ -28,15 +28,21 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a themed, accessible virtual ke
 - [Getting Started](#getting-started)
 - [Quick Start](#quick-start)
 - [API Stability](#api-stability)
+- [Custom Layouts](#custom-layouts)
+  - [Fields and how they resolve](#fields-and-how-they-resolve)
+  - [What the control reports](#what-the-control-reports)
+  - [In an XML view](#in-an-xml-view)
 - [KioskKeyboard Control](#kioskkeyboard-control)
   - [Properties](#properties)
   - [Associations](#associations)
+  - [Aggregations](#aggregations)
   - [Events](#events)
   - [Public Methods](#public-methods)
   - [Static Methods](#static-methods)
 - [Layouts](#layouts)
   - [Constrained Containers and Popovers](#constrained-containers-and-popovers)
-  - [Custom Layouts](#custom-layouts)
+  - [Layout Definition Format](#layout-definition-format)
+  - [Accent variants (German umlauts)](#accent-variants-german-umlauts)
 - [Function Keys (F1-F12)](#function-keys-f1-f12)
 - [Locale-Based Default Layout](#locale-based-default-layout)
 - [Docked Mode](#docked-mode)
@@ -376,7 +382,7 @@ Custom layouts apply in **aggregation order**. `layoutRole` is a tri-state: `Inh
 
 `compact` names the layout that renders instead of this one on a keyboard too narrow to seat its rows - the same key set in a denser arrangement, matched after trim and lowercase, and read only while the control's `autoCompact` is on. It may name a built-in (`ja-kana` ships `ja-kana-compact`) or another custom layout. `suppress` cannot turn it off: the suppressible facets are `Variants` and `Middleware`, so an overlay can replace an inherited counterpart but not remove it.
 
-`rows` and `variants` are read by object identity: assign a new array or object to change them; mutating in place is not observed.
+`rows` and `variants` are read by object identity: assign a new array or object to change them; mutating in place is not observed. The shape a `rows` array takes - and every field a key in it can carry - is in [Layout Definition Format](#layout-definition-format).
 
 ### What the control reports
 
@@ -435,7 +441,7 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 
 | Property          | Type                       | Default     | Description                                                                                                                                                                                                                                                     |
 | ----------------- | -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`          | `string`                   | `"qwerty"`  | Active layout name. Auto-detected from locale when omitted. Drives the displayed surface when `keyboardType="Full"`, and after a user `{layout:X}` tap regardless of `keyboardType`.                                                                            |
+| `layout`          | `string`                   | `"qwerty"`  | Active layout name, **written back as the active layout changes** - see the note below. Auto-detected from locale when omitted. Drives the displayed surface when `keyboardType="Full"`, and after a user `{layout:X}` tap regardless of `keyboardType`.        |
 | `keyboardType`    | `ui5.kiosk.KeyboardType`   | `"Full"`    | Display type: `Full`, `Numeric`, or `Numpad`.                                                                                                                                                                                                                   |
 | `enabled`         | `boolean`                  | `true`      | Whether the keyboard is interactive.                                                                                                                                                                                                                            |
 | `ariaLabel`       | `string`                   | `""`        | Accessible label for the keyboard group. Defaults to "Virtual Keyboard" from i18n when empty.                                                                                                                                                                   |
@@ -448,6 +454,17 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 | `accentVariants`  | `boolean`                  | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The five non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts). |
 | `controls`        | `string[]`                 | `[]`        | Input control IDs for targeting. Supports single or multiple inputs. See [controls](#controls).                                                                                                                                                                 |
 | `defaultVariants` | `VariantTable \| null`     | `null`      | Long-press variants applied under **every** layout, merged per base letter beneath anything a `customLayouts` entry declares. Effective only with `accentVariants`. See [Accent variants](#accent-variants-german-umlauts).                                     |
+
+> [!IMPORTANT]
+> `layout` holds the **effective** layout, not the one you last set. A `{layout:X}` tap, `setLayout()`, and an `autoCompact` width swap all write it, so `getLayout()` always answers "what is on screen" — the same contract `keyboardType` has under `autoType`.
+>
+> Two consequences worth knowing before you bind it:
+>
+> - **A two-way binding is written back.** `layout="{/prefs/layout}"` receives `"ja-kana-compact"` when the keyboard narrows, so persisting that model field persists an arrangement the user never chose — and two-way is every model's _default_ mode, so this needs no opting in. Bind one-way (`layout="{path: '/prefs/layout', mode: 'OneWay'}"`) when the value is a stored preference, and take user-driven changes from the `layoutChange` event, whose `autoDetected` flag separates a width swap from a request. The control logs a warning once per instance when a width swap is about to write through a two-way `layout`, so the case is never silent; a `{layout:X}` tap writes back without a warning, since persisting the user's own choice is the point.
+>
+>   `keyboardType` needs no such care despite sharing the contract: `autoType` only detects while the type has not been set explicitly, and a binding delivers its value through `setKeyboardType`, which marks it exactly that. Binding the property is what switches the detection off, so it has no path on which to write back.
+>
+> - **The web component splits this the other way.** `<kiosk-keyboard>.layout` keeps the layout you asked for and exposes the resolved one as the read-only `effectiveLayout`, because a custom-element attribute is an author declaration rather than live state. Port `getLayout()` to `effectiveLayout`. See [Requested vs. effective layout](../kiosk-keyboard-webc/README.md#requested-vs-effective-layout).
 
 ### Associations
 
@@ -629,9 +646,9 @@ The thresholds are configurable via CSS custom properties (`--ui5KioskKeyboard-c
 > [!TIP]
 > You can also fine-tune key sizes via `--ui5KioskKeyboard-keyHeight` and other [CSS custom properties](#public-css-custom-properties) to fit more content into a smaller container without relying solely on the automatic breakpoints.
 
-### Custom Layouts
+### Layout Definition Format
 
-Layouts are arrays of rows, where each row is an array of `KeyDefinition` objects:
+Layouts are arrays of rows, where each row is an array of `KeyDefinition` objects. This is the shape a `CustomLayout`'s `rows` takes:
 
 ```ts
 import type { LayoutDefinition, KeyDefinition } from "ui5/kiosk/types";
@@ -1732,19 +1749,23 @@ The library ships with an English resource bundle for all accessibility labels a
 
 **Resource bundle keys:**
 
-| Key                              | Default (English)       | Used for                                                                        |
-| -------------------------------- | ----------------------- | ------------------------------------------------------------------------------- |
-| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard        | Default `aria-label` when `ariaLabel` property is empty                         |
-| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                | `aria-roledescription` on the root element                                      |
-| `KEY_SHIFT`                      | Shift                   | Visual label and `aria-label` for the Shift key                                 |
-| `KEY_ENTER`                      | Enter                   | Visual label and `aria-label` for the Enter key                                 |
-| `KEY_BACKSPACE`                  | Backspace               | Label for the Backspace key (visible text; aria-label when label is suppressed) |
-| `KEY_SPACE`                      | Space                   | Label for the Space key (visible text; aria-label when label is suppressed)     |
-| `ARIA_CAPS_LOCK`                 | Caps Lock               | `aria-label` for the Shift key when Caps Lock is active                         |
-| `ARIA_CAPS_LOCK_ON`              | Caps Lock on            | ARIA live region announcement                                                   |
-| `ARIA_SHIFT_ON`                  | Shift on                | ARIA live region announcement                                                   |
-| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`                                       |
-| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`                                      |
+| Key                              | Default (English)                             | Used for                                                                        |
+| -------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------- |
+| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard                              | Default `aria-label` when `ariaLabel` property is empty                         |
+| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                                      | `aria-roledescription` on the root element                                      |
+| `KEY_SHIFT`                      | Shift                                         | Visual label and `aria-label` for the Shift key                                 |
+| `KEY_ENTER`                      | Enter                                         | Visual label and `aria-label` for the Enter key                                 |
+| `KEY_BACKSPACE`                  | Backspace                                     | Label for the Backspace key (visible text; aria-label when label is suppressed) |
+| `KEY_SPACE`                      | Space                                         | Label for the Space key (visible text; aria-label when label is suppressed)     |
+| `ARIA_CAPS_LOCK`                 | Caps Lock                                     | `aria-label` for the Shift key when Caps Lock is active                         |
+| `ARIA_CAPS_LOCK_ON`              | Caps Lock on                                  | ARIA live region announcement                                                   |
+| `ARIA_SHIFT_ON`                  | Shift on                                      | ARIA live region announcement                                                   |
+| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened                       | ARIA live region announcement on `show()`                                       |
+| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed                       | ARIA live region announcement on `close()`                                      |
+| `ARIA_LAYOUT_COMPACTED`          | Switched to the compact keyboard layout       | ARIA live region announcement when `autoCompact` takes a layout's compact form  |
+| `ARIA_LAYOUT_UNCOMPACTED`        | Switched back to the standard keyboard layout | ARIA live region announcement when `autoCompact` gives it back                  |
+
+The two `autoCompact` announcements name no layout on purpose: the layout a width picks is one the user never chose and never sees named, and an identifier dropped into a translated sentence stays untranslated. They also have to differ from each other - the live region re-announces only on a text change, so one shared wording would leave every second crossing unspoken.
 
 **Adding translations (library contributors):**
 

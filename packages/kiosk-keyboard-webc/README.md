@@ -293,7 +293,8 @@ Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operati
 
 | Attribute             | Property          | Type                   | Default     | Description                                                                                                                                                                                                                                                     |
 | --------------------- | ----------------- | ---------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`              | `layout`          | `string`               | `""`        | Layout name (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale.                                                                                                                                                                                      |
+| `layout`              | `layout`          | `string`               | `""`        | Layout **asked for** (e.g. `qwerty`, `qwertz-de`). Empty = auto-detect from locale. Not rewritten by what renders; read `effectiveLayout` for that.                                                                                                             |
+| _(read-only)_         | `effectiveLayout` | `string`               | -           | The layout actually rendering, after the locale default, a `{layout:*}` key, a `keyboard-type` constraint and the `auto-compact` width tier. See [Requested vs. effective layout](#requested-vs-effective-layout).                                              |
 | `keyboard-type`       | `keyboardType`    | `string`               | `"Full"`    | `"Full"`, `"Numpad"`, or `"Numeric"`.                                                                                                                                                                                                                           |
 | `open`                | `open`            | `boolean`              | `false`     | Opens/closes the docked keyboard. Equivalent to `show()`/`close()`.                                                                                                                                                                                             |
 | `docked`              | `docked`          | `boolean`              | `false`     | Fixed-position mode at bottom of viewport.                                                                                                                                                                                                                      |
@@ -307,6 +308,23 @@ Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operati
 | `f-key-mode`          | `fKeyMode`        | `string`               | `"Virtual"` | `"Virtual"` (fire event + move cursor), `"Native"` (dispatch keydown), `"None"`.                                                                                                                                                                                |
 | `accent-variants`     | `accentVariants`  | `boolean`              | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The five non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts). |
 | _(programmatic only)_ | `defaultVariants` | `VariantTable \| null` | `null`      | Long-press variants applied under **every** layout, merged per base letter beneath anything a slotted `<kiosk-keyboard-custom-layout>` declares. Effective only with `accent-variants`. See [Accent variants](#accent-variants-german-umlauts).                 |
+
+### Requested vs. effective layout
+
+`layout` is a declaration and `effectiveLayout` is a resolved value, the same split the platform draws between `src` and [`currentSrc`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/currentSrc), and that `@ui5/webcomponents-base` draws between `dir` and `UI5Element.effectiveDir`.
+
+Four things change what renders without writing to `layout`: the locale default when `layout` is empty, a `{layout:*}` key the user taps, a `keyboard-type` of `Numpad` or `Numeric` pinning its own surface, and an `auto-compact` width swap. Leaving the declaration alone is what lets each of them be undone — `auto-compact` needs the layout you asked for in order to restore it when the room comes back.
+
+```ts
+const kb = document.querySelector("kiosk-keyboard");
+kb.layout; // "ja-kana"          - what you asked for
+kb.effectiveLayout; // "ja-kana-compact"  - what is on screen right now
+```
+
+`effectiveLayout` is read-only and has no attribute. To be told when it changes rather than polling it, listen for `layout-change`, whose `autoDetected` flag separates a width swap from a request.
+
+> [!NOTE]
+> The UI5 control splits this differently: `KioskKeyboard#getLayout()` returns the **effective** layout, because a UI5 control property is live control state rather than an author declaration. Port `kb.effectiveLayout` to `kb.getLayout()`, not to the control's `layout` setting. See [Custom Layouts](../kiosk-keyboard/README.md#custom-layouts) in the control's README.
 
 ### Slots
 
@@ -1035,23 +1053,27 @@ Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i1
 
 **Resource bundle keys:**
 
-| Key                              | Default (English)       | Used for                                                                        |
-| -------------------------------- | ----------------------- | ------------------------------------------------------------------------------- |
-| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard        | Default `aria-label` when `accessibleName` is empty                             |
-| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                | `aria-roledescription` on the root element                                      |
-| `KEY_SHIFT`                      | Shift                   | Visual label and `aria-label` for the Shift key                                 |
-| `KEY_ENTER`                      | Enter                   | Visual label and `aria-label` for the Enter key                                 |
-| `KEY_BACKSPACE`                  | Backspace               | Label for the Backspace key (visible text; aria-label when label is suppressed) |
-| `KEY_SPACE`                      | Space                   | Label for the Space key (visible text; aria-label when label is suppressed)     |
-| `KEY_CAPS_LOCK`                  | Caps Lock               | Visible Shift-key label and its `aria-label` when Caps Lock is active           |
-| `ARIA_CAPS_LOCK_ON`              | Caps Lock on            | ARIA live region announcement                                                   |
-| `ARIA_SHIFT_ON`                  | Shift on                | ARIA live region announcement                                                   |
-| `ARIA_SHIFT_OFF`                 | Shift off               | ARIA live region announcement                                                   |
-| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened | ARIA live region announcement on `show()`                                       |
-| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed | ARIA live region announcement on `close()`                                      |
-| `ARIA_RETURN_TO_NUMBERS`         | Return to numbers       | Accessible name for the back key that returns to the numbers surface            |
-| `ARIA_VARIANTS_OPENED`           | {0} variants for {1}    | ARIA live region announcement when the accent-variant popup opens               |
-| `ARIA_VARIANTS_CLOSED`           | Variants closed         | ARIA live region announcement when the accent-variant popup is dismissed        |
+| Key                              | Default (English)                             | Used for                                                                        |
+| -------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------- |
+| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard                              | Default `aria-label` when `accessibleName` is empty                             |
+| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                                      | `aria-roledescription` on the root element                                      |
+| `KEY_SHIFT`                      | Shift                                         | Visual label and `aria-label` for the Shift key                                 |
+| `KEY_ENTER`                      | Enter                                         | Visual label and `aria-label` for the Enter key                                 |
+| `KEY_BACKSPACE`                  | Backspace                                     | Label for the Backspace key (visible text; aria-label when label is suppressed) |
+| `KEY_SPACE`                      | Space                                         | Label for the Space key (visible text; aria-label when label is suppressed)     |
+| `KEY_CAPS_LOCK`                  | Caps Lock                                     | Visible Shift-key label and its `aria-label` when Caps Lock is active           |
+| `ARIA_CAPS_LOCK_ON`              | Caps Lock on                                  | ARIA live region announcement                                                   |
+| `ARIA_SHIFT_ON`                  | Shift on                                      | ARIA live region announcement                                                   |
+| `ARIA_SHIFT_OFF`                 | Shift off                                     | ARIA live region announcement                                                   |
+| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened                       | ARIA live region announcement on `show()`                                       |
+| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed                       | ARIA live region announcement on `close()`                                      |
+| `ARIA_RETURN_TO_NUMBERS`         | Return to numbers                             | Accessible name for the back key that returns to the numbers surface            |
+| `ARIA_VARIANTS_OPENED`           | {0} variants for {1}                          | ARIA live region announcement when the accent-variant popup opens               |
+| `ARIA_VARIANTS_CLOSED`           | Variants closed                               | ARIA live region announcement when the accent-variant popup is dismissed        |
+| `ARIA_LAYOUT_COMPACTED`          | Switched to the compact keyboard layout       | ARIA live region announcement when `auto-compact` takes a layout's compact form |
+| `ARIA_LAYOUT_UNCOMPACTED`        | Switched back to the standard keyboard layout | ARIA live region announcement when `auto-compact` gives it back                 |
+
+The two `auto-compact` announcements name no layout on purpose: the layout a width picks is one the user never chose and never sees named, and an identifier dropped into a translated sentence stays untranslated. They also have to differ from each other - the live region re-announces only on a text change, so one shared wording would leave every second crossing unspoken.
 
 ### Custom i18n Resolver
 

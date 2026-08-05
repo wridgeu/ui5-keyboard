@@ -666,7 +666,30 @@
             </kiosk-keyboard>
           </div>
 
-          <!-- 20. i18n Resolver -->
+          <!-- 20. autoCompact width tier -->
+          <div class="card" style="grid-column: 1 / -1">
+            <h2>Auto-Compact (width tier)</h2>
+            <p style="font-size: 12px; color: var(--muted-color); margin: 0; line-height: 1.5">
+              Layout data is the one responsive dimension CSS cannot reach: a
+              <code>@container</code> rule restyles a row but cannot re-seat its keys. With <code>auto-compact</code>, a
+              layout that names a <code>compact</code> counterpart yields to it while the keyboard is too narrow to seat
+              its rows, and takes it back when the room returns. Drag the handle in the bottom-right corner of the box
+              below past 22rem (352px) to watch <code>ja-kana</code> hand over to <code>ja-kana-compact</code>. The swap
+              fires <code>layout-change</code> with <code>autoDetected: true</code>; a layout you ask for still wins and
+              is re-tiered from there.
+            </p>
+            <div class="input-group">
+              <ui5-label for="compact-input" show-colon>Kana input</ui5-label>
+              <ui5-input id="compact-input" placeholder="Resize the box below…"></ui5-input>
+            </div>
+            <p id="compact-status" style="font-size: 11px; color: var(--muted-color); margin: 0"></p>
+            <!-- `resize` needs a non-visible overflow to take effect. -->
+            <div style="resize: horizontal; overflow: auto; min-width: 260px; max-width: 100%; padding-bottom: 12px">
+              <kiosk-keyboard id="kb-compact" layout="ja-kana" auto-compact controls="compact-input"></kiosk-keyboard>
+            </div>
+          </div>
+
+          <!-- 21. i18n Resolver -->
           <div class="card" style="grid-column: 1 / -1">
             <h2>i18n Resolver (accessibility labels)</h2>
             <p style="font-size: 12px; color: var(--muted-color); margin: 0; line-height: 1.5">

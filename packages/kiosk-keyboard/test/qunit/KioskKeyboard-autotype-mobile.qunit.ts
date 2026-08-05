@@ -4,6 +4,7 @@ import Input from "sap/m/Input";
 import StepInput from "sap/m/StepInput";
 import Control from "sap/ui/core/Control";
 import Device from "sap/ui/Device";
+import JSONModel from "sap/ui/model/json/JSONModel";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
   createFakeKeyElement,
@@ -780,4 +781,35 @@ QUnit.test("Rapid target switches while open: each intermediate target is restor
   input2.destroy();
   input3.destroy();
   kb.destroy();
+});
+
+QUnit.test("Binding keyboardType turns autoType off, so detection never reaches the model", async (assert) => {
+  const model = new JSONModel({ type: KeyboardType.Full });
+  const numInput = new Input({ type: "Number" });
+  numInput.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    autoType: true,
+    keyboardType: { path: "/type", mode: "TwoWay" } as unknown as KeyboardType,
+    models: model,
+  });
+  await placeAndWait(kb);
+
+  try {
+    (numInput.getFocusDomRef() as HTMLElement).focus();
+    await nextUIUpdate();
+
+    // A binding delivers its value through setKeyboardType, which records the type as
+    // explicitly set, and detection is gated on it not having been. So binding the
+    // property is itself what disables autoType.
+    assert.strictEqual(kb.getKeyboardType(), KeyboardType.Full, "the bound type stands, undetected");
+    // Which is why the tier's two-way write-back diagnostic has no keyboardType twin:
+    // there is no path on which autoType can write through a binding.
+    assert.strictEqual(model.getProperty("/type"), KeyboardType.Full, "and nothing was written back");
+  } finally {
+    numInput.destroy();
+    kb.destroy();
+  }
 });

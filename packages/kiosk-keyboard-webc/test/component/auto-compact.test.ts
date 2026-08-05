@@ -203,18 +203,55 @@ describe("kiosk-keyboard - autoCompact", () => {
     expect(focused!.dataset.keyIndex).to.equal("0");
   });
 
-  it("announces the layout the width picked, in both directions", async () => {
+  it("announces which way the width moved the layout, in both directions", async () => {
     const { el, resize } = await mount(WIDE_PX, { layout: "ja-kana", "auto-compact": "" });
     const announced = () => el.shadowRoot!.querySelector('[role="status"]')!.textContent ?? "";
     expect(announced(), "a keyboard with room to spare announces nothing").to.equal("");
 
     await resize(NARROW_PX);
-    expect(announced()).to.equal("Keyboard layout changed to ja-kana-compact");
+    expect(announced()).to.equal("Switched to the compact keyboard layout");
 
     // A distinct text every time: a live region drops a repeat of what it already
     // holds, so alternating swaps would announce only the first.
     await resize(WIDE_PX);
-    expect(announced()).to.equal("Keyboard layout changed to ja-kana");
+    expect(announced()).to.equal("Switched back to the standard keyboard layout");
+  });
+
+  it("reports the tiered layout through effectiveLayout, leaving `layout` at what was asked for", async () => {
+    const { el, resize } = await mount(WIDE_PX, { layout: "ja-kana", "auto-compact": "" });
+    expect(el.effectiveLayout, "with room to spare the two agree").to.equal("ja-kana");
+
+    await resize(NARROW_PX);
+    // The declaration stays put so widening has something to go back to; the
+    // resolved value is the only readable trace of what actually rendered.
+    expect(el.layout, "the declaration is untouched by a width swap").to.equal("ja-kana");
+    expect(el.effectiveLayout, "and the resolved value is the compact form").to.equal("ja-kana-compact");
+
+    await resize(WIDE_PX);
+    expect(el.effectiveLayout, "widening resolves back").to.equal("ja-kana");
+  });
+
+  it("reports a `{layout:*}` switch through effectiveLayout too", async () => {
+    const { el } = await mount(WIDE_PX, { layout: "qwerty", "auto-compact": "" });
+
+    requireKey(el, "{layout:numeric}").click();
+    await settle();
+
+    expect(el.layout, "a key press is not a re-declaration either").to.equal("qwerty");
+    expect(el.effectiveLayout, "but it is what renders").to.equal("numeric");
+  });
+
+  it("names no layout, so the announcement carries no untranslated identifier", async () => {
+    const { el, resize } = await mount(WIDE_PX, { layout: "ja-kana", "auto-compact": "" });
+    const announced = () => el.shadowRoot!.querySelector('[role="status"]')!.textContent ?? "";
+
+    // The user never chose the layout a width picks and never sees its name, and the
+    // name would sit untranslated inside a translated sentence.
+    await resize(NARROW_PX);
+    expect(announced(), "the compacting announcement quotes no layout name").to.not.contain("ja-kana");
+
+    await resize(WIDE_PX);
+    expect(announced(), "and neither does the one restoring it").to.not.contain("ja-kana");
   });
 
   it("says nothing when the layout switch was asked for", async () => {
@@ -226,6 +263,43 @@ describe("kiosk-keyboard - autoCompact", () => {
     // A switch the user asked for is its own feedback, and it moves focus onto
     // the key it followed, which announces itself.
     expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent ?? "").to.equal("");
+  });
+
+  it("does not tier while a keyboardType constraint pins the surface, and re-tiers when it is lifted", async () => {
+    const { el, changes } = await mount(NARROW_PX, {
+      layout: "ja-kana",
+      "auto-compact": "",
+      "keyboard-type": "Numpad",
+    });
+    // Numpad pins the rendered surface, so a swap would emit a layout nobody can see.
+    expect(changes, "nothing is announced while the surface is constrained").to.deep.equal([]);
+    expect(el.effectiveLayout, "the numpad is what renders").to.equal("numpad");
+
+    el.keyboardType = "Full";
+    await settle();
+
+    // The constraint was the only thing holding the swap back, and lifting it is a
+    // change no resize reports - the box never moved.
+    expect(el.effectiveLayout, "the layout under the constraint tiers as soon as it surfaces").to.equal(
+      "ja-kana-compact",
+    );
+  });
+
+  it("re-tiers when the counterpart is slotted after first paint", async () => {
+    const { el, changes } = await mount(
+      NARROW_PX,
+      { layout: "home", "auto-compact": "" },
+      customLayout({ name: "home", rows: home, compact: "home-c" }),
+    );
+    expect(changes, "there is nothing to swap to yet").to.deep.equal([]);
+
+    el.appendChild(customLayout({ name: "home-c", rows: homeCompact }));
+    await settle();
+
+    // The counterpart arriving is a change to what the tier resolves through, and the
+    // box never moved, so no resize reports it.
+    expect(changes).to.deep.equal([{ layout: "home-c", autoDetected: true }]);
+    expect(readDataKeys(el)).to.deep.equal([["hc"]]);
   });
 
   it("tiers on the threshold custom property rather than a fixed width", async () => {
