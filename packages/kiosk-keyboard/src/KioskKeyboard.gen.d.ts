@@ -178,8 +178,8 @@ declare module "./KioskKeyboard" {
         where control IDs are prefixed by the view ID.
         
         In XML the IDs are comma-separated, and whitespace around one is not
-        part of it. An entry naming no control is skipped, and reported once
-        the keyboard has rendered.
+        part of it. An entry that names no control is skipped, and logged
+        once per ID.
          *
          * @since 0.1.0
          */
@@ -723,8 +723,8 @@ declare module "./KioskKeyboard" {
         where control IDs are prefixed by the view ID.
         
         In XML the IDs are comma-separated, and whitespace around one is not
-        part of it. An entry naming no control is skipped, and reported once
-        the keyboard has rendered.
+        part of it. An entry that names no control is skipped, and logged
+        once per ID.
          *
          * @since 0.1.0
          * Default value is: []
@@ -744,8 +744,8 @@ declare module "./KioskKeyboard" {
         where control IDs are prefixed by the view ID.
         
         In XML the IDs are comma-separated, and whitespace around one is not
-        part of it. An entry naming no control is skipped, and reported once
-        the keyboard has rendered.
+        part of it. An entry that names no control is skipped, and logged
+        once per ID.
          *
          * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.

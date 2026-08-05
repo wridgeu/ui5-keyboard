@@ -434,8 +434,8 @@ export default class KioskKeyboard extends Control {
        * where control IDs are prefixed by the view ID.
        *
        * In XML the IDs are comma-separated, and whitespace around one is not
-       * part of it. An entry naming no control is skipped, and reported once
-       * the keyboard has rendered.
+       * part of it. An entry that names no control is skipped, and logged
+       * once per ID.
        *
        * @example <caption>XML view - target multiple inputs</caption>
        * <m:Input id="name" />

@@ -250,8 +250,8 @@ function isVariantTable(value: unknown): boolean {
 
 /**
  * One entry of a comma-separated attribute list. UI5's array parser splits on commas
- * alone, so whitespace an author writes around a comma reaches the entry beside it. That
- * whitespace separates entries and is never part of one.
+ * without trimming, so whitespace an author writes around a comma reaches the entry
+ * beside it. That whitespace separates entries and is never part of one.
  */
 function trimToken(value: string): string {
   return value.trim();
@@ -265,14 +265,9 @@ function normalizeTokens(values: string[]): string[] {
   return values.map(trimToken).filter((token) => token !== "");
 }
 
-// Widened to `string[]` so a token can be looked up without first narrowing it to the
-// enum; `Object.values` alone infers `LayoutFacet[]`.
 const LAYOUT_FACET_NAMES: string[] = Object.values(LayoutFacet);
 
-/**
- * Whether a token names a `LayoutFacet` member. `createType` runs the base type's check
- * first, so this only ever sees a string.
- */
+/** Whether a token names a `LayoutFacet` member. The `string` base has checked it first. */
 function isLayoutFacetName(value: string): boolean {
   return LAYOUT_FACET_NAMES.includes(value);
 }
@@ -283,24 +278,19 @@ DataType.createType("ui5.kiosk.VariantOverrideTable", { defaultValue: null, isVa
 
 /**
  * One entry of `controls`. It carries no check of its own: any string is a well-formed
- * id, and the fault worth catching is an id that is well formed but names nothing, which
- * no type check reaches. The delegation controller reports that.
+ * id, and the fault worth catching - an id that names nothing - is the delegation
+ * controller's to report.
  */
 DataType.createType("ui5.kiosk.ControlID", { parseValue: trimToken }, "string");
-// The list normalizes on write as well, because only a value parsed from an XML attribute
-// passes through `parseValue`; a list assigned programmatically or delivered by a model
-// arrives whole.
+// Only a value parsed from an XML attribute passes through `parseValue`; a list assigned
+// programmatically or delivered by a model arrives whole, so the list normalizes on write too.
 DataType.getType("ui5.kiosk.ControlID[]")!.setNormalizer(normalizeTokens);
 
 /**
- * One entry of `suppress`. A validated string, not a registered enum, because an enum's
- * parser maps every unknown token to `undefined`, which reads the space in
- * `suppress="Variants, Middleware"` as a misspelling. A real misspelling fails the member
- * check and rejects the view.
- *
- * The default matters even though `suppress` declares its own: a property that omits
- * `defaultValue` inherits the type's, and `ManagedObject` returns that without validating
- * it, so the `string` base's `""` would read back as a facet this type rejects.
+ * One entry of `suppress`: a validated string rather than a registered enum, whose parser
+ * would read the space in `suppress="Variants, Middleware"` as a misspelling. `defaultValue`
+ * is required here - without it the type inherits the `string` base's `""`, which its own
+ * `isValid` rejects. See `docs/specs/2026-08-05-token-list-attributes-design.md` §4.1.
  */
 DataType.createType(
   "ui5.kiosk.LayoutFacet",

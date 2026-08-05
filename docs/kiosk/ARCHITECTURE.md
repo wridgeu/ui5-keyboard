@@ -567,9 +567,9 @@ packages/kiosk-keyboard/
     CustomLayout.ts           Element carrying one layout's rows, locales, keycap language,
                                role, middleware and variants; the customLayouts aggregation type
     library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode/
-                               LayoutRole/LayoutFacet enums, the LayoutRows / VariantOverrideTable
-                               property types, plus KeyName constants and the
-                               LATIN_DIACRITIC_VARIANTS / VariantTable re-exports
+                               LayoutRole/LayoutFacet enums, the ControlID / LayoutRows /
+                               VariantOverrideTable property types, plus KeyName constants and
+                               the LATIN_DIACRITIC_VARIANTS / VariantTable re-exports
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, I18nResolver
     internal/layout-registry.ts  Layout registration and locale resolution
     internal/
