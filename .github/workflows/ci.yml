@@ -102,6 +102,13 @@ jobs:
       - name: Stylesheet twin-drift check
         run: npm run test:style-twin-drift
 
+      # Asserts every message bundle stays ASCII (a raw UTF-8 value decodes to
+      # mojibake wherever the bundle is not served as UTF-8, and it lands in an
+      # ARIA announcement nothing on screen shows) and that each locale declares
+      # exactly the default bundle's keys; see tools/check-i18n-bundles.mjs.
+      - name: Message-bundle check
+        run: npm run test:i18n-bundles
+
   # QUnit for the two UI5 libraries, on the puppeteer backend ui5-test-runner
   # drives. Split from the web-component suites below so each leg provisions one
   # browser stack instead of both: this job never touches ~/.cache/ms-playwright.
