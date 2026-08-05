@@ -50,7 +50,7 @@ UI5's array parser implements Infra's _other_ algorithm, "strictly split a strin
 
 So each list property gets a component `DataType` whose `parseValue` trims one token. The library declares a token contract; the framework does every split. There is no delimiter, no index arithmetic and no string parser in library code.
 
-Three facts make this the idiomatic choice rather than a clever one:
+Three things make it the idiomatic choice:
 
 1. **It is the framework's documented extension point.** `DataType.createType(name, { parseValue, isValid }, base)` is public, and `getType("Foo[]")` resolves the component name through the ordinary type registry and caches the manufactured array type (`DataType.js:544-552`), so a library-registered scalar works as an array component with no framework change.
 2. **It is what SAP itself uses `parseValue` for.** Across every SAP library at 1.136.18 there are exactly two `parseValue` overrides, and both are whitespace normalizers built on `createType(..., "string")`: `sap.ui.core.CSSGapShortHand` (`sap/ui/core/library.js:938-955`) and `sap.ui.layout.cssgrid.CSSGridTrack` (`sap/ui/layout/library.js:803-829`).
@@ -58,7 +58,7 @@ Three facts make this the idiomatic choice rather than a clever one:
 
 ### 3.1 Where the framework has no hook
 
-Stated plainly rather than papered over: **the JS path never parses.** `applySettings` sends a property straight to its mutator (`ManagedObject.js:1332-1337`), so `new KioskKeyboard({ controls: [" emailInput"] })` — the repro issue #224 itself specifies — never reaches `parseValue`. The same is true of a model-bound `controls="{/ids}"`.
+**The JS path never parses.** `applySettings` sends a property straight to its mutator (`ManagedObject.js:1332-1337`), so `new KioskKeyboard({ controls: [" emailInput"] })` — the repro issue #224 itself specifies — never reaches `parseValue`. The same is true of a model-bound `controls="{/ids}"`.
 
 The only public on-write hook is `DataType.prototype.setNormalizer`, which `validateProperty` applies at `ManagedObject.js:1644-1648`, **after** the `isValid` throw at `:1635`. That ordering decides the asymmetry between the two properties:
 
@@ -71,7 +71,7 @@ The only public on-write hook is `DataType.prototype.setNormalizer`, which `vali
 
 The principle: **normalize on write where the type is open; validate where the type is closed.** A closed type cannot have a write-time normalizer without first calling `" Middleware"` valid, and the loud rejection of a genuine typo is a pinned contract (`test/qunit/customLayouts-xml.qunit.ts:176`).
 
-`setNormalizer` has zero callers in all of OpenUI5 1.136.18. Its JSDoc sanctions it for "applications or application frameworks" and warns it "is not intended to break-out of the value range defined by a type" — trimming an id stays inside the string value range, and the normalizer is set on `ui5.kiosk.ControlID[]`, a type only this library declares, so no page-global type object is mutated. It is included only because the layer it covers is the one the issue's own repro exercises; each layer is justified by a test that is red without it (§6).
+`setNormalizer` has zero callers in all of OpenUI5 1.136.18. Its JSDoc sanctions it for "applications or application frameworks" and warns it "is not intended to break-out of the value range defined by a type" — trimming an id stays inside the string value range, and the normalizer is set on `ui5.kiosk.ControlID[]`, a type only this library declares, so no page-global type object is mutated. It earns its place through the test in §6 that stays red without it.
 
 ## 4. The change
 
@@ -79,7 +79,7 @@ In `src/library.ts`, beside the two `createType` calls already there:
 
 ```ts
 DataType.createType("ui5.kiosk.ControlID", { parseValue: trimToken }, "string");
-DataType.getType("ui5.kiosk.ControlID[]")?.setNormalizer(trimTokens);
+DataType.getType("ui5.kiosk.ControlID[]")!.setNormalizer(trimTokens);
 DataType.createType("ui5.kiosk.LayoutFacet", { isValid: isLayoutFacetName, parseValue: trimToken }, "string");
 ```
 
@@ -105,7 +105,7 @@ Trimming fixes the padded id. It does not make a _mistyped_ id visible, which is
 
 **Emit site:** the resolution loop in `ControlsDelegationController.sync()`, written inline at the call site. Not a `DiagnosticCode`: that union requires a `layout` and lives in `custom-layout-fold.ts`, a byte-compared twin module (`tools/check-twin-drift.mjs`), so joining it would force an unrelated edit into the webc fold.
 
-**Once per distinct id.** Deduplication is load-bearing, not cosmetic: `sync()` runs from `onAfterRendering`, from `setControls`, and from the document-wide `focusin` capture listener, and the `_isResolutionUnchanged` fast path returns _after_ the resolution loop. An unwarned miss would re-log on every focus change in the application. The id is removed from the set the moment it does resolve, so a control destroyed and recreated broken is reported again.
+**Once per distinct id.** Deduplication is load-bearing, not cosmetic: `sync()` runs from `onAfterRendering`, from `setControls`, and from the document-wide `focusin` capture listener, and the `_isResolutionUnchanged` fast path returns _after_ the resolution loop. An unreported miss would re-log on every focus change in the application. The id leaves the set the moment it does resolve, so an id that breaks again afterwards is reported again.
 
 **"Not yet rendered" is the wrong frame.** A `ManagedObject` enters the element registry inside its constructor, before `init()` and before `applySettings` (`ManagedObject.js:511-517`), independently of rendering; an XMLView builds its whole content tree before anything renders. A merely unrendered target therefore always resolves. The two real "not yet" cases are (a) the keyboard is not yet parented under its View, so the view-local `byId` cannot run, and (b) the target is constructed later — a lazily loaded Fragment, another routing target.
 
@@ -115,16 +115,17 @@ Case (b) cannot be eliminated: `ElementRegistry` is created with only an `onDupl
 
 ## 6. Tests
 
-Each must fail on `main` for the stated reason, and each layer of the fix is justified by one that is red without it.
+Each was run against `main` first and failed for the stated reason. Both layers of the fix, and both halves of the diagnostic, are pinned by a test that goes red without them.
 
-| Test                                                                                                        | Fails on `main` because                                                                                                                                                                         |
-| ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| XMLView with `suppress="Variants, Middleware"` resolves and `getSuppress()` is `["Variants", "Middleware"]` | the enum parser yields `undefined`, the array `isValid` rejects, `XMLView.create` rejects — issue #223's repro                                                                                  |
-| XMLView with `controls="firstInput, secondInput"`, focusing the second input delegates to it                | `" secondInput"` resolves to nothing and is dropped by the silent `continue` — issue #224's repro; justifies `parseValue`                                                                       |
-| `new KioskKeyboard({ controls: [" <id>"] })` types into the input                                           | the settings path never parses — justifies `setNormalizer`; if that layer is dropped, this test goes with it                                                                                    |
-| An unresolvable id logs exactly one warning across repeated `focusin` events                                | nothing is logged at all — justifies the diagnostic and pins the dedupe                                                                                                                         |
-| Existing: a typo in `suppress` still rejects the view                                                       | must stay green; its inline comment cites the old `parseValue`-to-`undefined` mechanism and needs rewording to the new one (`isValid` rejects a trimmed non-member). The assertion is unchanged |
-| webc: `suppress="Variants, Middleware"` via the fixture factory                                             | already green — `splitTokens` absorbs it. Added because the webc README publishes that tolerance as a guarantee and no test exercises it                                                        |
+| Test                                                                                                        | Fails on `main` because                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| XMLView with `suppress="Variants, Middleware"` resolves and `getSuppress()` is `["Variants", "Middleware"]` | the enum parser yields `undefined`, the array `isValid` rejects, `XMLView.create` rejects — issue #223's repro                                   |
+| XMLView with `controls="firstInput, secondInput"`, focusing the second input delegates to it                | `" secondInput"` resolves to nothing and is dropped by the silent `continue` — issue #224's repro; justifies `parseValue`                        |
+| `new KioskKeyboard({ controls: [" <id>"] })` types into the input                                           | the settings path never parses — justifies `setNormalizer`                                                                                       |
+| An unresolvable id logs exactly one warning across repeated `focusin` events                                | nothing is logged at all — justifies the diagnostic and pins the dedupe                                                                          |
+| An unrendered keyboard logs nothing                                                                         | vacuous on `main`, so it was checked the other way: removing the render gate turns it red                                                        |
+| Existing: a typo in `suppress` still rejects the view                                                       | stays green. Its inline comment now cites the member check rather than the old `parseValue`-to-`undefined` mechanism; the assertion is unchanged |
+| webc: `suppress="Variants, Middleware"` via the fixture factory                                             | already green — `splitTokens` absorbs it. Added because the webc README publishes that tolerance as a guarantee and nothing exercised it         |
 
 ## 7. Twin divergence after the change
 

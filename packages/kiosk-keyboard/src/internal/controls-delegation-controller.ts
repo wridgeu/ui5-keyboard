@@ -19,8 +19,8 @@ export interface ControlsDelegationHost {
   /** Parent of the host control, used to resolve view-local control ids. */
   getParent(): ManagedObject | null;
   /**
-   * Whether the host is in the DOM. A rendered host is necessarily parented, which is
-   * what makes an id that still resolves to nothing worth reporting rather than early.
+   * Whether the host is in the DOM. A rendered host is necessarily parented, so an id
+   * that still resolves to nothing by then is wrong rather than early.
    */
   isRendered(): boolean;
   getEnabled(): boolean;
@@ -102,7 +102,7 @@ export default class ControlsDelegationController {
         continue;
       }
 
-      // A control destroyed and recreated broken is worth reporting again.
+      // Forget the report, so an id that breaks again after resolving is reported again.
       this._warnedUnresolvedIds.delete(inputId);
       const controlId = control.getId();
       nextByInputId.set(inputId, controlId);
@@ -176,10 +176,10 @@ export default class ControlsDelegationController {
   /**
    * Reports a `controls` entry that names no control, once per id.
    *
-   * Held back until the host has rendered: before that the keyboard may not be parented
-   * yet, so the view-local lookup cannot run and every id would look wrong. A target
-   * built later still cannot be told apart from a typo - the element registry offers no
-   * added signal to wait for - so the message names the remedy for both.
+   * Held back until the host has rendered: before that the keyboard may still be
+   * unparented, so the view-local lookup cannot run and every id would look wrong. A
+   * target built later remains indistinguishable from a typo, because the element
+   * registry raises no event when one is added, so the message names both remedies.
    */
   private _reportUnresolved(inputId: string): void {
     if (!this._host.isRendered()) return;

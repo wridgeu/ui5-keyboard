@@ -168,7 +168,7 @@ QUnit.test("suppress accepts whitespace around a comma-separated entry", async (
   assert.deepEqual(
     kb.getCustomLayouts()[0]!.getSuppress(),
     ["Variants", "Middleware"],
-    "the space after the comma is punctuation, not part of the facet name",
+    "the space after the comma is not part of the facet name",
   );
 
   v.destroy();

@@ -249,16 +249,15 @@ function isVariantTable(value: unknown): boolean {
 }
 
 /**
- * One entry of a comma-separated attribute list. UI5's array parser splits such an
- * attribute on commas alone, so whitespace an author writes around a comma arrives as
- * part of the neighbouring entry. It is the list's punctuation and never part of a value,
- * as it is everywhere else on the web platform.
+ * One entry of a comma-separated attribute list. UI5's array parser splits on commas
+ * alone, so whitespace an author writes around a comma reaches the entry beside it. That
+ * whitespace separates entries and is never part of one.
  */
 function trimToken(value: string): string {
   return value.trim();
 }
 
-/** The same list, arriving whole rather than one attribute token at a time. */
+/** The whole list, for the paths that never pass through {@link trimToken}. */
 function trimTokens(values: string[]): string[] {
   return values.map(trimToken);
 }
@@ -275,21 +274,21 @@ DataType.createType("ui5.kiosk.LayoutRows", { defaultValue: null, isValid: isLay
 DataType.createType("ui5.kiosk.VariantOverrideTable", { defaultValue: null, isValid: isVariantTable }, "object");
 
 /**
- * One entry of `controls`. An id carries no whitespace of its own, so the base string
- * type is validation enough here: the frequent fault is an id that is well formed and
- * names nothing, which no type check catches. The delegation controller reports that one.
+ * One entry of `controls`. The base string type validates it: an id carries no whitespace
+ * of its own, and the common fault is an id that is well formed but names nothing, which
+ * no type check catches. The delegation controller reports that.
  */
 DataType.createType("ui5.kiosk.ControlID", { parseValue: trimToken }, "string");
-// `parseValue` sees only a value parsed from an XML attribute. A list assigned
-// programmatically or delivered by a model reaches the property unparsed, where a padded
-// id resolves to nothing just as quietly, so the array normalizes on write as well.
-DataType.getType("ui5.kiosk.ControlID[]")?.setNormalizer(trimTokens);
+// `parseValue` runs only for a value parsed from an XML attribute. A list assigned
+// programmatically or delivered by a model arrives unparsed, so the array normalizes on
+// write too.
+DataType.getType("ui5.kiosk.ControlID[]")!.setNormalizer(trimTokens);
 
 /**
- * One entry of `suppress`. A validated string rather than a registered enum, because an
- * enum's parser maps any unknown token to `undefined` and so reads the space in
- * `suppress="Variants, Middleware"` as a misspelling. A real misspelling still fails, on
- * the member check, and still fails loudly.
+ * One entry of `suppress`. A validated string rather than a registered enum: an enum's
+ * parser maps every unknown token to `undefined`, which reads the space in
+ * `suppress="Variants, Middleware"` as a misspelling. A real misspelling fails on the
+ * member check, as loudly as before.
  */
 DataType.createType("ui5.kiosk.LayoutFacet", { isValid: isLayoutFacetName, parseValue: trimToken }, "string");
 

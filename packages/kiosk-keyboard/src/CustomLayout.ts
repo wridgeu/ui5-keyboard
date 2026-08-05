@@ -95,8 +95,8 @@ export default class CustomLayout extends Element {
        * `suppress="Variants, Middleware"`. A listed facet resolves to nothing at this
        * custom layout's position; a value this same custom layout declares still applies.
        *
-       * Comma-separated, with whitespace around an entry allowed. A token that names no
-       * facet is rejected rather than ignored.
+       * Comma-separated, and whitespace around a name is not part of it. A token naming
+       * no facet is rejected rather than ignored.
        */
       suppress: { type: "ui5.kiosk.LayoutFacet[]", defaultValue: [], group: "Behavior" },
     },
