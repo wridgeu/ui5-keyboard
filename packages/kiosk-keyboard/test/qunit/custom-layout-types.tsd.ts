@@ -6,10 +6,10 @@ import { LayoutFacet, LayoutRole } from "ui5/kiosk/library";
 // of its children. Nothing here runs: the file is not registered in testsuite.qunit.ts,
 // and the assertions are the `@ts-expect-error` directives themselves, each of which
 // fails the build if the line it guards stops being an error. `rows`, `variants`,
-// `middleware` and `suppress` are declared through `DataType.createType` and
-// `layoutRole` through `DataType.registerEnum`, precisely so these are rejected at
-// compile time; declared as bare `object` every line below would compile and each
-// directive would fail as unused.
+// `middleware`, `suppress` and `layoutRole` each name a declared type in their control
+// metadata, which the interface generator resolves to the exported TS type, precisely so
+// these are rejected at compile time; declared as bare `object` every line below would
+// compile and each directive would fail as unused.
 
 const kb = new KioskKeyboard();
 
