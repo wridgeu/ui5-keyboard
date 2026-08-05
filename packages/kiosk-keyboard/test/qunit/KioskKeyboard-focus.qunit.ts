@@ -1,6 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { KeyboardType } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
+import Log from "sap/base/Log";
 import StepInput from "sap/m/StepInput";
 import VBox from "sap/m/VBox";
 import XMLView from "sap/ui/core/mvc/XMLView";
@@ -22,8 +23,11 @@ const DOM = KioskKeyboard.DOM;
 // Module
 // ──────────────────────────────────────────────
 
+const sandbox = sinon.createSandbox();
+
 QUnit.module("KioskKeyboard focus and navigation", {
   afterEach() {
+    sandbox.restore();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },
@@ -425,7 +429,7 @@ QUnit.test("controls falls back to global when not inside a View", async (assert
   globalInput.destroy();
 });
 
-QUnit.test("controls silently skips unresolvable IDs", async (assert) => {
+QUnit.test("controls keeps resolving the rest of the list when one ID is unresolvable", async (assert) => {
   const input = new Input("real-input");
   input.placeAt("qunit-fixture");
 
@@ -447,6 +451,49 @@ QUnit.test("controls silently skips unresolvable IDs", async (assert) => {
 
   kb.destroy();
   input.destroy();
+});
+
+QUnit.test("an unresolvable controls entry is reported once, not on every focus event", async (assert) => {
+  const warning = sandbox.stub(Log, "warning");
+  const input = new Input("reported-real-input");
+  input.placeAt("qunit-fixture");
+
+  // docked + autoShow is what puts `sync()` on the document focusin listener, so this
+  // is the cadence the report has to survive rather than a contrived loop.
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    controls: ["missing-input", "reported-real-input"],
+  });
+  await placeAndWait(kb);
+
+  const dom = input.getFocusDomRef() as HTMLElement;
+  for (let focusCount = 0; focusCount < 3; focusCount++) {
+    dom.focus();
+    await nextUIUpdate();
+    dom.blur();
+  }
+
+  const reports = warning.getCalls().filter((call) => String(call.args[0]).includes("missing-input"));
+  assert.strictEqual(reports.length, 1, "the unresolvable entry is reported once across repeated focus events");
+  assert.strictEqual(kb.getActiveControl()?.getId(), input.getId(), "and the resolvable entry still delegates");
+
+  kb.destroy();
+  input.destroy();
+});
+
+QUnit.test("a controls entry is not reported before the keyboard has rendered", async (assert) => {
+  const warning = sandbox.stub(Log, "warning");
+
+  // Not yet placed: the keyboard has no parent, so the view-local lookup cannot run and
+  // every ID would look wrong. setControls syncs eagerly, which is the path that would
+  // report too early.
+  const kb = new KioskKeyboard();
+  kb.setControls(["not-there-yet"]);
+
+  assert.strictEqual(warning.callCount, 0, "an unrendered keyboard reports nothing");
+
+  kb.destroy();
 });
 
 QUnit.test("controls deduplicates delegates when aliased IDs resolve to the same control", async (assert) => {
