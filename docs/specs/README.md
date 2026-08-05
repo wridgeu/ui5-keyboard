@@ -14,3 +14,4 @@ Dated design specifications and adversarial-validation records, kept for context
 | [`customLayouts` Design (#216)](./2026-08-03-issue-216-custom-layouts-design.md)                      | The `CustomLayout` aggregation and slot replacing the four `instance*` maps.     |
 | [`customLayouts` Adversarial Hypotheses](./2026-08-03-custom-layouts-adversarial-hypotheses.md)       | Adversarial validation plan for the `customLayouts` migration, per CLAUDE.md §7. |
 | [`autoCompact` Adversarial Hypotheses](./2026-08-04-autocompact-adversarial-hypotheses.md)            | Adversarial validation of the `autoCompact` width tier, per CLAUDE.md §7.        |
+| [Token-list Attributes (#223, #224)](./2026-08-05-token-list-attributes-design.md)                    | Whitespace after a comma in `controls` and `suppress`, fixed at the type layer.  |

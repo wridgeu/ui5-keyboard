@@ -74,8 +74,11 @@ declare module "./CustomLayout" {
 
         /**
          * Facets whose inherited value this custom layout discards, e.g.
-        `suppress="Variants,Middleware"`. A listed facet resolves to nothing at this
+        `suppress="Variants, Middleware"`. A listed facet resolves to nothing at this
         custom layout's position; a value this same custom layout declares still applies.
+        
+        Comma-separated, with whitespace around an entry allowed. A token that names no
+        facet is rejected rather than ignored.
          */
         suppress?: LayoutFacet[] | PropertyBindingInfo | `{${string}}`;
     }
@@ -322,8 +325,11 @@ declare module "./CustomLayout" {
          * Gets current value of property "suppress".
          *
          * Facets whose inherited value this custom layout discards, e.g.
-        `suppress="Variants,Middleware"`. A listed facet resolves to nothing at this
+        `suppress="Variants, Middleware"`. A listed facet resolves to nothing at this
         custom layout's position; a value this same custom layout declares still applies.
+        
+        Comma-separated, with whitespace around an entry allowed. A token that names no
+        facet is rejected rather than ignored.
          *
          * Default value is: []
          * @returns Value of property "suppress"
@@ -334,8 +340,11 @@ declare module "./CustomLayout" {
          * Sets a new value for property "suppress".
          *
          * Facets whose inherited value this custom layout discards, e.g.
-        `suppress="Variants,Middleware"`. A listed facet resolves to nothing at this
+        `suppress="Variants, Middleware"`. A listed facet resolves to nothing at this
         custom layout's position; a value this same custom layout declares still applies.
+        
+        Comma-separated, with whitespace around an entry allowed. A token that names no
+        facet is rejected rather than ignored.
          *
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *

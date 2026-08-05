@@ -2,6 +2,7 @@ import { KeyboardType } from "ui5/kiosk/library";
 import Event from "sap/ui/base/Event";
 import { MobileKeyboard } from "ui5/kiosk/library";
 import { FKeyMode } from "ui5/kiosk/library";
+import { ControlID } from "ui5/kiosk/library";
 import { VariantOverrideTable } from "ui5/kiosk/library";
 import CustomLayout from "ui5/kiosk/CustomLayout";
 import { AggregationBindingInfo } from "sap/ui/base/ManagedObject";
@@ -175,10 +176,14 @@ declare module "./KioskKeyboard" {
         IDs are resolved against the parent View first (view-local IDs),
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
+        
+        In XML the entries are comma-separated; whitespace around an entry is
+        the list's punctuation and not part of the ID. An entry that resolves
+        to no control is skipped, and reported once the keyboard has rendered.
          *
          * @since 0.1.0
          */
-        controls?: string[] | PropertyBindingInfo | `{${string}}`;
+        controls?: ControlID[] | PropertyBindingInfo | `{${string}}`;
 
         /**
          * Long-press variants applied under every layout, merged per base letter beneath
@@ -716,12 +721,16 @@ declare module "./KioskKeyboard" {
         IDs are resolved against the parent View first (view-local IDs),
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
+        
+        In XML the entries are comma-separated; whitespace around an entry is
+        the list's punctuation and not part of the ID. An entry that resolves
+        to no control is skipped, and reported once the keyboard has rendered.
          *
          * @since 0.1.0
          * Default value is: []
          * @returns Value of property "controls"
          */
-        getControls(): string[];
+        getControls(): ControlID[];
 
         /**
          * Sets a new value for property "controls".
@@ -733,6 +742,10 @@ declare module "./KioskKeyboard" {
         IDs are resolved against the parent View first (view-local IDs),
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
+        
+        In XML the entries are comma-separated; whitespace around an entry is
+        the list's punctuation and not part of the ID. An entry that resolves
+        to no control is skipped, and reported once the keyboard has rendered.
          *
          * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
@@ -741,7 +754,7 @@ declare module "./KioskKeyboard" {
          * @param [controls=[]] New value for property "controls"
          * @returns Reference to "this" in order to allow method chaining
          */
-        setControls(controls: string[]): this;
+        setControls(controls: ControlID[]): this;
 
         // property: defaultVariants
 

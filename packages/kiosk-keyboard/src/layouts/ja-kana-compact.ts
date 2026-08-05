@@ -39,7 +39,7 @@ const [digitRow, upperRow, homeRow, lowerRow, bottomRow] = jaKana as [KeyRow, Ke
  *
  * @example <caption>Letting the width pick the form</caption>
  * ```ts
- * new KioskKeyboard({ layout: "ja-kana", autoCompact: true, controls: "myInput" });
+ * new KioskKeyboard({ layout: "ja-kana", autoCompact: true, controls: ["myInput"] });
  * ```
  *
  * @see {@link https://github.com/microsoft/Windows-driver-samples/blob/main/input/layout/fe_kbds/jpn/106/kbd106.c | Microsoft kbd106.c}

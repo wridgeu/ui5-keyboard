@@ -92,8 +92,11 @@ export default class CustomLayout extends Element {
       variants: { type: "ui5.kiosk.VariantOverrideTable", defaultValue: null, group: "Behavior" },
       /**
        * Facets whose inherited value this custom layout discards, e.g.
-       * `suppress="Variants,Middleware"`. A listed facet resolves to nothing at this
+       * `suppress="Variants, Middleware"`. A listed facet resolves to nothing at this
        * custom layout's position; a value this same custom layout declares still applies.
+       *
+       * Comma-separated, with whitespace around an entry allowed. A token that names no
+       * facet is rejected rather than ignored.
        */
       suppress: { type: "ui5.kiosk.LayoutFacet[]", defaultValue: [], group: "Behavior" },
     },

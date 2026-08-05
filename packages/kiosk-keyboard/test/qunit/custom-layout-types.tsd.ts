@@ -5,11 +5,11 @@ import { LayoutFacet, LayoutRole } from "ui5/kiosk/library";
 // Compile-time contract for the `customLayouts` aggregation and the typed properties
 // of its children. Nothing here runs: the file is not registered in testsuite.qunit.ts,
 // and the assertions are the `@ts-expect-error` directives themselves, each of which
-// fails the build if the line it guards stops being an error. `rows`, `variants` and
-// `middleware` are declared through `DataType.createType`, and `layoutRole` / `suppress`
-// through `DataType.registerEnum`, precisely so these are rejected at compile time;
-// declared as bare `object` every line below would compile and each directive would
-// fail as unused.
+// fails the build if the line it guards stops being an error. `rows`, `variants`,
+// `middleware` and `suppress` are declared through `DataType.createType` and
+// `layoutRole` through `DataType.registerEnum`, precisely so these are rejected at
+// compile time; declared as bare `object` every line below would compile and each
+// directive would fail as unused.
 
 const kb = new KioskKeyboard();
 

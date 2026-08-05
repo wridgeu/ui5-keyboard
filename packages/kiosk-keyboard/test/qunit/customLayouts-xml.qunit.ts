@@ -155,6 +155,25 @@ QUnit.test("suppress accepts a comma-separated list", async (assert) => {
   v.destroy();
 });
 
+QUnit.test("suppress accepts whitespace around a comma-separated entry", async (assert) => {
+  const v = await view(`<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:kiosk="ui5.kiosk">
+    <kiosk:KioskKeyboard id="kb" layout="qwerty">
+      <kiosk:customLayouts>
+        <kiosk:CustomLayout name="qwerty" suppress="Variants, Middleware" />
+      </kiosk:customLayouts>
+    </kiosk:KioskKeyboard>
+  </mvc:View>`);
+  const kb = v.byId("kb") as KioskKeyboard;
+
+  assert.deepEqual(
+    kb.getCustomLayouts()[0]!.getSuppress(),
+    ["Variants", "Middleware"],
+    "the space after the comma is punctuation, not part of the facet name",
+  );
+
+  v.destroy();
+});
+
 QUnit.test("layoutRole promotes the built-in secondary numeric to a base layout", async (assert) => {
   const v = await view(`<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:kiosk="ui5.kiosk">
     <kiosk:KioskKeyboard id="kb" layout="qwerty">
@@ -174,9 +193,9 @@ QUnit.test("layoutRole promotes the built-in secondary numeric to a base layout"
 });
 
 QUnit.test("a typo in a closed enum attribute fails loudly rather than silently", async (assert) => {
-  // `createEnumType.parseValue` yields `undefined` for an unknown token and
-  // `validateProperty` then throws, so a mis-spelled facet cannot resolve to
-  // nothing without a word.
+  // The facet type validates each token against the enum's members and
+  // `validateProperty` throws on a rejected one, so a mis-spelled facet cannot
+  // resolve to nothing without a word.
   const rejected = await view(`<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:kiosk="ui5.kiosk">
     <kiosk:KioskKeyboard id="kb" layout="qwerty">
       <kiosk:customLayouts>

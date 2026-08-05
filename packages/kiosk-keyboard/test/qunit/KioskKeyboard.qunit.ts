@@ -392,6 +392,24 @@ QUnit.test("Typing into target sap.m.Input", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Typing into a target whose ID was supplied with surrounding whitespace", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  // The settings path never parses, so this is the layer a type's parse hook cannot
+  // reach: a padded ID handed over programmatically, or delivered by a model binding.
+  const kb = new KioskKeyboard({ controls: [` ${input.getId()}`] });
+  await placeAndWait(kb);
+
+  tapKey(kb, "h");
+  tapKey(kb, "i");
+
+  assert.strictEqual(input.getValue(), "hi", "the padded ID still resolves to the input");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Backspace deletes last character from target input", async (assert) => {
   const input = new Input({ value: "abc" });
   input.placeAt("qunit-fixture");

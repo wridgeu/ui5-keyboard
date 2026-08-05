@@ -39,7 +39,7 @@ import {
   type VariantTable,
 } from "./internal/latin-variants";
 import VariantPopupBehavior from "./internal/variant-popup-behavior";
-import { KeyboardType } from "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType, type ControlID } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   getRegisteredLayout as registryGetLayout,
   getLayoutOrDefault as registryGetLayoutOrDefault,
@@ -433,10 +433,14 @@ export default class KioskKeyboard extends Control {
        * then globally. This makes the property safe to use in XML views
        * where control IDs are prefixed by the view ID.
        *
+       * In XML the entries are comma-separated; whitespace around an entry is
+       * the list's punctuation and not part of the ID. An entry that resolves
+       * to no control is skipped, and reported once the keyboard has rendered.
+       *
        * @example <caption>XML view - target multiple inputs</caption>
        * <m:Input id="name" />
        * <m:Input id="email" />
-       * <kiosk:KioskKeyboard controls="name,email" />
+       * <kiosk:KioskKeyboard controls="name, email" />
        *
        * @example <caption>TypeScript</caption>
        * new KioskKeyboard({ controls: ["name", "email"] });
@@ -444,7 +448,7 @@ export default class KioskKeyboard extends Control {
        * @since 0.1.0
        */
       controls: {
-        type: "string[]",
+        type: "ui5.kiosk.ControlID[]",
         defaultValue: [],
         group: "Behavior",
       },
@@ -1530,7 +1534,7 @@ export default class KioskKeyboard extends Control {
    * @public
    * @since 0.1.0
    */
-  setControls(controls: string[]): this {
+  setControls(controls: ControlID[]): this {
     this.setProperty("controls", controls, true);
     this._controlsDelegation.sync();
     return this;
