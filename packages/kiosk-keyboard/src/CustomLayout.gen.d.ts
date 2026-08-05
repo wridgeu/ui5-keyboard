@@ -43,7 +43,9 @@ declare module "./CustomLayout" {
         compact?: string | PropertyBindingInfo;
 
         /**
-         * Whether the layout is an auxiliary surface or a base alphabetic layout.
+         * Whether the layout is an auxiliary surface or a base alphabetic layout. `Inherit`
+        takes the built-in layout of the same name's role, and the base alphabetic role
+        when there is no built-in of that name.
          */
         layoutRole?: LayoutRole | PropertyBindingInfo | `{${string}}`;
 
@@ -203,7 +205,9 @@ declare module "./CustomLayout" {
         /**
          * Gets current value of property "layoutRole".
          *
-         * Whether the layout is an auxiliary surface or a base alphabetic layout.
+         * Whether the layout is an auxiliary surface or a base alphabetic layout. `Inherit`
+        takes the built-in layout of the same name's role, and the base alphabetic role
+        when there is no built-in of that name.
          *
          * Default value is: "Inherit"
          * @returns Value of property "layoutRole"
@@ -213,7 +217,9 @@ declare module "./CustomLayout" {
         /**
          * Sets a new value for property "layoutRole".
          *
-         * Whether the layout is an auxiliary surface or a base alphabetic layout.
+         * Whether the layout is an auxiliary surface or a base alphabetic layout. `Inherit`
+        takes the built-in layout of the same name's role, and the base alphabetic role
+        when there is no built-in of that name.
          *
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
