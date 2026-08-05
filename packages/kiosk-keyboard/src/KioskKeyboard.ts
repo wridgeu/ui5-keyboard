@@ -433,9 +433,9 @@ export default class KioskKeyboard extends Control {
        * then globally. This makes the property safe to use in XML views
        * where control IDs are prefixed by the view ID.
        *
-       * In XML the entries are comma-separated; whitespace around an entry is
-       * the list's punctuation and not part of the ID. An entry that resolves
-       * to no control is skipped, and reported once the keyboard has rendered.
+       * In XML the IDs are comma-separated, and whitespace around one is not
+       * part of it. An entry naming no control is skipped, and reported once
+       * the keyboard has rendered.
        *
        * @example <caption>XML view - target multiple inputs</caption>
        * <m:Input id="name" />

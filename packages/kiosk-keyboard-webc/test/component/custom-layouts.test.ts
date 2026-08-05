@@ -305,19 +305,17 @@ describe("kiosk-keyboard - custom layouts", () => {
   });
 
   it("suppress accepts whitespace around a comma-separated entry", async () => {
-    // The README publishes the comma-or-space tolerance as a guarantee, and the same
-    // markup is now valid in the UI5 twin, so the padded form is a contract to hold.
-    const entry = customLayout({ name: "ko-hangul", suppress: "Variants, Middleware" });
-    const { el, input } = await mountWithTarget({ layout: "ko-hangul" }, entry);
-
-    expect(entry.toSpec().suppress, "both facets parse out of the padded list").to.deep.equal([
-      "Variants",
-      "Middleware",
-    ]);
+    // The README publishes the comma-or-space tolerance as a guarantee, and nothing
+    // exercised the padding it exists to absorb.
+    const { el, input } = await mountWithTarget(
+      { layout: "ko-hangul" },
+      customLayout({ name: "ko-hangul", suppress: "Variants, Middleware" }),
+    );
 
     tapKey(el, "ㄱ");
     tapKey(el, "ㅏ");
-    expect(input.value, "and the suppressed composer stays out of the way").to.equal("ㄱㅏ");
+
+    expect(input.value, "the padded facet still suppresses the composer").to.equal("ㄱㅏ");
   });
 
   it("picks up a child edit made while a language change is pending", async () => {

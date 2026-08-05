@@ -177,9 +177,9 @@ declare module "./KioskKeyboard" {
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
         
-        In XML the entries are comma-separated; whitespace around an entry is
-        the list's punctuation and not part of the ID. An entry that resolves
-        to no control is skipped, and reported once the keyboard has rendered.
+        In XML the IDs are comma-separated, and whitespace around one is not
+        part of it. An entry naming no control is skipped, and reported once
+        the keyboard has rendered.
          *
          * @since 0.1.0
          */
@@ -722,9 +722,9 @@ declare module "./KioskKeyboard" {
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
         
-        In XML the entries are comma-separated; whitespace around an entry is
-        the list's punctuation and not part of the ID. An entry that resolves
-        to no control is skipped, and reported once the keyboard has rendered.
+        In XML the IDs are comma-separated, and whitespace around one is not
+        part of it. An entry naming no control is skipped, and reported once
+        the keyboard has rendered.
          *
          * @since 0.1.0
          * Default value is: []
@@ -743,9 +743,9 @@ declare module "./KioskKeyboard" {
         then globally. This makes the property safe to use in XML views
         where control IDs are prefixed by the view ID.
         
-        In XML the entries are comma-separated; whitespace around an entry is
-        the list's punctuation and not part of the ID. An entry that resolves
-        to no control is skipped, and reported once the keyboard has rendered.
+        In XML the IDs are comma-separated, and whitespace around one is not
+        part of it. An entry naming no control is skipped, and reported once
+        the keyboard has rendered.
          *
          * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.

@@ -1281,7 +1281,7 @@ The `controls` property provides declarative input targeting. List one or more i
 2. When any of them receives focus, the keyboard sets it as the active target. In docked + `autoShow` mode, the keyboard also opens automatically.
 3. When `autoShow` is active, `controls` acts as a filter: only the listed inputs trigger auto-show. Focusing an input **not** in the list will not open the keyboard.
 4. IDs are resolved against the parent View first (view-local IDs), then globally, safe for XML views where IDs are prefixed.
-5. Entries are comma-separated. Whitespace around an entry is the list's punctuation, not part of the ID, so `controls="firstName, lastName"` and `controls="firstName,lastName"` are the same list.
+5. IDs are comma-separated, and whitespace around one is not part of it: `controls="firstName, lastName"` and `controls="firstName,lastName"` are the same list.
 6. **Composite controls** (e.g. `sap.m.StepInput`) are supported: when focus lands on the inner input, the keyboard walks the UI5 parent chain to find the registered ancestor.
 
 **TypeScript:**

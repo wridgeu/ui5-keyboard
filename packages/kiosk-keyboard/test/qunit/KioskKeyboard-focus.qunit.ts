@@ -358,8 +358,7 @@ QUnit.test("controls resolves every entry when the attribute is written with spa
   const kb = view.byId("kb") as KioskKeyboard;
   const second = view.byId("secondInput") as Input;
 
-  // The entry after the comma is the one that carries the space, so it is the one that
-  // proves the attribute is read as a token list rather than split verbatim.
+  // The second entry is the one carrying the space, so it is the one worth focusing.
   (second.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
 
@@ -458,8 +457,8 @@ QUnit.test("an unresolvable controls entry is reported once, not on every focus 
   const input = new Input("reported-real-input");
   input.placeAt("qunit-fixture");
 
-  // docked + autoShow is what puts `sync()` on the document focusin listener, so this
-  // is the cadence the report has to survive rather than a contrived loop.
+  // docked + autoShow is what puts `sync()` on the document focusin listener, which is
+  // the cadence the report has to survive.
   const kb = new KioskKeyboard({
     docked: true,
     autoShow: true,
@@ -468,7 +467,7 @@ QUnit.test("an unresolvable controls entry is reported once, not on every focus 
   await placeAndWait(kb);
 
   const dom = input.getFocusDomRef() as HTMLElement;
-  for (let focusCount = 0; focusCount < 3; focusCount++) {
+  for (let i = 0; i < 3; i++) {
     dom.focus();
     await nextUIUpdate();
     dom.blur();
@@ -485,9 +484,8 @@ QUnit.test("an unresolvable controls entry is reported once, not on every focus 
 QUnit.test("a controls entry is not reported before the keyboard has rendered", async (assert) => {
   const warning = sandbox.stub(Log, "warning");
 
-  // Not yet placed: the keyboard has no parent, so the view-local lookup cannot run and
-  // every ID would look wrong. setControls syncs eagerly, which is the path that would
-  // report too early.
+  // Unplaced and unparented, so the view-local lookup cannot run and every ID would look
+  // wrong. setControls syncs eagerly, which is the path that would report too early.
   const kb = new KioskKeyboard();
   kb.setControls(["not-there-yet"]);
 
