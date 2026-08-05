@@ -3,7 +3,7 @@ import type { HotkeyRegistration } from "./types";
 /**
  * Per-scope index bucket for hotkey registrations, keyed by target mode.
  */
-export interface ScopeRegistrationBucket {
+interface ScopeRegistrationBucket {
   untargetedIds: Set<string>;
   targets: Map<EventTarget, Set<string>>;
   /**

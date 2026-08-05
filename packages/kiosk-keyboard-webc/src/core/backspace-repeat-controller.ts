@@ -2,7 +2,7 @@ import { AutoRepeater } from "./auto-repeat.js";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
 
 /** The slice of the host element the controller reads at event time. */
-export interface BackspaceRepeatHost {
+interface BackspaceRepeatHost {
   readonly shadowRoot: ShadowRoot | null;
   readonly disabled: boolean;
 }

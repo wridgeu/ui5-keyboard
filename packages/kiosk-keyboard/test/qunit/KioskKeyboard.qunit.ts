@@ -513,6 +513,17 @@ QUnit.test("controls auto-target does not trigger re-render", async (assert) => 
 // Auto-show
 // ──────────────────────────────────────────────
 
+/**
+ * The `AbortSignal` a listener was registered with, or `undefined` when the
+ * call carried no signal. Detachment runs through `signal.abort()`, so the
+ * signal is the seam a leak test has to inspect: a listener whose signal never
+ * aborts is a leaked listener.
+ */
+function signalOf(call: sinon.SinonSpyCall | undefined): AbortSignal | undefined {
+  const options = call?.args[2];
+  return typeof options === "object" && options !== null ? (options as AddEventListenerOptions).signal : undefined;
+}
+
 QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
   assert.expect(4);
   const kb = new KioskKeyboard();
@@ -522,24 +533,19 @@ QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
   // Spy the document listener seam so detachment is asserted directly, not via a
   // no-throw smoke test (a leaked focus listener is otherwise unobservable).
   const addSpy = sinon.spy(document, "addEventListener");
-  const removeSpy = sinon.spy(document, "removeEventListener");
 
   kb.setAutoShow(true);
 
-  const addedFocusIn = addSpy.getCalls().find((c) => c.args[0] === "focusin")?.args[1];
-  const addedFocusOut = addSpy.getCalls().find((c) => c.args[0] === "focusout")?.args[1];
+  const focusInSignal = signalOf(addSpy.getCalls().find((c) => c.args[0] === "focusin"));
+  const focusOutSignal = signalOf(addSpy.getCalls().find((c) => c.args[0] === "focusout"));
+  assert.notOk(focusInSignal?.aborted, "setAutoShow(true) attaches a live document focusin listener");
+  assert.notOk(focusOutSignal?.aborted, "setAutoShow(true) attaches a live document focusout listener");
 
   kb.destroy();
-
-  const focusInDetached = removeSpy.getCalls().some((c) => c.args[0] === "focusin" && c.args[1] === addedFocusIn);
-  const focusOutDetached = removeSpy.getCalls().some((c) => c.args[0] === "focusout" && c.args[1] === addedFocusOut);
   addSpy.restore();
-  removeSpy.restore();
 
-  assert.ok(addedFocusIn, "setAutoShow(true) attaches a document focusin listener");
-  assert.ok(addedFocusOut, "setAutoShow(true) attaches a document focusout listener");
-  assert.ok(focusInDetached, "destroy detaches the same focusin listener");
-  assert.ok(focusOutDetached, "destroy detaches the same focusout listener");
+  assert.ok(focusInSignal?.aborted, "destroy detaches the focusin listener");
+  assert.ok(focusOutSignal?.aborted, "destroy detaches the focusout listener");
 });
 
 QUnit.test("exit() removes escape key listener", async (assert) => {
@@ -549,24 +555,20 @@ QUnit.test("exit() removes escape key listener", async (assert) => {
   // Spy the document listener seam so detachment is asserted directly, not via a
   // no-throw smoke test (a leaked keydown listener is otherwise unobservable).
   const addSpy = sinon.spy(document, "addEventListener");
-  const removeSpy = sinon.spy(document, "removeEventListener");
 
   kb.show();
   assert.ok(kb.isOpen(), "Keyboard is open");
 
-  const escapeCall = addSpy.getCalls().find((c) => c.args[0] === "keydown" && c.args[2] === true);
-  const addedEscapeHandler = escapeCall?.args[1];
+  const escapeCall = addSpy
+    .getCalls()
+    .find((c) => c.args[0] === "keydown" && (c.args[2] as AddEventListenerOptions | undefined)?.capture === true);
+  const escapeSignal = signalOf(escapeCall);
+  assert.notOk(escapeSignal?.aborted, "show() attaches a live capturing document keydown listener");
 
   kb.destroy();
-
-  const detached = removeSpy
-    .getCalls()
-    .some((c) => c.args[0] === "keydown" && c.args[1] === addedEscapeHandler && c.args[2] === true);
   addSpy.restore();
-  removeSpy.restore();
 
-  assert.ok(addedEscapeHandler, "show() attaches a capturing document keydown listener");
-  assert.ok(detached, "destroy detaches the same keydown listener (with capture flag)");
+  assert.ok(escapeSignal?.aborted, "destroy detaches the capturing keydown listener");
 });
 
 // ──────────────────────────────────────────────
@@ -1548,23 +1550,20 @@ QUnit.test("Window blur safety listener is detached on touchend", async (assert)
   // no-throw smoke test (a stacked/leaked listener clears already-clear state
   // and is otherwise unobservable).
   const addSpy = sinon.spy(window, "addEventListener");
-  const removeSpy = sinon.spy(window, "removeEventListener");
 
   const start = new Event("touchstart", { bubbles: true });
   Object.defineProperty(start, "target", { value: qKey, writable: false });
   kb.ontouchstart(start);
 
+  const blurSignal = signalOf(addSpy.getCalls().find((c) => c.args[0] === "blur"));
+  assert.notOk(blurSignal?.aborted, "touchstart attaches a live window blur safety listener");
+
   const end = new Event("touchend", { bubbles: true });
   Object.defineProperty(end, "target", { value: qKey, writable: false });
   kb.ontouchend(end);
-
-  const addedBlurHandler = addSpy.getCalls().find((c) => c.args[0] === "blur")?.args[1];
-  const detached = removeSpy.getCalls().some((c) => c.args[0] === "blur" && c.args[1] === addedBlurHandler);
   addSpy.restore();
-  removeSpy.restore();
 
-  assert.ok(addedBlurHandler, "touchstart attaches a window blur safety listener");
-  assert.ok(detached, "touchend detaches the same blur listener (no stacking across taps)");
+  assert.ok(blurSignal?.aborted, "touchend detaches the blur listener (no stacking across taps)");
 
   kb.destroy();
 });

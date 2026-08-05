@@ -1,5 +1,5 @@
 /** The slice of the host the announcement queue reads and writes back into. */
-export interface AnnouncementQueueHost {
+interface AnnouncementQueueHost {
   /** Whether the host is still attached; a pending flush bails out when false. */
   isConnected(): boolean;
   /** Writes the next announcement to the reactive live-region property. */

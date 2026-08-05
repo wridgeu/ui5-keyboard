@@ -158,8 +158,14 @@ export default class KioskKeyboard extends Control {
   private _nativeKbSuppression!: NativeKeyboardSuppression;
   private _autoShowBehavior!: AutoShowBehavior;
   private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
-  private _boundEscapeKeydown!: (e: KeyboardEvent) => void;
-  private _boundClearPressedOnBlur!: () => void;
+  /**
+   * Detaches the document Escape listener for the current open period, or
+   * `null` while closed. An `AbortSignal` is one-shot, so each open mints a
+   * fresh controller; reusing an aborted one would attach nothing.
+   */
+  private _escapeAbort!: AbortController | null;
+  /** Detaches the window blur safety net for the current press, or `null` between presses. */
+  private _pressedBlurAbort!: AbortController | null;
   private _focusClaimService!: FocusClaimService;
   private _targetSession!: TargetInputSession;
   private _rendererApi!: RendererInternalApi | null;
@@ -899,9 +905,8 @@ export default class KioskKeyboard extends Control {
     this._nativeKbSuppression = new NativeKeyboardSuppression(this);
     this._autoShowBehavior = new AutoShowBehavior(this);
     this._extensions = [this._nativeKbSuppression, this._autoShowBehavior];
-    this._boundEscapeKeydown = this._onDocumentEscapeKeydown.bind(this);
-    // A press that ends outside the page abandons the gesture, like a cancel.
-    this._boundClearPressedOnBlur = (): void => this.ontouchcancel();
+    this._escapeAbort = null;
+    this._pressedBlurAbort = null;
     this._focusClaimService = new FocusClaimService(
       () => this.getControls(),
       () => this._controlsDelegation.getResolvedControlIds(),
@@ -1008,7 +1013,8 @@ export default class KioskKeyboard extends Control {
     this._variantPopup.destroy();
     this._clearPressedKeyState();
     for (const ext of this._extensions) ext.destroy();
-    document.removeEventListener("keydown", this._boundEscapeKeydown, true);
+    this._escapeAbort?.abort();
+    this._escapeAbort = null;
     // @ts-expect-error removeDelegate is an internal UI5 API not exposed in @openui5/types
     this.removeDelegate(this._keyGridNav);
     this._keyGridNav.destroy();
@@ -1721,7 +1727,11 @@ export default class KioskKeyboard extends Control {
 
     this._open = true;
     this._nativeKbSuppression.suppress();
-    document.addEventListener("keydown", this._boundEscapeKeydown, true);
+    this._escapeAbort = new AbortController();
+    document.addEventListener("keydown", (e) => this._onDocumentEscapeKeydown(e), {
+      capture: true,
+      signal: this._escapeAbort.signal,
+    });
     const dom = this.getDomRef();
     if (dom) {
       dom.classList.remove(KIOSK_KEYBOARD_DOM.classes.rootClosed);
@@ -1743,7 +1753,8 @@ export default class KioskKeyboard extends Control {
     this._targetSession.fireChangeIfDirty();
     this._open = false;
     this._nativeKbSuppression.restore();
-    document.removeEventListener("keydown", this._boundEscapeKeydown, true);
+    this._escapeAbort?.abort();
+    this._escapeAbort = null;
     const dom = this.getDomRef();
     if (dom) {
       dom.classList.add(KIOSK_KEYBOARD_DOM.classes.rootClosed);
@@ -2181,9 +2192,10 @@ export default class KioskKeyboard extends Control {
     this._variantPopup.stop();
     const pressed = this._pressedKeyEl;
     this._pressedKeyEl = null;
+    this._pressedBlurAbort?.abort();
+    this._pressedBlurAbort = null;
     if (pressed) {
       pressed.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyPressed);
-      window.removeEventListener("blur", this._boundClearPressedOnBlur);
     }
     return pressed;
   }
@@ -2225,8 +2237,12 @@ export default class KioskKeyboard extends Control {
       el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
       // Safety net: if the window loses focus before touchend/touchcancel
       // fires (e.g. Alt-Tab during a mousedown, or a modal popup steals
-      // focus), clear the pressed visual state so it does not stick.
-      window.addEventListener("blur", this._boundClearPressedOnBlur);
+      // focus), clear the pressed visual state so it does not stick. A press
+      // that ends outside the page abandons the gesture, like a cancel.
+      // Aborting first keeps a second press from stacking a second listener.
+      this._pressedBlurAbort?.abort();
+      this._pressedBlurAbort = new AbortController();
+      window.addEventListener("blur", () => this.ontouchcancel(), { signal: this._pressedBlurAbort.signal });
       // Press-and-hold Backspace deletes continuously; the behavior arms the
       // repeat and later tells ontouchend to suppress its trailing delete.
       this._backspaceRepeat.onPress(el, this.getEnabled());

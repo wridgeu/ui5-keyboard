@@ -47,7 +47,7 @@ export function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTex
 }
 
 /** Minimal control surface needed to decide DOM-level participation. */
-export interface ParticipationHost {
+interface ParticipationHost {
   getVisible(): boolean;
   getEnabled(): boolean;
   getDomRef(): Element | null;
