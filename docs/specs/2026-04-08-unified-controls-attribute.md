@@ -53,7 +53,7 @@ keyboard.controls += ", newDynamicInput";
 
 ```typescript
 controls: {
-  type: "ui5.kiosk.ControlID[]",
+  type: "string[]",
   defaultValue: [],
   group: "Behavior",
 }
