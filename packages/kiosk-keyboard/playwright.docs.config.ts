@@ -18,7 +18,14 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     viewport: DESKTOP_VIEWPORT,
-    launchOptions: { args: CHROMIUM_ARGS },
+    // Captured at 2x so the README renders sharp on a HiDPI display, where the
+    // images are scaled down rather than up.
+    deviceScaleFactor: 2,
+    // `--disable-lcd-text` forces grayscale antialiasing. Chrome's subpixel
+    // antialiasing tints glyph edges red and blue, which survives into a PNG as
+    // stray colour on the keycap letters - most visible on the two high-contrast
+    // themes, whose palette has no colour of its own to hide it.
+    launchOptions: { args: [...CHROMIUM_ARGS, "--disable-lcd-text"] },
   },
   projects: [{ name: "desktop", use: { browserName: "chromium" } }],
   webServer: ui5ServeWebServer({
