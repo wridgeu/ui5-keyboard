@@ -77,8 +77,8 @@ declare module "./CustomLayout" {
         `suppress="Variants, Middleware"`. A listed facet resolves to nothing at this
         custom layout's position; a value this same custom layout declares still applies.
         
-        Comma-separated, and whitespace around a name is not part of it. A token naming
-        no facet is rejected rather than ignored.
+        In XML the facets are comma-separated, and whitespace around a name is not part
+        of it. A token naming no facet is rejected rather than ignored.
          */
         suppress?: LayoutFacet[] | PropertyBindingInfo | `{${string}}`;
     }
@@ -328,8 +328,8 @@ declare module "./CustomLayout" {
         `suppress="Variants, Middleware"`. A listed facet resolves to nothing at this
         custom layout's position; a value this same custom layout declares still applies.
         
-        Comma-separated, and whitespace around a name is not part of it. A token naming
-        no facet is rejected rather than ignored.
+        In XML the facets are comma-separated, and whitespace around a name is not part
+        of it. A token naming no facet is rejected rather than ignored.
          *
          * Default value is: []
          * @returns Value of property "suppress"
@@ -343,8 +343,8 @@ declare module "./CustomLayout" {
         `suppress="Variants, Middleware"`. A listed facet resolves to nothing at this
         custom layout's position; a value this same custom layout declares still applies.
         
-        Comma-separated, and whitespace around a name is not part of it. A token naming
-        no facet is rejected rather than ignored.
+        In XML the facets are comma-separated, and whitespace around a name is not part
+        of it. A token naming no facet is rejected rather than ignored.
          *
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
          *
