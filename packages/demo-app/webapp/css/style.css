@@ -43,10 +43,6 @@
     padding: 0.5rem;
   }
 
-  .sapMPanelContentWrapper {
-    padding: 0.5rem;
-  }
-
   /* UI5 declares this utility class `!important`, so overriding it needs the same. */
   .sapUiSmallMargin {
     margin: 0.5rem !important;
@@ -63,10 +59,6 @@
    nothing for the page - which is what the library's compact row variants exist for. */
 @media (max-width: 400px) {
   .sapMPage.sapUiContentPadding > section {
-    padding: 0.25rem;
-  }
-
-  .sapMPanelContentWrapper {
     padding: 0.25rem;
   }
 
