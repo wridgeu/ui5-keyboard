@@ -35,7 +35,7 @@ interface AutoCompactHost {
  * and applied by the host.
  *
  * Deliberately a second `ResizeObserver` rather than a branch inside
- * {@link ResponsiveSizingController}. That controller returns early for docked and
+ * `ResponsiveSizingController`. That controller returns early for docked and
  * numpad keyboards and again when the keyboard is not height-constrained, which is
  * the common case and exactly when this tier still has to resolve; and its
  * measurement pass is pinned by a "no forced layout reads during shift toggle"

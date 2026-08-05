@@ -64,7 +64,11 @@ export default class CustomLayout extends Element {
        * layout's counterpart.
        */
       compact: { type: "string", defaultValue: "", group: "Behavior" },
-      /** Whether the layout is an auxiliary surface or a base alphabetic layout. */
+      /**
+       * Whether the layout is an auxiliary surface or a base alphabetic layout. `Inherit`
+       * takes the built-in layout of the same name's role, and the base alphabetic role
+       * when there is no built-in of that name.
+       */
       layoutRole: { type: "ui5.kiosk.LayoutRole", defaultValue: "Inherit", group: "Behavior" },
       /**
        * BCP-47 prefixes that select this layout when the control has no explicit

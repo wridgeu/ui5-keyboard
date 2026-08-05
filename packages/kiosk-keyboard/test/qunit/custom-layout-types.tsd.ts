@@ -27,7 +27,7 @@ void new CustomLayout({ name: "bad", layoutRole: "base" });
 void new CustomLayout({ name: "bad", suppress: ["Varients"] });
 // @ts-expect-error locales are BCP-47 prefixes, one per entry
 void new CustomLayout({ name: "bad", locales: "pl" });
-// @ts-expect-error the aggregation holds elements, not the record shape it replaced
+// @ts-expect-error the aggregation holds CustomLayout elements, not plain records
 kb.addCustomLayout({ name: "bad" });
 
 // The accepted shapes, which must keep compiling.
