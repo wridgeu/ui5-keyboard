@@ -18,10 +18,7 @@ export interface ControlsDelegationHost {
   getControls(): string[];
   /** Parent of the host control, used to resolve view-local control ids. */
   getParent(): ManagedObject | null;
-  /**
-   * Whether the host is in the DOM. A rendered host is necessarily parented, so an id
-   * that still resolves to nothing by then is wrong rather than early.
-   */
+  /** Whether the host is in the DOM. */
   isRendered(): boolean;
   getEnabled(): boolean;
   getDocked(): boolean;
@@ -56,7 +53,7 @@ export default class ControlsDelegationController {
   /** Live control instances the focus delegate is attached to, keyed by id. */
   private _delegatedInstances = new Map<string, Control>();
   /** Ids already reported as unresolvable, so the focusin firehose reports each once. */
-  private readonly _warnedUnresolvedIds = new Set<string>();
+  private readonly _reportedUnresolvedIds = new Set<string>();
   private readonly _delegate: InputFocusDelegation;
 
   constructor(private readonly _host: ControlsDelegationHost) {
@@ -103,7 +100,7 @@ export default class ControlsDelegationController {
       }
 
       // Forget the report, so an id that breaks again after resolving is reported again.
-      this._warnedUnresolvedIds.delete(inputId);
+      this._reportedUnresolvedIds.delete(inputId);
       const controlId = control.getId();
       nextByInputId.set(inputId, controlId);
       resolvedControlIds.add(controlId);
@@ -170,25 +167,26 @@ export default class ControlsDelegationController {
     this._delegatedInstances.clear();
     this._registeredControlById.clear();
     this._resolvedControlIds.clear();
-    this._warnedUnresolvedIds.clear();
+    this._reportedUnresolvedIds.clear();
   }
 
   /**
    * Reports a `controls` entry that names no control, once per id.
    *
-   * Held back until the host has rendered: before that the keyboard may still be
-   * unparented, so the view-local lookup cannot run and every id would look wrong. A
-   * target built later remains indistinguishable from a typo, because the element
-   * registry raises no event when one is added, so the message names both remedies.
+   * Held back until the host has rendered, because any enclosing View is an ancestor by
+   * then; earlier the view-local lookup may have nothing to walk and every id would look
+   * wrong. A target built later remains indistinguishable from a typo, because the
+   * element registry raises no event when one is added, so the message names both.
    */
   private _reportUnresolved(inputId: string): void {
     if (!this._host.isRendered()) return;
-    if (this._warnedUnresolvedIds.has(inputId)) return;
-    this._warnedUnresolvedIds.add(inputId);
+    if (this._reportedUnresolvedIds.has(inputId)) return;
+    this._reportedUnresolvedIds.add(inputId);
     Log.warning(
-      `Control with ID "${inputId}" could not be found, so "controls" does not delegate focus to it. ` +
-        `IDs resolve against the enclosing View first, then globally - correct the ID, ` +
-        `or set "controls" again once the control exists.`,
+      `"controls" entry "${inputId}" names no control, so focus is not delegated to it. ` +
+        `IDs resolve against the enclosing View first, then globally, and must name a control ` +
+        `rather than a plain element - check the ID for a typo. A control created after this ` +
+        `point is picked up on the next render or focus change.`,
       undefined,
       "ui5.kiosk.KioskKeyboard",
     );

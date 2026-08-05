@@ -257,14 +257,22 @@ function trimToken(value: string): string {
   return value.trim();
 }
 
-/** The whole list, for the paths that never pass through {@link trimToken}. */
-function trimTokens(values: string[]): string[] {
-  return values.map(trimToken);
+/**
+ * The whole list, for values that arrive already split: a settings object, a model
+ * binding, a `set*` call. An empty token names nothing, so it carries no entry.
+ */
+function normalizeTokens(values: string[]): string[] {
+  return values.map(trimToken).filter((token) => token !== "");
 }
 
+// Widened to `string[]` so a token can be looked up without first narrowing it to the
+// enum; `Object.values` alone infers `LayoutFacet[]`.
 const LAYOUT_FACET_NAMES: string[] = Object.values(LayoutFacet);
 
-/** Whether a token names a `LayoutFacet` member. */
+/**
+ * Whether a token names a `LayoutFacet` member. `createType` runs the base type's check
+ * first, so this only ever sees a string.
+ */
 function isLayoutFacetName(value: string): boolean {
   return LAYOUT_FACET_NAMES.includes(value);
 }
@@ -274,23 +282,31 @@ DataType.createType("ui5.kiosk.LayoutRows", { defaultValue: null, isValid: isLay
 DataType.createType("ui5.kiosk.VariantOverrideTable", { defaultValue: null, isValid: isVariantTable }, "object");
 
 /**
- * One entry of `controls`. The base string type validates it: an id carries no whitespace
- * of its own, and the common fault is an id that is well formed but names nothing, which
- * no type check catches. The delegation controller reports that.
+ * One entry of `controls`. It carries no check of its own: any string is a well-formed
+ * id, and the fault worth catching is an id that is well formed but names nothing, which
+ * no type check reaches. The delegation controller reports that.
  */
 DataType.createType("ui5.kiosk.ControlID", { parseValue: trimToken }, "string");
-// `parseValue` runs only for a value parsed from an XML attribute. A list assigned
-// programmatically or delivered by a model arrives unparsed, so the array normalizes on
-// write too.
-DataType.getType("ui5.kiosk.ControlID[]")!.setNormalizer(trimTokens);
+// The list normalizes on write as well, because only a value parsed from an XML attribute
+// passes through `parseValue`; a list assigned programmatically or delivered by a model
+// arrives whole.
+DataType.getType("ui5.kiosk.ControlID[]")!.setNormalizer(normalizeTokens);
 
 /**
- * One entry of `suppress`. A validated string rather than a registered enum: an enum's
+ * One entry of `suppress`. A validated string, not a registered enum, because an enum's
  * parser maps every unknown token to `undefined`, which reads the space in
- * `suppress="Variants, Middleware"` as a misspelling. A real misspelling fails on the
- * member check, as loudly as before.
+ * `suppress="Variants, Middleware"` as a misspelling. A real misspelling fails the member
+ * check and rejects the view.
+ *
+ * The default matters even though `suppress` declares its own: a property that omits
+ * `defaultValue` inherits the type's, and `ManagedObject` returns that without validating
+ * it, so the `string` base's `""` would read back as a facet this type rejects.
  */
-DataType.createType("ui5.kiosk.LayoutFacet", { isValid: isLayoutFacetName, parseValue: trimToken }, "string");
+DataType.createType(
+  "ui5.kiosk.LayoutFacet",
+  { defaultValue: LayoutFacet.Variants, isValid: isLayoutFacetName, parseValue: trimToken },
+  "string",
+);
 
 const library = Lib.init({
   apiVersion: 2,

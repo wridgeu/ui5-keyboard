@@ -209,4 +209,8 @@ QUnit.test("a typo in a closed enum attribute fails loudly rather than silently"
 
   // The rejected view never resolves, so there is nothing to destroy.
   assert.ok(rejected, "the view rejects rather than resolving with a silently-dropped facet");
+  assert.ok(
+    String(rejected).includes("ui5.kiosk.LayoutFacet[]"),
+    "and it is the facet type that rejects it, not some unrelated fault in the view",
+  );
 });

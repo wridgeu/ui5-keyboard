@@ -429,6 +429,9 @@ QUnit.test("controls falls back to global when not inside a View", async (assert
 });
 
 QUnit.test("controls keeps resolving the rest of the list when one ID is unresolvable", async (assert) => {
+  // The unresolvable entry is reported, and that report is this test's noise, not its
+  // subject.
+  sandbox.stub(Log, "warning");
   const input = new Input("real-input");
   input.placeAt("qunit-fixture");
 
@@ -489,9 +492,69 @@ QUnit.test("a controls entry is not reported before the keyboard has rendered", 
   const kb = new KioskKeyboard();
   kb.setControls(["not-there-yet"]);
 
-  assert.strictEqual(warning.callCount, 0, "an unrendered keyboard reports nothing");
+  const reports = warning.getCalls().filter((call) => String(call.args[0]).includes("not-there-yet"));
+  assert.strictEqual(reports.length, 0, "an unrendered keyboard reports nothing");
 
   kb.destroy();
+});
+
+QUnit.test("a controls entry that resolves and breaks again is reported a second time", async (assert) => {
+  const warning = sandbox.stub(Log, "warning");
+  const countReports = () =>
+    warning.getCalls().filter((call) => String(call.args[0]).includes("flapping-input")).length;
+
+  const kb = new KioskKeyboard({ controls: ["flapping-input"] });
+  await placeAndWait(kb);
+  assert.strictEqual(countReports(), 1, "the entry is reported while it names nothing");
+
+  // The control appears, which is what clears the entry from the reported set.
+  const input = new Input("flapping-input");
+  input.placeAt("qunit-fixture");
+  await nextUIUpdate();
+  kb.setControls(["flapping-input"]);
+  assert.strictEqual(countReports(), 1, "resolving it reports nothing further");
+
+  input.destroy();
+  kb.setControls(["flapping-input"]);
+  assert.strictEqual(countReports(), 2, "and breaking a second time is reported again");
+
+  kb.destroy();
+});
+
+QUnit.test("an empty controls token contributes no entry and is not reported", async (assert) => {
+  const warning = sandbox.stub(Log, "warning");
+  const input = new Input("kept-input");
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: ["kept-input", "", "  "] });
+  await placeAndWait(kb);
+
+  const reports = warning.getCalls().filter((call) => String(call.args[0]).includes('"controls" entry'));
+  assert.deepEqual(kb.getControls(), ["kept-input"], "an empty token carries no entry");
+  assert.strictEqual(reports.length, 0, "so there is no id-naming-nothing to report");
+
+  kb.destroy();
+  input.destroy();
+});
+
+QUnit.test("a trailing comma in the controls attribute contributes no entry", async (assert) => {
+  const warning = sandbox.stub(Log, "warning");
+  const view = await XMLView.create({
+    definition: `<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:m="sap.m" xmlns:kiosk="ui5.kiosk">
+      <m:Input id="onlyInput" />
+      <kiosk:KioskKeyboard id="kb" controls="onlyInput," />
+    </mvc:View>`,
+  });
+  view.placeAt("qunit-fixture");
+  await waitForRender();
+
+  const kb = view.byId("kb") as KioskKeyboard;
+  const reports = warning.getCalls().filter((call) => String(call.args[0]).includes('"controls" entry'));
+
+  assert.deepEqual(kb.getControls(), ["onlyInput"], "the token after the trailing comma is dropped");
+  assert.strictEqual(reports.length, 0, "so the diagnostic reports no id the author never wrote");
+
+  view.destroy();
 });
 
 QUnit.test("controls deduplicates delegates when aliased IDs resolve to the same control", async (assert) => {
