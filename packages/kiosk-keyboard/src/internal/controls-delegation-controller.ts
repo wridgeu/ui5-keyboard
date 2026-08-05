@@ -184,9 +184,8 @@ export default class ControlsDelegationController {
     this._reportedUnresolvedIds.add(inputId);
     Log.warning(
       `"controls" entry "${inputId}" names no control, so focus is not delegated to it. ` +
-        `IDs resolve against the enclosing View first, then globally, and must name a control ` +
-        `rather than a plain element - check the ID for a typo. A control created after this ` +
-        `point is picked up on the next render or focus change.`,
+        `IDs resolve against the enclosing View first, then globally, and must name a control; ` +
+        `one created later is picked up on the next render or focus change.`,
       undefined,
       "ui5.kiosk.KioskKeyboard",
     );

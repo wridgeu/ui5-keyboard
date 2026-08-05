@@ -378,7 +378,7 @@ The aggregation carries the usual generated accessors - `addCustomLayout`, `inse
 | `variants`   | `VariantTable`     | additive per base letter; a letter mapped to `[]` drops it                  | built-in → `defaultVariants` → custom layout |
 | `suppress`   | `LayoutFacet[]`    | discards the inherited value of each listed facet at this layout's position | -                                            |
 
-Custom layouts apply in **aggregation order**. `layoutRole` is a tri-state: `Inherit` (the default) takes the built-in layout of the same name's role, `Base` un-marks a built-in's secondary flag, `Secondary` marks an auxiliary surface. `suppress` is how a facet is turned _off_ rather than replaced - a value the same custom layout declares still applies, so `suppress="Variants"` plus a `variants` table stands that table alone. `suppress` is comma-separated and whitespace around a name is not part of it, so `suppress="Variants, Middleware"` and `suppress="Variants,Middleware"` are the same list; the comma is what separates them, and a name the list does not know is rejected rather than ignored.
+Custom layouts apply in **aggregation order**. `layoutRole` is a tri-state: `Inherit` (the default) takes the built-in layout of the same name's role, `Base` un-marks a built-in's secondary flag, `Secondary` marks an auxiliary surface. `suppress` is how a facet is turned _off_ rather than replaced - a value the same custom layout declares still applies, so `suppress="Variants"` plus a `variants` table stands that table alone. `suppress` is comma-separated and whitespace around a name is not part of it, so `suppress="Variants, Middleware"` and `suppress="Variants,Middleware"` are the same list.
 
 `compact` names the layout that renders instead of this one on a keyboard too narrow to seat its rows - the same key set in a denser arrangement, matched after trim and lowercase, and read only while the control's `autoCompact` is on. It may name a built-in (`ja-kana` ships `ja-kana-compact`) or another custom layout. `suppress` cannot turn it off: the suppressible facets are `Variants` and `Middleware`, so an overlay can replace an inherited counterpart but not remove it.
 
@@ -1283,6 +1283,7 @@ The `controls` property provides declarative input targeting. List one or more i
 4. IDs are resolved against the parent View first (view-local IDs), then globally, safe for XML views where IDs are prefixed.
 5. IDs are comma-separated, and whitespace around one is not part of it: `controls="firstName, lastName"` and `controls="firstName,lastName"` are the same list.
 6. **Composite controls** (e.g. `sap.m.StepInput`) are supported: when focus lands on the inner input, the keyboard walks the UI5 parent chain to find the registered ancestor.
+7. An entry that names no control is skipped - the rest of the list still resolves - and is reported once as a `Log.warning` from `ui5.kiosk.KioskKeyboard`.
 
 **TypeScript:**
 
