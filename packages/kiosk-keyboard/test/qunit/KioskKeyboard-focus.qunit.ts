@@ -340,6 +340,34 @@ QUnit.test("controls resolves view-local IDs when keyboard is inside a View", as
   view.destroy();
 });
 
+QUnit.test("controls resolves every entry when the attribute is written with spaces", async (assert) => {
+  const view = await XMLView.create({
+    definition: `<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:m="sap.m" xmlns:kiosk="ui5.kiosk">
+      <m:Input id="firstInput" />
+      <m:Input id="secondInput" />
+      <kiosk:KioskKeyboard id="kb" controls="firstInput, secondInput" />
+    </mvc:View>`,
+  });
+  view.placeAt("qunit-fixture");
+  await waitForRender();
+
+  const kb = view.byId("kb") as KioskKeyboard;
+  const second = view.byId("secondInput") as Input;
+
+  // The entry after the comma is the one that carries the space, so it is the one that
+  // proves the attribute is read as a token list rather than split verbatim.
+  (second.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+
+  assert.strictEqual(
+    kb.getActiveControl()?.getId(),
+    second.getId(),
+    "the entry written after a space is delegated like any other",
+  );
+
+  view.destroy();
+});
+
 QUnit.test("controls prefers view-local over global when IDs collide", async (assert) => {
   // Create a global control with a short ID that matches the view-local one
   const globalInput = new Input("collisionInput");

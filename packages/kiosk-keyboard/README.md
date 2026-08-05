@@ -452,7 +452,7 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 | `mobileKeyboard`  | `ui5.kiosk.MobileKeyboard` | `"Auto"`    | Native keyboard behavior: `Auto` (device-aware), `Custom` (suppress), `Native` (defer).                                                                                                                                                                         |
 | `fKeyMode`        | `ui5.kiosk.FKeyMode`       | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`), `Native` (dispatch synthetic keydown + native actions), `None` (event only, no native action).                                                                                                                     |
 | `accentVariants`  | `boolean`                  | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The five non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts). |
-| `controls`        | `string[]`                 | `[]`        | Input control IDs for targeting. Supports single or multiple inputs. See [controls](#controls).                                                                                                                                                                 |
+| `controls`        | `ui5.kiosk.ControlID[]`    | `[]`        | Input control IDs for targeting. Supports single or multiple inputs. See [controls](#controls).                                                                                                                                                                 |
 | `defaultVariants` | `VariantTable \| null`     | `null`      | Long-press variants applied under **every** layout, merged per base letter beneath anything a `customLayouts` entry declares. Effective only with `accentVariants`. See [Accent variants](#accent-variants-german-umlauts).                                     |
 
 > [!IMPORTANT]
@@ -1272,7 +1272,7 @@ The `controls` property provides declarative input targeting. List one or more i
 <m:Input id="lastName" />
 <m:Input id="email" />
 
-<kiosk:KioskKeyboard controls="firstName,lastName,email" />
+<kiosk:KioskKeyboard controls="firstName, lastName, email" />
 ```
 
 **How it works:**
@@ -1281,7 +1281,8 @@ The `controls` property provides declarative input targeting. List one or more i
 2. When any of them receives focus, the keyboard sets it as the active target. In docked + `autoShow` mode, the keyboard also opens automatically.
 3. When `autoShow` is active, `controls` acts as a filter: only the listed inputs trigger auto-show. Focusing an input **not** in the list will not open the keyboard.
 4. IDs are resolved against the parent View first (view-local IDs), then globally, safe for XML views where IDs are prefixed.
-5. **Composite controls** (e.g. `sap.m.StepInput`) are supported: when focus lands on the inner input, the keyboard walks the UI5 parent chain to find the registered ancestor.
+5. Entries are comma-separated. Whitespace around an entry is the list's punctuation, not part of the ID, so `controls="firstName, lastName"` and `controls="firstName,lastName"` are the same list.
+6. **Composite controls** (e.g. `sap.m.StepInput`) are supported: when focus lands on the inner input, the keyboard walks the UI5 parent chain to find the registered ancestor.
 
 **TypeScript:**
 

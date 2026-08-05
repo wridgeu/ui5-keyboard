@@ -248,10 +248,50 @@ function isVariantTable(value: unknown): boolean {
   return value === null || (typeof value === "object" && !Array.isArray(value));
 }
 
+/**
+ * One entry of a comma-separated attribute list. UI5's array parser splits such an
+ * attribute on commas alone, so whitespace an author writes around a comma arrives as
+ * part of the neighbouring entry. It is the list's punctuation and never part of a value,
+ * as it is everywhere else on the web platform.
+ */
+function trimToken(value: string): string {
+  return value.trim();
+}
+
+/** The same list, arriving whole rather than one attribute token at a time. */
+function trimTokens(values: string[]): string[] {
+  return values.map(trimToken);
+}
+
+const LAYOUT_FACET_NAMES: string[] = Object.values(LayoutFacet);
+
+/** Whether a token names a `LayoutFacet` member. */
+function isLayoutFacetName(value: string): boolean {
+  return LAYOUT_FACET_NAMES.includes(value);
+}
+
 DataType.registerEnum("ui5.kiosk.LayoutRole", LayoutRole);
-DataType.registerEnum("ui5.kiosk.LayoutFacet", LayoutFacet);
 DataType.createType("ui5.kiosk.LayoutRows", { defaultValue: null, isValid: isLayoutRows }, "object");
 DataType.createType("ui5.kiosk.VariantOverrideTable", { defaultValue: null, isValid: isVariantTable }, "object");
+
+/**
+ * One entry of `controls`. An id carries no whitespace of its own, so the base string
+ * type is validation enough here: the frequent fault is an id that is well formed and
+ * names nothing, which no type check catches. The delegation controller reports that one.
+ */
+DataType.createType("ui5.kiosk.ControlID", { parseValue: trimToken }, "string");
+// `parseValue` sees only a value parsed from an XML attribute. A list assigned
+// programmatically or delivered by a model reaches the property unparsed, where a padded
+// id resolves to nothing just as quietly, so the array normalizes on write as well.
+DataType.getType("ui5.kiosk.ControlID[]")?.setNormalizer(trimTokens);
+
+/**
+ * One entry of `suppress`. A validated string rather than a registered enum, because an
+ * enum's parser maps any unknown token to `undefined` and so reads the space in
+ * `suppress="Variants, Middleware"` as a misspelling. A real misspelling still fails, on
+ * the member check, and still fails loudly.
+ */
+DataType.createType("ui5.kiosk.LayoutFacet", { isValid: isLayoutFacetName, parseValue: trimToken }, "string");
 
 const library = Lib.init({
   apiVersion: 2,
@@ -267,6 +307,7 @@ const library = Lib.init({
     "ui5.kiosk.LayoutFacet",
     "ui5.kiosk.LayoutRows",
     "ui5.kiosk.VariantOverrideTable",
+    "ui5.kiosk.ControlID",
   ],
   interfaces: [],
   controls: ["ui5.kiosk.KioskKeyboard"],
@@ -305,3 +346,11 @@ export type { VariantTable } from "./internal/latin-variants";
  */
 export type LayoutRows = LayoutDefinition | null;
 export type VariantOverrideTable = VariantTable | null;
+
+/**
+ * One entry of the `controls` list: the id of a control the keyboard targets.
+ *
+ * @public
+ * @since 0.1.0
+ */
+export type ControlID = string;
