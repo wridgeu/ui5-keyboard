@@ -10,14 +10,8 @@ import { PlacementType } from "sap/m/library";
 import { getLayoutMeta } from "./internal/layout-meta";
 import type { LayoutDefinition, CompositionMiddleware } from "./types";
 import CustomLayout from "./CustomLayout";
-import {
-  describeDiagnostic,
-  foldCustomLayouts,
-  isValidVariantTable,
-  type CustomLayoutFold,
-  type DiagnosticVocabulary,
-  type LayoutDiagnostic,
-} from "./internal/custom-layout-fold";
+import { isValidVariantTable } from "./internal/custom-layout-fold";
+import LayoutFoldCache from "./internal/layout-fold-cache";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
 import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
@@ -74,13 +68,6 @@ import { parseKeyAction, assertNever, LAYOUT_BASE } from "./internal/key-token";
 import { constrainedLayoutName, reconcileBaseSwitch } from "./internal/layout-constraint";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
-
-/** How this twin spells the surface names a fold diagnostic has to quote. */
-const KIOSK_DIAGNOSTIC_VOCABULARY: DiagnosticVocabulary = {
-  customLayouts: "customLayouts aggregation",
-  customLayout: "<kiosk:CustomLayout>",
-  builtInLayouts: registryGetLayoutNames(),
-};
 
 /**
  * Whether a simulated touch event stands for a non-primary mouse button.
@@ -171,7 +158,7 @@ export default class KioskKeyboard extends Control {
   private _rendererApi!: RendererInternalApi | null;
   private _targetResolverInstance!: TargetResolverFn | null;
   /**
-   * Custom layouts folded into the lookup maps; `null` while the cache is cold or stale.
+   * Owns the folded view of `customLayouts` and its diagnostics.
    *
    * Declared without an initialiser on purpose. `tsconfig` targets ES2022 and leaves
    * `useDefineForClassFields` at its default `true`, while `ManagedObject` calls `init()`
@@ -179,11 +166,7 @@ export default class KioskKeyboard extends Control {
    * *after* both and silently discard the single fold built between the two
    * `applySettings` phases. Every field above follows the same form.
    */
-  private _fold!: CustomLayoutFold | null;
-  /** The elements the cached fold was built from, compared element-wise on read. */
-  private _foldChildren!: CustomLayout[];
-  /** Diagnostics already reported for the current configuration, keyed by content. */
-  private _reportedDiagnostics!: Set<string>;
+  private _foldCache!: LayoutFoldCache;
   /** The factory that produced `_middleware`, so a re-resolve onto the same factory is a no-op. */
   private _middlewareFactory!: (() => CompositionMiddleware) | null;
   /** Caps the disarmed-variants diagnostic at one emission per control. */
@@ -847,7 +830,7 @@ export default class KioskKeyboard extends Control {
       const first: Record<string, unknown> = { customLayouts };
       super.applySettings(first, oScope);
     }
-    const fold = this._getFold();
+    const fold = this._foldCache.get();
     // `layout` first so the locale default is the first setting applied; the spread
     // overwrites its value, not its position, when the caller named a layout.
     const second: Record<string, unknown> = {
@@ -914,9 +897,10 @@ export default class KioskKeyboard extends Control {
       (id) => this._isTargetOfOther(id),
     );
     this._targetResolverInstance = null;
-    this._fold = null;
-    this._foldChildren = [];
-    this._reportedDiagnostics = new Set();
+    this._foldCache = new LayoutFoldCache({
+      getCustomLayouts: () => this.getCustomLayouts(),
+      onRebuilt: () => this._autoCompact.reapply(),
+    });
     this._middlewareFactory = null;
     this._pendingLayoutAnnouncement = null;
     this._warnedDisarmedVariants = false;
@@ -1127,7 +1111,7 @@ export default class KioskKeyboard extends Control {
    */
   private _performLayoutSwitch(rawName: string, source: "external" | "user", origin: string): boolean {
     const name = rawName.trim().toLowerCase();
-    if (!registryGetLayout(name, this._getFold().layouts)) {
+    if (!registryGetLayout(name, this._foldCache.get().layouts)) {
       Log.warning(
         `Layout "${name}" ${origin} is not registered. Declare it as a <kiosk:CustomLayout> in the customLayouts aggregation.`,
         undefined,
@@ -1166,7 +1150,7 @@ export default class KioskKeyboard extends Control {
     // would fire `layoutChange` naming a layout that is not the one on screen.
     if (constrainedLayoutName(this.getKeyboardType()) !== null) return;
 
-    const fold = this._getFold();
+    const fold = this._foldCache.get();
     const requested = this._requestedLayout;
     const compact = narrow ? getLayoutMeta(requested, fold.layoutMeta)?.compact : undefined;
     const target = compact ?? requested;
@@ -1215,7 +1199,7 @@ export default class KioskKeyboard extends Control {
    * so a no-op re-selection can't silently flip the constraint-override.
    */
   private _applyLayout(name: string, source: "external" | "user"): boolean {
-    if (getLayoutMeta(name, this._getFold().layoutMeta)?.secondary !== true) {
+    if (getLayoutMeta(name, this._foldCache.get().layoutMeta)?.secondary !== true) {
       this._baseLayout = name;
     }
     const changed = name !== this.getLayout();
@@ -1250,60 +1234,6 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * The folded view of `customLayouts`: the lookup maps every resolution path reads,
-   * rebuilt only when the aggregation or one of its custom layouts actually changed.
-   *
-   * Two signals, one per axis. Structure - adds, inserts, removals, reorders - is read
-   * off the element list here, because `removeAggregation`, `removeAllAggregation` and
-   * `destroyAggregation` invalidate without naming a child. Content - a property write
-   * inside a parented custom layout - arrives as `invalidate(customLayout)` and drops
-   * the cache there.
-   *
-   * Never call this from `invalidate`: it reports diagnostics, and a re-fold driven by
-   * an invalidation would run during rendering.
-   */
-  private _getFold(): CustomLayoutFold {
-    const children = this.getCustomLayouts();
-    if (this._fold && this._sameChildren(children)) return this._fold;
-    // `getAggregation` hands back a fresh array each call, so this needs no copy.
-    this._foldChildren = children;
-    this._fold = foldCustomLayouts(
-      children.map((child) => child.toSpec()),
-      registryIsBuiltIn,
-    );
-    this._reportDiagnostics(this._fold.diagnostics);
-    // The width tier resolves the counterpart through this fold, so a rebuild can
-    // change its answer at an unchanged width - a model-bound `rows` arriving after
-    // first paint is the ordinary case.
-    this._autoCompact.reapply();
-    return this._fold;
-  }
-
-  private _sameChildren(children: readonly CustomLayout[]): boolean {
-    const cached = this._foldChildren;
-    if (children.length !== cached.length) return false;
-    for (let i = 0; i < children.length; i++) {
-      if (children[i] !== cached[i]) return false;
-    }
-    return true;
-  }
-
-  /** Logs what the fold rejected, once per distinct complaint per configuration. */
-  private _reportDiagnostics(diagnostics: readonly LayoutDiagnostic[]): void {
-    if (diagnostics.length === 0) {
-      // Everything resolves: a fault re-introduced later is reported again.
-      this._reportedDiagnostics.clear();
-      return;
-    }
-    for (const d of diagnostics) {
-      const key = `${d.code}|${d.layout}|${d.other ?? ""}|${d.value ?? ""}`;
-      if (this._reportedDiagnostics.has(key)) continue;
-      this._reportedDiagnostics.add(key);
-      Log.warning(describeDiagnostic(d, KIOSK_DIAGNOSTIC_VOCABULARY), undefined, "ui5.kiosk.KioskKeyboard");
-    }
-  }
-
-  /**
    * A property write inside a parented custom layout reaches this control as an
    * invalidation naming that element. Dropping the cache is the entire reaction; the
    * fold is rebuilt on the next read, so a composition in progress is never torn down
@@ -1313,7 +1243,7 @@ export default class KioskKeyboard extends Control {
    * returns early while a rendering pass is in flight.
    */
   override invalidate(oOrigin?: ManagedObject): void {
-    if (oOrigin instanceof CustomLayout) this._fold = null;
+    if (oOrigin instanceof CustomLayout) this._foldCache.drop();
     super.invalidate(oOrigin);
   }
 
@@ -1325,7 +1255,7 @@ export default class KioskKeyboard extends Control {
     const table = this.getDefaultVariants();
     if (table === null) return null;
     if (isValidVariantTable(table)) return table;
-    this._reportDiagnostics([{ code: "invalid-variants", layout: "" }]);
+    this._foldCache.report([{ code: "invalid-variants", layout: "" }]);
     return null;
   }
 
@@ -1979,7 +1909,7 @@ export default class KioskKeyboard extends Control {
       this._layoutSource === "user"
         ? this.getLayout()
         : (constrainedLayoutName(this.getKeyboardType()) ?? this.getLayout());
-    return registryResolveLayoutName(requested, this._getFold().layouts);
+    return registryResolveLayoutName(requested, this._foldCache.get().layouts);
   }
 
   /**
@@ -1989,13 +1919,13 @@ export default class KioskKeyboard extends Control {
    * pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts).
    */
   private _getLayoutLang(): string | undefined {
-    return getLayoutMeta(this._resolvedLayoutName(), this._getFold().layoutMeta)?.lang;
+    return getLayoutMeta(this._resolvedLayoutName(), this._foldCache.get().layoutMeta)?.lang;
   }
 
   /** Resolve the effective layout used by the renderer. */
   private _getResolvedLayout(): LayoutDefinition {
     const layoutName = this._resolvedLayoutName();
-    const fold = this._getFold();
+    const fold = this._foldCache.get();
     const resolved = registryGetLayoutOrDefault(layoutName, fold.layouts);
     const constrainedName = constrainedLayoutName(this.getKeyboardType());
     const base =
@@ -2399,7 +2329,7 @@ export default class KioskKeyboard extends Control {
     // The factory check runs before the composition gate: a non-composition key pressed
     // after a swap must still commit, or a stale buffer stays attached to a middleware
     // the resolved layout no longer reads.
-    const factory = registryGetMiddlewareFactory(this._resolvedLayoutName(), this._getFold().middleware);
+    const factory = registryGetMiddlewareFactory(this._resolvedLayoutName(), this._foldCache.get().middleware);
     if (factory !== this._middlewareFactory) {
       // Commit rather than reset: the characters already typed are the user's.
       this._endComposition();

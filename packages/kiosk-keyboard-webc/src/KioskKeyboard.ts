@@ -28,16 +28,9 @@ import {
 } from "./core/layout-registry.js";
 import { getLayoutMeta } from "./core/layout-meta.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
-import {
-  EMPTY_FOLD,
-  describeDiagnostic,
-  foldCustomLayouts,
-  isValidVariantTable,
-  type CustomLayoutFold,
-  type DiagnosticVocabulary,
-  type LayoutDiagnostic,
-} from "./core/custom-layout-fold.js";
-import { isCustomLayout, type ICustomLayout } from "./CustomLayout.js";
+import { isValidVariantTable } from "./core/custom-layout-fold.js";
+import { LayoutFoldCache } from "./core/layout-fold-cache.js";
+import { type ICustomLayout } from "./CustomLayout.js";
 import slot from "@ui5/webcomponents-base/dist/decorators/slot-strict.js";
 import type { Slot } from "@ui5/webcomponents-base/dist/UI5Element.js";
 import {
@@ -67,7 +60,6 @@ import {
   FKeyMode,
   type CompositionMiddleware,
   type LayoutDefinition,
-  type CustomLayoutSpec,
   type KeyDefinition,
   type KeyPressEventDetail,
   type LayoutChangeEventDetail,
@@ -1280,7 +1272,7 @@ class KioskKeyboard extends UI5Element {
 
   /** Locale-derived default layout name, honoring the per-instance locale and layout overrides. */
   private _localeLayout(): string {
-    const fold = this._getFold();
+    const fold = this._foldCache.get();
     return getLocaleLayout(fold.localeLayouts, fold.layouts);
   }
 
@@ -1300,7 +1292,7 @@ class KioskKeyboard extends UI5Element {
         ? this._currentLayout
         : (constrainedLayoutName(this.keyboardType) ??
           (this._currentLayout || this._baseLayout || this.layout || this._localeLayout()));
-    const resolved = resolveLayoutName(requested, this._getFold().layouts);
+    const resolved = resolveLayoutName(requested, this._foldCache.get().layouts);
     if (resolved !== requested && requested && !this._warnedUnregisteredLayouts.has(requested)) {
       this._warnedUnregisteredLayouts.add(requested);
       console.warn(
@@ -1319,11 +1311,11 @@ class KioskKeyboard extends UI5Element {
    * @internal Read by the template and the variant popup state.
    */
   _getLayoutLang(): string | undefined {
-    return getLayoutMeta(this._resolvedLayoutName(), this._getFold().layoutMeta)?.lang;
+    return getLayoutMeta(this._resolvedLayoutName(), this._foldCache.get().layoutMeta)?.lang;
   }
 
   _getResolvedLayout(): LayoutDefinition {
-    const fold = this._getFold();
+    const fold = this._foldCache.get();
     const layoutName = this._resolvedLayoutName();
     const resolved = getLayoutOrDefault(layoutName, fold.layouts);
     const constrainedName = constrainedLayoutName(this.keyboardType);
@@ -1354,7 +1346,7 @@ class KioskKeyboard extends UI5Element {
     const table = this.defaultVariants;
     if (table === null) return null;
     if (isValidVariantTable(table)) return table;
-    this._reportDiagnostics([{ code: "invalid-variants", layout: "" }]);
+    this._foldCache.report([{ code: "invalid-variants", layout: "" }]);
     return null;
   }
 
@@ -1372,69 +1364,14 @@ class KioskKeyboard extends UI5Element {
 
   // ── The folded view of the customLayouts slot ──
 
-  private _foldCache: CustomLayoutFold = EMPTY_FOLD;
-  private _foldKey: readonly ICustomLayout[] = [];
-  private _foldRevisions: readonly number[] = [];
-  private _reportedDiagnostics = new Set<string>();
+  /** Owns the folded view of the `customLayouts` slot and its diagnostics. */
+  private readonly _foldCache = new LayoutFoldCache({
+    getCustomLayouts: () => this.customLayouts,
+    onRebuilt: () => this._autoCompact.reapply(),
+  });
   /** Caps the unregistered-layout warning at one per distinct name. */
   private _warnedUnregisteredLayouts = new Set<string>();
   private _middlewareFactory: (() => CompositionMiddleware) | null = null;
-
-  /**
-   * The lookup maps the resolution pipeline reads, folded from the `customLayouts` slot.
-   *
-   * Read on demand rather than assembled on invalidation: `_invalidate` is suppressed
-   * until the first render completes while `_processChildren` populates the slot before
-   * it, so an invalidation-driven fold would be empty for the whole first frame. The
-   * slot array itself is populated by then, so reading it here is correct from the first
-   * `onBeforeRendering` onward - which is what makes a `<kiosk-keyboard-custom-layout>`
-   * present at connect time honoured on first paint.
-   *
-   * Rebuilt only when the slotted elements change identity or one of them bumps its
-   * revision, so diagnostics are emitted once per real change, not once per read. The
-   * revision is read off the children rather than delivered to `onInvalidation`, which
-   * a pending language change suppresses on a `languageAware` host.
-   */
-  private _getFold(): CustomLayoutFold {
-    const children = this.customLayouts;
-    const revisions = children.map((child) => child.revision);
-    if (sameElements(this._foldKey, children) && sameElements(this._foldRevisions, revisions)) return this._foldCache;
-    this._foldKey = children;
-    this._foldRevisions = revisions;
-
-    const specs: CustomLayoutSpec[] = [];
-    // The slot admits any element at runtime, so a foreign child is reachable even
-    // though the declared type is narrower.
-    for (const child of children as readonly HTMLElement[]) {
-      if (isCustomLayout(child)) specs.push(child.toSpec());
-      else
-        console.warn(
-          `[kiosk-keyboard] Ignoring <${child.localName}> in the customLayouts slot: not a <kiosk-keyboard-custom-layout>.`,
-        );
-    }
-    this._foldCache = foldCustomLayouts(specs, isBuiltInLayout);
-    this._reportDiagnostics(this._foldCache.diagnostics);
-    // The width tier resolves the counterpart through this fold, so a rebuild can
-    // change its answer at an unchanged width - a counterpart slotted after first
-    // paint is the ordinary case.
-    this._autoCompact.reapply();
-    return this._foldCache;
-  }
-
-  /** Logs what the fold rejected, once per distinct complaint per configuration. */
-  private _reportDiagnostics(diagnostics: readonly LayoutDiagnostic[]): void {
-    if (diagnostics.length === 0) {
-      // Everything resolves: a fault re-introduced later is reported again.
-      this._reportedDiagnostics.clear();
-      return;
-    }
-    for (const d of diagnostics) {
-      const key = `${d.code}|${d.layout}|${d.other ?? ""}|${d.value ?? ""}`;
-      if (this._reportedDiagnostics.has(key)) continue;
-      this._reportedDiagnostics.add(key);
-      console.warn(`[kiosk-keyboard] ${describeDiagnostic(d, WEBC_DIAGNOSTIC_VOCABULARY)}`);
-    }
-  }
 
   _getKeyLabel(key: KeyDefinition): string {
     if (key.label === "") return "";
@@ -1751,7 +1688,7 @@ class KioskKeyboard extends UI5Element {
    * Backspace auto-repeat so both run keys through the same buffer.
    */
   private _ensureMiddleware(): CompositionMiddleware | null {
-    const factory = getMiddlewareFactory(this._resolvedLayoutName(), this._getFold().middleware);
+    const factory = getMiddlewareFactory(this._resolvedLayoutName(), this._foldCache.get().middleware);
     if (factory !== this._middlewareFactory) {
       if (this._middleware) {
         // Commit the buffer to the target: `reset()` would drop a half-typed syllable,
@@ -1874,7 +1811,7 @@ class KioskKeyboard extends UI5Element {
    * silently flip the constraint-override. Returns whether the layout changed.
    */
   private _applyLayout(currentLayout: string, source: "external" | "user"): boolean {
-    if (getLayoutMeta(currentLayout, this._getFold().layoutMeta)?.secondary !== true) {
+    if (getLayoutMeta(currentLayout, this._foldCache.get().layoutMeta)?.secondary !== true) {
       this._baseLayout = currentLayout;
     }
     const changed = currentLayout !== this._currentLayout;
@@ -1920,7 +1857,7 @@ class KioskKeyboard extends UI5Element {
     // would emit `layout-change` naming a layout that is not the one on screen.
     if (constrainedLayoutName(this.keyboardType) !== null) return;
 
-    const fold = this._getFold();
+    const fold = this._foldCache.get();
     const requested = this._requestedLayout;
     const compact = narrow ? getLayoutMeta(requested, fold.layoutMeta)?.compact : undefined;
     const target = compact ?? requested;
@@ -1961,7 +1898,7 @@ class KioskKeyboard extends UI5Element {
 
   private _handleLayoutSwitch(layoutName: string): void {
     const isBase = layoutName === LAYOUT_BASE;
-    if (!isBase && !getRegisteredLayout(layoutName, this._getFold().layouts)) {
+    if (!isBase && !getRegisteredLayout(layoutName, this._foldCache.get().layouts)) {
       console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
       return;
     }
@@ -2128,17 +2065,6 @@ class KioskKeyboard extends UI5Element {
     if (this._openValue) this.close();
   }
 }
-
-/** Element-wise identity comparison: `_updateSlots` assigns a new array on every run. */
-const sameElements = (a: readonly unknown[], b: readonly unknown[]): boolean =>
-  a.length === b.length && a.every((el, i) => el === b[i]);
-
-/** How this twin spells the surface names a fold diagnostic has to quote. */
-const WEBC_DIAGNOSTIC_VOCABULARY: DiagnosticVocabulary = {
-  customLayouts: "customLayouts slot",
-  customLayout: "<kiosk-keyboard-custom-layout>",
-  builtInLayouts: getRegisteredLayoutNames(),
-};
 
 KioskKeyboard.define();
 
