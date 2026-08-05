@@ -54,7 +54,8 @@
           "ui5.kiosk.LayoutRole",
           "ui5.kiosk.LayoutFacet",
           "ui5.kiosk.LayoutRows",
-          "ui5.kiosk.VariantOverrideTable"
+          "ui5.kiosk.VariantOverrideTable",
+          "ui5.kiosk.ControlID"
         ],
         "interfaces": []
       }
