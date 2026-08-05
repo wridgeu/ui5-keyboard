@@ -171,6 +171,26 @@ Adversarial validation record: `docs/specs/2026-07-21-dom-contract-drift-adversa
 
 Run via `npm run test:dom-contract` (also part of `check:base` and CI).
 
+## `check-i18n-bundles.mjs`
+
+Two invariants over `src/i18n/messagebundle*.properties` in both keyboard packages,
+neither of which is visible in a diff and both of which fail silently at runtime.
+
+- **ASCII only.** Non-ASCII is written as `\uXXXX`. A raw UTF-8 value reads correctly
+  in an editor and decodes to mojibake wherever the bundle is not served as UTF-8:
+  the UI5 twin loads it through `Properties.create` →
+  `LoaderExtensions.loadResource({dataType:"text"})`, which sets no charset. The
+  damage lands in an ARIA announcement, which nothing on screen would show was wrong.
+  This regressed once within a single branch (#216), which is why it is a guard.
+- **Key parity.** Each locale bundle declares exactly the keys of its package's
+  default bundle. A missing key silently serves the untranslated default; an orphan
+  key is dead weight.
+
+Values are not compared: translations differ by definition, and the placeholder
+counts that matter are already asserted by the tests over the rendered text.
+
+Run via `npm run test:i18n-bundles` (also part of `check:base` and CI).
+
 ## `copy-license.mjs`
 
 Copies the monorepo's root `LICENSE` into the current working directory (the package being published) so `npm publish` includes it in the tarball. Each publishable package calls it from its `prepublishOnly` script (`node ../../tools/copy-license.mjs`).
