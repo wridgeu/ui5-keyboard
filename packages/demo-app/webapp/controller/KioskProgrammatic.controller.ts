@@ -105,10 +105,8 @@ export default class KioskProgrammatic extends BaseController {
 
   onUseQwertyNav(): void {
     const kb = this._getKeyboard();
-    if (!this._hasCustomLayout(kb, "qwerty-nav")) {
-      this._addCustomLayout(kb, "qwerty-nav", KioskKeyboard.composeLayout([navRow], "qwerty"));
-      this._addLayoutOption("qwerty-nav");
-    }
+    this._addCustomLayout(kb, "qwerty-nav", KioskKeyboard.composeLayout([navRow], "qwerty"));
+    this._addLayoutOption("qwerty-nav");
 
     kb.resetKeyboardType();
     kb.setLayout("qwerty-nav");
@@ -117,10 +115,8 @@ export default class KioskProgrammatic extends BaseController {
 
   onUseQwertyNavCompact(): void {
     const kb = this._getKeyboard();
-    if (!this._hasCustomLayout(kb, "qwerty-nav-compact")) {
-      this._addCustomLayout(kb, "qwerty-nav-compact", KioskKeyboard.composeLayout(navRowCompact, "qwerty"));
-      this._addLayoutOption("qwerty-nav-compact");
-    }
+    this._addCustomLayout(kb, "qwerty-nav-compact", KioskKeyboard.composeLayout(navRowCompact, "qwerty"));
+    this._addLayoutOption("qwerty-nav-compact");
 
     kb.resetKeyboardType();
     kb.setLayout("qwerty-nav-compact");
@@ -189,7 +185,9 @@ export default class KioskProgrammatic extends BaseController {
     return kb.getCustomLayouts().some((layout) => layout.getName() === name);
   }
 
+  /** Idempotent: a second declaration of the same name would be reported as `duplicate-rows`. */
   private _addCustomLayout(kb: KioskKeyboard, name: string, rows: LayoutDefinition): void {
+    if (this._hasCustomLayout(kb, name)) return;
     kb.addCustomLayout(new CustomLayout({ name, rows }));
   }
 
