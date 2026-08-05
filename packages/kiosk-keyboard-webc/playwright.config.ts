@@ -42,6 +42,11 @@ const devices = [
 const CI_DEVICE_SPEC = "invariants.spec.ts";
 const CI_DEVICE_SPECS = new RegExp(`${CI_DEVICE_SPEC.replaceAll(".", "\\.")}$`);
 
+// readme-screenshots runs under playwright.docs.config.ts: it writes doc assets
+// at a different scale factor instead of comparing snapshots, so it has no place
+// in the regression matrix.
+const SEPARATE_CONFIG_SPECS = /readme-screenshots\.spec\.ts$/;
+
 // A project whose testMatch selects nothing still exits 0: Playwright's
 // "no tests found" check looks at the whole run, not per project. Renaming the
 // spec would turn all four device legs into silent no-ops, so fail the config
@@ -86,6 +91,7 @@ export default defineConfig({
   projects: [
     {
       name: "desktop",
+      testIgnore: SEPARATE_CONFIG_SPECS,
       use: { viewport: { width: 1440, height: 900 } },
     },
     // The behavioral component spec is desktop-only; the device matrix runs the
@@ -98,7 +104,7 @@ export default defineConfig({
     // project runs every spec and compares pixels.
     ...devices.map((d) => ({
       name: d.name,
-      testIgnore: /component\.spec\.ts/,
+      testIgnore: [/component\.spec\.ts/, SEPARATE_CONFIG_SPECS],
       testMatch: process.env.CI ? CI_DEVICE_SPECS : undefined,
       use: {
         viewport: d.viewport,
