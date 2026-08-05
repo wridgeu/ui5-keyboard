@@ -53,6 +53,7 @@
     "test:kiosk-webc:e2e:open": "npm run test:e2e:open -w packages/kiosk-keyboard-webc",
     "test:kiosk-webc:e2e:update": "npm run test:e2e:update -w packages/kiosk-keyboard-webc",
     "test:kiosk-webc:e2e:update:all-devices": "npm run test:e2e:update:all-devices -w packages/kiosk-keyboard-webc",
+    "test:kiosk-webc:e2e:docs": "npm run test:e2e:docs -w packages/kiosk-keyboard-webc",
     "test:packages:smoke": "npm run clean && npm run build:all && node tools/check-package-smoke.mjs",
     "test:twin-drift": "node tools/check-twin-drift.mjs",
     "test:style-twin-drift": "node tools/check-style-twin-drift.mjs",

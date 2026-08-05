@@ -105,6 +105,7 @@
     "test:e2e:phone-md:update": "npm run generate && playwright test --project=phone-md --update-snapshots",
     "test:e2e:phone-lg:update": "npm run generate && playwright test --project=phone-lg --update-snapshots",
     "test:e2e:tablet:update": "npm run generate && playwright test --project=tablet --update-snapshots",
+    "test:e2e:docs": "npm run generate && playwright test --config playwright.docs.config.ts",
     "test:e2e:report": "playwright show-report",
     "test:e2e:all-devices": "npm run generate && playwright test",
     "test:e2e:all-devices:sequential": "npm run generate && playwright test --workers=1",
