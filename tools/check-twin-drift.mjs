@@ -52,6 +52,11 @@
  *   internal/fkey-controller.ts <-> core/fkey-controller.ts (kiosk reads the
  *   FKeyMode enum and dispatches via a UI5 target session; webc compares mode
  *   string literals and writes the resolved DOM input directly),
+ *   internal/layout-fold-cache.ts <-> core/layout-fold-cache.ts (both cache the
+ *   fold and dedupe its diagnostics, but kiosk keys the cache on aggregation
+ *   child identity alone and logs through sap/base/Log, while webc also keys on
+ *   each slotted element's revision, filters foreign children out of the slot,
+ *   and logs through console),
  *   internal/key-grid-navigation.ts <-> core/key-grid-navigation.ts (both
  *   implement the same WAI-ARIA APG layout-grid arrow model (column-clamped
  *   vertical moves that stop at the top/bottom edge, row-boundary continuation
@@ -118,6 +123,7 @@ const UNCHECKED_CORE_TWINS = [
   "fkey-controller",
   "input-operations",
   "key-grid-navigation",
+  "layout-fold-cache",
   "layout-registry",
   "middleware-registry",
   "responsive-sizing-controller",
