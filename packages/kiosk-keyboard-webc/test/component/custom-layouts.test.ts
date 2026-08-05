@@ -304,6 +304,22 @@ describe("kiosk-keyboard - custom layouts", () => {
     expect(input.value, "the jamo are typed uncomposed rather than forming 가").to.equal("ㄱㅏ");
   });
 
+  it("suppress accepts whitespace around a comma-separated entry", async () => {
+    // The README publishes the comma-or-space tolerance as a guarantee, and the same
+    // markup is now valid in the UI5 twin, so the padded form is a contract to hold.
+    const entry = customLayout({ name: "ko-hangul", suppress: "Variants, Middleware" });
+    const { el, input } = await mountWithTarget({ layout: "ko-hangul" }, entry);
+
+    expect(entry.toSpec().suppress, "both facets parse out of the padded list").to.deep.equal([
+      "Variants",
+      "Middleware",
+    ]);
+
+    tapKey(el, "ㄱ");
+    tapKey(el, "ㅏ");
+    expect(input.value, "and the suppressed composer stays out of the way").to.equal("ㄱㅏ");
+  });
+
   it("picks up a child edit made while a language change is pending", async () => {
     // The host is `languageAware`, and UI5Element drops an invalidation entirely while a
     // language change is in flight. A fold keyed off the host's own hook would miss the

@@ -1,5 +1,6 @@
 import Control from "sap/ui/core/Control";
 import Element from "sap/ui/core/Element";
+import Log from "sap/base/Log";
 import type ManagedObject from "sap/ui/base/ManagedObject";
 import View from "sap/ui/core/mvc/View";
 
@@ -17,6 +18,11 @@ export interface ControlsDelegationHost {
   getControls(): string[];
   /** Parent of the host control, used to resolve view-local control ids. */
   getParent(): ManagedObject | null;
+  /**
+   * Whether the host is in the DOM. A rendered host is necessarily parented, which is
+   * what makes an id that still resolves to nothing worth reporting rather than early.
+   */
+  isRendered(): boolean;
   getEnabled(): boolean;
   getDocked(): boolean;
   getAutoShow(): boolean;
@@ -49,6 +55,8 @@ export default class ControlsDelegationController {
   private _resolvedControlIds = new Set<string>();
   /** Live control instances the focus delegate is attached to, keyed by id. */
   private _delegatedInstances = new Map<string, Control>();
+  /** Ids already reported as unresolvable, so the focusin firehose reports each once. */
+  private readonly _warnedUnresolvedIds = new Set<string>();
   private readonly _delegate: InputFocusDelegation;
 
   constructor(private readonly _host: ControlsDelegationHost) {
@@ -89,8 +97,13 @@ export default class ControlsDelegationController {
     // Resolve current IDs to canonical control IDs.
     for (const inputId of ids) {
       const control = this._findControlById(inputId);
-      if (!control) continue;
+      if (!control) {
+        this._reportUnresolved(inputId);
+        continue;
+      }
 
+      // A control destroyed and recreated broken is worth reporting again.
+      this._warnedUnresolvedIds.delete(inputId);
       const controlId = control.getId();
       nextByInputId.set(inputId, controlId);
       resolvedControlIds.add(controlId);
@@ -157,6 +170,28 @@ export default class ControlsDelegationController {
     this._delegatedInstances.clear();
     this._registeredControlById.clear();
     this._resolvedControlIds.clear();
+    this._warnedUnresolvedIds.clear();
+  }
+
+  /**
+   * Reports a `controls` entry that names no control, once per id.
+   *
+   * Held back until the host has rendered: before that the keyboard may not be parented
+   * yet, so the view-local lookup cannot run and every id would look wrong. A target
+   * built later still cannot be told apart from a typo - the element registry offers no
+   * added signal to wait for - so the message names the remedy for both.
+   */
+  private _reportUnresolved(inputId: string): void {
+    if (!this._host.isRendered()) return;
+    if (this._warnedUnresolvedIds.has(inputId)) return;
+    this._warnedUnresolvedIds.add(inputId);
+    Log.warning(
+      `Control with ID "${inputId}" could not be found, so "controls" does not delegate focus to it. ` +
+        `IDs resolve against the enclosing View first, then globally - correct the ID, ` +
+        `or set "controls" again once the control exists.`,
+      undefined,
+      "ui5.kiosk.KioskKeyboard",
+    );
   }
 
   /**

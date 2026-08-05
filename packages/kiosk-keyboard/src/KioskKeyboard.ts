@@ -861,6 +861,7 @@ export default class KioskKeyboard extends Control {
     this._controlsDelegation = new ControlsDelegationController({
       getControls: () => this.getControls(),
       getParent: () => this.getParent(),
+      isRendered: () => this.getDomRef() !== null,
       getEnabled: () => this.getEnabled(),
       getDocked: () => this.getDocked(),
       getAutoShow: () => this.getAutoShow(),
