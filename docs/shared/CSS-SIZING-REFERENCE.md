@@ -268,13 +268,21 @@ The space bar takes 6x the flex-grow of a standard key. In a typical bottom row 
 ## Icon Dimensions
 
 ```css
-.kiosk-key__icon {
-  width: 1.25em;
-  height: 1.25em;
+/* webc - only a SAP icon element gets a box */
+ui5-icon.kiosk-key__icon {
+  inline-size: 1em;
+  block-size: 1em;
 }
 ```
 
-Icons are sized at 125% of the current font-size (`1.25em`). This makes icons slightly larger than adjacent text so they appear visually balanced at the same optical weight.
+```less
+// kiosk - the icon tracks the key font size, no box sizing
+&__icon {
+  font-size: var(--ui5KioskKeyboard-keyFontSize);
+}
+```
+
+Neither package gives the icon a fixed box at 125% of the font size. In webc the sizing is scoped to `ui5-icon` on purpose, so a Unicode-glyph icon (rendered as a plain span) stays unsized and is laid out by its own font metrics; in kiosk the icon only inherits the key font size. Dual and F-key keys override the icon size separately.
 
 The icon font stack appends symbol fonts (`Segoe UI Symbol`, `Apple Symbols`, `Noto Sans Symbols 2`) after the SAP font family. Navigation key icons use Unicode arrow symbols (U+21D1-U+21F2) that are absent from the 72 font and may fail on stripped-down platforms (embedded Android WebView) without these explicit fallbacks.
 
@@ -434,6 +442,8 @@ Browser support: Chrome 133+, Edge 133+, Safari 18.2+. Non-supporting browsers k
 
 ## Complete Variable Reference
 
+The shadow variables are declared as `color-mix(in srgb, var(--sapContent_ShadowColor, #223548) N%, transparent)`; the percentages below are that `N`. The equivalent `rgba(34,53,72,…)` is only what they resolve to under `sap_horizon`, where `--sapContent_ShadowColor` is `#223548`.
+
 All public CSS custom properties defined on `:host`, listed with their default values.
 
 | Variable                                   | Default                                         | Section                                                                         |
@@ -446,11 +456,11 @@ All public CSS custom properties defined on `:host`, listed with their default v
 | `--kiosk-keyboard-key-padding`             | `0 key-padding-inline`                          | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
 | `--kiosk-keyboard-key-padding-inline-xs`   | `min(key-padding-inline, 0.125rem)`             | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
 | `--kiosk-keyboard-key-padding-xs`          | `0 key-padding-inline-xs`                       | [Width-Responsive Key Padding](#width-responsive-key-padding)                   |
-| `--kiosk-keyboard-key-shadow`              | `0 1px 2px rgba(34,53,72,0.1)`                  | [Shadow Opacities](#shadow-opacities)                                           |
-| `--kiosk-keyboard-key-shadow-hover`        | `0 2px 4px rgba(34,53,72,0.15)`                 | [Shadow Opacities](#shadow-opacities)                                           |
-| `--kiosk-keyboard-modifier-shadow`         | `0 1px 2px rgba(34,53,72,0.14)`                 | [Shadow Opacities](#shadow-opacities)                                           |
-| `--kiosk-keyboard-modifier-shadow-hover`   | `0 2px 4px rgba(34,53,72,0.18)`                 | [Shadow Opacities](#shadow-opacities)                                           |
-| `--kiosk-keyboard-docked-shadow`           | `0 -4px 20px rgba(34,53,72,0.2)`                | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-key-shadow`              | `0 1px 2px` + `ShadowColor` at 10%              | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-key-shadow-hover`        | `0 2px 4px` + `ShadowColor` at 15%              | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-modifier-shadow`         | `0 1px 2px` + `ShadowColor` at 14%              | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-modifier-shadow-hover`   | `0 2px 4px` + `ShadowColor` at 18%              | [Shadow Opacities](#shadow-opacities)                                           |
+| `--kiosk-keyboard-docked-shadow`           | `0 -4px 20px` + `ShadowColor` at 20%            | [Shadow Opacities](#shadow-opacities)                                           |
 | `--kiosk-keyboard-modifier-font-size`      | `var(--sapFontSize, 0.875rem)`                  | [Modifier and Action Key Font-Scale](#modifier-and-action-key-font-scale-08)    |
 | `--kiosk-keyboard-modifier-font-scale`     | `0.8`                                           | [Modifier and Action Key Font-Scale](#modifier-and-action-key-font-scale-08)    |
 | `--kiosk-keyboard-max-width`               | `100%`                                          | [Structural Properties](#structural-properties)                                 |
