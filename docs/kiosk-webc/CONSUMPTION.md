@@ -11,7 +11,7 @@ The `kiosk-keyboard-webc` package provides the `<kiosk-keyboard>` custom element
 built on the UI5 Web Components framework (`UI5Element`). Unlike `@ui5/webcomponents`
 (which ships dozens of independent components), our package is a single component
 with a pluggable layout system: 13 built-in keyboard layouts bundled via direct
-imports, plus 2 shared building-block rows for composing custom variants.
+imports, plus 4 shared building-block rows for composing custom variants.
 
 This "one component, many plugins" pattern is unusual in the web components
 ecosystem and surfaced several tooling limitations. In the broader ecosystem
@@ -192,8 +192,9 @@ document.body.appendChild(el);
 Stable layout subpaths: `kiosk-keyboard-webc/layouts/<name>` (e.g., `qwerty`,
 `numeric`, `arabic`, `ja-kana`, `ko-hangul`) - import a built-in to use as a base
 or to pass as a custom layout's `rows`. The shared building-block rows
-`kiosk-keyboard-webc/layouts/fkey-row` and `kiosk-keyboard-webc/layouts/nav-row`
-are stable imports for composing custom variant layouts.
+`kiosk-keyboard-webc/layouts/fkey-row`, `.../fkey-row-compact`, `.../nav-row` and
+`.../nav-row-compact` are stable imports for composing custom variant layouts;
+the `-compact` pair is the narrow-width arrangement of the same keys.
 
 ## Custom Keys
 
@@ -250,10 +251,17 @@ No CSS is required from the consumer for this to work: a flex or grid parent wit
 
 ### Windows Backslashes in CEM Type References
 
-Not applicable to this package: its single-module output never emits cross-module
-type-reference paths, so the `@ui5/webcomponents-tools` analyzer's `path.join()`
-backslash bug is never exercised. The upstream bug persists for components with
-cross-module type references on Windows.
+Applies to this package, but not to the published artifact. The two elements do
+emit cross-module type references, and a Windows build reproduces the
+`@ui5/webcomponents-tools` analyzer's `path.join()` bug verbatim:
+`custom-elements.json` comes out with `"module": "dist\\types.js"` and
+`"dist\\core\\latin-variants.js"`, and `custom-elements-internal.json` adds
+`"dist\\CustomLayout.js"`.
+
+What keeps it out of the tarball is that `dist/` is gitignored and releases run
+on `ubuntu-latest`, so the shipped manifest always has forward slashes. A
+contributor building on Windows will see the backslashed paths locally; they are
+a build artifact of that machine, not a defect in the release.
 
 ### Exports Map Double-Dist Resolution
 

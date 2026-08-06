@@ -10,7 +10,8 @@ KioskKeyboard.ts          Web component class (state, event delegation, target i
                           all built-in layout imports. Re-exports public types.
 KioskKeyboardTemplate.tsx JSX template: Preact-based, UI5 WC jsxRenderer
 CustomLayout.ts           <kiosk-keyboard-custom-layout> element carrying one layout's rows,
-                          locales, keycap language, role, middleware and variants; renders nothing
+                          locales, keycap language, role, compact counterpart, suppressed
+                          facets, middleware and variants; renders nothing
 Assets.ts                 Registers theme parameter bundles and i18n loaders
 bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all built-in layouts);
                           re-exports component classes, enums, and public types. Built-in
@@ -46,6 +47,9 @@ core/
   native-inputmode-suppression.ts  NativeInputModeSuppression: ref-counted inputmode="none" on the target, shared across instances
   physical-key-highlight-controller.ts  PhysicalKeyHighlightController: lights up the matching virtual key on physical keydown and mirrors Shift/CapsLock
   responsive-sizing-controller.ts  ResponsiveSizingController: ResizeObserver-driven height-responsive host cq-tier attribute (short/tiny)
+  auto-compact-controller.ts  AutoCompactController: ResizeObserver-driven width tier that swaps a layout for its compact counterpart past --kiosk-keyboard-auto-compact-threshold
+  key-action-meta.ts      Canonical special-key metadata (shared icon names)
+  layout-constraint.ts    Numpad/Numeric constraint -> layout name + {layout:base} reconciliation
   latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping; resolveVariantTable layers built-in -> defaultVariants -> custom layout per layout, each merged per base letter, null for the layouts whose layout-meta entry declares `variants: null`
   variant-popup-controller.ts  VariantPopupController: long-press/right-click accent-variant popup orchestration (open, option sizing, commit through the composition path)
 middleware/
@@ -61,7 +65,9 @@ layouts/
   fkeys.ts                Standalone function key layout (F1-F12)
   nav.ts                  Standalone navigation layout (arrows + Home/End/Page)
   fkey-row.ts             Shared F1-F12 row (import and prepend to compose custom variants)
+  fkey-row-compact.ts     Narrow-width F-key row (2x6)
   nav-row.ts              Shared navigation row (import and prepend to compose custom variants)
+  nav-row-compact.ts      Narrow-width navigation row (2x4)
   ja-romaji.ts            Japanese Romaji layout
   ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
   ja-kana-compact.ts      Japanese Kana rearranged for narrow keyboards
@@ -149,6 +155,7 @@ This design was chosen for:
 | `f-key-mode`      | string  | `"Virtual"` | `"Virtual"`, `"Native"`, `"None"`                                        |
 | `open`            | boolean | `false`     | Opens/closes docked keyboard                                             |
 | `accent-variants` | boolean | `false`     | Built-in Latin-diacritics popup on Latin keys (long-press / right-click) |
+| `auto-compact`    | boolean | `false`     | Swaps a layout for its compact counterpart below the width threshold     |
 
 Programmatic-only reactive properties (`type: Object`, so no HTML attribute; assign a new object to change one, they are read by identity):
 
@@ -292,10 +299,14 @@ interface KeyDefinition {
   value: string; // character or action token ({backspace}, {enter}, {shift}, {layout:name}, {fkey:name})
   label?: string; // display label
   shiftLabel?: string; // label when shifted
+  capsLockLabel?: string; // label when caps lock is on
+  capsLockIcon?: string; // icon when caps lock is on
   shiftValue?: string; // value when shifted
   width?: KeyWidth; // see `KeyWidth` in types.ts
   type?: KeyType; // "default" | "modifier" | "action" | "space"
   icon?: string; // SAP icon URI or Unicode character; renders alongside label when both present
+  ariaLabel?: string; // accessible name override
+  variants?: string[]; // long-press accent variants for this key
 }
 ```
 
@@ -376,7 +387,9 @@ Auto-show uses document-level `focusin`/`focusout` listeners in capture phase.
 
 ### Multi-Instance Isolation
 
-A static `_instances` set tracks all connected `KioskKeyboard` instances. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any other instance already claims that input. If so, auto-show bails out.
+A static `_participants` set on `AutoShowController` (`core/auto-show-controller.ts`) tracks the controllers of all live keyboards; each joins via `register()` and leaves via `unregister()`. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any other participant already claims that input, gated by `_isAutoShowParticipationActive()` so an instance with auto-show off never blocks one that has it on. If another participant claims the input, auto-show bails out.
+
+`KioskKeyboard._instances` is a separate static set, and serves only as the guard for queued i18n re-renders.
 
 ### Focus-In Logic
 
@@ -479,7 +492,7 @@ A single `KioskKeyboard.css` file uses SAP Fiori CSS custom properties with fall
 --kiosk-keyboard-key-padding-inline-xs: min(var(--kiosk-keyboard-key-padding-inline), 0.125rem);
 --kiosk-keyboard-key-padding-xs: 0 var(--kiosk-keyboard-key-padding-inline-xs);
 --kiosk-keyboard-max-width: 100%;
---kiosk-keyboard-docked-max-width: 1024px;
+--kiosk-keyboard-docked-max-width: 64rem;
 --kiosk-keyboard-docked-z-index: 100;
 --kiosk-keyboard-numpad-max-width: 20rem;
 --kiosk-keyboard-numpad-key-min-width: 4rem;
@@ -491,14 +504,17 @@ The extra-narrow `*-xs` padding variables exist because wide single-glyph labels
 
 ### Responsive Sizing
 
-Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted).
+Responsiveness is split into two axes: width (CSS styling, plus an opt-in JS layout tier) and height (JS-assisted).
 
-**Width responsiveness** is handled entirely by CSS `@container` queries on the `.kiosk-keyboard` root element, which sets `container-name: keyboard; container-type: inline-size`. Two breakpoints exist:
+**Width styling** is handled by CSS `@container` queries on the `.kiosk-keyboard` root element, which sets `container-name: keyboard; container-type: inline-size`. Three thresholds exist:
 
-- **30rem (narrow):** Caps `--kiosk-keyboard-key-font-size` via `min(base, 1rem)` so consumer-provided smaller values are preserved while larger values get clamped.
-- **20rem (compact):** Additionally reduces key inline padding for non-numpad keys and applies a tighter font-size cap of `0.875rem`.
+- **30rem (narrow):** Caps `--kiosk-keyboard-key-font-size` via `min(base, 1rem)`.
+- **22rem:** Caps the row gap via `min(base, 0.25rem)` for non-numpad keyboards.
+- **20rem (compact):** Tightens the gap cap to `0.125rem`, reduces key inline padding for non-numpad keys, and applies a tighter font-size cap of `0.875rem`.
 
-No JavaScript is involved in width responsiveness. The `min()` capping pattern ensures that a consumer who sets a small font-size keeps it, while large values are reduced at narrow widths.
+The `min()` capping pattern ensures that a consumer who sets a small value keeps it, while large values are reduced at narrow widths.
+
+**Width also has one JS behavior**: the opt-in `autoCompact` tier. `AutoCompactController` (`core/auto-compact-controller.ts`) observes the root's border-box inline size against `--kiosk-keyboard-auto-compact-threshold` (default `22rem`) and swaps the layout for its compact counterpart through `LayoutState.applyTier`. A container query can restyle a row but cannot re-seat its keys, and grid navigation runs on the resolved layout, so the narrow arrangement has to be a real layout swap. No observer is allocated while `auto-compact` is off.
 
 **Height responsiveness** uses JS (`ResizeObserver`) to detect when the host element is externally height-constrained (i.e., `scrollHeight` exceeds the host content-box height; both are untransformed layout pixels, so an ancestor `transform: scale()` does not shift the breakpoints). The host sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained (`max-height: 100%` of a `height: auto` parent resolves to no constraint). Consumers can override all three from outside the shadow DOM. When constrained, the component reflects a `cq-tier` attribute on the **host** element (absent when unconstrained):
 
@@ -607,7 +623,7 @@ All built-in layouts and middleware are bundled with the component (direct impor
 | Finger drift on touch                | `touchend` uses `elementFromPoint()` at lift-off coordinates                                                                |
 | Docked close during key click        | Deferred focusout close via `requestAnimationFrame`, cancelled if focus returns to keyboard                                 |
 | Input inside shadow DOM              | `resolveInputOrTextarea()` recurses up to 3 shadow DOM levels                                                               |
-| Multiple keyboard instances          | Static `_instances` set, `_isTargetOfOther()` isolation, ref-counted inputmode                                              |
+| Multiple keyboard instances          | Static `AutoShowController._participants` set, `_isTargetOfOther()` isolation, ref-counted inputmode                        |
 | Custom resolver crash                | try/catch with fallback to built-in resolver                                                                                |
 | Layout switch in Numpad/Numeric mode | `{layout:*}` sets `_layoutSource="user"` so the named layout renders despite the constraint; keyboardType is left unchanged |
 | UI5-prefixed DOM IDs                 | `_matchesControls()` strips `*--` prefix pattern                                                                            |
