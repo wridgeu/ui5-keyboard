@@ -152,7 +152,7 @@ The keyboard operates on the target's inner DOM element (`getFocusDomRef()`) for
 2. **Backspace**: Deletes the selection (if any) or the character before the cursor.
 3. **Enter**: Inserts `\n` for `<textarea>`. For single-line `<input>`, fires a `change` event on the target control (matching physical Enter key behavior).
 
-After modifying the DOM value, the keyboard calls the UI5 control's `setValue()` and `fireLiveChange()` for proper data binding integration. These are invoked via duck-typing (`Record<string, unknown>`) to avoid a hard dependency on specific control types.
+After modifying the DOM value, `setTargetValue()` (`internal/input-operations.ts`) writes it back through the UI5 element for data binding integration. It prefers a typed `setValue()` method (`InputBase.setValue`), falls back to `setProperty("value")` when the control declares a `value` property, and finally to the inner DOM value for custom controls that declare neither. A `liveChange` event is raised afterwards, gated on `metadata.hasEvent("liveChange")`. The element is typed as `TargetElement` (`internal/types.ts`), not a specific control class, so no control type is a hard dependency.
 
 ### Backspace Press-and-Hold Auto-Repeat
 
@@ -208,13 +208,15 @@ Each key defines its value, optional display label, optional shift variant, widt
 `_getResolvedLayout()` resolves the active surface from `keyboardType` and the layout source:
 
 ```
-_layoutSource   keyboardType    Resolved layout
+getSource()     keyboardType    Resolved layout
 ─────────────   ────────────    ───────────────
 "user"          (any)           layouts[layout]   (user pick overrides the constraint)
 "external"      "Numpad"        layouts.numpad
 "external"      "Numeric"       layouts.numeric
 "external"      "Full"          layouts[layout]   (property-driven, default: qwerty)
 ```
+
+The source is held by `LayoutState` (`internal/layout-state.ts`) and read via `getSource()`; `clearUserOverride()` drops a user pick back to `"external"` on a target switch and on every `keyboardType` change.
 
 `keyboardType` acts as a constraint when the source is `"external"`; a user-driven pick overrides it.
 
@@ -317,12 +319,22 @@ Because UI5's `applySettings()` calls custom setters, `{ keyboardType: "Numpad" 
 In `AutoShowBehavior._onDocumentFocusIn`, after resolving the UI5 control and before `show()`:
 
 ```ts
-if (this.getAutoType() && this._keyboardTypeSource !== "explicit") {
-  const detected = detectKbType(ui5Control, this._getEffectiveResolver());
-  this._keyboardTypeSource = `auto:${detected}`;
-  this.setProperty("keyboardType", detected); // bypasses custom setter
+if (
+  this._host.getAutoType() &&
+  this._host._getKeyboardTypeSource() !== "explicit" &&
+  this._host._getActiveTargetId() === ui5Control.getId()
+) {
+  const detected = detectKbType(ui5Control, this._host._getEffectiveResolver());
+  const previous = this._host.getKeyboardType();
+  if (detected !== previous) {
+    this._host._setKeyboardTypeSource(`auto:${detected}`);
+    this._host.setProperty("keyboardType", detected); // bypasses custom setter
+    this._host.fireKeyboardTypeChange({ ... });
+  }
 }
 ```
+
+The behavior reaches the control through host accessors, never its private fields. Two guards matter: the active-target check drops a detection that a re-entrant deferred change handler has already superseded, and the `detected !== previous` check keeps a repeat focusin (refocusing the same input to reposition the caret) from re-running the setter. `_setKeyboardTypeSource()` does more than tag the origin - it also clears the user layout override, ends any composition, and reapplies the `autoCompact` tier - so re-running it would revert a layout the user explicitly picked.
 
 When the user tabs from a Number input to a Text input, `AutoShowBehavior._onDocumentFocusIn` fires again, detects `"Full"`, and switches back.
 
@@ -446,7 +458,7 @@ The "would this keyboard claim" check uses `_wouldClaimInput()`, which consults 
 
 The control implements roving tabindex for arrow key navigation:
 
-- First key in the grid gets `tabindex="0"`, all others get `tabindex="-1"`.
+- Exactly one key carries `tabindex="0"`, all others `tabindex="-1"`. `KioskKeyboardRenderer.resolveFocusTarget()` restores it to the last focused key's `{row}-{col}` when that coordinate still exists in the layout, falling back to `{0,0}` (and to no target at all for an empty layout); `internal/key-grid-navigation.ts` moves it as focus travels.
 - Arrow keys move focus by row/column using element ID pattern: `{controlId}-key-{row}-{col}`.
 - `_lastFocusedKeyId` tracks the last focused key for `getFocusDomRef()` and `applyFocusInfo()`.
 
@@ -488,16 +500,17 @@ Keys use SAP button parameters for visual consistency with the rest of the UI:
 
 Keys use `flex: <grow> 1 0` for proportional sizing within rows. The `data-key-span` attribute (`[data-key-span="1.5"]`, `[data-key-span="2"]`, `[data-key-span="space"]`) sets the flex-grow factor. This makes the keyboard naturally responsive, and keys scale proportionally to the container width.
 
-Responsiveness is split into two axes: width (pure CSS) and height (JS-assisted).
+Responsiveness is split into two axes: width (CSS styling, plus an opt-in JS layout tier) and height (JS-assisted).
 
-**Width responsiveness** is handled entirely by CSS `@container` queries. The root `.ui5KioskKeyboard` element sets `container-name: keyboard; container-type: inline-size`. Two breakpoints exist:
+**Width styling** is handled by CSS `@container` queries. The root `.ui5KioskKeyboard` element sets `container-name: keyboard; container-type: inline-size`. Three thresholds exist, each capping a custom property with `min()` so a smaller consumer value is preserved and only larger ones clamp:
 
-- **30rem (narrow):** Caps `--ui5KioskKeyboard-keyFontSize` via `min(base, 1rem)` so consumer-provided smaller values are preserved while larger values get clamped.
-- **20rem (compact):** Key inline padding is reduced for non-numpad keys, and a tighter font-size cap of `0.875rem` applies.
+- **30rem (narrow):** Caps `--ui5KioskKeyboard-keyFontSize` at `1rem`.
+- **22rem:** Caps the row gap `--ui5KioskKeyboard-keyGap` at `0.25rem`.
+- **20rem (compact):** Tightens the gap cap to `0.125rem`, reduces key inline padding for non-numpad keys, and caps the font size at `0.875rem`.
 
 Rows are never wrapped or reordered at a breakpoint. Arrow-key grid navigation moves on the resolved layout's coordinates, so a reflow would leave focus moving between keys the user does not see as adjacent; a narrow-width arrangement is a second layout instead (`layouts/fkey-row-compact`, `layouts/nav-row-compact`).
 
-No JavaScript is involved in width responsiveness.
+One width behavior is not CSS: the opt-in `autoCompact` tier. `AutoCompactBehavior` (`internal/auto-compact-behavior.ts`) observes the root's border-box inline size and swaps to a layout's compact counterpart through `LayoutState.applyTier`. A container query can restyle a row but cannot re-seat its keys, and grid navigation runs on the resolved layout, so the narrow arrangement has to be a real layout swap. No observer is allocated while `autoCompact` is off.
 
 **Height responsiveness** uses JS (a native `ResizeObserver`) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds `clientHeight`; both are untransformed layout pixels, so an ancestor `transform: scale()` does not shift the breakpoints and the root border is excluded). The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
 
@@ -526,34 +539,34 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 
 ## Edge Cases
 
-| Edge Case                               | How It Is Handled                                                                          |
-| --------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Focus steal on key tap                  | `ontouchstart` `preventDefault()` keeps focus on input                                     |
-| Target input not yet focused            | `_getTargetDomRef()` places cursor at end via `setSelectionRange()` (no focus)             |
-| Auto-show flicker on focus transitions  | Synchronous `relatedTarget` check, plus one-tick deferred fallback when null               |
-| Focus on keyboard during auto-show      | `relatedTarget` checked against keyboard DOM via `contains()`                              |
-| Auto-show vs input owned by other kbd   | `_wouldClaimInput()` checks `_isTargetOfOther()`                                           |
-| Focus moves to claimed input while open | `_wouldClaimInput()` checks `_isTargetOfOther()`, closes normally                          |
-| Layout switch in non-Full mode          | User pick overrides the constraint (`_layoutSource="user"`); `{layout:base}` re-engages it |
-| Shift auto-release vs Caps Lock         | `ShiftState.autoRelease()` only releases `Mode.Shift`, not `Mode.CapsLock`                 |
-| `sap.ui.core.Element` name collision    | `globalThis.Element` for DOM Element references                                            |
-| No `$KioskKeyboardSettings` type        | Use setters in tests, not constructor settings                                             |
-| `_setActiveTarget` re-render            | `setAssociation(name, value, true)` suppresses invalidation                                |
-| `_setActiveTarget` re-entrancy          | Change event deferred to after state transitions via `captureAndClearDirty()`              |
-| Docked show/close during render         | `onAfterRendering` syncs CSS with `_open` state                                            |
-| Destroy with auto-show active           | `exit()` removes from instance registry, disables auto-show, restores inputmode            |
-| `setValue`/`fireLiveChange` duck-typing | `Record<string, unknown>` cast avoids `any`                                                |
-| `controls` with `autoShow`              | `_resolveClaimableControl()` filters by `controls`; delegation triggers `show()`           |
-| `controls` property churn               | `_syncControls()` rebinds delegates by control ID on each auto-show `focusin`              |
-| Locale detection no region              | Falls through to language prefix, then `DEFAULT_LAYOUT`                                    |
-| Explicit `keyboardType` vs auto-type    | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                           |
-| Constructor sets `keyboardType`         | `applySettings` calls custom setter, which sets the source tag                             |
-| `inputmode` restore on target switch    | `_nativeKbSuppression.suppress()` restores previous before suppressing new                 |
-| `inputmode` restore on destroy          | `exit()` calls `_nativeKbSuppression.restore()`                                            |
-| Combi device (tablet + desktop)         | `Device.system.tablet && !Device.system.desktop` → treats as desktop                       |
-| `show()` without target input           | `_nativeKbSuppression.suppress()` is a no-op when no target element exists                 |
-| Resolver throws                         | `getText` catches, logs warning, returns base bundle text                                  |
-| Last `KioskKeyboard` instance destroyed | `exit()` clears the i18n resolver (FLP safety)                                             |
+| Edge Case                                 | How It Is Handled                                                                                         |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Focus steal on key tap                    | `ontouchstart` `preventDefault()` keeps focus on input                                                    |
+| Target input not yet focused              | `_getTargetDomRef()` places cursor at end via `setSelectionRange()` (no focus)                            |
+| Auto-show flicker on focus transitions    | Synchronous `relatedTarget` check, plus one-tick deferred fallback when null                              |
+| Focus on keyboard during auto-show        | `relatedTarget` checked against keyboard DOM via `contains()`                                             |
+| Auto-show vs input owned by other kbd     | `_wouldClaimInput()` checks `_isTargetOfOther()`                                                          |
+| Focus moves to claimed input while open   | `_wouldClaimInput()` checks `_isTargetOfOther()`, closes normally                                         |
+| Layout switch in non-Full mode            | User pick overrides the constraint (`LayoutState.getSource()` is `"user"`); `{layout:base}` re-engages it |
+| Shift auto-release vs Caps Lock           | `ShiftState.autoRelease()` only releases `Mode.Shift`, not `Mode.CapsLock`                                |
+| `sap.ui.core.Element` name collision      | `globalThis.Element` for DOM Element references                                                           |
+| `$KioskKeyboardSettings` availability     | Generated into the committed `src/KioskKeyboard.gen.d.ts`; run `npm run generate`, never hand-edit        |
+| `_setActiveTarget` re-render              | `setAssociation(name, value, true)` suppresses invalidation                                               |
+| `_setActiveTarget` re-entrancy            | Change event deferred to after state transitions via `captureAndClearDirty()`                             |
+| Docked show/close during render           | `onAfterRendering` syncs CSS with `_open` state                                                           |
+| Destroy with auto-show active             | `exit()` removes from instance registry, disables auto-show, restores inputmode                           |
+| Target control without a `value` property | `setTargetValue()` falls back `setValue()` -> `setProperty("value")` -> raw DOM value                     |
+| `controls` with `autoShow`                | `_resolveClaimableControl()` filters by `controls`; delegation triggers `show()`                          |
+| `controls` property churn                 | `_syncControls()` rebinds delegates by control ID on each auto-show `focusin`                             |
+| Locale detection no region                | Falls through to language prefix, then `DEFAULT_LAYOUT`                                                   |
+| Explicit `keyboardType` vs auto-type      | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                                          |
+| Constructor sets `keyboardType`           | `applySettings` calls custom setter, which sets the source tag                                            |
+| `inputmode` restore on target switch      | `_nativeKbSuppression.suppress()` restores previous before suppressing new                                |
+| `inputmode` restore on destroy            | `exit()` calls `_nativeKbSuppression.restore()`                                                           |
+| Combi device (tablet + desktop)           | `Device.system.tablet && !Device.system.desktop` → treats as desktop                                      |
+| `show()` without target input             | `_nativeKbSuppression.suppress()` is a no-op when no target element exists                                |
+| Resolver throws                           | `getText` catches, logs warning, returns base bundle text                                                 |
+| Last `KioskKeyboard` instance destroyed   | `exit()` clears the i18n resolver (FLP safety)                                                            |
 
 ## Project Layout
 
@@ -597,6 +610,7 @@ packages/kiosk-keyboard/
       auto-show-behavior.ts   Auto-show focus-in/out listeners, deferred close
       controls-delegation-controller.ts  ControlsDelegationController (`controls`-property delegate reconciliation)
       responsive-sizing-controller.ts  ResponsiveSizingController (cqShort/cqTiny height classes)
+      auto-compact-behavior.ts  AutoCompactBehavior (opt-in width tier: compact layout swap)
       physical-key-highlight.ts  PhysicalKeyHighlight (hardware keyboard mirror)
       backspace-repeat-behavior.ts  BackspaceRepeatBehavior (press-and-hold delete)
       variant-popup-behavior.ts  VariantPopupBehavior (long-press / right-click accent-variant popup)
@@ -628,7 +642,9 @@ packages/kiosk-keyboard/
       fkeys.ts                Standalone F-key layout
       nav.ts                  Standalone navigation layout
       fkey-row.ts             Shared F-key row for consumer-composed variants
+      fkey-row-compact.ts     Narrow-width F-key row (2x6), used by the built-in fkeys layout
       nav-row.ts              Shared navigation row for consumer-composed variants
+      nav-row-compact.ts      Narrow-width navigation row (2x4)
       ja-romaji.ts            Japanese Romaji layout
       ja-kana.ts              Japanese Kana direct-input layout (JIS X 6002)
       ja-kana-compact.ts      Japanese Kana rearranged for narrow keyboards
