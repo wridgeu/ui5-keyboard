@@ -3,7 +3,7 @@
 /**
  * Message-bundle invariants for both keyboard packages.
  *
- * Two things about `src/i18n/messagebundle*.properties` are invisible in review and
+ * Three things about `src/i18n/messagebundle*.properties` are invisible in review and
  * silent at runtime, so they are checked here rather than noticed later:
  *
  * 1. **ASCII only.** Every non-ASCII character is written as a `\\uXXXX` escape. A raw

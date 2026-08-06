@@ -164,7 +164,10 @@ onInit(): void {
 }
 ```
 
-Both UI5 libraries use standard UI5 lifecycle management (`destroy()`) and coexist on the same page without conflicts. The KioskKeyboard fires `keyPress` events (not native `keydown`), so virtual key taps do not trigger hotkeys registered via HotkeyManager.
+Both UI5 libraries use standard UI5 lifecycle management (`destroy()`) and coexist on the same page without conflicts. Whether a virtual key tap can reach a hotkey depends on `fKeyMode`:
+
+- **`Virtual`** (the default): the keyboard fires its own `keyPress` event and no native `keydown`, so taps never trigger hotkeys registered via HotkeyManager.
+- **`Native`**: F-key taps dispatch a real bubbling, cancelable `keydown`, and HotkeyManager does not filter on `isTrusted`, so a matching hotkey can run. Whether it does is then up to `ignoreInputs` - under the default `"auto"`, a single-key or Alt/Shift-only hotkey is suppressed while the focused target is editable.
 
 ## Development
 

@@ -27,14 +27,15 @@ Each proposal doc should include a status line near the top:
 > Status: <status>
 ```
 
-| Status          | Meaning                                               |
-| --------------- | ----------------------------------------------------- |
-| **Proposal**    | Idea documented, not yet committed to                 |
-| **Accepted**    | Approved for implementation                           |
-| **In Progress** | Implementation underway                               |
-| **Implemented** | Completed. Move to `history/`                         |
-| **Deferred**    | Postponed, may revisit later                          |
-| **Rejected**    | Will not implement. Move to `history/` with rationale |
+| Status                    | Meaning                                                                        |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| **Proposal**              | Idea documented, not yet committed to                                          |
+| **Accepted**              | Approved for implementation                                                    |
+| **In Progress**           | Implementation underway                                                        |
+| **Partially Implemented** | Part of the design shipped; the rest is open or blocked. Stays in `proposals/` |
+| **Implemented**           | Completed. Move to `history/`                                                  |
+| **Deferred**              | Postponed, may revisit later                                                   |
+| **Rejected**              | Will not implement. Move to `history/` with rationale                          |
 
 ## Naming Conventions
 
