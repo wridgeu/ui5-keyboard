@@ -67,10 +67,8 @@ export default class LayoutFoldCache {
   }
 
   /**
-   * Drops the cached fold so the next read rebuilds it.
-   *
-   * Never reports diagnostics, so it is safe to call from `invalidate`: a
-   * re-fold driven by an invalidation would otherwise run during rendering.
+   * Drops the cached fold so the next read rebuilds it. Reports no diagnostics, so
+   * it is safe to call from `invalidate`, where a re-fold would run during rendering.
    */
   drop(): void {
     this._fold = null;

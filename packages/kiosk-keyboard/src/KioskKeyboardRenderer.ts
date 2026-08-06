@@ -114,9 +114,8 @@ const KioskKeyboardRenderer = {
   },
 
   /**
-   * ARIA live region. The text is whatever the control's announcement queue last
-   * wrote, re-emitted here so a patch does not clear an announcement mid-read; the
-   * queue owns what is said and when, and writes the live node itself.
+   * ARIA live region. The queue owns what is said and when, and writes the live node
+   * itself; re-emitting its last text here keeps a patch from clearing it mid-read.
    */
   renderLiveRegion(rm: RenderManager, oControl: KioskKeyboard): void {
     const { _getLiveRegionText } = oControl._getRendererApi();

@@ -106,10 +106,8 @@ export default class VariantPopupBehavior {
   private _holdTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly _onAfterClose: () => void;
   /**
-   * Detaches every DOM listener of the open session (grid keydown, document
-   * touch tracking), or `null` while closed. An `AbortSignal` is one-shot, so
-   * each open mints a fresh controller; reusing an aborted one would attach
-   * nothing.
+   * Detaches every DOM listener of the open session (grid keydown, document touch
+   * tracking), or `null` while closed.
    */
   private _sessionAbort: AbortController | null = null;
 

@@ -42,11 +42,7 @@ interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" 
 
 export default class AutoShowBehavior extends BaseObject {
   private _host: AutoShowBehaviorHost;
-  /**
-   * Detaches the document focus listeners for the current armed period, or
-   * `null` while disarmed. An `AbortSignal` is one-shot, so each `enable()`
-   * mints a fresh controller; reusing an aborted one would attach nothing.
-   */
+  /** Detaches the document focus listeners of the armed period, or `null` while disarmed. */
   private _abort: AbortController | null = null;
   private _deferredCloseId: number | null = null;
 

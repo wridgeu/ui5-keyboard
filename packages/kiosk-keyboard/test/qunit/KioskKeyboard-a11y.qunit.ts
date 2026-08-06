@@ -147,9 +147,8 @@ QUnit.test("Live region announces Shift state", async (assert) => {
     liveRegion = document.getElementById(`${sId}-liveState`);
     assert.strictEqual(liveRegion!.textContent, "Shift on", "Announces Shift on");
 
-    // Activate caps lock. The double-tap that reaches Caps Lock is by definition
-    // close behind the tap that turned Shift on, so its announcement waits for the
-    // queue's gap rather than overwriting one that has not been read yet.
+    // Activate caps lock. The double-tap lands close behind the tap that turned Shift
+    // on, so its announcement waits for the queue's gap.
     tapKey(kb, "{shift}");
     await waitForRender();
     await waitForAnnouncement();
@@ -162,9 +161,8 @@ QUnit.test("Live region announces Shift state", async (assert) => {
     await waitForRender();
     await waitForAnnouncement();
 
-    // Leaving Caps Lock announces nothing, so the region keeps the text it last
-    // spoke. A live region speaks on change, so retained text is silent - and the
-    // queue, not the renderer, decides when it is replaced. Matches the webc twin.
+    // Leaving Caps Lock announces nothing, so the region keeps the text it last spoke;
+    // a live region speaks on change, so retained text is silent. Matches the webc twin.
     liveRegion = document.getElementById(`${sId}-liveState`);
     assert.strictEqual(liveRegion!.textContent, "Caps Lock on", "Retains the last announcement after caps off");
   } finally {
@@ -182,8 +180,7 @@ QUnit.test("Announcements raised while the keyboard has no DOM are dropped, not 
   const shiftState = (kb as unknown as { _shiftState: { syncFromPhysical(s: boolean, c: boolean): void } })._shiftState;
 
   // setVisible(false) renders the invisible placeholder, so getDomRef() is null while
-  // the control is very much alive - it is not destroyed and its physical-key delegate
-  // is still attached to the target input, so hardware Shift keeps reaching the
+  // the control is still alive and its physical-key delegate still reaches the
   // announcement path.
   kb.setVisible(false);
   await waitForRender();
@@ -197,9 +194,8 @@ QUnit.test("Announcements raised while the keyboard has no DOM are dropped, not 
   kb.show();
   await waitForAnnouncement();
 
-  // A live-region announcement is only meaningful when it is raised. Banking the
-  // detached ones would make the screen reader read a backlog before reaching the
-  // announcement the user actually just caused.
+  // Banking the detached ones would make the screen reader read a backlog before
+  // reaching the announcement the user actually just caused.
   assert.strictEqual(liveRegion(), "Virtual keyboard opened", "the open announcement is not queued behind a backlog");
 
   kb.destroy();
