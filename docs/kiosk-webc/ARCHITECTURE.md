@@ -278,6 +278,8 @@ Caps Lock    false    true       true
 
 **Auto-release**: After typing a character with one-shot Shift active, `autoRelease()` clears the shift state. Caps Lock is sticky and does not auto-release.
 
+**Announcements**: `_syncShiftState()` queues one live-region text per transition: `ARIA_CAPS_LOCK_ON`, `ARIA_CAPS_LOCK_OFF`, `ARIA_SHIFT_ON`, `ARIA_SHIFT_OFF`. Caps Lock is settled before Shift because `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift release.
+
 ## Layout System
 
 ### Layout Definition

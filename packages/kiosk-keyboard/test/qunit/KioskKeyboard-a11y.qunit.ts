@@ -161,13 +161,31 @@ QUnit.test("Live region announces Shift state", async (assert) => {
     await waitForRender();
     await waitForAnnouncement();
 
-    // Leaving Caps Lock announces nothing, so the region keeps the text it last spoke;
-    // a live region speaks on change, so retained text is silent. Matches the webc twin.
     liveRegion = document.getElementById(`${sId}-liveState`);
-    assert.strictEqual(liveRegion!.textContent, "Caps Lock on", "Retains the last announcement after caps off");
+    assert.strictEqual(liveRegion!.textContent, "Caps Lock off", "Announces Caps Lock off");
   } finally {
     clock.restore();
   }
+
+  kb.destroy();
+});
+
+QUnit.test("Live region reports Caps Lock ending even when Shift takes over", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const liveRegion = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
+  const shiftState = (kb as unknown as { _shiftState: { syncFromPhysical(s: boolean, c: boolean): void } })._shiftState;
+
+  shiftState.syncFromPhysical(false, true);
+  assert.strictEqual(liveRegion(), "Caps Lock on", "Announces Caps Lock on");
+
+  // `isShifted` is true on both sides of this step, so the mode that ended is the
+  // only thing that changed.
+  shiftState.syncFromPhysical(true, false);
+  await waitForAnnouncement();
+
+  assert.strictEqual(liveRegion(), "Caps Lock off", "Announces Caps Lock off");
 
   kb.destroy();
 });

@@ -1063,6 +1063,7 @@ Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i1
 | `KEY_SPACE`                      | Space                                         | Label for the Space key (visible text; aria-label when label is suppressed)     |
 | `KEY_CAPS_LOCK`                  | Caps Lock                                     | Visible Shift-key label and its `aria-label` when Caps Lock is active           |
 | `ARIA_CAPS_LOCK_ON`              | Caps Lock on                                  | ARIA live region announcement                                                   |
+| `ARIA_CAPS_LOCK_OFF`             | Caps Lock off                                 | ARIA live region announcement when Caps Lock is released                        |
 | `ARIA_SHIFT_ON`                  | Shift on                                      | ARIA live region announcement                                                   |
 | `ARIA_SHIFT_OFF`                 | Shift off                                     | ARIA live region announcement                                                   |
 | `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened                       | ARIA live region announcement on `show()`                                       |
@@ -1092,6 +1093,7 @@ KioskKeyboard.setI18nResolver((key, locale, defaultText) => {
     KEY_SPACE: "Espace",
     KEY_CAPS_LOCK: "Verrouillage majuscules",
     ARIA_CAPS_LOCK_ON: "Verrouillage majuscules active",
+    ARIA_CAPS_LOCK_OFF: "Verrouillage majuscules desactive",
     ARIA_SHIFT_ON: "Majuscules activees",
     ARIA_SHIFT_OFF: "Majuscules desactivees",
     ARIA_KEYBOARD_OPENED: "Clavier virtuel ouvert",
