@@ -158,6 +158,42 @@ before any code moves.
 
 ---
 
+## What implementation changed about this plan
+
+All five items landed. Two of them did not survive contact with the code in the shape ranked above,
+and the corrections are the durable part of this document.
+
+**Item 2 cannot converge the twins, and the divergence is load-bearing.** The plan assumed the two
+layout state machines were the same logic in two dialects. They are not. Kiosk funnels every request
+through one `_performLayoutSwitch` that validates against the registry up front; webc has three
+entry points (the `layout` attribute, a `{layout:*}` key, the session reset) and validates _late_, in
+`_resolvedLayoutName`, behind a `_currentLayout || _baseLayout || layout || _localeLayout()` fallback
+chain. That is deliberate: webc's `layout` attribute can be set before `_processChildren` populates
+the slot, so an early registry check would reject a name that is about to be valid. Reconciling them
+would move one package's validation timing — a behavior change, and a non-goal of #174. Both twins
+were extracted separately instead, and the pair is declared in `check-twin-drift.mjs` as unchecked
+with that reason, so the divergence is documented rather than erased.
+
+**Item 5 was not a port, and the fix is a rate limit rather than a queue.** The plan read kiosk's
+live region as "a single slot where webc has a queue". The real difference is _ownership_:
+`KioskKeyboardRenderer.renderLiveRegion` derived the text from shift/caps state on every patch, which
+is why `_applyCompactTier` had to defer its announcement to `onAfterRendering` to avoid being
+overwritten. Ownership moved to the queue — the renderer now re-emits a `_liveRegionText` field the
+queue writes — and shift/caps announcements became imperative, matching webc.
+
+Porting webc's queue verbatim would not have fixed anything. Its `flush` drains from
+`onAfterRendering`, but kiosk's `show`/`close`/variant announcements change no rendered state, so no
+render follows to drain them; draining on every `announce` instead makes each write immediate and the
+queue never holds more than one entry. The interval now sits between _writes_ rather than between
+drains, which gives the same spacing under either drain policy and keeps a lone announcement
+synchronous. Both twins share that module byte-identically (`CORE_MODULES`, 30 pairs).
+
+One gap is now shared rather than fixed: leaving Caps Lock announces nothing in either twin, so the
+live region keeps the text it last spoke. Worth its own issue; it is a one-line change in one shared
+module now, which it was not before.
+
+---
+
 ## Assessed and rejected
 
 - **Input mutation → native `InputEvent` / `beforeinput` / `EditContext`.** Not viable for kiosk.

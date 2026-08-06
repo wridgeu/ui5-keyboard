@@ -108,6 +108,7 @@ const LAYOUTS = [
 ];
 
 const CORE_MODULES = [
+  "announcement-queue",
   "grapheme",
   "auto-repeat",
   "shift-state",
@@ -153,7 +154,7 @@ const PAIRS = [
 
 // Guard against the manifest silently shrinking (a dropped entry would make
 // the check pass while comparing fewer pairs).
-const EXPECTED_PAIR_COUNT = 29;
+const EXPECTED_PAIR_COUNT = 30;
 
 /**
  * Removes line and block comments, but ONLY outside string literals: a `//` or

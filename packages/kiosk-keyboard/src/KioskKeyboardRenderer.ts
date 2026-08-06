@@ -113,20 +113,18 @@ const KioskKeyboardRenderer = {
     return { row: 0, col: 0 };
   },
 
-  /** ARIA live region - announces shift/caps state changes to screen readers. */
+  /**
+   * ARIA live region. The text is whatever the control's announcement queue last
+   * wrote, re-emitted here so a patch does not clear an announcement mid-read; the
+   * queue owns what is said and when, and writes the live node itself.
+   */
   renderLiveRegion(rm: RenderManager, oControl: KioskKeyboard): void {
-    const { _isCapsLock, _isShiftActive } = oControl._getRendererApi();
+    const { _getLiveRegionText } = oControl._getRendererApi();
     rm.openStart("span", `${oControl.getId()}-liveState`);
     rm.class("sapUiInvisibleText");
     rm.attr("role", "status");
     rm.openEnd();
-
-    if (_isCapsLock()) {
-      rm.text(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
-    } else if (_isShiftActive()) {
-      rm.text(getText("ARIA_SHIFT_ON", "Shift on"));
-    }
-
+    rm.text(_getLiveRegionText());
     rm.close("span");
   },
 

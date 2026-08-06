@@ -5,7 +5,13 @@ import { KeyboardType } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Log from "sap/base/Log";
 import JSONModel from "sap/ui/model/json/JSONModel";
-import { getRenderedLayoutKeys, getRequiredKeyElement, tapKey, waitForRender } from "./test-helpers";
+import {
+  getRenderedLayoutKeys,
+  getRequiredKeyElement,
+  tapKey,
+  waitForAnnouncement,
+  waitForRender,
+} from "./test-helpers";
 
 // The default threshold is 22rem, so 320px is narrow and 600px is not at any
 // root font-size this suite runs at.
@@ -32,14 +38,16 @@ interface Mounted {
 
 /**
  * Lets a width change work through the observer, the frame the tier is applied
- * from, and the re-render the swap triggers. Generous enough that a settled
- * keyboard stays settled, so a negative assertion after it is meaningful.
+ * from, the re-render the swap triggers, and the gap the announcement queue keeps
+ * between writes. Generous enough that a settled keyboard stays settled, so a
+ * negative assertion after it is meaningful.
  */
 async function settle(): Promise<void> {
   for (let frame = 0; frame < 4; frame++) {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     await waitForRender();
   }
+  await waitForAnnouncement();
 }
 
 const mounted: KioskKeyboard[] = [];

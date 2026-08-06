@@ -11,6 +11,7 @@ export type RendererInternalApi = {
   _isShiftActive(): boolean;
   _isCapsLock(): boolean;
   _getResolvedLayout(): LayoutDefinition;
+  _getLiveRegionText(): string;
   _getLayoutLang(): string | undefined;
   _getKeyLabel(key: KeyDefinition): string;
   _getKeyAriaLabel(key: KeyDefinition): string;
