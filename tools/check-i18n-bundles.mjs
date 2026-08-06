@@ -34,8 +34,6 @@ import path from "node:path";
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const PACKAGES = ["kiosk-keyboard", "kiosk-keyboard-webc"];
 const DEFAULT_BUNDLE = "messagebundle.properties";
-/** `getText("KEY"` - the only form either package uses to name a bundle key. */
-const GET_TEXT_KEY = /\bgetText\(\s*"([A-Za-z0-9_]+)"/g;
 
 const errors = [];
 
@@ -69,8 +67,40 @@ function checkAscii(file, relative) {
 }
 
 /**
- * Every `getText("KEY"` literal under a package's `src/`, mapped to where it was asked
- * for. `src/generated/` is skipped: it is build output, rebuilt from the bundle itself.
+ * Records every `getText("KEY"` on one line into `found`, keyed by the first site that
+ * asked for it.
+ *
+ * Scanned rather than matched: every call names its key as a literal directly after the
+ * paren, so `indexOf` reads it exactly, and a line-comment guard falls out for free -
+ * a `getText("EXAMPLE_KEY", ...)` in a doc-block is an example, not a request, and a
+ * pattern has no way to tell the two apart. Calls whose key is a variable
+ * (`getText(entry[0], ...)`, `getText(i18nKey, ...)`) are deliberately invisible here:
+ * their keys come from tables this cannot follow, and the bundles they read are covered
+ * by the parity invariant instead.
+ *
+ * @param {string} line one line of TypeScript source
+ * @param {string} site `package/path:line`, recorded as where the key was first asked for
+ * @param {Map<string, string>} found key -> first call site
+ */
+function collectLineKeys(line, site, found) {
+  const trimmed = line.trim();
+  if (trimmed.startsWith("*") || trimmed.startsWith("//")) return;
+
+  const CALL = 'getText("';
+  let at = line.indexOf(CALL);
+  while (at !== -1) {
+    const start = at + CALL.length;
+    const end = line.indexOf('"', start);
+    if (end === -1) return; // an unterminated literal is not a key we can name
+    const key = line.slice(start, end);
+    if (!found.has(key)) found.set(key, site);
+    at = line.indexOf(CALL, end);
+  }
+}
+
+/**
+ * Every key a package's `src/` asks for by literal. `src/generated/` is skipped: it is
+ * build output, rebuilt from the bundle itself.
  *
  * @param {string} dir directory to walk
  * @param {string} pkg package name, for the reported path
@@ -85,18 +115,13 @@ function collectRequestedKeys(dir, pkg, found = new Map()) {
       continue;
     }
     if (!name.endsWith(".ts") || name.endsWith(".d.ts")) continue;
-    const source = readFileSync(file, "utf8");
-    const lines = source.split(/\r?\n/);
-    lines.forEach((line, index) => {
-      for (const match of line.matchAll(GET_TEXT_KEY)) {
-        const key = match[1];
-        if (key === undefined || found.has(key)) continue;
-        found.set(
-          key,
-          `packages/${pkg}/${path.relative(path.join(repoRoot, "packages", pkg), file).replace(/\\/g, "/")}:${index + 1}`,
-        );
-      }
-    });
+    const relative = path
+      .relative(path.join(repoRoot, "packages", pkg), file)
+      .split(path.sep)
+      .join("/");
+    readFileSync(file, "utf8")
+      .split("\n")
+      .forEach((line, index) => collectLineKeys(line, `packages/${pkg}/${relative}:${index + 1}`, found));
   }
   return found;
 }
