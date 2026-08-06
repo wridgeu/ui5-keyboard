@@ -43,6 +43,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a themed, accessible virtual ke
   - [Constrained Containers and Popovers](#constrained-containers-and-popovers)
   - [Layout Definition Format](#layout-definition-format)
   - [Accent variants (German umlauts)](#accent-variants-german-umlauts)
+- [Composition Middleware](#composition-middleware)
 - [Function Keys (F1-F12)](#function-keys-f1-f12)
 - [Locale-Based Default Layout](#locale-based-default-layout)
 - [Docked Mode](#docked-mode)
@@ -51,6 +52,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a themed, accessible virtual ke
 - [Interop Cookbook](#interop-cookbook)
 - [Auto-Type](#auto-type)
 - [controls](#controls)
+- [Icon + Label Rendering](#icon--label-rendering)
 - [Custom Target Resolver](#custom-target-resolver)
 - [Mobile Keyboard Detection](#mobile-keyboard-detection)
 - [Shift & Caps Lock](#shift--caps-lock)
@@ -59,9 +61,11 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a themed, accessible virtual ke
 - [Internationalization (i18n)](#internationalization-i18n)
   - [i18n Extension API](#i18n-extension-api)
 - [Library Enums & Constants](#library-enums--constants)
+- [Development](#development)
 - [Further Reading](#further-reading)
 - [Troubleshooting](#troubleshooting)
 - [When NOT to Use This Library](#when-not-to-use-this-library)
+- [License](#license)
 
 ---
 
@@ -77,8 +81,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a themed, accessible virtual ke
 
 **Layouts**
 
-- Built-in layouts: QWERTY, QWERTZ-DE, Spanish QWERTY, Japanese Romaji, Japanese Kana, Korean Hangul, Arabic, numeric, special characters, numpad, function keys, navigation keys
-- Composable variant layouts (e.g. QWERTY-FK, QWERTZ-DE-NAV) built from the shared `fkey-row` / `nav-row` modules
+- Built-in layouts: QWERTY, QWERTZ-DE, Spanish QWERTY, Japanese Romaji, Japanese Kana (plus a narrow-width compact form), Korean Hangul, Arabic, numeric, special characters, numpad, function keys, navigation keys
 - Locale-based default layout (auto-detects from UI5 language setting)
 - Runtime layout switching via `{layout:name}` keys
 - `keyboardType` property for quick switching between Full, Numeric, and Numpad modes
@@ -396,7 +399,6 @@ A misconfiguration is logged once per control per distinct complaint, naming the
 | `invalid-middleware`   | `middleware` that is not a function                                    |
 | `invalid-locale`       | a `locales` entry that is empty after trim                             |
 | `unknown-target`       | facets declared with no `rows`, for a name no layout has               |
-| `unknown-suppress`     | a `suppress` token outside `Variants` / `Middleware`                   |
 | `unknown-compact`      | `compact` that names a layout nothing declares                         |
 | `duplicate-rows`       | two custom layouts declare `rows` for one name                         |
 | `duplicate-middleware` | two custom layouts declare `middleware` for one name                   |
@@ -527,19 +529,20 @@ The generated file above covers UI5 metadata accessors. The convenience/runtime 
 
 ### Static Methods
 
-The static surface is read-only. Customization is per control via the `customLayouts` aggregation (see [Custom Layouts](#custom-layouts)).
+The static surface carries no layout registration; custom layouts come from the per-control `customLayouts` aggregation (see [Custom Layouts](#custom-layouts)).
 
-| Method                        | Returns             | Description                                                                           |
-| ----------------------------- | ------------------- | ------------------------------------------------------------------------------------- |
-| `getRegisteredLayout(name)`   | `LayoutDefinition?` | Get the definition for a built-in layout name, or `undefined`.                        |
-| `getRegisteredLayoutNames()`  | `string[]`          | List all built-in layout names.                                                       |
-| `isBuiltInLayout(name)`       | `boolean`           | Whether the given name is a built-in layout.                                          |
-| `isSecondaryLayout(name)`     | `boolean`           | Whether the layout is secondary (non-alphabetic, e.g. `numeric`, `fkeys`).            |
-| `getLocaleLayout()`           | `string`            | Detect the best built-in layout for the current UI5 locale. Falls back to `"qwerty"`. |
-| `getKeyIcon(keyValue)`        | `string?`           | Default icon URI for a special key value, or `undefined` if none.                     |
-| `setI18nResolver(fn)`         | `void`              | Set a resolver callback for i18n text overrides, or `null` to clear.                  |
-| `setGlobalTargetResolver(fn)` | `void`              | Set a global custom resolver for locating native inputs. Pass `null` to clear.        |
-| `getGlobalTargetResolver()`   | `Function \| null`  | Returns the global target resolver, or `null`.                                        |
+| Method                        | Returns             | Description                                                                                                            |
+| ----------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `getRegisteredLayout(name)`   | `LayoutDefinition?` | Get the definition for a built-in layout name, or `undefined`.                                                         |
+| `getRegisteredLayoutNames()`  | `string[]`          | List all built-in layout names.                                                                                        |
+| `isBuiltInLayout(name)`       | `boolean`           | Whether the given name is a built-in layout.                                                                           |
+| `isSecondaryLayout(name)`     | `boolean`           | Whether the layout is secondary (non-alphabetic, e.g. `numeric`, `fkeys`).                                             |
+| `getLocaleLayout()`           | `string`            | Detect the best built-in layout for the current UI5 locale. Falls back to `"qwerty"`.                                  |
+| `composeLayout(...sources)`   | `LayoutDefinition`  | Splice rows from built-in layout names and row arrays, in order. A name no built-in has contributes nothing and warns. |
+| `getKeyIcon(keyValue)`        | `string?`           | Default icon URI for a special key value, or `undefined` if none.                                                      |
+| `setI18nResolver(fn)`         | `void`              | Set a resolver callback for i18n text overrides, or `null` to clear.                                                   |
+| `setGlobalTargetResolver(fn)` | `void`              | Set a global custom resolver for locating native inputs. Pass `null` to clear.                                         |
+| `getGlobalTargetResolver()`   | `Function \| null`  | Returns the global target resolver, or `null`.                                                                         |
 
 ### DOM Contract
 
@@ -927,7 +930,7 @@ Handle other F-keys via the `keyPress` event:
 
 ```typescript
 onKeyPress(event: Event<{ key: string }>): void {
-  if (event.getParameter("key") === "{fkey:F1}") {
+  if (event.getParameter("key") === KeyName.F1) {
     event.preventDefault(); // optional: suppress default key-press behavior
     this.showHelpDialog();
   }
@@ -1751,23 +1754,26 @@ The library ships with an English resource bundle for all accessibility labels a
 
 **Resource bundle keys:**
 
-| Key                              | Default (English)                             | Used for                                                                        |
-| -------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------- |
-| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard                              | Default `aria-label` when `ariaLabel` property is empty                         |
-| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                                      | `aria-roledescription` on the root element                                      |
-| `KEY_SHIFT`                      | Shift                                         | Visual label and `aria-label` for the Shift key                                 |
-| `KEY_ENTER`                      | Enter                                         | Visual label and `aria-label` for the Enter key                                 |
-| `KEY_BACKSPACE`                  | Backspace                                     | Label for the Backspace key (visible text; aria-label when label is suppressed) |
-| `KEY_SPACE`                      | Space                                         | Label for the Space key (visible text; aria-label when label is suppressed)     |
-| `ARIA_CAPS_LOCK`                 | Caps Lock                                     | `aria-label` for the Shift key when Caps Lock is active                         |
-| `ARIA_CAPS_LOCK_ON`              | Caps Lock on                                  | ARIA live region announcement                                                   |
-| `ARIA_CAPS_LOCK_OFF`             | Caps Lock off                                 | ARIA live region announcement when Caps Lock is released                        |
-| `ARIA_SHIFT_ON`                  | Shift on                                      | ARIA live region announcement                                                   |
-| `ARIA_SHIFT_OFF`                 | Shift off                                     | ARIA live region announcement when Shift is released                            |
-| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened                       | ARIA live region announcement on `show()`                                       |
-| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed                       | ARIA live region announcement on `close()`                                      |
-| `ARIA_LAYOUT_COMPACTED`          | Switched to the compact keyboard layout       | ARIA live region announcement when `autoCompact` takes a layout's compact form  |
-| `ARIA_LAYOUT_UNCOMPACTED`        | Switched back to the standard keyboard layout | ARIA live region announcement when `autoCompact` gives it back                  |
+| Key                              | Default (English)                             | Used for                                                                               |
+| -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `KIOSK_KEYBOARD_LABEL`           | Virtual Keyboard                              | Default `aria-label` when `ariaLabel` property is empty                                |
+| `KIOSK_KEYBOARD_ROLEDESCRIPTION` | keyboard                                      | `aria-roledescription` on the root element                                             |
+| `KEY_SHIFT`                      | Shift                                         | Visual label and `aria-label` for the Shift key                                        |
+| `KEY_ENTER`                      | Enter                                         | Visual label and `aria-label` for the Enter key                                        |
+| `KEY_BACKSPACE`                  | Backspace                                     | Label for the Backspace key (visible text; aria-label when label is suppressed)        |
+| `KEY_SPACE`                      | Space                                         | Label for the Space key (visible text; aria-label when label is suppressed)            |
+| `ARIA_RETURN_TO_NUMBERS`         | Return to numbers                             | `aria-label` for `{layout:base}` while a Numpad/Numeric constraint is active           |
+| `ARIA_CAPS_LOCK`                 | Caps Lock                                     | `aria-label` for the Shift key when Caps Lock is active                                |
+| `ARIA_CAPS_LOCK_ON`              | Caps Lock on                                  | ARIA live region announcement                                                          |
+| `ARIA_CAPS_LOCK_OFF`             | Caps Lock off                                 | ARIA live region announcement when Caps Lock is released                               |
+| `ARIA_SHIFT_ON`                  | Shift on                                      | ARIA live region announcement                                                          |
+| `ARIA_SHIFT_OFF`                 | Shift off                                     | ARIA live region announcement when Shift is released                                   |
+| `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened                       | ARIA live region announcement on `show()`                                              |
+| `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed                       | ARIA live region announcement on `close()`                                             |
+| `ARIA_LAYOUT_COMPACTED`          | Switched to the compact keyboard layout       | ARIA live region announcement when `autoCompact` takes a layout's compact form         |
+| `ARIA_LAYOUT_UNCOMPACTED`        | Switched back to the standard keyboard layout | ARIA live region announcement when `autoCompact` gives it back                         |
+| `ARIA_VARIANTS_OPENED`           | `{0} variants for {1}`                        | ARIA live region announcement when the accent-variant popup opens (count, base letter) |
+| `ARIA_VARIANTS_CLOSED`           | Variants closed                               | ARIA live region announcement when the accent-variant popup closes                     |
 
 The two `autoCompact` announcements name no layout on purpose: the layout a width picks is one the user never chose and never sees named, and an identifier dropped into a translated sentence stays untranslated. They also have to differ from each other - the live region re-announces only on a text change, so one shared wording would leave every second crossing unspoken.
 
