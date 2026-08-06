@@ -50,17 +50,16 @@ interface LayoutStateHost {
  * `{layout:base}` returns to, the layout last requested, and the source that drove
  * the current one.
  *
- * Three request entry points, because the element accepts a layout three ways -
- * the `layout` attribute, a `{layout:*}` key, and the reset that ends a session -
- * plus `applyTier`, which is an *arrangement* the `autoCompact` width observer
- * imposes and which must leave the request alone.
+ * Three *request* entry points, one per way the element accepts a layout - the
+ * `layout` attribute, a `{layout:*}` key, and the reset that ends a session - plus
+ * {@link applyTier}, an *arrangement* the `autoCompact` width observer imposes, which
+ * must leave the request alone.
  *
- * Unlike the kiosk twin, a requested name is not validated against the registry at
- * request time on the attribute path: the slot is populated asynchronously by
- * `_processChildren`, so a custom layout appended in the same task is not in the
- * fold yet and an early check would reject a name that is about to be perfectly
- * valid. {@link resolvedName} reports the fallback from the render pass instead,
- * where the fold is authoritative.
+ * The attribute path does not validate against the registry at request time: the slot
+ * is populated asynchronously by `_processChildren`, so a custom layout appended in
+ * the same task is not in the fold yet and an early check would reject a name that is
+ * about to be perfectly valid. {@link resolvedName} reports the fallback from the
+ * render pass instead, where the fold is authoritative.
  */
 export class LayoutState {
   private readonly _host: LayoutStateHost;
@@ -98,10 +97,7 @@ export class LayoutState {
     this._source = "external";
   }
 
-  /**
-   * Applies the `layout` attribute. Applied unconditionally - see the class doc for
-   * why the registry check cannot happen here.
-   */
+  /** Applies the `layout` attribute, unconditionally - see the class doc for why. */
   applyAttribute(rawName: string): void {
     const requested = rawName.trim().toLowerCase();
     this._requested = requested;
@@ -135,16 +131,15 @@ export class LayoutState {
    * returns. Called from `AutoCompactController` on a frame of its own, never
    * from the observation callback.
    *
-   * Deliberately not routed through the request paths: this is not a request and must
-   * leave the requested layout alone, or the first swap would erase the layout it has
-   * to swap back to. An unregistered counterpart resolves to no swap rather than to
-   * the default layout, since a consumer who names a missing one should keep the
-   * layout they asked for.
+   * Deliberately not routed through the request paths: it must leave the requested
+   * layout alone, or the first swap would erase the layout it has to swap back to. An
+   * unregistered counterpart resolves to no swap rather than to the default layout,
+   * since a consumer who names a missing one should keep the layout they asked for.
    *
    * The tier is compared against the layout on screen, not against the current layout:
    * a `layout` attribute present before the element connects reaches the first render
-   * through the fallback chain of {@link resolvedName} without passing through the
-   * current layout, which stays empty until the first switch.
+   * through {@link resolvedName}'s fallback chain without passing through the current
+   * layout, which stays empty until the first switch.
    */
   applyTier(narrow: boolean, crossed: boolean): void {
     // Numpad and Numeric pin the rendered surface to their own layout, so tiering
@@ -166,19 +161,15 @@ export class LayoutState {
     const changed = this._apply(target, this._source);
     this._base = base;
     if (changed) {
-      // Announced only when a width the user crossed rearranged the keyboard under
-      // them: the one layout change with no interaction behind it, and so the only
-      // one a screen reader user has no other way of learning about. The first
-      // resolution of a keyboard that was always this narrow rearranged nothing they
-      // had seen, and a requested switch re-seats focus onto the key it followed,
-      // which announces itself; announcing either would speak over the interaction.
+      // Announced only on a width the user crossed: the one layout change with no
+      // interaction behind it. A keyboard that was always this narrow rearranged
+      // nothing they had seen, and a requested switch re-seats focus onto the key it
+      // followed, which announces itself.
       //
-      // The direction is announced rather than the layout's name: the name is an
-      // identifier the user never chose and never sees, and it would enter a
-      // translated sentence untranslated. Two texts rather than one because the live
-      // region is a plain text write, so a repeat of what it already holds is dropped
-      // - and consecutive announcements always alternate direction, since
-      // `AutoCompactController` only reports a verdict that differs from the last.
+      // The direction rather than the layout's name - an identifier the user never
+      // chose, which would enter a translated sentence untranslated. Two texts, not
+      // one: a live region speaks on change, and consecutive announcements always
+      // alternate direction.
       if (crossed) {
         this._host.announce(
           narrow

@@ -45,10 +45,10 @@ interface LayoutStateHost {
  * `{layout:base}` returns to, the layout last requested, the source that drove the
  * current one, and the tier announcement waiting on a render.
  *
- * Two entry points, deliberately distinct. `perform` is a *request* - `setLayout`
- * and the `{layout:*}` key - which validates against the registry and becomes the
- * layout to swap back to. `applyTier` is an *arrangement* the `autoCompact` width
- * observer imposes, which must leave the request alone.
+ * Two entry points, deliberately distinct. {@link perform} is a *request* -
+ * `setLayout` and the `{layout:*}` key - validated against the registry and kept as
+ * the layout to swap back to. {@link applyTier} is an *arrangement* the `autoCompact`
+ * width observer imposes, which must leave the request alone.
  */
 export default class LayoutState {
   private readonly _host: LayoutStateHost;
@@ -90,11 +90,10 @@ export default class LayoutState {
   /**
    * Takes the tier announcement waiting on a render, or `null` when none is due.
    *
-   * Held rather than announced at the swap so a request arriving in the same task can
-   * still retract it: `perform` drops it, because a text naming the arrangement a
-   * request has just replaced would tell a screen reader user the keyboard is on a
-   * layout it has left. Once handed to the announcement queue there is no taking it
-   * back, so the hand-off waits for the render the swap triggers.
+   * Held rather than queued at the swap so a request arriving in the same task can
+   * still retract it - once queued there is no taking it back, and a text naming the
+   * arrangement a request has just replaced would put a screen reader user on a
+   * layout the keyboard has left.
    */
   takePendingAnnouncement(): string | null {
     const pending = this._pendingAnnouncement;
@@ -103,10 +102,9 @@ export default class LayoutState {
   }
 
   /**
-   * Single layout-switch core shared by the public `setLayout` and the `{layout:*}`
-   * key branch of `_handleKeyAction`: normalize (trim + lowercase) -> validate
-   * against the registry (warn and bail when unregistered) -> apply -> fire
-   * `layoutChange` on a real change. Returns whether the layout changed.
+   * Requests a layout: normalize (trim + lowercase) -> validate against the registry
+   * (warn and bail when unregistered) -> apply -> fire `layoutChange` on a real
+   * change. Returns whether the layout changed.
    *
    * @param rawName Requested layout name; normalized here.
    * @param source  Who drove the switch.
@@ -142,11 +140,10 @@ export default class LayoutState {
    * returns. Called from `AutoCompactBehavior` on a frame of its own, never from
    * the observation callback.
    *
-   * Deliberately not routed through {@link perform}: this is not a request and must
-   * leave the requested layout alone, or the first swap would erase the layout it has
-   * to swap back to. An unregistered counterpart resolves to no swap rather than to
-   * the default layout, since a consumer who names a missing one should keep the
-   * layout they asked for.
+   * Deliberately not routed through {@link perform}: it must leave the requested
+   * layout alone, or the first swap would erase the layout it has to swap back to. An
+   * unregistered counterpart resolves to no swap rather than to the default layout,
+   * since a consumer who names a missing one should keep the layout they asked for.
    */
   applyTier(narrow: boolean, crossed: boolean): void {
     // Numpad and Numeric pin the rendered surface to their own layout, so tiering
@@ -168,19 +165,15 @@ export default class LayoutState {
     const changed = this._apply(target, this._source);
     this._base = base;
     if (changed) {
-      // Announced only when a width the user crossed rearranged the keyboard under
-      // them: the one layout change with no interaction behind it, and so the only
-      // one a screen reader user has no other way of learning about. The first
-      // resolution of a keyboard that was always this narrow rearranged nothing they
-      // had seen, and a requested switch re-seats focus onto the key it followed,
-      // which announces itself; announcing either would speak over the interaction.
+      // Announced only on a width the user crossed: the one layout change with no
+      // interaction behind it. A keyboard that was always this narrow rearranged
+      // nothing they had seen, and a requested switch re-seats focus onto the key it
+      // followed, which announces itself.
       //
-      // The direction is announced rather than the layout's name: the name is an
-      // identifier the user never chose and never sees, and it would enter a
-      // translated sentence untranslated. Two texts rather than one because a live
-      // region speaks on change, so a repeat of what it already holds is silent - and
-      // consecutive announcements always alternate direction, since
-      // `AutoCompactBehavior` only reports a verdict that differs from the last.
+      // The direction rather than the layout's name - an identifier the user never
+      // chose, which would enter a translated sentence untranslated. Two texts, not
+      // one: a live region speaks on change, and consecutive announcements always
+      // alternate direction.
       if (crossed) {
         this._pendingAnnouncement = narrow
           ? getText("ARIA_LAYOUT_COMPACTED", "Switched to the compact keyboard layout")

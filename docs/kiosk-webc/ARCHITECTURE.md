@@ -41,7 +41,7 @@ core/
   composition-utils.ts    Shared composition utilities (preedit text, CompositionEvent dispatch)
   auto-repeat.ts          AutoRepeater press-and-hold scheduler + BACKSPACE_AUTO_REPEAT timing curve (accelerating cadence)
   backspace-repeat-controller.ts  BackspaceRepeatController: owns press-and-hold Backspace pointer wiring, repeat timer, trailing-click suppression
-  announcement-queue.ts   AnnouncementQueue: owns the ARIA live-region text, keeping a fixed gap between writes (not between drains, so a lone announcement is written immediately)
+  announcement-queue.ts   AnnouncementQueue: owns the ARIA live-region text, keeping a fixed gap between writes so a burst is not collapsed
   auto-show-controller.ts AutoShowController: focusin/focusout-driven auto open/close with multi-instance isolation
   native-inputmode-suppression.ts  NativeInputModeSuppression: ref-counted inputmode="none" on the target, shared across instances
   physical-key-highlight-controller.ts  PhysicalKeyHighlightController: lights up the matching virtual key on physical keydown and mirrors Shift/CapsLock

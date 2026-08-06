@@ -20,11 +20,9 @@ export async function waitForRender(): Promise<void> {
 }
 
 /**
- * Wait for the live-region announcement queue to write the entry it is holding.
- *
- * The queue keeps a fixed gap between writes so assistive tech is not asked to read
- * two texts at once, so an announcement raised right after another one lands a beat
- * later rather than in the same task.
+ * Wait for the live-region announcement queue to write the entry it is holding. The
+ * queue keeps a fixed gap between writes, so an announcement raised right after
+ * another one lands a beat later rather than in the same task.
  */
 export async function waitForAnnouncement(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 150));

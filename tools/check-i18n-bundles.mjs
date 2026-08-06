@@ -18,11 +18,10 @@
  *    an orphan key is dead weight nothing will ever read.
  * 3. **Call-site coverage.** Every key a package's `src/` asks for by literal exists in
  *    that package's default bundle. `getText` takes a hardcoded English fallback and
- *    resolves with `bIgnoreKeyFallback`, so a key that was never declared returns that
- *    fallback with no warning: an English suite cannot tell it apart from a translation,
- *    and invariant 2 stays green because a key missing from the default bundle is
- *    equally missing from every locale. Only every locale except English is wrong, and
- *    only in an ARIA announcement.
+ *    resolves with `bIgnoreKeyFallback`, so an undeclared key returns that fallback with
+ *    no warning: an English suite cannot tell it apart from a translation, and invariant
+ *    2 stays green because a key missing from the default bundle is equally missing from
+ *    every locale. Every locale but English then gets untranslated text.
  *
  * Values are deliberately NOT compared: translations differ, and `{0}` placeholder
  * counts are already load-bearing in the tests that assert the rendered text.
@@ -70,13 +69,11 @@ function checkAscii(file, relative) {
  * Records every `getText("KEY"` on one line into `found`, keyed by the first site that
  * asked for it.
  *
- * Scanned rather than matched: every call names its key as a literal directly after the
- * paren, so `indexOf` reads it exactly, and working a line at a time is what makes the
- * comment guard below possible - a `getText("EXAMPLE_KEY", ...)` in a doc-block is an
- * example, not a request, and a whole-file pattern has no way to tell the two apart.
- * Calls whose key is a variable (`getText(entry[0], ...)`, `getText(i18nKey, ...)`) are
- * deliberately invisible here: their keys come from tables this cannot follow, and the
- * bundles they read are covered by the parity invariant instead.
+ * Working a line at a time is what makes the comment guard possible: a
+ * `getText("EXAMPLE_KEY", ...)` in a doc-block is an example, not a request. Calls whose
+ * key is a variable (`getText(entry[0], ...)`) are deliberately invisible here - their
+ * keys come from tables this cannot follow, and the parity invariant covers the bundles
+ * they read instead.
  *
  * @param {string} line one line of TypeScript source
  * @param {string} site `package/path:line`, recorded as where the key was first asked for

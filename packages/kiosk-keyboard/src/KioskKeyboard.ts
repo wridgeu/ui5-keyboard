@@ -144,11 +144,7 @@ export default class KioskKeyboard extends Control {
   private _nativeKbSuppression!: NativeKeyboardSuppression;
   private _autoShowBehavior!: AutoShowBehavior;
   private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
-  /**
-   * Detaches the document Escape listener for the current open period, or
-   * `null` while closed. An `AbortSignal` is one-shot, so each open mints a
-   * fresh controller; reusing an aborted one would attach nothing.
-   */
+  /** Detaches the document Escape listener of the current open period, or `null` while closed. */
   private _escapeAbort!: AbortController | null;
   /** Detaches the window blur safety net for the current press, or `null` between presses. */
   private _pressedBlurAbort!: AbortController | null;
@@ -1751,9 +1747,8 @@ export default class KioskKeyboard extends Control {
   /**
    * Queues text for the ARIA live region and drains what is due.
    *
-   * Draining here rather than only from `onAfterRendering` is what keeps a lone
-   * announcement synchronous: most of the callers below (`show`, `close`, the
-   * variant popup) change no rendered state, so no render would follow to drain it.
+   * Drained here rather than only from `onAfterRendering`: most callers (`show`,
+   * `close`, the variant popup) change no rendered state, so no render would follow.
    */
   private _announceLiveRegion(text: string): void {
     this._announcements.announce(text);
@@ -1814,9 +1809,8 @@ export default class KioskKeyboard extends Control {
    *
    * Wired as the `ShiftState` change callback, so every mutator - a `{shift}` tap,
    * the auto-release after a shifted key, a physical modifier and the reset a layout
-   * switch performs - routes through here. Only the three transitions a screen
-   * reader user cannot otherwise perceive are spoken; the intermediate states of a
-   * double-tap to Caps Lock are not.
+   * switch performs - routes through here. Three transitions speak; leaving Caps Lock
+   * does not, matching the webc twin.
    */
   private _syncShiftState(): void {
     const wasShifted = this._announcedShifted;

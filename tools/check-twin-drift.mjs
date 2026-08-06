@@ -53,13 +53,12 @@
  *   FKeyMode enum and dispatches via a UI5 target session; webc compares mode
  *   string literals and writes the resolved DOM input directly),
  *   internal/layout-state.ts <-> core/layout-state.ts (both own the base/requested
- *   layout and the source that drove the current one, but the request paths differ
- *   by design: kiosk funnels every request through one `perform` that validates
- *   against the registry up front, while webc keeps three entry points and defers
- *   validation to `resolvedName`, because its `layout` attribute can be set before
- *   `_processChildren` has populated the slot. kiosk also holds the tier
- *   announcement until the renderer's patch is done, where webc hands it to its
- *   announcement queue),
+ *   layout and the source that drove the current one, but kiosk funnels every
+ *   request through one `perform` that validates against the registry up front,
+ *   while webc keeps three entry points and defers validation to `resolvedName`
+ *   because its `layout` attribute can be set before `_processChildren` has
+ *   populated the slot; kiosk also holds the tier announcement until the renderer's
+ *   patch is done, where webc hands it straight to the announcement queue),
  *   internal/layout-fold-cache.ts <-> core/layout-fold-cache.ts (both cache the
  *   fold and dedupe its diagnostics, but kiosk keys the cache on aggregation
  *   child identity alone and logs through sap/base/Log, while webc also keys on

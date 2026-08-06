@@ -9,24 +9,17 @@ interface AnnouncementQueueHost {
 /**
  * Owns the ARIA live-region announcement queue.
  *
- * A queue (rather than a single slot) is necessary because two state changes in
- * the same task (e.g. a shift toggle and the layout swap it triggers) must each
- * be announced; assistive tech can elide an announcement if a single live region
- * is rewritten too quickly, so the queue is drained one entry per fixed interval.
- * The host forwards `announce` (queue text) and `flush` (drain), and clears the
- * in-flight timer through `teardown` on disconnect.
- *
- * The interval is enforced between writes rather than between drains, so a lone
- * announcement still reaches the live region in the same task that raised it and
- * only an announcement treading on the heels of another waits. A host that drains
- * on every `announce` therefore gets the same spacing as one that drains once per
- * render.
+ * A queue rather than a single slot: two state changes in the same task (a shift
+ * toggle and the layout swap it triggers) must each be announced, and assistive tech
+ * elides a live region rewritten too quickly. The gap is kept between writes rather
+ * than between drains, so a lone announcement still reaches the live region in the
+ * task that raised it and only one treading on another's heels waits.
  */
 export class AnnouncementQueue {
   /** Minimum gap between live-region writes so AT clients can pick each one up. */
   private static readonly _INTERVAL_MS = 120;
 
-  /** Pending live-region announcements (see class doc for why a queue). */
+  /** Pending live-region announcements, drained one per interval. */
   private readonly _queue: string[] = [];
   private _flushPending = false;
   private _timerId: ReturnType<typeof setTimeout> | null = null;
@@ -42,10 +35,7 @@ export class AnnouncementQueue {
     this._queue.push(text);
   }
 
-  /**
-   * Drains the announcement queue with a fixed inter-message delay so AT
-   * clients don't elide rapid consecutive writes to the same live region.
-   */
+  /** Writes what is due to the live region, scheduling the rest an interval apart. */
   flush(): void {
     if (this._flushPending) return;
     if (this._queue.length === 0) return;
@@ -53,12 +43,9 @@ export class AnnouncementQueue {
     this._flushPending = true;
     const writeNext = (): void => {
       this._timerId = null;
-      // A detached host drops what it was holding rather than banking it. An
-      // announcement is only meaningful at the moment it is raised, and a host can
-      // lose its node while staying alive and still raising them - a hidden UI5
-      // control keeps its event delegates - so deferring instead would let a
-      // backlog build for the whole detached period and then be read out ahead of
-      // whatever the user actually just did.
+      // A detached host drops what it was holding rather than banking it: a host can
+      // lose its node while staying alive and still raising announcements, and a
+      // backlog read out on reattach would land ahead of what the user just did.
       if (!this._host.isConnected()) {
         this._queue.length = 0;
         this._flushPending = false;

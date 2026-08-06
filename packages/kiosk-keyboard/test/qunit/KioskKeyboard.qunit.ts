@@ -514,10 +514,9 @@ QUnit.test("controls auto-target does not trigger re-render", async (assert) => 
 // ──────────────────────────────────────────────
 
 /**
- * The `AbortSignal` a listener was registered with, or `undefined` when the
- * call carried no signal. Detachment runs through `signal.abort()`, so the
- * signal is the seam a leak test has to inspect: a listener whose signal never
- * aborts is a leaked listener.
+ * The `AbortSignal` a listener was registered with, or `undefined` when the call
+ * carried none. Detachment runs through `signal.abort()`, so a listener whose signal
+ * never aborts is a leaked listener.
  */
 function signalOf(call: sinon.SinonSpyCall | undefined): AbortSignal | undefined {
   const options = call?.args[2];

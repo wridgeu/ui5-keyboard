@@ -311,9 +311,8 @@ QUnit.test("Escape still closes the keyboard on a second open", async (assert) =
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
-  // close() detaches the Escape listener by aborting its signal. A signal is
-  // one-shot, so the second show() must mint a fresh controller; reusing the
-  // aborted one attaches nothing and Escape goes dead from here on.
+  // close() aborts the Escape listener's signal. A signal is one-shot, so the second
+  // show() must mint a fresh controller; reusing the aborted one attaches nothing.
   kb.show();
   kb.close();
   kb.show();
@@ -465,9 +464,8 @@ QUnit.test("auto-show still opens on focus after an undock/re-dock cycle", async
   const kb = new KioskKeyboard({ docked: true, autoShow: true });
   await placeAndWait(kb);
 
-  // Undocking aborts the focus listeners' signal. A signal is one-shot, so
-  // re-docking must mint a fresh controller; reusing the aborted one leaves
-  // isActive() reporting true while nothing is actually attached.
+  // Undocking aborts the focus listeners' signal. A signal is one-shot, so re-docking
+  // must mint a fresh controller; reusing the aborted one attaches nothing.
   kb.setDocked(false);
   kb.setDocked(true);
 

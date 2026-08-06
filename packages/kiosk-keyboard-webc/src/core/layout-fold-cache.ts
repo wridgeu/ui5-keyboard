@@ -36,19 +36,16 @@ interface LayoutFoldCacheHost {
  * Owns the folded view of the `customLayouts` slot - the lookup maps every
  * resolution path reads - and the once-per-fault diagnostics it produces.
  *
- * Read on demand rather than assembled on invalidation: `_invalidate` is
- * suppressed until the first render completes while `_processChildren` populates
- * the slot before it, so an invalidation-driven fold would be empty for the
- * whole first frame. The slot array itself is populated by then, so reading it
- * here is correct from the first `onBeforeRendering` onward - which is what
- * makes a `<kiosk-keyboard-custom-layout>` present at connect time honoured on
- * first paint.
+ * Read on demand rather than assembled on invalidation: `_invalidate` is suppressed
+ * until the first render completes while `_processChildren` populates the slot
+ * before it, so an invalidation-driven fold would be empty for the whole first
+ * frame. The slot array is populated by then, which is what makes a
+ * `<kiosk-keyboard-custom-layout>` present at connect time honoured on first paint.
  *
- * Rebuilt only when the slotted elements change identity or one of them bumps
- * its revision, so diagnostics are emitted once per real change, not once per
- * read. The revision is read off the children rather than delivered to
- * `onInvalidation`, which a pending language change suppresses on a
- * `languageAware` host.
+ * Rebuilt only when the slotted elements change identity or one of them bumps its
+ * revision, so diagnostics are emitted once per real change, not once per read. The
+ * revision is read off the children rather than delivered to `onInvalidation`, which
+ * a pending language change suppresses on a `languageAware` host.
  */
 export class LayoutFoldCache {
   private readonly _host: LayoutFoldCacheHost;
