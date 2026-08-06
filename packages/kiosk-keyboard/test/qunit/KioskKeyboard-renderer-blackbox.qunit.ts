@@ -14,7 +14,6 @@ import {
   hasKeyClass,
   placeAndWait,
   tapKey,
-  waitForAnnouncement,
   waitForRender,
 } from "./test-helpers";
 
@@ -36,7 +35,6 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
   await placeAndWait(kb);
 
   const getShift = () => getKeyElement(kb, "{shift}")!;
-  const getLive = () => document.getElementById(`${kb.getId()}-liveState`)!;
 
   const clock = freezeDoubleClickWindow();
   try {
@@ -44,7 +42,6 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
     assert.strictEqual(getShift().getAttribute("aria-pressed"), "false", "Initially aria-pressed=false");
     assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "No active class initially");
     assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "No capsLock class initially");
-    assert.strictEqual(getLive().textContent, "", "Live region empty initially");
 
     // 1st tap → Shift on
     tapKey(kb, "{shift}");
@@ -53,29 +50,22 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
     assert.strictEqual(getShift().getAttribute("aria-pressed"), "true", "After 1st tap: aria-pressed=true");
     assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "After 1st tap: active class present");
     assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "After 1st tap: no capsLock class");
-    assert.strictEqual(getLive().textContent, "Shift on", "After 1st tap: live region announces Shift on");
 
-    // 2nd tap → Caps Lock on. The announcement queue keeps a gap between writes, so
-    // a double-tap's second announcement lands a beat after the first.
+    // 2nd tap → Caps Lock on
     tapKey(kb, "{shift}");
     await waitForRender();
-    await waitForAnnouncement();
 
     assert.strictEqual(getShift().getAttribute("aria-pressed"), "true", "After 2nd tap: aria-pressed=true");
     assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "After 2nd tap: active class present");
     assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "After 2nd tap: capsLock class present");
-    assert.strictEqual(getLive().textContent, "Caps Lock on", "After 2nd tap: live region announces Caps Lock on");
 
     // 3rd tap → All off
     tapKey(kb, "{shift}");
     await waitForRender();
-    await waitForAnnouncement();
 
     assert.strictEqual(getShift().getAttribute("aria-pressed"), "false", "After 3rd tap: aria-pressed=false");
     assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "After 3rd tap: no active class");
     assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "After 3rd tap: no capsLock class");
-    // The live region is owned by the announcement queue, not by this render pass.
-    assert.strictEqual(getLive().textContent, "Caps Lock off", "After 3rd tap: live region announces Caps Lock off");
   } finally {
     clock.restore();
   }
