@@ -219,7 +219,7 @@ QUnit.test("Announcements raised while the keyboard has no DOM are dropped, not 
   kb.destroy();
 });
 
-QUnit.test("Two announcements in one task are spoken in turn, not collapsed", async (assert) => {
+QUnit.test("Open and close announcements are spoken in turn, not collapsed", async (assert) => {
   const kb = new KioskKeyboard({ docked: true });
   await placeAndWait(kb);
 
@@ -232,31 +232,18 @@ QUnit.test("Two announcements in one task are spoken in turn, not collapsed", as
 
   assert.strictEqual(liveRegion(), "Virtual keyboard opened", "the first announcement holds the region");
 
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await waitForAnnouncement();
   assert.strictEqual(liveRegion(), "Virtual keyboard closed", "the second follows once the first has been read");
 
-  kb.destroy();
-});
-
-QUnit.test("Live region announces open and close", async (assert) => {
-  const kb = new KioskKeyboard({ docked: true });
-  await placeAndWait(kb);
-
-  const sId = kb.getId();
-  let liveRegion = document.getElementById(`${sId}-liveState`);
-  assert.ok(liveRegion, "Live region element exists");
-
+  // Far enough behind the last write that the gap is already spent, so this one
+  // reaches the region in the task that raised it.
+  await waitForAnnouncement();
   kb.show();
-  liveRegion = document.getElementById(`${sId}-liveState`);
-  assert.strictEqual(liveRegion!.textContent, "Virtual keyboard opened", "Announces open");
-
-  // Far enough apart that the queue writes each one straight away; the burst case
-  // is covered above.
-  await new Promise((resolve) => setTimeout(resolve, 200));
-
-  kb.close();
-  liveRegion = document.getElementById(`${sId}-liveState`);
-  assert.strictEqual(liveRegion!.textContent, "Virtual keyboard closed", "Announces close");
+  assert.strictEqual(
+    liveRegion(),
+    "Virtual keyboard opened",
+    "an announcement clear of the gap is written straight away",
+  );
 
   kb.destroy();
 });

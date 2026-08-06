@@ -1875,7 +1875,7 @@ describe("kiosk-keyboard", () => {
       // The component throttles announcements; wait long enough for at least one to land.
       await new Promise((r) => setTimeout(r, 60));
       const region = el.shadowRoot!.querySelector('[role="status"][aria-live="polite"]') as HTMLElement;
-      expect(region.textContent ?? "", "shift-on announcement appears in live region").to.match(/shift|on/i);
+      expect(region.textContent ?? "", "shift-on announcement appears in live region").to.equal("Shift on");
     });
 
     it("releasing Caps Lock announces caps-lock-off, not shift-off", async () => {
