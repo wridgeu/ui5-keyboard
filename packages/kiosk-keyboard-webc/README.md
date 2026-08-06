@@ -21,7 +21,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **Standards-based custom element** (`<kiosk-keyboard>`) usable in any framework: plain HTML, React, Vue, Angular
 - **SAP theming**: Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
 - **UI5 app integration**: consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
-- **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana, Arabic, Korean Hangul, Spanish, Numeric, Numpad, Special, F-keys, Navigation. Composite variants (e.g., QWERTY + F-key row) are trivial to compose from building block rows.
+- **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana (plus a narrow-width compact form), Arabic, Korean Hangul, Spanish, Numeric, Numpad, Special, F-keys, Navigation. Composite variants (e.g., QWERTY + F-key row) are trivial to compose from building block rows.
 - **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`, `ko` → `ko-hangul`, `es` → `qwerty-es`). Slot a `<kiosk-keyboard-custom-layout name="ja-kana" locales="ja">` into an element to switch the Japanese default to kana input for that instance.
 - **Shift / Caps Lock**: single-click for one-shot shift, double-click for caps lock
 - **Docked mode**: fixed-position keyboard at bottom of viewport with slide animation
@@ -85,7 +85,7 @@ If your app also uses UI5 Web Components directly (e.g., `@ui5/webcomponents` bu
 
 ### Tree-Shaking
 
-The package declares a `sideEffects` field in `package.json` so that bundlers (Vite/Rollup, webpack) can correctly handle side-effectful modules during tree-shaking (see [Rollup side effects](https://rollupjs.org/configuration-options/#treeshake-modulesideeffects)). Only the genuinely side-effectful modules are listed: the component entry that registers the custom element (`KioskKeyboard`), theme/i18n asset registration (`Assets`, `generated/**`), and the convenience bundle entries (`bundle.esm`, `kiosk-keyboard.bundle`).
+The package declares a `sideEffects` field in `package.json` so that bundlers (Vite/Rollup, webpack) can correctly handle side-effectful modules during tree-shaking (see [Rollup side effects](https://rollupjs.org/configuration-options/#treeshake-modulesideeffects)). Only the genuinely side-effectful modules are listed: the component entries that register the custom elements (`KioskKeyboard`, `CustomLayout`), theme/i18n asset registration (`Assets`, `generated/**`), and the convenience bundle entries (`bundle.esm`, `kiosk-keyboard.bundle`).
 
 > [!NOTE]
 > All built-in layouts and their composition middleware (kana, Hangul) are pure data/factory modules that the registries (`core/layout-registry`, `core/middleware-registry`) statically import and reference. They are therefore always included in the bundle through normal tree-shaking, so no `sideEffects` marker is required.
@@ -209,9 +209,12 @@ The demo app in this repository uses Path A (CEM-driven) for the `kiosk-keyboard
 
 For full control over the UI5 metadata surface, create a manual bridge using `WebComponent.extend()`. This gives explicit property/event/method/association mappings and typed UI5 events. Since UI5 >= 1.138, camelCase event names in `metadata.events` auto-convert to kebab-case DOM events (e.g. `keyPress` maps to `key-press`), so explicit `mapping: { to: "..." }` on events is not needed.
 
+> [!IMPORTANT]
+> The bridge below binds `tag: "kiosk-keyboard"`, the canonical unscoped name. The module-system import registers that tag **only if scoping is off** (`pluginOptions.webcomponents.scoping: false`) on **both** the `ui5-tooling-modules` task and its middleware - the configuration in 3a above does not set it. With scoping left on, the middleware intercepts the import and registers `kiosk-keyboard-<hash>` instead; `customElements.get("kiosk-keyboard")` then finds nothing and the element stays unupgraded, with no error. Either turn scoping off, or load `dist/kiosk-keyboard.bundle.js` from a `<script>` tag outside `/resources/` so it registers the canonical tag without interception. See [CONSUMPTION.md](../../docs/kiosk-webc/CONSUMPTION.md#tag-scoping-and-the-manual-bridge).
+
 ```ts
 import WebComponent from "sap/ui/core/webc/WebComponent";
-import "kiosk-keyboard-webc/bundle";
+import "kiosk-keyboard-webc/bundle"; // requires scoping: false (see note above)
 
 const KioskKeyboardWebc = WebComponent.extend("my.control.KioskKeyboard", {
   metadata: {
@@ -275,7 +278,7 @@ import type {
 
 For most applications, prefer `kiosk-keyboard-webc/bundle`. The bare `kiosk-keyboard-webc` entry point is also supported for advanced setups when paired with `kiosk-keyboard-webc/Assets`. Both register `<kiosk-keyboard-custom-layout>` alongside `<kiosk-keyboard>`; `kiosk-keyboard-webc/CustomLayout` is the subpath for the element class on its own.
 
-Customization is per element via the `customLayouts` slot and the `defaultVariants` property. The remaining static methods on `KioskKeyboard` are read-only inspectors (`getRegisteredLayout`, `getRegisteredLayoutNames`, `isBuiltInLayout`, `isSecondaryLayout`, `getLocaleLayout`) plus the global `setI18nResolver`. Import the class and call them directly:
+Customization is per element via the `customLayouts` slot and the `defaultVariants` property. The static methods on `KioskKeyboard` are read-only inspectors (`getRegisteredLayout`, `getRegisteredLayoutNames`, `isBuiltInLayout`, `isSecondaryLayout`, `getLocaleLayout`), the global `setI18nResolver`, and `composeLayout` for splicing rows together. Import the class and call them directly:
 
 ```js
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
@@ -376,7 +379,7 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Static API
 
-The static surface is read-only. Customization is per element via the `customLayouts` slot (see [Custom Layouts](#custom-layouts)).
+The static surface carries no layout registration; custom layouts come from the `customLayouts` slot (see [Custom Layouts](#custom-layouts)).
 
 | Method                                     | Description                                                                                                            |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
@@ -386,6 +389,7 @@ The static surface is read-only. Customization is per element via the `customLay
 | `KioskKeyboard.isSecondaryLayout(name)`    | Checks if a layout is secondary (non-alphabetic).                                                                      |
 | `KioskKeyboard.getLocaleLayout()`          | Returns the layout for the active UI5 Web Components locale (configured language, falling back to the browser locale). |
 | `KioskKeyboard.setI18nResolver(fn)`        | Sets a custom i18n resolver callback.                                                                                  |
+| `KioskKeyboard.composeLayout(...sources)`  | Splices rows from built-in layout names and row arrays, in order, into one layout definition.                          |
 
 `KioskKeyboard.DOM` is a supported read-only DOM hook contract for tests and DOM assertions. Prefer it over hard-coded shadow selectors. Styling customizations should still use the documented host attributes and public `--kiosk-keyboard-*` CSS custom properties.
 
@@ -422,7 +426,7 @@ The contract is intentionally read-only. It is not the styling API; continue to 
 | `qwerty-es`       | Spanish QWERTY with accented vowels and ñ                          |
 
 Combined variants (e.g., QWERTY + F-key row) are not built-in. They are
-trivial compositions - see [Layout Composition](#layout-composition) above.
+trivial compositions - see [Layout Composition](#layout-composition) below.
 
 ## Custom Layouts
 
@@ -676,7 +680,7 @@ The `defaultVariants` tier only ever adds; it has no suppression spelling. Turn 
 
 The five non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `ja-kana-compact`, `arabic`, `ko-hangul`) resolve the built-in table to nothing, so `accent-variants` adds no popups there; supply a `variants` table on a custom layout (or a `defaultVariants` table) to opt one back in, and because there is no built-in tier to merge onto, those tiers stand alone. That exclusion list is only the shipped default for those built-ins; it never locks you out. A **custom** layout whose Latin-looking keys should _not_ surface accent popups (a transliteration IME, say) opts out with `suppress="Variants"`, which discards `defaultVariants` along with the built-in tier. Action, modifier, and space keys never take table variants even when a table is keyed to their value.
 
-`LATIN_DIACRITIC_VARIANTS` is exported from the `kiosk-keyboard-webc/variants` subpath for inspection (to read what the defaults are, or to build a table from them); merging means you no longer need to spread it to extend the defaults.
+`LATIN_DIACRITIC_VARIANTS` is exported from the `kiosk-keyboard-webc/variants` subpath for inspection (to read what the defaults are, or to build a table from them). A custom table only needs the base letters it changes.
 
 Declaring a variant table while `accent-variants` is off applies nothing, and logs a warning saying so.
 
@@ -1204,7 +1208,7 @@ my-wrapper::part(key) {
 
 ## Public CSS Custom Properties
 
-The documented `--kiosk-keyboard-*` variables are the supported styling API. Internal `--_kiosk-keyboard-*` aliases and raw shadow DOM class names remain private implementation details. For tests and DOM assertions, use the stable `KioskKeyboard.DOM` contract instead of hard-coded selectors. This package currently expects customization through host attributes and public CSS variables rather than shadow-internal selectors.
+The documented `--kiosk-keyboard-*` variables are the supported styling API. Internal `--_kiosk-keyboard-*` aliases and raw shadow DOM class names remain private implementation details. For tests and DOM assertions, use the stable `KioskKeyboard.DOM` contract instead of hard-coded selectors.
 
 For the rationale behind default values, breakpoint thresholds, and scaling factors, see the [CSS Sizing Reference](../../docs/shared/CSS-SIZING-REFERENCE.md).
 
