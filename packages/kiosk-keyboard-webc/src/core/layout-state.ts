@@ -132,7 +132,7 @@ export class LayoutState {
   /**
    * Applies the `autoCompact` width tier: the requested layout's compact counterpart
    * while the keyboard is too narrow for it, the requested layout itself once the room
-   * returns. Called from {@link AutoCompactController} on a frame of its own, never
+   * returns. Called from `AutoCompactController` on a frame of its own, never
    * from the observation callback.
    *
    * Deliberately not routed through the request paths: this is not a request and must

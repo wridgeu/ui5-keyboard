@@ -137,7 +137,8 @@ export default class KioskKeyboard extends Control {
   /** The live region's current text, so a re-render re-emits it instead of clearing it. */
   private _liveRegionText!: string;
   /** The shift/caps pair the last announcement described, so only transitions speak. */
-  private _announcedShiftState!: { shifted: boolean; capsLock: boolean };
+  private _announcedShifted!: boolean;
+  private _announcedCapsLock!: boolean;
   private _middleware!: CompositionMiddleware | null;
   private _keyboardTypeSource!: KeyboardTypeSource;
   private _nativeKbSuppression!: NativeKeyboardSuppression;
@@ -833,7 +834,8 @@ export default class KioskKeyboard extends Control {
   override init(): void {
     KioskKeyboard._instances.add(this);
     this._liveRegionText = "";
-    this._announcedShiftState = { shifted: false, capsLock: false };
+    this._announcedShifted = false;
+    this._announcedCapsLock = false;
     this._announcements = new AnnouncementQueue({
       isConnected: () => this.getDomRef() !== null,
       setLiveRegionText: (text) => this._setLiveRegionText(text),
@@ -1350,7 +1352,7 @@ export default class KioskKeyboard extends Control {
     // the new constraint context.
     this._layoutState.clearUserOverride();
     // End any in-progress composition so the next key resolves against the new
-    // effective layout (mirrors the layout state's own switch handling).
+    // effective layout, the way a layout switch does.
     this._endComposition();
     // A constraint pins the rendered surface and suppresses the tier, so lifting one
     // re-opens the tier question for the layout that surfaces from under it.
@@ -1817,16 +1819,16 @@ export default class KioskKeyboard extends Control {
    * double-tap to Caps Lock are not.
    */
   private _syncShiftState(): void {
-    const { shifted: wasShifted, capsLock: wasCapsLock } = this._announcedShiftState;
-    const shifted = this._shiftState.isShifted;
-    const capsLock = this._shiftState.isCapsLock;
-    this._announcedShiftState = { shifted, capsLock };
+    const wasShifted = this._announcedShifted;
+    const wasCapsLock = this._announcedCapsLock;
+    this._announcedShifted = this._shiftState.isShifted;
+    this._announcedCapsLock = this._shiftState.isCapsLock;
 
-    if (!wasCapsLock && capsLock) {
+    if (!wasCapsLock && this._announcedCapsLock) {
       this._announceLiveRegion(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
-    } else if (!wasShifted && shifted && !capsLock) {
+    } else if (!wasShifted && this._announcedShifted && !this._announcedCapsLock) {
       this._announceLiveRegion(getText("ARIA_SHIFT_ON", "Shift on"));
-    } else if (wasShifted && !wasCapsLock && !shifted && !capsLock) {
+    } else if (wasShifted && !wasCapsLock && !this._announcedShifted && !this._announcedCapsLock) {
       this._announceLiveRegion(getText("ARIA_SHIFT_OFF", "Shift off"));
     }
 
