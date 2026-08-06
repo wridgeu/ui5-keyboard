@@ -974,7 +974,7 @@ manager.register("Mod+S", otherHandler); // logs warning, saveHandler keeps prio
 // Strict: throw on conflict (prevents accidental duplicates)
 manager.register("Mod+S", saveHandler, { conflictBehavior: ConflictBehavior.Error });
 manager.register("Mod+S", otherHandler, { conflictBehavior: ConflictBehavior.Error });
-// → throws Error("Hotkey "Control+S" conflicts with ...")
+// → throws Error('Hotkey "Control+S" is already registered in scope "__global__" (id: hk_N).')
 
 // Replace: new registration replaces existing (useful for overriding defaults)
 manager.register("Mod+S", saveHandler);
