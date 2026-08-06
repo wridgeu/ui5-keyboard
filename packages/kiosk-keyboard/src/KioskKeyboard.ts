@@ -1403,7 +1403,7 @@ export default class KioskKeyboard extends Control {
    */
   setKeyboardType(type: KeyboardType): this {
     const previous = this.getKeyboardType();
-    // Route through _setKeyboardTypeSource so the `_layoutSource` reset
+    // Route through _setKeyboardTypeSource so the layout-source reset
     // (webc parity, see _getResolvedLayout) fires for explicit changes too,
     // not just for auto-detect.
     this._setKeyboardTypeSource("explicit");
@@ -1432,7 +1432,7 @@ export default class KioskKeyboard extends Control {
    */
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
-    // Route through _setKeyboardTypeSource so the `_layoutSource` reset fires.
+    // Route through _setKeyboardTypeSource so the layout-source reset fires.
     this._setKeyboardTypeSource("unset");
     this.setProperty("keyboardType", KeyboardType.Full);
     if (KeyboardType.Full !== sPrevious) {

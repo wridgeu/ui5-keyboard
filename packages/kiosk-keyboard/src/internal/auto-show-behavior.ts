@@ -118,7 +118,7 @@ export default class AutoShowBehavior extends BaseObject {
       // Only (re)apply detection when the type actually changes. Re-running on
       // every focusin (e.g. refocusing the same input to reposition the caret)
       // would call _setKeyboardTypeSource, which resets the user-driven
-      // {layout:*} override (_layoutSource -> "external") and reverts a layout the
+      // {layout:*} override (LayoutState source -> "external") and reverts a layout the
       // user explicitly chose. Mirrors the webc focusin guard
       // (`if (detected !== this.keyboardType)`).
       if (detected !== previous) {
