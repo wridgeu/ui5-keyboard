@@ -108,7 +108,9 @@ See [Project Structure](./README.md#project-structure) in the root README for th
 
 ### Dependency Layout
 
-Shared test/build tooling (`typescript`, `rimraf`, `@playwright/test`, `ui5-test-runner` + `puppeteer` + `start-server-and-test` for the UI5 QUnit suites, and the patched `@ui5/webcomponents-tools` / `less-openui5` toolchain) is declared **once at the repository root** and resolved by every workspace via npm hoisting, which keeps a single source of truth for versions. Each package declares only the tooling unique to it (e.g. `vite` / `vitest` and `@web/test-runner` for the web component). The e2e/visual suites use `@playwright/test` directly; the UI5 QUnit suites are harvested by `ui5-test-runner` using its puppeteer backend (chromium only: its bundled chromium is fetched on `npm install`, and unlike the playwright backend it does not try to install firefox/webkit, which hangs on CI). Because of this, always run `npm install` at the root after switching to a branch that changes dependencies; a workspace's own `node_modules` is not self-contained.
+Only `typescript`, `puppeteer` and the patched `less-openui5` live exclusively at the repository root. Everything else a package invokes from its own scripts is re-declared in that workspace at the same pinned version (`rimraf`, `@playwright/test`, `ui5-test-runner`, `start-server-and-test`, `@ui5/webcomponents-tools`), so the package is honest about what it runs; the root pins the same versions to keep them aligned, and npm hoisting still resolves a single installed copy. Tooling unique to one package (e.g. `vite` / `vitest` and `@web/test-runner` for the web component) is declared only there.
+
+The e2e/visual suites use `@playwright/test` directly; the UI5 QUnit suites are harvested by `ui5-test-runner` using its puppeteer backend (chromium only: its bundled chromium is fetched on `npm install`, and unlike the playwright backend it does not try to install firefox/webkit, which hangs on CI). Always run `npm install` at the root after switching to a branch that changes dependencies; a workspace's own `node_modules` is not self-contained.
 
 ## Build Pipelines
 

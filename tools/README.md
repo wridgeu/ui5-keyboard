@@ -105,14 +105,16 @@ Requires `npm_execpath` (set by npm for every script it runs), so it must be run
 Drift check for the deliberately hand-duplicated kiosk twin modules
 (`packages/kiosk-keyboard/src` vs `packages/kiosk-keyboard-webc/src`).
 
-- Compares an explicit manifest of 24 pairs (all 16 `layouts/*` files plus the
-  `grapheme`, `auto-repeat`, `shift-state`, `composition-utils`, `key-token`,
-  `key-action-meta`, `layout-constraint`, and `latin-variants` core helpers)
-  after normalization: comments stripped
-  (string-aware), relative `.js` import suffixes removed, whitespace collapsed
-  outside string literals. Nothing else is equated: a normalizer that rewrites a
-  line also hides real drift on it, so the set stays limited to differences the
-  two packaging conventions force.
+- Compares an explicit manifest of 30 pairs (19 `layouts/*` files plus 11 core
+  helpers: `grapheme`, `auto-repeat`, `shift-state`, `composition-utils`,
+  `key-token`, `key-action-meta`, `layout-constraint`, `latin-variants`,
+  `announcement-queue`, `layout-meta`, and `custom-layout-fold`) after
+  normalization: comments stripped (string-aware), relative `.js` import
+  suffixes removed, each line trimmed and blank lines dropped. Intra-line
+  spacing is left to oxfmt. Nothing else is equated: a normalizer that rewrites
+  a line also hides real drift on it, so the set stays limited to differences
+  the two packaging conventions force. The count is pinned by
+  `EXPECTED_PAIR_COUNT`, so the manifest and the number move together.
 - Fails with a unified-diff-style report naming the drifted pair; a missing
   file or a shrunken manifest is a hard failure, never a silent skip.
 - Intentionally divergent or framework-adapted modules (e.g.
@@ -173,8 +175,8 @@ Run via `npm run test:dom-contract` (also part of `check:base` and CI).
 
 ## `check-i18n-bundles.mjs`
 
-Two invariants over `src/i18n/messagebundle*.properties` in both keyboard packages,
-neither of which is visible in a diff and both of which fail silently at runtime.
+Three invariants over `src/i18n/messagebundle*.properties` in both keyboard packages,
+none of which is visible in a diff and all of which fail silently at runtime.
 
 - **ASCII only.** Non-ASCII is written as `\uXXXX`. A raw UTF-8 value reads correctly
   in an editor and decodes to mojibake wherever the bundle is not served as UTF-8:
@@ -185,11 +187,35 @@ neither of which is visible in a diff and both of which fail silently at runtime
 - **Key parity.** Each locale bundle declares exactly the keys of its package's
   default bundle. A missing key silently serves the untranslated default; an orphan
   key is dead weight.
+- **Call-site coverage.** Every key a package's `src/` asks for by literal exists in
+  the default bundle. Key parity cannot catch this: `getText` takes a hardcoded
+  fallback and `bIgnoreKeyFallback`, so a key absent from every bundle returns
+  plausible text rather than failing. The scan reads literal `getText("KEY"` calls
+  over `src/` and skips `generated/`; a key built from a variable is invisible to it.
 
 Values are not compared: translations differ by definition, and the placeholder
 counts that matter are already asserted by the tests over the rendered text.
 
 Run via `npm run test:i18n-bundles` (also part of `check:base` and CI).
+
+## `check-port-free.mjs`
+
+Guards the QUnit ports before the suite starts. With a foreign listener already on
+the port, `start-server-and-test` sees the URL respond, skips spawning its own
+server, and runs the whole suite green against whatever code that listener is
+serving. Each package's `test:qunit` prefixes the check: `hotkeys` on 8081,
+`kiosk-keyboard` on 8082.
+
+- The probe **connects** rather than binds. "Can I bind this port?" is a different
+  question: a bind can succeed against a listener holding `SO_REUSEADDR`/
+  `SO_REUSEPORT`, while a connect answers the question that actually matters -
+  is something already answering here?
+- Both loopback hosts are probed. `@ui5/server` binds `127.0.0.1` only, but
+  `localhost` resolution order can put `::1` first, so a foreign listener bound to
+  `::1` alone is hijackable while `127.0.0.1` is genuinely free.
+
+`check-port-free.test.mjs` covers it, and is picked up by `test:lint-plugins`
+(`node --test tools/*.test.mjs`).
 
 ## `copy-license.mjs`
 

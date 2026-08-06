@@ -12,7 +12,7 @@ KioskBoard addresses a related need with `keysEnterCanClose`, which at least sig
 
 ### No "Submit" action for TextArea
 
-`_handleEnter()` correctly matches physical keyboard behavior:
+`TargetInputSession.handleEnter()` (`internal/target-input-session.ts`) correctly matches physical keyboard behavior:
 
 - **`<input>`**: fires `change` event (submit signal)
 - **`<textarea>`**: inserts `\n` (newline)

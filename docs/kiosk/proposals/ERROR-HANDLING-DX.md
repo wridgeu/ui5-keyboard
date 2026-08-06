@@ -16,17 +16,23 @@ policy for better developer experience (DX).
 
 ### 1) Throws
 
-- No explicit `throw` in kiosk production source (`packages/kiosk-keyboard/src`).
+Two, neither of them a consumer-facing contract violation, so section A's policy is still unimplemented:
+
+- `internal/layout-registry.ts` - invariant guard: the built-in default layout is missing from the registry.
+- `internal/key-token.ts` - `assertNever` exhaustiveness guard over `KeyAction`.
 
 ### 2) Logs (mostly `Log.warning`)
 
-- `packages/kiosk-keyboard/src/KioskKeyboard.ts`
-  - unknown layout name in `setLayout(...)` logs warning and no-ops
+- `packages/kiosk-keyboard/src/internal/layout-state.ts`
+  - unknown layout name in a layout request logs warning and no-ops
+- `packages/kiosk-keyboard/src/internal/controls-delegation-controller.ts`
   - unresolved `controls` IDs log warnings
+- `packages/kiosk-keyboard/src/internal/fkey-controller.ts`
   - unsupported native F-key dispatch logs warning
 - `packages/kiosk-keyboard/src/internal/layout-registry.ts`
-  - invalid layout names/definitions log warning and no-op
-  - invalid locale mapping and unknown mapped layout log warning
+  - a layout **name** that is not a non-empty string logs warning and no-ops. The layout and locale maps are sealed at module load with no mutation API, and locale resolution is silent: an unmatched locale falls through to `DEFAULT_LAYOUT`.
+- `packages/kiosk-keyboard/src/internal/layout-fold-cache.ts`
+  - custom-layout definition diagnostics are reported through `report()`
 
 ### 3) Silent fallback / defensive catch
 
