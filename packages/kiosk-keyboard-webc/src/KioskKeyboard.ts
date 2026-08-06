@@ -30,7 +30,7 @@ import { getMiddlewareFactory } from "./core/middleware-registry.js";
 import { isValidVariantTable } from "./core/custom-layout-fold.js";
 import { LayoutFoldCache } from "./core/layout-fold-cache.js";
 import { LayoutState, type FocusAnchor } from "./core/layout-state.js";
-import { type ICustomLayout } from "./CustomLayout.js";
+import type { ICustomLayout } from "./CustomLayout.js";
 import slot from "@ui5/webcomponents-base/dist/decorators/slot-strict.js";
 import type { Slot } from "@ui5/webcomponents-base/dist/UI5Element.js";
 import {

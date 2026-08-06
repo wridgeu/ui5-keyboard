@@ -71,12 +71,12 @@ function checkAscii(file, relative) {
  * asked for it.
  *
  * Scanned rather than matched: every call names its key as a literal directly after the
- * paren, so `indexOf` reads it exactly, and a line-comment guard falls out for free -
- * a `getText("EXAMPLE_KEY", ...)` in a doc-block is an example, not a request, and a
- * pattern has no way to tell the two apart. Calls whose key is a variable
- * (`getText(entry[0], ...)`, `getText(i18nKey, ...)`) are deliberately invisible here:
- * their keys come from tables this cannot follow, and the bundles they read are covered
- * by the parity invariant instead.
+ * paren, so `indexOf` reads it exactly, and working a line at a time is what makes the
+ * comment guard below possible - a `getText("EXAMPLE_KEY", ...)` in a doc-block is an
+ * example, not a request, and a whole-file pattern has no way to tell the two apart.
+ * Calls whose key is a variable (`getText(entry[0], ...)`, `getText(i18nKey, ...)`) are
+ * deliberately invisible here: their keys come from tables this cannot follow, and the
+ * bundles they read are covered by the parity invariant instead.
  *
  * @param {string} line one line of TypeScript source
  * @param {string} site `package/path:line`, recorded as where the key was first asked for

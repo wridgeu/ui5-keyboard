@@ -139,7 +139,7 @@ export default class LayoutState {
   /**
    * Applies the `autoCompact` width tier: the requested layout's compact counterpart
    * while the keyboard is too narrow for it, the requested layout itself once the room
-   * returns. Called from {@link AutoCompactBehavior} on a frame of its own, never from
+   * returns. Called from `AutoCompactBehavior` on a frame of its own, never from
    * the observation callback.
    *
    * Deliberately not routed through {@link perform}: this is not a request and must
