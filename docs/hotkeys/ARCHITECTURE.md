@@ -101,9 +101,10 @@ Target-scoped registrations use `event.composedPath()` for membership checks ins
 
 1. **Active scope pass**: iterate `composedPath()` from index 0 (innermost) outward. For each node, check if it has target-scoped registrations in the active scope's bucket. The first (innermost) match wins.
 2. **Global scope pass**: only if no active-scope target matched and active scope is not `GLOBAL_SCOPE`.
-3. **Skip-reason pass**: for unhandled tracking, iterate off-path targets whose key combo matches the event and record `TargetMismatch`.
+3. **Callback-target pass**: only if neither element-target pass matched. Callback targets live in their own bucket and are resolved lazily by calling the callback; one that returns `null`, throws, or resolves to a node outside the path is skipped.
+4. **Skip-reason pass**: for unhandled tracking, iterate off-path targets whose key combo matches the event and record `TargetMismatch`.
 
-For nested targets with the same key, only the **innermost** matching target fires.
+For nested **element** targets with the same key, only the **innermost** matching target fires. Callback targets are iterated in registration order and never beat an element target, however deeply nested the callback's node turns out to be.
 
 Registrations within each scope are matched in FIFO order (first registered, first matched).
 
@@ -226,12 +227,12 @@ Pressing Shift+4 produces `event.key = "$"`, but `event.code = "Digit4"`. The co
 
 `isInputElement(target)` determines whether an event target is an editable text field. It returns `true` for:
 
-- `<input>` elements with text-like types: text, password, email, number, search, tel, url, date, datetime-local, month, time, week
+- `<input>` elements with text-like types that are not `readonly`: text, password, email, number, search, tel, url, date, datetime-local, month, time, week
 - `<textarea>` elements
 - `<select>` elements
 - Any element with `contentEditable` set (checked via `element.isContentEditable`, which correctly handles inherited values)
 
-It returns `false` for button-like input types (button, submit, reset, checkbox, radio, etc.), since these do not accept text input.
+It returns `false` for button-like input types (button, submit, reset, checkbox, radio, etc.) and for `readonly` text inputs, since neither accepts typed text - a hotkey should still fire there.
 
 ### Smart Auto Mode
 
@@ -329,19 +330,25 @@ packages/hotkeys/
     RegistrationGroup.ts Scoped batch registration with auto-cleanup
     KeyStateTracker.ts   Held-key state tracking
     HotkeyRecorder.ts    Keyboard shortcut recorder
-    validate.ts          Validation + browser/SAP blocklists
     types.ts             All interfaces and type definitions
-    constants.ts         Alias maps, display symbols, normalization
-    parse.ts             Hotkey string parsing
-    match.ts             KeyboardEvent matching
-    internal/dom.ts      Input element detection
-    platform.ts          Platform detection and Mod resolution
+    validate.ts          Validation + browser/SAP blocklists (stable consumer import)
+    constants.ts         Alias maps, display symbols, normalization (stable consumer import)
+    parse.ts             Hotkey string parsing (stable consumer import)
+    match.ts             KeyboardEvent matching (stable consumer import)
+    platform.ts          Platform detection and Mod resolution (stable consumer import)
     format.ts            Display formatting helper (stable consumer import)
     internal/
+      types.ts             Internal type definitions
+      validate.ts          Validation implementation
+      constants.ts         Alias/symbol map implementation
+      parse.ts             Hotkey string parsing implementation
+      match.ts             KeyboardEvent matching implementation
+      platform.ts          Platform detection implementation
+      format.ts            Display formatting implementation
+      dom.ts               Input element detection
       SequenceManager.ts   Multi-key sequence matching
       event-dispatcher.ts  Centralized DOM listener + 7-step pipeline
       dispatch-core.ts     Internal dispatch helpers
-      format.ts            Display formatting implementation
       internal-token.ts    Runtime instantiation guard symbol
       scope.ts             Scope string resolution and validation
       skip-reason.ts       Internal skip-reason models
