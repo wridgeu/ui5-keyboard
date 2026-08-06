@@ -10,12 +10,13 @@ The keyboard uses `container-type: inline-size` on its root element with `contai
 
 ### Width Breakpoints
 
-| Breakpoint        | What Changes                                                             |
-| ----------------- | ------------------------------------------------------------------------ |
-| `<=30rem` (480px) | Key font size capped at `1rem`                                           |
-| `<=20rem` (320px) | Key font size capped at `0.875rem`, inline padding reduced to `0.125rem` |
+| Breakpoint        | What Changes                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| `<=30rem` (480px) | Key font size capped at `1rem`                                                           |
+| `<=22rem` (352px) | Row gap capped at `0.25rem`                                                              |
+| `<=20rem` (320px) | Row gap capped at `0.125rem`, key font size capped at `0.875rem`, inline padding reduced |
 
-Both packages ship these breakpoints identically. No breakpoint reflows a row; see below.
+Every cell above is a `min()` cap on a custom property, so a smaller consumer value survives and only larger ones clamp; the gap caps are skipped for the numpad. Both packages ship these breakpoints identically. No breakpoint reflows a row; see below.
 
 ### Rows: Choose the Arrangement, Don't Reflow It
 
@@ -225,9 +226,7 @@ At 320px, 6 tool keys in a row are cramped.
 
 ### The Solution
 
-Since all keys in `toolRow` use `{fkey:...}` values, `classifyRow()` marks the row as `data-row-kind="fkey"`. That attribute is a styling hook only; the component ships no wrapping rule for it, so the row lays out 1x6 on a single line. To wrap it 2x3 at narrow widths, add the custom CSS rule below (1/3 width).
-
-If the row contains a mix of key types (not all fkeys or all nav keys), `classifyRow()` returns `undefined` and no `data-row-kind` is set. In that case, add a custom CSS rule targeting the row by position or a custom `data-*` attribute:
+`classifyRow()` sets `data-row-kind="fkey"` only when every key is a numbered function key (`F1`, `F2`, ...), and `"nav"` only when every key is a known navigation key. `toolRow` uses `{fkey:...}` values, but `Cut`/`Copy`/`Paste`/`Undo`/`Redo`/`Find` are none of those, so the row classifies as `undefined` and carries no `data-row-kind`. Target it by position or by a custom `data-*` attribute instead:
 
 ```css
 /* Wrap a custom 6-key toolbar row into 2x3 at narrow widths */
