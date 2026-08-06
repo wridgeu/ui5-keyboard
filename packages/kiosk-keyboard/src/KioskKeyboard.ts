@@ -40,8 +40,8 @@ import {
   getRegisteredLayoutNames as registryGetLayoutNames,
   isBuiltInLayout as registryIsBuiltIn,
   getLocaleLayout as registryGetLocaleLayout,
-  resolveLayoutName as registryResolveLayoutName,
 } from "./internal/layout-registry";
+import LayoutState from "./internal/layout-state";
 import { getMiddlewareFactory as registryGetMiddlewareFactory } from "./internal/middleware-registry";
 import {
   SPECIAL_KEY_ICONS as DEFAULT_SPECIAL_KEY_ICONS,
@@ -129,19 +129,10 @@ export default class KioskKeyboard extends Control {
   private _backspaceRepeat!: BackspaceRepeatBehavior;
   /** Owns the long-press / right-click accent-variant popup. */
   private _variantPopup!: VariantPopupBehavior;
-  private _baseLayout!: string;
+  /** Owns which layout is active, who asked for it, and the width tier's announcement. */
+  private _layoutState!: LayoutState;
   private _middleware!: CompositionMiddleware | null;
   private _keyboardTypeSource!: KeyboardTypeSource;
-  /**
-   * Whether the active layout was last set by a user-driven `{layout:X}` key tap
-   * (`"user"`) or by a programmatic / auto-detected change (`"external"`).
-   *
-   * User-driven switches override the `keyboardType` constraint so a `{layout:special}`
-   * tap in Numeric/Numpad mode shows the special layout. `{layout:base}`, `setLayout`,
-   * `setKeyboardType`, `resetKeyboardType`, and auto-type detection all reset this
-   * back to `"external"`. Mirrors the webc package's `_layoutSource` semantics.
-   */
-  private _layoutSource: "external" | "user" = "external";
   private _nativeKbSuppression!: NativeKeyboardSuppression;
   private _autoShowBehavior!: AutoShowBehavior;
   private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
@@ -176,14 +167,6 @@ export default class KioskKeyboard extends Control {
   /** Owns the ResizeObserver-driven height-responsive class application. */
   private _responsiveSizing!: ResponsiveSizingController;
   private _autoCompact!: AutoCompactBehavior;
-  /**
-   * The layout last asked for, by `setLayout`, a `{layout:*}` key or the locale
-   * default. `autoCompact` resolves its tier against this rather than against the
-   * effective layout, so a swap it made is never mistaken for a request.
-   */
-  private _requestedLayout!: string;
-  /** Live-region text for a width-driven swap, held until the render it triggers is done. */
-  private _pendingLayoutAnnouncement!: string | null;
   /** Owns `fKeyMode`-driven F-key dispatch (native keydown + caret navigation). */
   private _fKeyController!: FKeyController;
   static readonly metadata: MetadataOptions = {
@@ -902,7 +885,23 @@ export default class KioskKeyboard extends Control {
       onRebuilt: () => this._autoCompact.reapply(),
     });
     this._middlewareFactory = null;
-    this._pendingLayoutAnnouncement = null;
+    this._layoutState = new LayoutState({
+      getLayout: () => this.getLayout(),
+      setLayoutProperty: (name) => {
+        this.setProperty("layout", name);
+      },
+      getKeyboardType: () => this.getKeyboardType(),
+      getFold: () => this._foldCache.get(),
+      fireLayoutChange: (parameters) => {
+        this.fireLayoutChange(parameters);
+      },
+      resetShiftState: () => this._shiftState.reset(),
+      endComposition: () => this._endComposition(),
+      focusAnchorValue: () => this._focusAnchorValue(),
+      reseatFocusAnchor: (value) => this._reseatFocusAnchor(value),
+      reapplyAutoCompact: () => this._autoCompact.reapply(),
+      warnTierWriteBack: () => this._warnTierWriteBack(),
+    });
     this._warnedDisarmedVariants = false;
     this._warnedWriteBack = false;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
@@ -921,8 +920,7 @@ export default class KioskKeyboard extends Control {
     // applySettings, so it resolves against the built-in locale map alone;
     // applySettings re-resolves once the instance maps are known.
     const localeLayout = registryGetLocaleLayout();
-    this._baseLayout = localeLayout;
-    this._requestedLayout = localeLayout;
+    this._layoutState.seed(localeLayout);
     if (localeLayout !== DEFAULT_LAYOUT) {
       this.setLayout(localeLayout);
     }
@@ -938,12 +936,9 @@ export default class KioskKeyboard extends Control {
     this._keyGridNav.setRootRef(this.getDomRef() as HTMLElement | null);
     this._syncDockedDomState();
 
-    // The live region's text belongs to the renderer (shift/caps state, or
-    // nothing), so the patch a layout swap triggers overwrites anything written
-    // before it. The swap's announcement is written after that patch instead.
-    if (this._pendingLayoutAnnouncement !== null) {
-      this._announceLiveRegion(this._pendingLayoutAnnouncement);
-      this._pendingLayoutAnnouncement = null;
+    const pendingAnnouncement = this._layoutState.takePendingAnnouncement();
+    if (pendingAnnouncement !== null) {
+      this._announceLiveRegion(pendingAnnouncement);
     }
 
     for (const ext of this._extensions) ext.onAfterRendering?.();
@@ -1094,129 +1089,16 @@ export default class KioskKeyboard extends Control {
    */
   setLayout(sLayout: string): this {
     // Programmatic change is external-sourced and re-engages keyboardType constraints.
-    this._performLayoutSwitch(sLayout, "external", "passed to setLayout()");
+    this._layoutState.perform(sLayout, "external", "passed to setLayout()");
     return this;
   }
 
   /**
-   * Single layout-switch core shared by the public `setLayout` and the
-   * `{layout:*}` key branch of `_handleKeyAction`: normalize (trim + lowercase)
-   * -> validate against the registry (warn and bail when unregistered) ->
-   * apply -> fire `layoutChange` on a real change. Returns whether the layout
-   * changed.
-   *
-   * @param rawName Requested layout name; normalized here.
-   * @param source  Who drove the switch (see {@link _applyLayout}).
-   * @param origin  Requester description used in the unregistered warning.
-   */
-  private _performLayoutSwitch(rawName: string, source: "external" | "user", origin: string): boolean {
-    const name = rawName.trim().toLowerCase();
-    if (!registryGetLayout(name, this._foldCache.get().layouts)) {
-      Log.warning(
-        `Layout "${name}" ${origin} is not registered. Declare it as a <kiosk:CustomLayout> in the customLayouts aggregation.`,
-        undefined,
-        "ui5.kiosk.KioskKeyboard",
-      );
-      return false;
-    }
-    this._requestedLayout = name;
-    // A request supersedes any tier announcement still waiting on a render, which
-    // would otherwise name the layout this switch just replaced.
-    this._pendingLayoutAnnouncement = null;
-    const changed = this._applyLayout(name, source);
-    if (changed) {
-      this.fireLayoutChange({ layout: name, autoDetected: false });
-    }
-    // A new request re-opens the tier question at an unchanged width, which no
-    // resize would report.
-    this._autoCompact.reapply();
-    return changed;
-  }
-
-  /**
-   * Applies the `autoCompact` width tier: the requested layout's compact counterpart
-   * while the keyboard is too narrow for it, the requested layout itself once the room
-   * returns. Called from {@link AutoCompactBehavior} on a frame of its own, never from
-   * the observation callback.
-   *
-   * Deliberately not routed through {@link _performLayoutSwitch}: this is not a request
-   * and must leave `_requestedLayout` alone, or the first swap would erase the layout it
-   * has to swap back to. An unregistered counterpart resolves to no swap rather than to
-   * the default layout, since a consumer who names a missing one should keep the layout
-   * they asked for.
+   * Applies the `autoCompact` width tier. Called from {@link AutoCompactBehavior}
+   * on a frame of its own, never from the observation callback.
    */
   _applyCompactTier(narrow: boolean, crossed: boolean): void {
-    // Numpad and Numeric pin the rendered surface to their own layout, so tiering
-    // would fire `layoutChange` naming a layout that is not the one on screen.
-    if (constrainedLayoutName(this.getKeyboardType()) !== null) return;
-
-    const fold = this._foldCache.get();
-    const requested = this._requestedLayout;
-    const compact = narrow ? getLayoutMeta(requested, fold.layoutMeta)?.compact : undefined;
-    const target = compact ?? requested;
-    if (target === this.getLayout()) return;
-    if (!registryGetLayout(target, fold.layouts)) return;
-
-    // The tier is an arrangement, not a request, so it must not become the base:
-    // `{layout:base}`, `resetLayout()` and `reset()` all return to the layout that
-    // was asked for. `_applyLayout` promotes any non-secondary name it applies, so
-    // the base is restored around it.
-    const baseLayout = this._baseLayout;
-    const changed = this._applyLayout(target, this._layoutSource);
-    this._baseLayout = baseLayout;
-    if (changed) {
-      // Announced only when a width the user crossed rearranged the keyboard under
-      // them: the one layout change with no interaction behind it, and so the only
-      // one a screen reader user has no other way of learning about. The first
-      // resolution of a keyboard that was always this narrow rearranged nothing they
-      // had seen, and a requested switch re-seats focus onto the key it followed,
-      // which announces itself; announcing either would speak over the interaction.
-      //
-      // The direction is announced rather than the layout's name: the name is an
-      // identifier the user never chose and never sees, and it would enter a
-      // translated sentence untranslated. Two texts rather than one because the live
-      // region is a plain `textContent` write, so a repeat of what it already holds
-      // is dropped - and consecutive announcements always alternate direction, since
-      // `AutoCompactBehavior` only reports a verdict that differs from the last.
-      if (crossed) {
-        this._pendingLayoutAnnouncement = narrow
-          ? getText("ARIA_LAYOUT_COMPACTED", "Switched to the compact keyboard layout")
-          : getText("ARIA_LAYOUT_UNCOMPACTED", "Switched back to the standard keyboard layout");
-      }
-      this._warnTierWriteBack();
-      this.fireLayoutChange({ layout: target, autoDetected: true });
-    }
-  }
-
-  /**
-   * State-application step of {@link _performLayoutSwitch}: track the base
-   * (alphabetic) layout, record who drove the switch, and write the `layout`
-   * property. The caller validates `name` against the registry first.
-   * Returns whether the property value actually changed.
-   *
-   * Selecting a layout always resets the typing context (shift/caps-lock), even a
-   * re-selection of the active layout. The `source` only changes on a real switch
-   * so a no-op re-selection can't silently flip the constraint-override.
-   */
-  private _applyLayout(name: string, source: "external" | "user"): boolean {
-    if (getLayoutMeta(name, this._foldCache.get().layoutMeta)?.secondary !== true) {
-      this._baseLayout = name;
-    }
-    const changed = name !== this.getLayout();
-    const anchorValue = changed ? this._focusAnchorValue() : null;
-    if (changed) {
-      this._layoutSource = source;
-      // A real layout switch ends any in-progress composition so the next key
-      // resolves the new layout's middleware. Covers both programmatic
-      // setLayout() and the {layout:*} key path.
-      this._endComposition();
-    }
-    this._shiftState.reset();
-    this.setProperty("layout", name);
-    if (changed) {
-      this._reseatFocusAnchor(anchorValue);
-    }
-    return changed;
+    this._layoutState.applyTier(narrow, crossed);
   }
 
   /**
@@ -1269,7 +1151,7 @@ export default class KioskKeyboard extends Control {
    * @since 0.1.0
    */
   getBaseLayout(): string {
-    return this._baseLayout;
+    return this._layoutState.getBaseLayout();
   }
 
   /**
@@ -1279,7 +1161,7 @@ export default class KioskKeyboard extends Control {
    * @since 0.1.0
    */
   resetLayout(): this {
-    return this.setLayout(this._baseLayout);
+    return this.setLayout(this._layoutState.getBaseLayout());
   }
 
   /**
@@ -1361,8 +1243,8 @@ export default class KioskKeyboard extends Control {
     // A real target switch is a new editing context: drop a user-driven
     // `{layout:X}` override so the new target re-resolves under its keyboardType.
     // A same-input refocus (caret reposition) keeps it.
-    if (isRealSwitch && this._layoutSource === "user") {
-      this._layoutSource = "external";
+    if (isRealSwitch && this._layoutState.getSource() === "user") {
+      this._layoutState.clearUserOverride();
       this.invalidate();
     }
 
@@ -1452,9 +1334,9 @@ export default class KioskKeyboard extends Control {
     // A keyboardType change (explicit, reset, or auto-detected) invalidates
     // any prior user-driven layout switch; the resolved layout must follow
     // the new constraint context.
-    this._layoutSource = "external";
+    this._layoutState.clearUserOverride();
     // End any in-progress composition so the next key resolves against the new
-    // effective layout (mirrors _applyLayout).
+    // effective layout (mirrors the layout state's own switch handling).
     this._endComposition();
     // A constraint pins the rendered surface and suppresses the tier, so lifting one
     // re-opens the tier question for the layout that surfaces from under it.
@@ -1895,36 +1777,18 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * The effective layout NAME for the current state, shared by the renderer
-   * (`_getResolvedLayout`), the accent-variant table and the composition-middleware
-   * lookup (`_tryCompositionMiddleware`) so none of them resolve to a different
-   * layout than the one rendered. A user-driven `{layout:X}` switch wins (it
-   * overrides the keyboardType constraint), then the keyboardType constraint
-   * (Numpad/Numeric force their layout), then the `layout` property. The result is
-   * run through the registry, so an unregistered name reports the default layout it
-   * actually falls back to. Mirrors the webc twin's `_resolvedLayoutName`.
-   */
-  private _resolvedLayoutName(): string {
-    const requested =
-      this._layoutSource === "user"
-        ? this.getLayout()
-        : (constrainedLayoutName(this.getKeyboardType()) ?? this.getLayout());
-    return registryResolveLayoutName(requested, this._foldCache.get().layouts);
-  }
-
-  /**
    * The BCP-47 language of the active layout's keycaps, or `undefined` when they
    * are in the UI language. The renderer puts it on the labels that carry the
    * layout's script so assistive tech announces them with that language's
    * pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts).
    */
   private _getLayoutLang(): string | undefined {
-    return getLayoutMeta(this._resolvedLayoutName(), this._foldCache.get().layoutMeta)?.lang;
+    return getLayoutMeta(this._layoutState.resolvedName(), this._foldCache.get().layoutMeta)?.lang;
   }
 
   /** Resolve the effective layout used by the renderer. */
   private _getResolvedLayout(): LayoutDefinition {
-    const layoutName = this._resolvedLayoutName();
+    const layoutName = this._layoutState.resolvedName();
     const fold = this._foldCache.get();
     const resolved = registryGetLayoutOrDefault(layoutName, fold.layouts);
     const constrainedName = constrainedLayoutName(this.getKeyboardType());
@@ -2329,7 +2193,7 @@ export default class KioskKeyboard extends Control {
     // The factory check runs before the composition gate: a non-composition key pressed
     // after a swap must still commit, or a stale buffer stays attached to a middleware
     // the resolved layout no longer reads.
-    const factory = registryGetMiddlewareFactory(this._resolvedLayoutName(), this._foldCache.get().middleware);
+    const factory = registryGetMiddlewareFactory(this._layoutState.resolvedName(), this._foldCache.get().middleware);
     if (factory !== this._middlewareFactory) {
       // Commit rather than reset: the characters already typed are the user's.
       this._endComposition();
@@ -2390,9 +2254,9 @@ export default class KioskKeyboard extends Control {
       case "layout": {
         // `base` re-engages the keyboardType constraint; any other pick is
         // user-driven and overrides it (webc parity).
-        const name = action.target === LAYOUT_BASE ? this._baseLayout : action.target;
+        const name = action.target === LAYOUT_BASE ? this._layoutState.getBaseLayout() : action.target;
         const source = action.target === LAYOUT_BASE ? "external" : "user";
-        this._performLayoutSwitch(name, source, "referenced by a {layout:*} key");
+        this._layoutState.perform(name, source, "referenced by a {layout:*} key");
         return;
       }
 

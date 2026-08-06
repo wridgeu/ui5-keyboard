@@ -24,12 +24,12 @@ import {
   getRegisteredLayout,
   getRegisteredLayoutNames,
   isBuiltInLayout,
-  resolveLayoutName,
 } from "./core/layout-registry.js";
 import { getLayoutMeta } from "./core/layout-meta.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
 import { isValidVariantTable } from "./core/custom-layout-fold.js";
 import { LayoutFoldCache } from "./core/layout-fold-cache.js";
+import { LayoutState } from "./core/layout-state.js";
 import { type ICustomLayout } from "./CustomLayout.js";
 import slot from "@ui5/webcomponents-base/dist/decorators/slot-strict.js";
 import type { Slot } from "@ui5/webcomponents-base/dist/UI5Element.js";
@@ -46,7 +46,7 @@ import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
 import { AutoCompactController } from "./core/auto-compact-controller.js";
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
-import { parseKeyAction, assertNever, LAYOUT_BASE } from "./core/key-token.js";
+import { parseKeyAction, assertNever } from "./core/key-token.js";
 import { SPECIAL_KEY_ICON_NAMES, SPECIAL_KEY_I18N_KEYS } from "./core/key-action-meta.js";
 import { constrainedLayoutName, reconcileBaseSwitch } from "./core/layout-constraint.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
@@ -119,9 +119,6 @@ type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
 
 /** Why _targetElement was set: drives focusout cleanup policy. */
 type TargetSource = "autoShow" | "explicit";
-
-/** Why _currentLayout was last changed: drives _getResolvedLayout bypass. */
-type LayoutSource = "user" | "external";
 
 /** Display and ARIA labels for built-in special keys. */
 const SPECIAL_KEY_LABELS: Record<string, string> = {
@@ -419,7 +416,7 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   get effectiveLayout(): string {
-    return this._resolvedLayoutName();
+    return this._layoutState.resolvedName();
   }
 
   /**
@@ -639,20 +636,37 @@ class KioskKeyboard extends UI5Element {
 
   private _shiftState = new ShiftState(() => this._syncShiftState());
   private _middleware: CompositionMiddleware | null = null;
-  private _baseLayout = "";
-  /**
-   * The layout last asked for, by the `layout` property, a `{layout:*}` key or the
-   * locale default. `autoCompact` resolves its tier against this rather than against
-   * the effective layout, so a swap it made is never mistaken for a request.
-   */
-  private _requestedLayout = "";
+  /** Owns which layout is active and who asked for it. */
+  private readonly _layoutState = new LayoutState({
+    getCurrentLayout: () => this._currentLayout,
+    setCurrentLayout: (name) => {
+      this._currentLayout = name;
+    },
+    getLayoutAttribute: () => this.layout,
+    getLocaleLayout: () => this._localeLayout(),
+    getKeyboardType: () => this.keyboardType,
+    getFold: () => this._foldCache.get(),
+    fireLayoutChange: (parameters) => {
+      this.fireDecoratorEvent("layout-change", parameters);
+    },
+    resetShiftState: () => this._shiftState.reset(),
+    endComposition: () => {
+      if (this._middleware) {
+        this._middleware.commit();
+        this._middleware = null;
+      }
+    },
+    focusAnchor: () => this._focusAnchor(),
+    reseatFocusAnchor: (anchor) => this._reseatFocusAnchor(anchor),
+    reapplyAutoCompact: () => this._autoCompact.reapply(),
+    announce: (text) => this._announcements.announce(text),
+  });
   private _keyboardTypeSource: KeyboardTypeSource = "unset";
   private _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
   private _targetSource: TargetSource = "explicit";
   private _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
   /** Accessed by the JSX template for highlight class binding - not private. */
   _highlightedKey: string | null = null;
-  private _layoutSource: LayoutSource = "external";
   /** Whether the next render must put DOM focus back on the re-seated roving tab stop. */
   private _restoreKeyFocus = false;
   /** Caps the disarmed-variants diagnostic at one emission per element. */
@@ -805,7 +819,7 @@ class KioskKeyboard extends UI5Element {
   /** Owns the width measurement behind the `autoCompact` property. */
   private readonly _autoCompact = new AutoCompactController({
     isEnabled: () => this.autoCompact,
-    applyTier: (narrow, crossed) => this._applyCompactTier(narrow, crossed),
+    applyTier: (narrow, crossed) => this._layoutState.applyTier(narrow, crossed),
   });
 
   // ── F-key dispatch ──
@@ -895,13 +909,7 @@ class KioskKeyboard extends UI5Element {
     KioskKeyboard._instances.add(this);
     this._autoShow.register();
 
-    if (!this._baseLayout) {
-      this._baseLayout = this.layout || this._localeLayout();
-      this._requestedLayout = this._baseLayout;
-      if (!this.layout) {
-        this._currentLayout = this._baseLayout;
-      }
-    }
+    this._layoutState.seed();
 
     this._autoShow.sync();
     this._physicalKeyHighlight.sync();
@@ -1011,17 +1019,7 @@ class KioskKeyboard extends UI5Element {
     const { name } = changeInfo;
 
     if (name === "layout") {
-      // Applied unconditionally: the slot is populated asynchronously by
-      // `_processChildren`, so a custom layout appended in this same task is not in the
-      // fold yet and a registry check here would reject a name that is about to be
-      // perfectly valid. An unresolvable name is reported from the render pass instead,
-      // where the fold is authoritative.
-      const requested = this.layout.trim().toLowerCase();
-      this._requestedLayout = requested;
-      this._applyLayout(requested, "external");
-      // A new request re-opens the tier question at an unchanged width, which no
-      // resize would report.
-      this._autoCompact.reapply();
+      this._layoutState.applyAttribute(this.layout);
     }
     if (name === "keyboardType") {
       if (isInvalidEnumValue("keyboardType", this.keyboardType, VALID_KEYBOARD_TYPES)) {
@@ -1033,7 +1031,7 @@ class KioskKeyboard extends UI5Element {
       const autoDetected = this._keyboardTypeSource === `auto:${this.keyboardType}`;
       this._keyboardTypeSource = autoDetected ? "unset" : "explicit";
       // Reset user layout switch and shift state - a keyboardType change implies a new layout context
-      this._layoutSource = "external";
+      this._layoutState.clearUserOverride();
       this._shiftState.reset();
       // The surface swap ends any in-progress composition: commit the preedit
       // and drop the middleware so the next key resolves against the new
@@ -1223,22 +1221,7 @@ class KioskKeyboard extends UI5Element {
     this._variantGesture.stop();
     this._variantPopup = null;
     this._shiftState.reset();
-    this._resetToBaseLayout();
-  }
-
-  /**
-   * Returns the active surface to the base (alphabetic) layout, mirroring the
-   * kiosk twin's `resetLayout()`. Fires `layout-change` only on a real change.
-   */
-  private _resetToBaseLayout(): void {
-    const base = this._baseLayout || this.layout || this._localeLayout();
-    this._requestedLayout = base;
-    if (this._applyLayout(base, "external")) {
-      this.fireDecoratorEvent("layout-change", { layout: this._currentLayout, autoDetected: false });
-    }
-    // A new request re-opens the tier question at an unchanged width, which no
-    // resize would report.
-    this._autoCompact.reapply();
+    this._layoutState.resetToBase();
   }
 
   /**
@@ -1277,32 +1260,6 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * The effective layout name for the current state: an explicit user switch
-   * (via a {layout:...} key) takes precedence, then the keyboardType
-   * constraint (Numpad/Numeric force their layout), then the
-   * current/base/property/locale fallback chain. The result is run through the
-   * registry, so an unregistered name reports the default layout it actually
-   * falls back to. Rendering (_getResolvedLayout), the accent-variant table and
-   * composition-middleware resolution (_ensureMiddleware) all read this name, so
-   * none of them can key off a layout other than the one rendered.
-   */
-  private _resolvedLayoutName(): string {
-    const requested =
-      this._layoutSource === "user"
-        ? this._currentLayout
-        : (constrainedLayoutName(this.keyboardType) ??
-          (this._currentLayout || this._baseLayout || this.layout || this._localeLayout()));
-    const resolved = resolveLayoutName(requested, this._foldCache.get().layouts);
-    if (resolved !== requested && requested && !this._warnedUnregisteredLayouts.has(requested)) {
-      this._warnedUnregisteredLayouts.add(requested);
-      console.warn(
-        `[kiosk-keyboard] Layout "${requested}" is not registered, so "${resolved}" renders instead. Declare it as a <kiosk-keyboard-custom-layout> in the customLayouts slot.`,
-      );
-    }
-    return resolved;
-  }
-
-  /**
    * The BCP-47 language of the active layout's keycaps, or `undefined` when they
    * are in the UI language. The template puts it on the labels that carry the
    * layout's script so assistive tech announces them with that language's
@@ -1311,12 +1268,12 @@ class KioskKeyboard extends UI5Element {
    * @internal Read by the template and the variant popup state.
    */
   _getLayoutLang(): string | undefined {
-    return getLayoutMeta(this._resolvedLayoutName(), this._foldCache.get().layoutMeta)?.lang;
+    return getLayoutMeta(this._layoutState.resolvedName(), this._foldCache.get().layoutMeta)?.lang;
   }
 
   _getResolvedLayout(): LayoutDefinition {
     const fold = this._foldCache.get();
-    const layoutName = this._resolvedLayoutName();
+    const layoutName = this._layoutState.resolvedName();
     const resolved = getLayoutOrDefault(layoutName, fold.layouts);
     const constrainedName = constrainedLayoutName(this.keyboardType);
     const base =
@@ -1369,8 +1326,6 @@ class KioskKeyboard extends UI5Element {
     getCustomLayouts: () => this.customLayouts,
     onRebuilt: () => this._autoCompact.reapply(),
   });
-  /** Caps the unregistered-layout warning at one per distinct name. */
-  private _warnedUnregisteredLayouts = new Set<string>();
   private _middlewareFactory: (() => CompositionMiddleware) | null = null;
 
   _getKeyLabel(key: KeyDefinition): string {
@@ -1585,7 +1540,7 @@ class KioskKeyboard extends UI5Element {
       // the same way they can veto any other key.
       const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted });
       if (!allowed) return;
-      this._handleLayoutSwitch(action.target);
+      this._layoutState.applyKeySwitch(action.target);
       return;
     }
 
@@ -1688,7 +1643,7 @@ class KioskKeyboard extends UI5Element {
    * Backspace auto-repeat so both run keys through the same buffer.
    */
   private _ensureMiddleware(): CompositionMiddleware | null {
-    const factory = getMiddlewareFactory(this._resolvedLayoutName(), this._foldCache.get().middleware);
+    const factory = getMiddlewareFactory(this._layoutState.resolvedName(), this._foldCache.get().middleware);
     if (factory !== this._middlewareFactory) {
       if (this._middleware) {
         // Commit the buffer to the target: `reset()` would drop a half-typed syllable,
@@ -1800,117 +1755,6 @@ class KioskKeyboard extends UI5Element {
   }
 
   // ── Layout switch / F-key handling ──
-
-  /**
-   * Apply a resolved layout as the active surface: track the base (alphabetic)
-   * layout, record who drove the switch, and reset the typing context. Shared by
-   * the `layout` property path and the `{layout:*}` key handler.
-   *
-   * Selecting a layout always resets shift/caps-lock, even a re-selection of the
-   * active layout. The `source` only changes on a real switch so a no-op can't
-   * silently flip the constraint-override. Returns whether the layout changed.
-   */
-  private _applyLayout(currentLayout: string, source: "external" | "user"): boolean {
-    if (getLayoutMeta(currentLayout, this._foldCache.get().layoutMeta)?.secondary !== true) {
-      this._baseLayout = currentLayout;
-    }
-    const changed = currentLayout !== this._currentLayout;
-    const anchor = changed ? this._focusAnchor() : null;
-    if (changed) {
-      this._currentLayout = currentLayout;
-      this._layoutSource = source;
-      // A real layout switch ends any in-progress composition: commit the
-      // preedit to the target and drop the middleware so the next key resolves
-      // the new layout's middleware. Covers both a programmatic `layout` change
-      // and the {layout:*} key path.
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
-    }
-    this._shiftState.reset();
-    if (anchor) {
-      this._reseatFocusAnchor(anchor);
-    }
-    return changed;
-  }
-
-  /**
-   * Applies the `autoCompact` width tier: the requested layout's compact counterpart
-   * while the keyboard is too narrow for it, the requested layout itself once the room
-   * returns. Called from {@link AutoCompactController} on a frame of its own, never from
-   * the observation callback.
-   *
-   * Deliberately not routed through the request paths: this is not a request and must
-   * leave `_requestedLayout` alone, or the first swap would erase the layout it has to
-   * swap back to. An unregistered counterpart resolves to no swap rather than to the
-   * default layout, since a consumer who names a missing one should keep the layout
-   * they asked for.
-   *
-   * The tier is compared against the layout on screen, not against `_currentLayout`:
-   * a `layout` attribute present before the element connects reaches the first render
-   * through the fallback chain of {@link _resolvedLayoutName} without passing through
-   * `_currentLayout`, which stays empty until the first switch.
-   */
-  private _applyCompactTier(narrow: boolean, crossed: boolean): void {
-    // Numpad and Numeric pin the rendered surface to their own layout, so tiering
-    // would emit `layout-change` naming a layout that is not the one on screen.
-    if (constrainedLayoutName(this.keyboardType) !== null) return;
-
-    const fold = this._foldCache.get();
-    const requested = this._requestedLayout;
-    const compact = narrow ? getLayoutMeta(requested, fold.layoutMeta)?.compact : undefined;
-    const target = compact ?? requested;
-    if (target === this._resolvedLayoutName()) return;
-    if (!getRegisteredLayout(target, fold.layouts)) return;
-
-    // The tier is an arrangement, not a request, so it must not become the base:
-    // a `{layout:base}` key and `_resetToBaseLayout` both return to the layout that
-    // was asked for. `_applyLayout` promotes any non-secondary name it applies, so
-    // the base is restored around it.
-    const baseLayout = this._baseLayout;
-    const changed = this._applyLayout(target, this._layoutSource);
-    this._baseLayout = baseLayout;
-    if (changed) {
-      // Announced only when a width the user crossed rearranged the keyboard under
-      // them: the one layout change with no interaction behind it, and so the only
-      // one a screen reader user has no other way of learning about. The first
-      // resolution of a keyboard that was always this narrow rearranged nothing they
-      // had seen, and a requested switch re-seats focus onto the key it followed,
-      // which announces itself; announcing either would speak over the interaction.
-      //
-      // The direction is announced rather than the layout's name: the name is an
-      // identifier the user never chose and never sees, and it would enter a
-      // translated sentence untranslated. Two texts rather than one because the live
-      // region is a plain text write, so a repeat of what it already holds is dropped
-      // - and consecutive announcements always alternate direction, since
-      // `AutoCompactController` only reports a verdict that differs from the last.
-      if (crossed) {
-        this._announcements.announce(
-          narrow
-            ? getText("ARIA_LAYOUT_COMPACTED", "Switched to the compact keyboard layout")
-            : getText("ARIA_LAYOUT_UNCOMPACTED", "Switched back to the standard keyboard layout"),
-        );
-      }
-      this.fireDecoratorEvent("layout-change", { layout: target, autoDetected: true });
-    }
-  }
-
-  private _handleLayoutSwitch(layoutName: string): void {
-    const isBase = layoutName === LAYOUT_BASE;
-    if (!isBase && !getRegisteredLayout(layoutName, this._foldCache.get().layouts)) {
-      console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
-      return;
-    }
-    const requested = isBase ? this._baseLayout || this.layout || this._localeLayout() : layoutName;
-    this._requestedLayout = requested;
-    if (this._applyLayout(requested, isBase ? "external" : "user")) {
-      this.fireDecoratorEvent("layout-change", { layout: this._currentLayout, autoDetected: false });
-    }
-    // A new request re-opens the tier question at an unchanged width, which no
-    // resize would report.
-    this._autoCompact.reapply();
-  }
 
   private _handleFKeyPress(fkeyName: string, shifted: boolean): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
