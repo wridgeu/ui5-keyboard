@@ -10,7 +10,9 @@ These are standard UI5 libraries built by the UI5 CLI:
 src/*.ts  -->  ui5-tooling-transpile  -->  dist/resources/ui5/{namespace}/
 ```
 
-The UI5 CLI handles TypeScript transpilation, version replacement, and library packaging. No separate code generation step is needed because UI5 libraries use LESS for theming (processed by the UI5 builder) and standard `.properties` files for i18n (resolved at runtime by the UI5 resource bundle mechanism).
+The UI5 CLI handles TypeScript transpilation, version replacement, and library packaging. Theming and i18n need no generation step: UI5 libraries use LESS for theming (processed by the UI5 builder) and standard `.properties` files for i18n (resolved at runtime by the UI5 resource bundle mechanism).
+
+`kiosk-keyboard` does run one generator, outside the arrow above. `@ui5/ts-interface-generator` emits the committed `src/KioskKeyboard.gen.d.ts` from the control's metadata via `npm run generate` (also wired as `prebuild` and `pretypecheck`). It is type-only, produces no runtime output, and is not part of the UI5 CLI build. The file is deliberately committed rather than gitignored, and CI gates drift with `generate && git diff --exit-code`; see the control-authoring conventions in [CLAUDE.md](../../CLAUDE.md). `hotkeys` has no generation step at all.
 
 ## Web Component (kiosk-keyboard-webc)
 
@@ -119,14 +121,17 @@ The `package.json` declares which modules have side effects:
 
 ```json
 "sideEffects": [
+  "./dist/KioskKeyboard.js",
+  "./dist/CustomLayout.js",
+  "./dist/kiosk-keyboard.bundle.js",
   "./dist/bundle.esm.js",
   "./dist/Assets.js",
   "./dist/generated/**"
 ]
 ```
 
-These modules execute code at import time (theme/i18n asset registration and the convenience bundle entry). Bundlers preserve them even when no explicit export is consumed. Layouts and middleware are pure data/factory modules and are intentionally not listed (see issue #108).
+These modules execute code at import time: `KioskKeyboard.js` and `CustomLayout.js` each call `.define()` at module scope to register their custom element, and the rest cover theme/i18n asset registration and the two bundle entries. Bundlers preserve them even when no explicit export is consumed. Layouts and middleware are pure data/factory modules and are intentionally not listed (see issue #108).
 
-All other modules (core utilities, types, the main `KioskKeyboard.js`) are tree-shakeable. A bundler that imports only specific layouts or only the component class can eliminate the rest.
+The remaining modules (core utilities, types, layouts, middleware) are tree-shakeable. A bundler that imports only specific layouts can eliminate the rest.
 
 The standalone bundle (`kiosk-keyboard.bundle.js`) includes everything and is not tree-shakeable. Tree shaking only applies to consumers who import individual ESM modules.
