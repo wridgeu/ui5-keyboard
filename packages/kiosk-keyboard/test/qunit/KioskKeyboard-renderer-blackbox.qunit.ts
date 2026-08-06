@@ -74,9 +74,8 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
     assert.strictEqual(getShift().getAttribute("aria-pressed"), "false", "After 3rd tap: aria-pressed=false");
     assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "After 3rd tap: no active class");
     assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "After 3rd tap: no capsLock class");
-    // The live region is owned by the announcement queue, not by this render pass:
-    // leaving Caps Lock announces nothing, so the last spoken text stays put.
-    assert.strictEqual(getLive().textContent, "Caps Lock on", "After 3rd tap: live region keeps its last announcement");
+    // The live region is owned by the announcement queue, not by this render pass.
+    assert.strictEqual(getLive().textContent, "Caps Lock off", "After 3rd tap: live region announces Caps Lock off");
   } finally {
     clock.restore();
   }

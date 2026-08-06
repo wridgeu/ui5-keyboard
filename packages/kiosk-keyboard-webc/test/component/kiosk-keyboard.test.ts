@@ -1878,11 +1878,11 @@ describe("kiosk-keyboard", () => {
       expect(region.textContent ?? "", "shift-on announcement appears in live region").to.match(/shift|on/i);
     });
 
-    it("releasing Caps Lock does not announce shift-off", async () => {
+    it("releasing Caps Lock announces caps-lock-off, not shift-off", async () => {
       // ShiftState.isShifted is true in CapsLock mode, so a CapsLock -> Off
       // transition also reads as a shift release. The shift-off announcement is
       // reserved for a genuine Shift -> Off; releasing Caps Lock (a key labelled
-      // "Caps Lock") must not claim shift was released.
+      // "Caps Lock") names the mode that ended instead.
       const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
       await nextRender();
       const shift = () => queryKey(el, "{shift}")!;
@@ -1895,8 +1895,7 @@ describe("kiosk-keyboard", () => {
       // Let the throttled announcement queue fully drain (120ms per entry).
       await new Promise((r) => setTimeout(r, 400));
       const region = el.shadowRoot!.querySelector('[role="status"][aria-live="polite"]') as HTMLElement;
-      expect(region.textContent ?? "", "Caps Lock must have engaged").to.match(/caps/i);
-      expect(region.textContent ?? "", "Caps Lock release must not announce shift-off").to.not.match(/shift\s*off/i);
+      expect(region.textContent ?? "", "Caps Lock release announces caps-lock-off").to.equal("Caps Lock off");
     });
 
     it("follows the focused key to its new seat across a layout switch", async () => {

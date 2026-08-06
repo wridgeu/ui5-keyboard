@@ -23,6 +23,7 @@ sap.ui.define(["ui5/kiosk/KioskKeyboard", "sap/m/Input", "sap/m/Button"], (Kiosk
     KEY_SPACE: "Espace",
     ARIA_CAPS_LOCK: "Verrouillage majuscule",
     ARIA_CAPS_LOCK_ON: "Verrouillage majuscule activ\u00e9",
+    ARIA_CAPS_LOCK_OFF: "Verrouillage majuscule d\u00e9sactiv\u00e9",
     ARIA_SHIFT_ON: "Majuscule activ\u00e9e",
     ARIA_SHIFT_OFF: "Majuscule d\u00e9sactiv\u00e9e",
     ARIA_KEYBOARD_OPENED: "Clavier virtuel ouvert",

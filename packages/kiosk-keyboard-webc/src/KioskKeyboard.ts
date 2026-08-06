@@ -1822,6 +1822,11 @@ class KioskKeyboard extends UI5Element {
     this.keyboardType = value;
   }
 
+  /**
+   * Announces a shift/caps transition. Caps Lock is settled before Shift: `isShifted`
+   * is true in both modes, so a Caps Lock exit - to Off or to Shift - would otherwise
+   * read as a shift release.
+   */
   private _syncShiftState(): void {
     const wasShifted = this._shifted;
     const wasCapsLock = this._capsLock;
@@ -1829,9 +1834,11 @@ class KioskKeyboard extends UI5Element {
     this._capsLock = this._shiftState.isCapsLock;
     if (!wasCapsLock && this._capsLock) {
       this._announcements.announce(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
-    } else if (!wasShifted && this._shifted && !this._capsLock) {
+    } else if (wasCapsLock && !this._capsLock) {
+      this._announcements.announce(getText("ARIA_CAPS_LOCK_OFF", "Caps Lock off"));
+    } else if (!wasShifted && this._shifted) {
       this._announcements.announce(getText("ARIA_SHIFT_ON", "Shift on"));
-    } else if (wasShifted && !wasCapsLock && !this._shifted && !this._capsLock) {
+    } else if (wasShifted && !this._shifted) {
       this._announcements.announce(getText("ARIA_SHIFT_OFF", "Shift off"));
     }
   }

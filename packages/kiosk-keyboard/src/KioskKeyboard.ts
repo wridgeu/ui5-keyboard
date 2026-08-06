@@ -1809,8 +1809,9 @@ export default class KioskKeyboard extends Control {
    *
    * Wired as the `ShiftState` change callback, so every mutator - a `{shift}` tap,
    * the auto-release after a shifted key, a physical modifier and the reset a layout
-   * switch performs - routes through here. Three transitions speak; leaving Caps Lock
-   * does not, matching the webc twin.
+   * switch performs - routes through here. Caps Lock is settled before Shift:
+   * `isShifted` is true in both modes, so a Caps Lock exit - to Off or to Shift -
+   * would otherwise read as a shift release.
    */
   private _syncShiftState(): void {
     const wasShifted = this._announcedShifted;
@@ -1820,9 +1821,11 @@ export default class KioskKeyboard extends Control {
 
     if (!wasCapsLock && this._announcedCapsLock) {
       this._announceLiveRegion(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
-    } else if (!wasShifted && this._announcedShifted && !this._announcedCapsLock) {
+    } else if (wasCapsLock && !this._announcedCapsLock) {
+      this._announceLiveRegion(getText("ARIA_CAPS_LOCK_OFF", "Caps Lock off"));
+    } else if (!wasShifted && this._announcedShifted) {
       this._announceLiveRegion(getText("ARIA_SHIFT_ON", "Shift on"));
-    } else if (wasShifted && !wasCapsLock && !this._announcedShifted && !this._announcedCapsLock) {
+    } else if (wasShifted && !this._announcedShifted) {
       this._announceLiveRegion(getText("ARIA_SHIFT_OFF", "Shift off"));
     }
 

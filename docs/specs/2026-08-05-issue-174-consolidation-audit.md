@@ -188,9 +188,10 @@ queue never holds more than one entry. The interval now sits between _writes_ ra
 drains, which gives the same spacing under either drain policy and keeps a lone announcement
 synchronous. Both twins share that module byte-identically (`CORE_MODULES`, 30 pairs).
 
-One gap is now shared rather than fixed: leaving Caps Lock announces nothing in either twin, so the
-live region keeps the text it last spoke. Worth its own issue; it is a one-line change in one shared
-module now, which it was not before.
+One gap this pass exposed is fixed here rather than filed: leaving Caps Lock announced nothing, so
+the live region kept saying "Caps Lock on" while Caps Lock was off. Both twins now settle Caps Lock
+before Shift — `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift
+release — with `ARIA_CAPS_LOCK_OFF` declared in all eight bundles.
 
 ## What the review pass caught
 
