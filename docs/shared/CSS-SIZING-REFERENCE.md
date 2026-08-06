@@ -282,7 +282,7 @@ ui5-icon.kiosk-key__icon {
 }
 ```
 
-Neither package gives the icon a fixed box at 125% of the font size. In webc the sizing is scoped to `ui5-icon` on purpose, so a Unicode-glyph icon (rendered as a plain span) stays unsized and is laid out by its own font metrics; in kiosk the icon only inherits the key font size. Dual and F-key keys override the icon size separately.
+In webc the box is scoped to `ui5-icon` on purpose, so a Unicode-glyph icon (rendered as a plain span) stays unsized and is laid out by its own font metrics; in kiosk the icon carries no box and only inherits the key font size. Dual and F-key keys override the icon size separately.
 
 The icon font stack appends symbol fonts (`Segoe UI Symbol`, `Apple Symbols`, `Noto Sans Symbols 2`) after the SAP font family. Navigation key icons use Unicode arrow symbols (U+21D1-U+21F2) that are absent from the 72 font and may fail on stripped-down platforms (embedded Android WebView) without these explicit fallbacks.
 
@@ -442,7 +442,7 @@ Browser support: Chrome 133+, Edge 133+, Safari 18.2+. Non-supporting browsers k
 
 ## Complete Variable Reference
 
-The shadow variables are declared as `color-mix(in srgb, var(--sapContent_ShadowColor, #223548) N%, transparent)`; the percentages below are that `N`. The equivalent `rgba(34,53,72,…)` is only what they resolve to under `sap_horizon`, where `--sapContent_ShadowColor` is `#223548`.
+The shadow variables are declared as `color-mix(in srgb, var(--sapContent_ShadowColor, #223548) N%, transparent)`; the percentages below are that `N`. They resolve to `rgba(34,53,72,…)` under `sap_horizon`, where `--sapContent_ShadowColor` is `#223548`, and follow the theme elsewhere.
 
 All public CSS custom properties defined on `:host`, listed with their default values.
 

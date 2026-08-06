@@ -14,6 +14,6 @@ The following proposals were fully implemented and their documentation removed (
 
 The following proposals were superseded or rejected:
 
-- **Layout Tree-Shaking** (split entry points for WebC): superseded. The main entry now includes all built-in layouts. Subpath imports remain, and cover more than middleware and the bundle - see the entry-point table in the [Glossary](../GLOSSARY.md).
+- **Layout Tree-Shaking** (split entry points for WebC): superseded. The main entry now includes all built-in layouts. Subpath imports remain for the bundle, `CustomLayout`, layouts, middleware, variants and Assets - see [Subpath Imports (WebC)](../GLOSSARY.md#subpath-imports-webc) in the Glossary.
 
 When a proposal is implemented, deferred, or rejected, update its status line and move it to a more appropriate long-term location if needed.
