@@ -59,7 +59,7 @@ surface". That is what item 1 below attacks.
 
 Serves goals 3 (native platform) and 5 (twin alignment). **Recommended first slice.**
 
-`AbortController` appears 13 times across the repo and **zero** of them are in `kiosk-keyboard`:
+`AbortController` appears 10 times across the repo and **zero** of them are in `kiosk-keyboard`:
 
 | Package               | `addEventListener` | `removeEventListener` | `AbortController` |
 | --------------------- | ------------------ | --------------------- | ----------------- |
@@ -191,6 +191,35 @@ synchronous. Both twins share that module byte-identically (`CORE_MODULES`, 30 p
 One gap is now shared rather than fixed: leaving Caps Lock announces nothing in either twin, so the
 live region keeps the text it last spoke. Worth its own issue; it is a one-line change in one shared
 module now, which it was not before.
+
+## What the review pass caught
+
+An adversarial review of the branch found two defects a fully green suite could not see, both in
+slice 5, and both since fixed on this branch.
+
+**A new localizable string shipped with no resource-bundle key.** `_syncShiftState` called
+`getText("ARIA_SHIFT_OFF", …)` while none of kiosk's four `.properties` bundles declared the key —
+the behaviour was ported across the twins, the string was not. `getText` resolves with
+`bIgnoreKeyFallback`, so a missing key returns the hardcoded English with no warning: a German user
+heard "Umschalttaste ein" then "Shift off". Three separate lenses found it independently.
+
+Nothing could have caught it. `check-i18n-bundles.mjs` compared each locale bundle against _its own
+package's_ default bundle, and the key was missing from that too, so all four agreed and the check
+was green; the QUnit suite runs in English, where a resolved key and a missing key are
+indistinguishable. The check now carries a third invariant — every `getText("KEY"` literal under a
+package's `src/` must exist in that package's default bundle — which is the shape of the miss, not
+just this instance of it. Verified to go red by deleting the key.
+
+**The queue banked announcements raised while the control had no DOM.** The `!isConnected()` branch
+returned without clearing `_queue`, and its comment cited a `teardown()` precondition that is never
+met while a kiosk control is alive: `teardown()` runs only from `exit()`, where webc also has
+`onExitDOM`. `setVisible(false)` renders the invisible placeholder without destroying the control or
+detaching its physical-key delegate, so hardware Shift kept queueing an alternating pair that
+`announce`'s dedupe never collapses. The backlog was then read out ahead of whatever the user
+actually did next. The old single-slot write was a no-op when detached, so this was a regression the
+queue introduced. A detached host now discards rather than defers.
+
+Both fixes ship with regression tests confirmed to fail against the defect.
 
 ---
 

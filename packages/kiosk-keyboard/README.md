@@ -1762,6 +1762,7 @@ The library ships with an English resource bundle for all accessibility labels a
 | `ARIA_CAPS_LOCK`                 | Caps Lock                                     | `aria-label` for the Shift key when Caps Lock is active                         |
 | `ARIA_CAPS_LOCK_ON`              | Caps Lock on                                  | ARIA live region announcement                                                   |
 | `ARIA_SHIFT_ON`                  | Shift on                                      | ARIA live region announcement                                                   |
+| `ARIA_SHIFT_OFF`                 | Shift off                                     | ARIA live region announcement when Shift is released                            |
 | `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened                       | ARIA live region announcement on `show()`                                       |
 | `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed                       | ARIA live region announcement on `close()`                                      |
 | `ARIA_LAYOUT_COMPACTED`          | Switched to the compact keyboard layout       | ARIA live region announcement when `autoCompact` takes a layout's compact form  |
@@ -1787,6 +1788,7 @@ KEY_SPACE=Espace
 ARIA_CAPS_LOCK=Verrouillage majuscules
 ARIA_CAPS_LOCK_ON=Verrouillage majuscules activé
 ARIA_SHIFT_ON=Majuscules activées
+ARIA_SHIFT_OFF=Majuscules désactivées
 ARIA_KEYBOARD_OPENED=Clavier virtuel ouvert
 ARIA_KEYBOARD_CLOSED=Clavier virtuel fermé
 ```

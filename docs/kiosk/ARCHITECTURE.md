@@ -23,9 +23,9 @@ Because `Control` extends `ManagedObject`, the class field initializer trap appl
 
 ```ts
 private _shiftState!: ShiftState;
-// ... initialized in init(); the callback repaints on every shift/caps transition
+// ... initialized in init(); the callback announces the transition, then repaints
 init(): void {
-  this._shiftState = new ShiftState(() => this.invalidate());
+  this._shiftState = new ShiftState(() => this._syncShiftState());
 }
 ```
 
@@ -184,7 +184,7 @@ Caps Lock    Mode.CapsLock true      true
 
 **Double-click detection**: A second Shift press within 400ms (`ShiftState.DOUBLE_CLICK_MS`) of the first activates Caps Lock. A single press outside that window toggles one-shot Shift. Pressing Shift while Caps Lock is active turns everything off.
 
-**Auto-release**: After typing a character with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and fires the `onChange` callback (which the owner wires to `invalidate()`) to update the display. Caps Lock is sticky and does not auto-release.
+**Auto-release**: After typing a character with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and fires the `onChange` callback (which the owner wires to `_syncShiftState()`, announcing the transition before repainting) to update the display. Caps Lock is sticky and does not auto-release.
 
 **Physical keyboard sync**: When a physical keyboard is attached, the virtual keyboard automatically syncs its shift and caps-lock state from physical key events. This works through the existing highlight delegation on the target input: `keydown`/`keyup` events for Shift and CapsLock update the `ShiftState`, and the keyboard re-renders to reflect the current modifier state. No additional listeners are required because the delegation already observes all key events on the target element.
 
@@ -223,7 +223,7 @@ While the `Numpad`/`Numeric` constraint is active (regardless of source), the re
 Layout switch keys use a special value format: `{layout:name}`. When tapped:
 
 1. The `name` is extracted (lowercased) from the value string and validated against the registry.
-2. `_applyLayout(name, source)` records the base layout, the switch source (`{layout:base}` → `"external"`, any other pick → `"user"`), resets the typing context (shift/caps-lock), and writes the `layout` property.
+2. `LayoutState.perform(name, source, origin)` (`internal/layout-state.ts`) records the base layout, the switch source (`{layout:base}` → `"external"`, any other pick → `"user"`), resets the typing context (shift/caps-lock), and writes the `layout` property.
 3. A `layoutChange` event fires when the layout actually changes.
 4. The control re-renders with the resolved layout.
 
@@ -259,7 +259,7 @@ override applySettings(mSettings: Record<string, unknown>, oScope?: object): thi
     const first: Record<string, unknown> = { customLayouts };
     super.applySettings(first, oScope);
   }
-  const fold = this._getFold();
+  const fold = this._foldCache.get();
   // `layout` first so the locale default is the first setting applied; the spread
   // overwrites its value, not its position, when the caller named a layout.
   const second: Record<string, unknown> = {
@@ -284,9 +284,9 @@ Resolution checks exact match first (e.g. `"de-at"`), then language prefix (`"de
 
 The locale → layout map is extensible per control via the `locales` property of the `customLayouts` entries. Resolution checks the folded instance map first, then the built-in map. No cleanup is needed: the custom layouts are owned by the control and destroyed with it.
 
-### Impact on \_baseLayout
+### Impact on the base layout
 
-Works correctly: `setLayout("qwertz-de")` sets `_baseLayout = "qwertz-de"` (not marked `secondary` in `internal/layout-meta.ts`), so `{layout:base}` roundtrips back to it. A layout declared by a `CustomLayout` can mark itself `layoutRole="Secondary"` and is then tracked the same way.
+Works correctly: `setLayout("qwertz-de")` makes `"qwertz-de"` the base layout `LayoutState` tracks (it is not marked `secondary` in `internal/layout-meta.ts`), so `{layout:base}` roundtrips back to it. A layout declared by a `CustomLayout` can mark itself `layoutRole="Secondary"` and is then tracked the same way.
 
 ## Auto-Type Detection
 
@@ -576,6 +576,10 @@ packages/kiosk-keyboard/
       types.ts                Internal contracts (TargetElement)
       custom-layout-fold.ts   Folds the custom layouts into the per-facet lookup maps the
                                resolution paths read, plus the diagnostics it reports
+      layout-fold-cache.ts    LayoutFoldCache: caches that fold against the aggregation's children
+                               and dedupes its diagnostics
+      layout-state.ts         LayoutState: which layout is active and who asked for it (base,
+                               requested, source), the autoCompact tier, the effective name
       layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins,
                                resolved per attribute against the folded custom layouts
       dom.ts                  DOM/key ID utilities + input resolver
@@ -595,6 +599,8 @@ packages/kiosk-keyboard/
       backspace-repeat-behavior.ts  BackspaceRepeatBehavior (press-and-hold delete)
       variant-popup-behavior.ts  VariantPopupBehavior (long-press / right-click accent-variant popup)
       auto-repeat.ts          Accelerating press-and-hold repeat scheduler
+      announcement-queue.ts   AnnouncementQueue: owns the ARIA live-region text, keeping a fixed
+                               gap between writes so a burst is not collapsed
       shift-state.ts          Shift / Caps Lock state machine
       key-token.ts            data-key value classifier (token kind)
       key-action-meta.ts      Canonical special-key metadata (shared icon names)

@@ -18,7 +18,7 @@ import type { KeyboardType } from "../library";
  * `setKeyboardType`, `resetKeyboardType`, and auto-type detection all reset this
  * back to `"external"`.
  */
-export type LayoutSource = "external" | "user";
+type LayoutSource = "external" | "user";
 
 /** The slice of the control the layout state reads and writes back into. */
 interface LayoutStateHost {
@@ -90,9 +90,11 @@ export default class LayoutState {
   /**
    * Takes the tier announcement waiting on a render, or `null` when none is due.
    *
-   * The live region's text belongs to the renderer (shift/caps state, or nothing),
-   * so the patch a layout swap triggers overwrites anything written before it. The
-   * swap's announcement is written after that patch instead.
+   * Held rather than announced at the swap so a request arriving in the same task can
+   * still retract it: `perform` drops it, because a text naming the arrangement a
+   * request has just replaced would tell a screen reader user the keyboard is on a
+   * layout it has left. Once handed to the announcement queue there is no taking it
+   * back, so the hand-off waits for the render the swap triggers.
    */
   takePendingAnnouncement(): string | null {
     const pending = this._pendingAnnouncement;
@@ -175,9 +177,9 @@ export default class LayoutState {
       //
       // The direction is announced rather than the layout's name: the name is an
       // identifier the user never chose and never sees, and it would enter a
-      // translated sentence untranslated. Two texts rather than one because the live
-      // region is a plain `textContent` write, so a repeat of what it already holds
-      // is dropped - and consecutive announcements always alternate direction, since
+      // translated sentence untranslated. Two texts rather than one because a live
+      // region speaks on change, so a repeat of what it already holds is silent - and
+      // consecutive announcements always alternate direction, since
       // `AutoCompactBehavior` only reports a verdict that differs from the last.
       if (crossed) {
         this._pendingAnnouncement = narrow

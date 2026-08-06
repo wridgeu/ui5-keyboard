@@ -16,17 +16,26 @@
  * 2. **Key parity.** Every locale bundle declares exactly the keys of its package's
  *    default bundle. A missing key falls back to the untranslated default silently, and
  *    an orphan key is dead weight nothing will ever read.
+ * 3. **Call-site coverage.** Every key a package's `src/` asks for by literal exists in
+ *    that package's default bundle. `getText` takes a hardcoded English fallback and
+ *    resolves with `bIgnoreKeyFallback`, so a key that was never declared returns that
+ *    fallback with no warning: an English suite cannot tell it apart from a translation,
+ *    and invariant 2 stays green because a key missing from the default bundle is
+ *    equally missing from every locale. Only every locale except English is wrong, and
+ *    only in an ARIA announcement.
  *
  * Values are deliberately NOT compared: translations differ, and `{0}` placeholder
  * counts are already load-bearing in the tests that assert the rendered text.
  */
 
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const PACKAGES = ["kiosk-keyboard", "kiosk-keyboard-webc"];
 const DEFAULT_BUNDLE = "messagebundle.properties";
+/** `getText("KEY"` - the only form either package uses to name a bundle key. */
+const GET_TEXT_KEY = /\bgetText\(\s*"([A-Za-z0-9_]+)"/g;
 
 const errors = [];
 
@@ -59,6 +68,39 @@ function checkAscii(file, relative) {
   });
 }
 
+/**
+ * Every `getText("KEY"` literal under a package's `src/`, mapped to where it was asked
+ * for. `src/generated/` is skipped: it is build output, rebuilt from the bundle itself.
+ *
+ * @param {string} dir directory to walk
+ * @param {string} pkg package name, for the reported path
+ * @param {Map<string, string>} found key -> first call site
+ * @returns {Map<string, string>} the same map
+ */
+function collectRequestedKeys(dir, pkg, found = new Map()) {
+  for (const name of readdirSync(dir)) {
+    const file = path.join(dir, name);
+    if (statSync(file).isDirectory()) {
+      if (name !== "generated") collectRequestedKeys(file, pkg, found);
+      continue;
+    }
+    if (!name.endsWith(".ts") || name.endsWith(".d.ts")) continue;
+    const source = readFileSync(file, "utf8");
+    const lines = source.split(/\r?\n/);
+    lines.forEach((line, index) => {
+      for (const match of line.matchAll(GET_TEXT_KEY)) {
+        const key = match[1];
+        if (key === undefined || found.has(key)) continue;
+        found.set(
+          key,
+          `packages/${pkg}/${path.relative(path.join(repoRoot, "packages", pkg), file).replace(/\\/g, "/")}:${index + 1}`,
+        );
+      }
+    });
+  }
+  return found;
+}
+
 let bundleCount = 0;
 let keyCount = 0;
 
@@ -87,6 +129,13 @@ for (const pkg of PACKAGES) {
     for (const key of declared) {
       if (!expected.has(key)) errors.push(`${relative} declares "${key}", which ${DEFAULT_BUNDLE} does not.`);
     }
+  }
+
+  for (const [key, site] of collectRequestedKeys(path.join(repoRoot, "packages", pkg, "src"), pkg)) {
+    if (expected.has(key)) continue;
+    errors.push(
+      `${site} asks for "${key}", which packages/${pkg}/src/i18n/${DEFAULT_BUNDLE} does not declare, so every locale gets the hardcoded fallback.`,
+    );
   }
 }
 

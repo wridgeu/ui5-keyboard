@@ -30,6 +30,8 @@ core/
   layout-registry.ts      Layout registration/reset + locale-based layout resolution
   layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins, resolved per attribute against the folded custom layouts
   custom-layout-fold.ts   Folds the customLayouts slot into the per-facet lookup maps the resolution paths read, plus the diagnostics it reports
+  layout-fold-cache.ts    LayoutFoldCache: caches that fold against the slotted elements and their revisions, and dedupes its diagnostics
+  layout-state.ts         LayoutState: which layout is active and who asked for it (base, requested, source), the autoCompact tier, the effective name
   input-operations.ts     Target input text operations (insert, backspace, navigation)
   keyboard-type-detector.ts  Auto-type detection (data attributes, inputmode, HTML type)
   fkey-controller.ts      FKeyController: F-key dispatch (Virtual fires key-press + caret nav; Native synthesizes keydown)
@@ -39,7 +41,7 @@ core/
   composition-utils.ts    Shared composition utilities (preedit text, CompositionEvent dispatch)
   auto-repeat.ts          AutoRepeater press-and-hold scheduler + BACKSPACE_AUTO_REPEAT timing curve (accelerating cadence)
   backspace-repeat-controller.ts  BackspaceRepeatController: owns press-and-hold Backspace pointer wiring, repeat timer, trailing-click suppression
-  announcement-queue.ts   AnnouncementQueue: drains ARIA live-region announcements one entry per fixed interval
+  announcement-queue.ts   AnnouncementQueue: owns the ARIA live-region text, keeping a fixed gap between writes (not between drains, so a lone announcement is written immediately)
   auto-show-controller.ts AutoShowController: focusin/focusout-driven auto open/close with multi-instance isolation
   native-inputmode-suppression.ts  NativeInputModeSuppression: ref-counted inputmode="none" on the target, shared across instances
   physical-key-highlight-controller.ts  PhysicalKeyHighlightController: lights up the matching virtual key on physical keydown and mirrors Shift/CapsLock
