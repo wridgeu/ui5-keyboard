@@ -53,9 +53,14 @@ export class AnnouncementQueue {
     this._flushPending = true;
     const writeNext = (): void => {
       this._timerId = null;
-      // Bail out if the host was disconnected while the timer was pending.
-      // teardown() clears the queue and flag, so just stop the chain here.
+      // A detached host drops what it was holding rather than banking it. An
+      // announcement is only meaningful at the moment it is raised, and a host can
+      // lose its node while staying alive and still raising them - a hidden UI5
+      // control keeps its event delegates - so deferring instead would let a
+      // backlog build for the whole detached period and then be read out ahead of
+      // whatever the user actually just did.
       if (!this._host.isConnected()) {
+        this._queue.length = 0;
         this._flushPending = false;
         return;
       }

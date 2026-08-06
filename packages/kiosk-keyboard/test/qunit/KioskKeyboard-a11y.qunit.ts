@@ -174,6 +174,37 @@ QUnit.test("Live region announces Shift state", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Announcements raised while the keyboard has no DOM are dropped, not banked", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+
+  const liveRegion = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
+  const shiftState = (kb as unknown as { _shiftState: { syncFromPhysical(s: boolean, c: boolean): void } })._shiftState;
+
+  // setVisible(false) renders the invisible placeholder, so getDomRef() is null while
+  // the control is very much alive - it is not destroyed and its physical-key delegate
+  // is still attached to the target input, so hardware Shift keeps reaching the
+  // announcement path.
+  kb.setVisible(false);
+  await waitForRender();
+
+  for (let press = 0; press < 6; press++) {
+    shiftState.syncFromPhysical(press % 2 === 0, false);
+  }
+
+  kb.setVisible(true);
+  await waitForRender();
+  kb.show();
+  await waitForAnnouncement();
+
+  // A live-region announcement is only meaningful when it is raised. Banking the
+  // detached ones would make the screen reader read a backlog before reaching the
+  // announcement the user actually just caused.
+  assert.strictEqual(liveRegion(), "Virtual keyboard opened", "the open announcement is not queued behind a backlog");
+
+  kb.destroy();
+});
+
 QUnit.test("Two announcements in one task are spoken in turn, not collapsed", async (assert) => {
   const kb = new KioskKeyboard({ docked: true });
   await placeAndWait(kb);

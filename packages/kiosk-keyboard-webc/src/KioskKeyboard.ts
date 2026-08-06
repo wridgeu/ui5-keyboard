@@ -29,7 +29,7 @@ import { getLayoutMeta } from "./core/layout-meta.js";
 import { getMiddlewareFactory } from "./core/middleware-registry.js";
 import { isValidVariantTable } from "./core/custom-layout-fold.js";
 import { LayoutFoldCache } from "./core/layout-fold-cache.js";
-import { LayoutState } from "./core/layout-state.js";
+import { LayoutState, type FocusAnchor } from "./core/layout-state.js";
 import { type ICustomLayout } from "./CustomLayout.js";
 import slot from "@ui5/webcomponents-base/dist/decorators/slot-strict.js";
 import type { Slot } from "@ui5/webcomponents-base/dist/UI5Element.js";
@@ -1494,7 +1494,7 @@ class KioskKeyboard extends UI5Element {
    * UI5 twin gets that restore from `FocusHandler.restoreFocus`; here the flag is
    * read in `onAfterRendering`, once the re-seated tab stop exists.
    */
-  private _reseatFocusAnchor(anchor: { value: string | null; focused: boolean }): void {
+  private _reseatFocusAnchor(anchor: FocusAnchor): void {
     const layout = anchor.value === null ? [] : this._getResolvedLayout();
     let id: string | null = null;
     for (let row = 0; row < layout.length && id === null; row++) {

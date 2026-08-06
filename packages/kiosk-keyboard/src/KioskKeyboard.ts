@@ -1773,7 +1773,7 @@ export default class KioskKeyboard extends Control {
   /**
    * Returns the internal renderer API object.
    *
-   * Exposes the six private helpers the renderer needs, without an unsafe
+   * Exposes the private helpers the renderer needs, without an unsafe
    * `as unknown as` cast. TypeScript structurally checks the returned object
    * literal against {@link RendererInternalApi} - if any method is renamed or
    * its signature changes, this line produces a compile error.

@@ -26,6 +26,7 @@ const FRENCH_TEXTS: Record<string, string> = {
   ARIA_CAPS_LOCK: "Verrouillage majuscule",
   ARIA_CAPS_LOCK_ON: "Verrouillage majuscule activ\u00e9",
   ARIA_SHIFT_ON: "Majuscule activ\u00e9e",
+  ARIA_SHIFT_OFF: "Majuscule d\u00e9sactiv\u00e9e",
   ARIA_KEYBOARD_OPENED: "Clavier virtuel ouvert",
   ARIA_KEYBOARD_CLOSED: "Clavier virtuel ferm\u00e9",
 };

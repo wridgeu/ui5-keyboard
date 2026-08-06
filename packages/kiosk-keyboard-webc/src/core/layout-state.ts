@@ -15,7 +15,7 @@ import type { KeyboardType } from "../types.js";
  * attribute, `keyboardType` changes and auto-type detection all reset this back to
  * `"external"`.
  */
-export type LayoutSource = "user" | "external";
+type LayoutSource = "user" | "external";
 
 /** The key focus sat on before a switch re-rendered the grid. */
 export interface FocusAnchor {
@@ -88,14 +88,6 @@ export class LayoutState {
     if (!this._host.getLayoutAttribute()) {
       this._host.setCurrentLayout(this._base);
     }
-  }
-
-  getBaseLayout(): string {
-    return this._base;
-  }
-
-  getSource(): LayoutSource {
-    return this._source;
   }
 
   /**
