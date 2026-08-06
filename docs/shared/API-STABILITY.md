@@ -40,12 +40,14 @@ Use these imports for application code:
 
 `ui5/kiosk/library` re-exports the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type, for inspecting the defaults; a `variants` table merges onto them per base letter, so extending them needs no spread. It also exports the `LayoutRole` and `LayoutFacet` enums and the `ControlID`, `LayoutRows` and `VariantOverrideTable` property types. The module and those exported names are stable, the table's contents are additive: a minor release may add entries, while removing or reordering existing ones is breaking.
 
-Customization is per control via the `customLayouts` aggregation of `ui5.kiosk.CustomLayout` elements, plus the `defaultVariants` property for the accent table applied under every layout. The static surface is read-only:
+Customization is per control via the `customLayouts` aggregation of `ui5.kiosk.CustomLayout` elements, plus the `defaultVariants` property for the accent table applied under every layout. The static surface carries no layout registration:
 
 - `getRegisteredLayout` / `getRegisteredLayoutNames` / `isBuiltInLayout` / `isSecondaryLayout`
 - `composeLayout` - splices built-in layouts (by name) and row arrays into one layout, for a `CustomLayout`'s `rows`
 - `getLocaleLayout`
+- `getKeyIcon` and the `SPECIAL_KEY_ICONS` map - default icon for a special key value
 - `setI18nResolver`
+- `setGlobalTargetResolver` / `getGlobalTargetResolver` - global resolver for locating native inputs
 
 Stable runtime hooks on the `KioskKeyboard` class include:
 
@@ -105,7 +107,7 @@ For `ui5.kiosk`, `layouts/*` and `middleware/*` are stable consumer imports (lis
 
 ### `kiosk-keyboard-webc`
 
-Modules under `core/*` (`shift-state`, `dom-utils`, `dom-contract`, `input-operations`, `keyboard-type-detector`, `layout-registry`, `layout-meta`, `middleware-registry`, `composition-utils`, `grapheme`, `i18n`) are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation.
+Modules under `core/*` are internal implementation details. The same rules apply: they can change shape, behavior, and location without deprecation. The one carve-out is `core/latin-variants`, which is published through the `kiosk-keyboard-webc/variants` subpath and is stable at that import path (listed under Stable Consumer API above).
 
 For `kiosk-keyboard-webc`, `layouts/*` and `middleware/*` are stable consumer imports (listed under Stable Consumer API above); the internal composition helpers `layouts/symbol-common` and `layouts/default-layout` are not part of the stable surface.
 

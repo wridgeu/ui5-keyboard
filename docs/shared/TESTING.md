@@ -55,7 +55,9 @@ Visual tests use Playwright's built-in `toHaveScreenshot()` assertion. Baselines
 
 The pipeline is whatever Playwright does for `expect(locator).toHaveScreenshot()`:
 
-1. **Capture**: Playwright scrolls the target locator into view and screenshots **the element**, not the viewport. Element screenshots are captured in full even when the element is larger than the viewport, so there is no viewport-clipping problem and **no section isolation is needed**.
+1. **Capture**: the two packages differ here.
+   - **webc** screenshots **the element** via `expect(locator).toHaveScreenshot()`. Element screenshots are captured in full even when the element is larger than the viewport, so there is no viewport-clipping problem and **no section isolation is needed**.
+   - **kiosk** routes every in-flow assertion through `expectKeyboardVisualMatch` -> `expectVisualMatch` (`test/e2e/helpers.ts`), which measures a document-coordinate clip and calls `expect(page).toHaveScreenshot(name, { fullPage: true, clip })`. Its fixture page pins fixtures to 320/400/600px and so overflows horizontally, which (per #204) breaks the viewport-relative box an element screenshot uses once mobile emulation inflates the layout viewport or RTL moves the scroll origin. The `position: fixed` docked case has no document box and stays on element capture.
 2. **Compare**: The capture is compared against the committed baseline under `test/e2e/__baselines__/<project>/`. On mismatch the test fails and Playwright writes `actual`, `expected`, and `diff` PNGs into `test-results/`.
 3. **Report**: `playwright show-report` opens the HTML report with the three images side by side for every failed snapshot.
 
@@ -69,18 +71,18 @@ expect: { toHaveScreenshot: { animations: "disabled", caret: "hide" } }
 
 Each package drives Playwright from configs at its **package root** (not inside `test/e2e/`):
 
-| Config                      | Package | Purpose                                                                  |
-| --------------------------- | ------- | ------------------------------------------------------------------------ |
-| `playwright.config.ts`      | both    | e2e + visual; `desktop` project plus the `phone-*`/`tablet` matrix       |
-| `playwright.flp.config.ts`  | kiosk   | FLP sandbox lifecycle suite (separate `ui5 serve --config ui5-flp.yaml`) |
-| `playwright.docs.config.ts` | kiosk   | On-demand README screenshot generation (`readme-screenshots.spec.ts`)    |
+| Config                      | Package | Purpose                                                                                                                                                                          |
+| --------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `playwright.config.ts`      | both    | e2e + visual; `desktop` project plus the `phone-*`/`tablet` matrix                                                                                                               |
+| `playwright.flp.config.ts`  | kiosk   | FLP sandbox lifecycle suite (separate `ui5 serve --config ui5-flp.yaml`)                                                                                                         |
+| `playwright.docs.config.ts` | both    | On-demand README screenshot generation; kiosk runs `readme-screenshots.spec.ts` on port 8085, webc serves `test/pages/key-style-demo.html` from its own Vite server on port 8087 |
 
 Within `playwright.config.ts`, projects share a single `webServer` and differ only by emulated device:
 
 - The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores `flp-lifecycle` and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
 - The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs; the behavioral specs (kiosk: autotype, focus, i18n, inputmode, interop; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
 
-Because element screenshots capture overflow, the fixed-width container fixtures run on every profile and are captured in full without per-viewport gating.
+Both capture paths take the element in full regardless of viewport, so the fixed-width container fixtures run on every profile without per-viewport gating.
 
 Baselines are committed, one directory per Playwright project (via `snapshotPathTemplate: "{testDir}/__baselines__/{projectName}/{arg}{ext}"`):
 
@@ -161,7 +163,7 @@ npm run test:e2e:tablet:update -w packages/kiosk-keyboard-webc
 
 **After updating, always:**
 
-1. Run `git diff --stat` to verify only expected baselines changed. Playwright names a baseline `<arg>-<project>-<platform>.png` and only writes the projects you actually ran, so a partial update is visible in the diff.
+1. Run `git diff --stat` to verify only expected baselines changed. Both configs pin `snapshotPathTemplate`, so a baseline is `test/e2e/__baselines__/<project>/<arg>.png` with no project or platform suffix in the filename, and only the projects you actually ran are written - a partial update shows up as changes confined to those project directories.
 2. Spot-check the updated images (open them directly or via the report).
 3. Commit ALL related changes together: new baselines, deleted old baselines, and any code changes. Leaving orphaned baseline files in the repository causes confusion.
 
@@ -171,6 +173,9 @@ The default is pixel-perfect. Determinism comes from the pinned bundled Chromium
 
 ```ts
 const SOFT = { maxDiffPixelRatio: 0.003 };
+// kiosk, through the clip helper (VisualMatchOptions = screenshot options minus fullPage/clip)
+await expectKeyboardVisualMatch(page, "kb-shift", "kb-shift-active.png", SOFT);
+// webc, element capture
 await expect(keyboardRoot(page, "kb-shift")).toHaveScreenshot("kb-shift-active.png", SOFT);
 ```
 
@@ -184,7 +189,7 @@ The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2
 
 ### Test helpers
 
-Each package keeps its own minimal `test/e2e/helpers.ts`. There is no shared cross-package helper module, and native Playwright APIs cover most needs (web-first assertions, `emulateMedia`, `addStyleTag`, projects for the device matrix). The helpers that remain are thin:
+Each package keeps its own minimal `test/e2e/helpers.ts`. There is no shared cross-package helper module, and native Playwright APIs cover most needs (web-first assertions, `emulateMedia`, `addStyleTag`, projects for the device matrix). Most of the helpers that remain are thin wrappers; the kiosk clip helper is the one substantial piece of logic:
 
 | Helper                                                 | Package | Purpose                                                                                                                  |
 | ------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -192,7 +197,9 @@ Each package keeps its own minimal `test/e2e/helpers.ts`. There is no shared cro
 | `keyboardRoot(page, id)`                               | both    | `Locator` for the keyboard root (light DOM for kiosk; the host for webc)                                                 |
 | `key(page, id, dataKey)`                               | both    | `Locator` for a specific key                                                                                             |
 | `setDocumentDirection(page, dir)`                      | both    | Set `dir`/`lang` for RTL snapshots                                                                                       |
+| `expectVisualMatch` / `expectKeyboardVisualMatch`      | kiosk   | Measure a document-coordinate clip and compare it as a full-page capture (see Capture above)                             |
 | `waitForKeys` / `waitForDocked*`                       | webc    | Await shadow-DOM render / docked open/closed/shown states                                                                |
+| `isCoarsePointer` / `isHoverCapable`                   | webc    | Gate pointer/hover-dependent assertions on the active device project                                                     |
 | `injectShadowStyleOverride` / `remove…`                | webc    | Inject a `<style>` into the shadow root to force enhancement-fallback paths                                              |
 | `CLOSED_CLASS`, `VISUAL_PAGE`, `DISABLE_TEXT_BOX_TRIM` | varies  | Shared constants (the kiosk closed-state class, the visual page URL, a CSS opt-out for progressive-enhancement features) |
 
@@ -218,6 +225,7 @@ The UI5 QUnit suites are served by `ui5 serve` (via each package's `test:qunit` 
 | 8084 | Kiosk webc manual dev server (`npm run start:kiosk-webc`) |
 | 8085 | Kiosk keyboard e2e / visual / docs (all projects)         |
 | 8086 | Kiosk webc e2e / visual (Vite, all projects)              |
+| 8087 | Kiosk webc docs screenshots (`playwright.docs.config.ts`) |
 
 ## Running all tests
 
