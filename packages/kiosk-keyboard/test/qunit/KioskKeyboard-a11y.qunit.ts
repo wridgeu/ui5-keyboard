@@ -11,6 +11,7 @@ import {
   hasKeyClass,
   placeAndWait,
   tapKey,
+  waitForAnnouncement,
   waitForRender,
 } from "./test-helpers";
 
@@ -146,9 +147,12 @@ QUnit.test("Live region announces Shift state", async (assert) => {
     liveRegion = document.getElementById(`${sId}-liveState`);
     assert.strictEqual(liveRegion!.textContent, "Shift on", "Announces Shift on");
 
-    // Activate caps lock
+    // Activate caps lock. The double-tap that reaches Caps Lock is by definition
+    // close behind the tap that turned Shift on, so its announcement waits for the
+    // queue's gap rather than overwriting one that has not been read yet.
     tapKey(kb, "{shift}");
     await waitForRender();
+    await waitForAnnouncement();
 
     liveRegion = document.getElementById(`${sId}-liveState`);
     assert.strictEqual(liveRegion!.textContent, "Caps Lock on", "Announces Caps Lock on");
@@ -156,12 +160,35 @@ QUnit.test("Live region announces Shift state", async (assert) => {
     // Deactivate
     tapKey(kb, "{shift}");
     await waitForRender();
+    await waitForAnnouncement();
 
+    // Leaving Caps Lock announces nothing, so the region keeps the text it last
+    // spoke. A live region speaks on change, so retained text is silent - and the
+    // queue, not the renderer, decides when it is replaced. Matches the webc twin.
     liveRegion = document.getElementById(`${sId}-liveState`);
-    assert.strictEqual(liveRegion!.textContent, "", "Empty after shift off");
+    assert.strictEqual(liveRegion!.textContent, "Caps Lock on", "Retains the last announcement after caps off");
   } finally {
     clock.restore();
   }
+
+  kb.destroy();
+});
+
+QUnit.test("Two announcements in one task are spoken in turn, not collapsed", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+
+  const liveRegion = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
+
+  // Both land in the same task. A single-slot live region would hold only the
+  // second, and assistive tech would never speak the first.
+  kb.show();
+  kb.close();
+
+  assert.strictEqual(liveRegion(), "Virtual keyboard opened", "the first announcement holds the region");
+
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.strictEqual(liveRegion(), "Virtual keyboard closed", "the second follows once the first has been read");
 
   kb.destroy();
 });
@@ -177,6 +204,10 @@ QUnit.test("Live region announces open and close", async (assert) => {
   kb.show();
   liveRegion = document.getElementById(`${sId}-liveState`);
   assert.strictEqual(liveRegion!.textContent, "Virtual keyboard opened", "Announces open");
+
+  // Far enough apart that the queue writes each one straight away; the burst case
+  // is covered above.
+  await new Promise((resolve) => setTimeout(resolve, 200));
 
   kb.close();
   liveRegion = document.getElementById(`${sId}-liveState`);

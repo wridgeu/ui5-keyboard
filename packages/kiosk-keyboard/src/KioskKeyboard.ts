@@ -42,6 +42,7 @@ import {
   getLocaleLayout as registryGetLocaleLayout,
 } from "./internal/layout-registry";
 import LayoutState from "./internal/layout-state";
+import { AnnouncementQueue } from "./internal/announcement-queue";
 import { getMiddlewareFactory as registryGetMiddlewareFactory } from "./internal/middleware-registry";
 import {
   SPECIAL_KEY_ICONS as DEFAULT_SPECIAL_KEY_ICONS,
@@ -131,6 +132,12 @@ export default class KioskKeyboard extends Control {
   private _variantPopup!: VariantPopupBehavior;
   /** Owns which layout is active, who asked for it, and the width tier's announcement. */
   private _layoutState!: LayoutState;
+  /** Owns the ARIA live-region announcement queue and its drain timer. */
+  private _announcements!: AnnouncementQueue;
+  /** The live region's current text, so a re-render re-emits it instead of clearing it. */
+  private _liveRegionText!: string;
+  /** The shift/caps pair the last announcement described, so only transitions speak. */
+  private _announcedShiftState!: { shifted: boolean; capsLock: boolean };
   private _middleware!: CompositionMiddleware | null;
   private _keyboardTypeSource!: KeyboardTypeSource;
   private _nativeKbSuppression!: NativeKeyboardSuppression;
@@ -825,7 +832,13 @@ export default class KioskKeyboard extends Control {
 
   override init(): void {
     KioskKeyboard._instances.add(this);
-    this._shiftState = new ShiftState(() => this.invalidate());
+    this._liveRegionText = "";
+    this._announcedShiftState = { shifted: false, capsLock: false };
+    this._announcements = new AnnouncementQueue({
+      isConnected: () => this.getDomRef() !== null,
+      setLiveRegionText: (text) => this._setLiveRegionText(text),
+    });
+    this._shiftState = new ShiftState(() => this._syncShiftState());
     this._keyGridNav = new KeyGridNavigation(this.getId(), KIOSK_KEYBOARD_DOM);
     // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
     this.addDelegate(this._keyGridNav, true);
@@ -985,6 +998,7 @@ export default class KioskKeyboard extends Control {
       KioskKeyboard._globalTargetResolver = null;
     }
 
+    this._announcements.teardown();
     this._controlsDelegation.teardown();
     this._physicalKeyHighlight.detach();
     this._responsiveSizing.destroy();
@@ -1732,8 +1746,24 @@ export default class KioskKeyboard extends Control {
     };
   }
 
-  /** Updates the ARIA live region text for screen reader announcements. */
+  /**
+   * Queues text for the ARIA live region and drains what is due.
+   *
+   * Draining here rather than only from `onAfterRendering` is what keeps a lone
+   * announcement synchronous: most of the callers below (`show`, `close`, the
+   * variant popup) change no rendered state, so no render would follow to drain it.
+   */
   private _announceLiveRegion(text: string): void {
+    this._announcements.announce(text);
+    this._announcements.flush();
+  }
+
+  /**
+   * Writes the live-region text to both the field the renderer reads and the live
+   * node, so the announcement survives the next patch without waiting for one.
+   */
+  private _setLiveRegionText(text: string): void {
+    this._liveRegionText = text;
     const liveRegion = this.getDomRef("liveState");
     if (liveRegion) liveRegion.textContent = text;
   }
@@ -1758,6 +1788,7 @@ export default class KioskKeyboard extends Control {
         _isShiftActive: () => this._isShiftActive(),
         _isCapsLock: () => this._isCapsLock(),
         _getResolvedLayout: () => this._getResolvedLayout(),
+        _getLiveRegionText: () => this._liveRegionText,
         _getLayoutLang: () => this._getLayoutLang(),
         _getKeyLabel: (key) => getKeyLabel(key, this._isShiftActive(), this._isCapsLock()),
         _getKeyAriaLabel: (key) => getKeyAriaLabel(key, this._isShiftActive(), this._isCapsLock()),
@@ -1774,6 +1805,32 @@ export default class KioskKeyboard extends Control {
   /** Returns true when Caps Lock mode is active. */
   private _isCapsLock(): boolean {
     return this._shiftState.isCapsLock;
+  }
+
+  /**
+   * Announces a shift/caps transition and repaints the keycaps.
+   *
+   * Wired as the `ShiftState` change callback, so every mutator - a `{shift}` tap,
+   * the auto-release after a shifted key, a physical modifier and the reset a layout
+   * switch performs - routes through here. Only the three transitions a screen
+   * reader user cannot otherwise perceive are spoken; the intermediate states of a
+   * double-tap to Caps Lock are not.
+   */
+  private _syncShiftState(): void {
+    const { shifted: wasShifted, capsLock: wasCapsLock } = this._announcedShiftState;
+    const shifted = this._shiftState.isShifted;
+    const capsLock = this._shiftState.isCapsLock;
+    this._announcedShiftState = { shifted, capsLock };
+
+    if (!wasCapsLock && capsLock) {
+      this._announceLiveRegion(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
+    } else if (!wasShifted && shifted && !capsLock) {
+      this._announceLiveRegion(getText("ARIA_SHIFT_ON", "Shift on"));
+    } else if (wasShifted && !wasCapsLock && !shifted && !capsLock) {
+      this._announceLiveRegion(getText("ARIA_SHIFT_OFF", "Shift off"));
+    }
+
+    this.invalidate();
   }
 
   /**
