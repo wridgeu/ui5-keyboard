@@ -22,7 +22,7 @@ The `alphabetical-sort-plugin` recursively sorts every array in the CEM by `name
 
 **Example:** `UI5Element.fireDecoratorEvent(name, data)` becomes `fireDecoratorEvent(data, name)` in the CEM because `d` sorts before `n`.
 
-The example is an inherited member on purpose: the component's own public methods take at most one parameter each, so none of their signatures reorder today. The damage lands on the `UI5Element` members the CEM inherits and on `mixins` ordering, and on whatever multi-parameter method gets added next.
+The component's own public methods take at most one parameter each, so no signature of ours reorders today; the damage lands on the inherited `UI5Element` members and on `mixins` ordering.
 
 In theory, parameter order in the CEM should not matter: each parameter object carries its own `name`, `type`, and other identifying properties, so consumers could identify parameters by these properties rather than by position. However, without the `rest: true` fix ([Bug 2](#bug-2-rest-parameters-not-emitted-in-cem)), a rest parameter that gets sorted out of its trailing position would be indistinguishable from a regular parameter, since the `rest` property that marks it as variadic was never emitted. The combination of both bugs means a sorted rest parameter silently loses its variadic semantics.
 
@@ -159,15 +159,15 @@ The approach follows the modern LESS 4.x parser (PRs #4337, #4340, #4349, #4351)
 
 **Note:**
 
-`patch-package` only patches the hoisted `node_modules/less-openui5/`. The UI5 builder resolves additional nested copies under each `@ui5/cli` install (currently one, at `node_modules/@ui5/cli/node_modules/less-openui5/`) that `patch-package` cannot reach. The `postinstall` script runs `patches/apply-nested.mjs` to sync the patched files into every nested copy it finds; it skips (with a warning) any nested copy whose **vendored LESS fork** version differs from the hoisted one. That gate reads `lib/thirdparty/less/index.js`, not the `less-openui5` package version: the fork has stayed put across less-openui5 releases, so gating on the package version would skip a copy whose parser is byte-identical and leave the theme build unpatched. `npm dedupe` does not eliminate the duplication.
+`patch-package` only patches the hoisted `node_modules/less-openui5/`. The UI5 builder resolves additional nested copies under each `@ui5/cli` install (currently one, at `node_modules/@ui5/cli/node_modules/less-openui5/`) that `patch-package` cannot reach. The `postinstall` script runs `patches/apply-nested.mjs` to sync the patched files into every nested copy it finds; it skips (with a warning) any nested copy whose vendored LESS fork version differs from the hoisted one. That gate reads `lib/thirdparty/less/index.js`, not the `less-openui5` package version: the fork has stayed put across less-openui5 releases, so gating on the package version would skip a copy whose parser is byte-identical and leave the theme build unpatched. `npm dedupe` does not eliminate the duplication.
 
 **Why not patch-package's native nested patches (verdict 2026-06-11, premise re-checked 2026-08-07):**
 
 patch-package does support nested dependency patches via the `parent/child` syntax (`npx patch-package @ui5/cli/less-openui5`, producing a `@ui5+cli++less-openui5+<version>.patch` file), but that path resolves strictly relative to the directory patch-package runs in: it reaches only `node_modules/@ui5/cli/node_modules/less-openui5` under the invoking root.
 
-That path exists today, so the native syntax would work as things stand. It is still not worth taking, because where npm puts `@ui5/cli` is a hoisting decision rather than something this repo declares, and it has already moved once: the original verdict was recorded against a tree with no root-level `@ui5/cli` and a separate nested copy under each of three workspace packages. A patch cut against the root path would have covered nothing in that tree, and one cut against the per-package paths covers nothing in this one. Covering every possible location natively means running patch-package once per workspace directory, which is a bespoke wrapper again plus hard failures in the workspaces that carry no nested copy.
+That path exists today, so the native syntax would work. It is still not worth taking, because where npm puts `@ui5/cli` is a hoisting decision rather than something this repo declares, and it has already moved once: the original verdict was recorded against a tree with no root-level `@ui5/cli` and a separate nested copy under each of three workspace packages. A patch cut against the root path would have covered nothing in that tree, and one cut against the per-package paths covers nothing in this one. Covering every location natively means running patch-package once per workspace directory, which is a bespoke wrapper again plus hard failures in the workspaces that carry no nested copy.
 
-The dynamic-discovery script stays because it is indifferent to the outcome: it searches the root and every package, syncing whatever it finds. `patches/less-openui5-test.mjs` mirrors that search and loads every nested copy it finds, so a broken sync fails `npm run test:patches` instead of a later theme build.
+The dynamic-discovery script stays because it is indifferent to where the copy lands: it searches the root and every package, syncing whatever it finds. `patches/less-openui5-test.mjs` mirrors that search, so a broken sync fails `npm run test:patches` instead of a later theme build.
 
 > **Why not more?**
 >

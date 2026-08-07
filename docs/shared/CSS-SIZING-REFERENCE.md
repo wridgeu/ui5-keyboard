@@ -359,7 +359,7 @@ The hint color default is a neutral grey (`--sapContent_LabelColor` at 71%) on t
 
 The three popup properties are WebC only: they tune the layout of the option row slotted into a `ui5-popover`. The UI5 variant renders the popup as a themed `sap.m.Popover` of `sap.m.Button`s in the static area, where the framework theme owns the chrome and option styling.
 
-One more variable appears in the WebC stylesheet and is deliberately absent from the reference table below: `--kiosk-keyboard-variant-option-width` is not a consumer override. The component publishes it inline each time the popup opens, carrying the anchor key's rendered width so every option matches the key it was summoned from; it falls back to `--kiosk-keyboard-key-height` when unset. A value set from consumer CSS is replaced on the next open. The UI5 twin publishes the same measurement as `--_ui5KioskKeyboard-variantOptionWidth`, where the leading underscore marks it private — the WebC spelling carries no such marker despite being just as internal.
+`--kiosk-keyboard-variant-option-width` is not a consumer override and is not listed below. The component publishes it inline on each popup open, carrying the anchor key's rendered width so every option matches the key it came from, and falls back to `--kiosk-keyboard-key-height` when unset; a value set from consumer CSS is replaced on the next open. The UI5 twin publishes the same measurement as the private `--_ui5KioskKeyboard-variantOptionWidth`.
 
 ## Structural Properties
 

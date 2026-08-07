@@ -2,7 +2,7 @@
 
 ## Affects
 
-KioskKeyboard (Full type) inside `sap.m.Popover` on scrollable pages, on every OpenUI5 version this library supports. The `_applyPosition` guard below is unchanged from 1.120.0 (the true implementation floor) through 1.150.0, so staying on the declared 1.136 floor is not a way around it.
+KioskKeyboard (Full type) inside `sap.m.Popover` on scrollable pages, on every OpenUI5 version this library supports: the `_applyPosition` guard is unchanged from 1.120.0 through 1.150.0.
 
 ## Symptom
 
