@@ -492,11 +492,9 @@ QUnit.test("isDispatchSuspended returns false after destroy", (assert) => {
 
 QUnit.module("Negative / Edge-Case - Destroyed manager method calls", freshManagerHooks());
 
-// One row per `_assertAlive` call site in HotkeyManager, so the guard's coverage
-// is readable as a list rather than inferred from seven near-identical tests.
-// `register()` appears once, not twice: `_assertAlive` is its first statement,
-// ahead of any sequence parsing, so the "G I" spelling exercises nothing the
-// plain one does not.
+// One row per `_assertAlive` call site in HotkeyManager. `register()` gets a
+// single row: `_assertAlive` is its first statement, ahead of any sequence
+// parsing, so a "G I" spelling exercises nothing the plain key does not.
 const destroyedGuardCases: [name: string, call: (manager: ReturnType<typeof createHotkeyManager>) => unknown][] = [
   ["register", (manager) => manager.register("F5", () => {})],
   ["createRecorder", (manager) => manager.createRecorder({ onRecord: () => {} })],
