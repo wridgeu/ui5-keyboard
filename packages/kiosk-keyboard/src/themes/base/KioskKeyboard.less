@@ -581,17 +581,14 @@
 
   /* Variant: Caps Lock indicator.
 
-     Compounded to (0,3,0) rather than written as the lone `&--capsLock`: the
-     ring is the only signal that the mode is latched, and `:hover` and
-     `:focus-visible` both declare box-shadow on `.ui5KioskKey` at (0,2,0), so a
-     single class loses to them and the ring disappears exactly while Caps Lock
-     is on. `--shiftActive` is always present alongside `--capsLock` (isCapsLock
-     implies isShifted, and the renderer nests the class), and the base class is
-     unconditional, so the compound matches whenever the lone class would.
-
-     It now also outranks the `:active`/`--pressed`/`--highlight` flattening,
-     which is deliberate: a latched mode indicator should not blink out under
-     transient press feedback. */
+     The ring is the only signal that the mode is latched, and `:hover` and
+     `:focus-visible` both declare box-shadow on `.ui5KioskKey` at (0,2,0), so it
+     is written at (0,3,0) to outrank them. `--shiftActive` is always present
+     alongside `--capsLock` (isCapsLock implies isShifted, and the renderer nests
+     the class) and the base class is unconditional, so the compound matches
+     every latched key. Outranking the `:active`/`--pressed`/`--highlight`
+     flattening is deliberate too: a latched mode indicator must not blink out
+     under transient press feedback. */
   .ui5KioskKey.ui5KioskKey--shiftActive.ui5KioskKey--capsLock {
     box-shadow: 0 0 0 2px @sapUiButtonEmphasizedBackground;
     /* Only animate the ring; background/color snaps instantly via --shiftActive's transition: none. */
@@ -819,9 +816,13 @@
   /* Accessibility */
 
   @media (prefers-reduced-motion: reduce) {
+    /* The Caps Lock ring declares its own `transition` at (0,3,0), so it is
+       listed here in full: a lone `.ui5KioskKey` loses to it on specificity and
+       the ring would keep fading in over 0.1s on every latch. */
     .ui5KioskKey,
     .ui5KioskKey:hover,
     .ui5KioskKey:active,
+    .ui5KioskKey.ui5KioskKey--shiftActive.ui5KioskKey--capsLock,
     .ui5KioskKeyboard--docked,
     .ui5KioskKeyboard--closed {
       transition: none;
@@ -871,10 +872,15 @@
       }
     }
 
-    .ui5KioskKey--capsLock {
-      border-color: Highlight;
-      outline: 2px solid Highlight;
-      outline-offset: -1px;
+    /* Variant: Caps Lock indicator. box-shadow is forced to none here, so the
+       latch signal moves onto the key's border, not its outline: outline is the
+       focus indicator, and a latched key that takes focus would trade one signal
+       for the other. `--shiftActive` fills the key with Highlight, so the ring
+       is drawn in HighlightText, and at (0,3,0) so it outranks that fill's own
+       border-color. */
+    .ui5KioskKey.ui5KioskKey--shiftActive.ui5KioskKey--capsLock {
+      border-color: HighlightText;
+      border-width: 2px;
     }
   }
 

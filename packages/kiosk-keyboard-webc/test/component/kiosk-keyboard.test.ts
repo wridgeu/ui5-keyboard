@@ -732,8 +732,18 @@ describe("kiosk-keyboard", () => {
         shiftEl.classList.contains(DOM.classes.keyCapsLock),
         "caps-lock class should be present synchronously after double-click",
       ).to.be.true;
+      // The Caps Lock ring is styled on the compound
+      // `.kiosk-key.kiosk-key--shift-active.kiosk-key--caps-lock`, so a latched
+      // key that carries only the caps class would paint no ring at all.
+      expect(shiftEl.classList.contains(DOM.classes.keyShiftActive), "shift-active class accompanies caps-lock").to.be
+        .true;
 
       await nextRender();
+      const rendered = queryKey(el, "{shift}")!;
+      expect(
+        rendered.classList.contains(DOM.classes.keyCapsLock) && rendered.classList.contains(DOM.classes.keyShiftActive),
+        "both classes survive the render that follows",
+      ).to.be.true;
     });
 
     it("no forced layout reads during shift toggle", async () => {
