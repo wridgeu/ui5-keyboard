@@ -980,11 +980,7 @@ export default class KioskKeyboard extends Control {
   }
 
   override exit(): void {
-    if (this._middleware) {
-      this._middleware.reset();
-      this._middleware = null;
-      this._middlewareFactory = null;
-    }
+    this._dropComposition("reset");
     KioskKeyboard._instances.delete(this);
     const wasLastInstance = KioskKeyboard._instances.size === 0;
 
@@ -1114,17 +1110,26 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Ends any in-progress composition and drops the middleware together with the
+   * factory that produced it, so the next key re-resolves from scratch.
+   * `"commit"` flushes the buffer to the target; `"reset"` discards it. A no-op
+   * when no composition is active.
+   */
+  private _dropComposition(mode: "commit" | "reset"): void {
+    if (!this._middleware) return;
+    this._middleware[mode]();
+    this._middleware = null;
+    this._middlewareFactory = null;
+  }
+
+  /**
    * Commits any in-progress composition to the target and drops the middleware,
    * so the next key starts a fresh composition. A no-op when no composition is
    * active. Called on every real editing-context switch (layout, target, or
    * keyboardType change).
    */
   private _endComposition(): void {
-    if (this._middleware) {
-      this._middleware.commit();
-      this._middleware = null;
-      this._middlewareFactory = null;
-    }
+    this._dropComposition("commit");
   }
 
   /**
@@ -1193,11 +1198,7 @@ export default class KioskKeyboard extends Control {
   reset(): this {
     // Abort (not commit) any in-progress composition: reset discards the
     // interaction rather than flushing a half-formed syllable to the target.
-    if (this._middleware) {
-      this._middleware.reset();
-      this._middleware = null;
-      this._middlewareFactory = null;
-    }
+    this._dropComposition("reset");
     this._backspaceRepeat.stop();
     this._variantPopup.stop();
     this._variantPopup.dismissOpen();
