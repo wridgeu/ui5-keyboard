@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -56,6 +57,19 @@ function assertFilesPresent(packageName, files, requiredFiles) {
   }
 }
 
+// npm only packs files inside the package directory, so each published package
+// carries its own committed copy of the repo's LICENSE. Presence is not enough:
+// a copy that fell behind the root file ships the wrong licence text, and
+// nothing else in the tree compares them.
+const rootLicense = readFileSync(path.join(repoRoot, "LICENSE"), "utf8");
+
+function assertLicenseMatchesRoot(packageName, workspace) {
+  const packaged = readFileSync(path.join(repoRoot, workspace, "LICENSE"), "utf8");
+  if (packaged !== rootLicense) {
+    throw new Error(`${packageName} ships a LICENSE that differs from the repo root LICENSE. Re-copy the root file.`);
+  }
+}
+
 // One invocation for all three workspaces: npm accepts repeated `-w` and emits a
 // single JSON array. Entries are matched by package name rather than by position,
 // so the result does not depend on npm preserving the flag order.
@@ -73,5 +87,6 @@ for (const pkg of packages) {
   }
 
   assertFilesPresent(pkg.name, metadata.files, pkg.requiredFiles);
+  assertLicenseMatchesRoot(pkg.name, pkg.workspace);
   process.stdout.write(`Verified dry-run package contents for ${pkg.name}.\n`);
 }
