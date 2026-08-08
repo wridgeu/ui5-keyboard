@@ -151,11 +151,9 @@ const FANCY_DASH_RE = new RegExp(`[${EM_DASH}${EN_DASH}]`, "g");
 const hasFancyDash = (text) => text.includes(EM_DASH) || text.includes(EN_DASH);
 
 /**
- * Detects em-dashes (U+2014) and en-dashes (U+2013) in strings and/or comments.
+ * Detects em-dashes (U+2014) and en-dashes (U+2013) in strings and comments.
  *
  * Both are a strong signal of AI-generated text that was pasted without review.
- * Configurable via `checkStrings` and `checkComments` options (both default to
- * true).
  *
  * Auto-fix: replaces with `-` in strings and comments.
  */
@@ -172,31 +170,11 @@ const noEmDash = {
       emDashInComment:
         "Comment contains an em-dash or en-dash. Rewrite the sentence so it reads cleanly (a colon, comma, or period usually works), or use a regular dash (-) instead.",
     },
-    schema: [
-      {
-        type: "object",
-        properties: {
-          checkStrings: { type: "boolean" },
-          checkComments: { type: "boolean" },
-        },
-        additionalProperties: false,
-      },
-    ],
+    schema: [],
   },
   create(context) {
-    // Shape is enforced by this rule’s own `schema`, which oxlint validates
-    // before calling `create`; `context.options` itself is typed as raw JSON.
-    const [configured] = context.options;
-    /** @type {{ checkStrings?: boolean; checkComments?: boolean }} */
-    const opts = configured && typeof configured === "object" && !Array.isArray(configured) ? configured : {};
-    const checkStrings = opts.checkStrings !== false;
-    const checkComments = opts.checkComments !== false;
-
-    /** @type {Record<string, (node: any) => void>} */
-    const visitors = {};
-
-    if (checkStrings) {
-      visitors.Literal = function (node) {
+    return {
+      Literal(node) {
         if (typeof node.value === "string" && hasFancyDash(node.value)) {
           context.report({
             node,
@@ -206,8 +184,8 @@ const noEmDash = {
             },
           });
         }
-      };
-      visitors.TemplateLiteral = function (node) {
+      },
+      TemplateLiteral(node) {
         for (const quasi of node.quasis) {
           if (hasFancyDash(quasi.value.raw)) {
             context.report({
@@ -220,11 +198,8 @@ const noEmDash = {
             break;
           }
         }
-      };
-    }
-
-    if (checkComments) {
-      visitors.Program = function () {
+      },
+      Program() {
         for (const comment of context.sourceCode.getAllComments()) {
           if (!hasFancyDash(comment.value)) continue;
           context.report({
@@ -241,10 +216,8 @@ const noEmDash = {
             },
           });
         }
-      };
-    }
-
-    return visitors;
+      },
+    };
   },
 };
 
