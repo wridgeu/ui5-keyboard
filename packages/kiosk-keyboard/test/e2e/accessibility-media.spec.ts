@@ -46,3 +46,30 @@ for (const stateClass of [DOM.classes.keyHighlight, DOM.classes.keyPressed, DOM.
     expect(highlighted.hint).not.toBe(restingHint);
   });
 }
+
+// The Caps Lock ring is the only signal that the mode is latched, so it has to
+// outrank the transient interaction states painted on the same key. `:hover` and
+// `:focus-visible` both declare `box-shadow` on `.ui5KioskKey` at (0,2,0) while
+// the ring's own selector is a lone class at (0,1,0), so before the compound
+// selector the ring vanished exactly while Caps Lock was on. Polled rather than
+// read once: the ring declares `transition: box-shadow 0.1s ease`, so an
+// immediate read returns the pre-transition value.
+const CAPS_RING = /0px 0px 0px 2px/;
+
+test("kb-caps-lock-ring-survives-hover-and-focus", async ({ page }) => {
+  await openPage(page);
+  const shiftKey = key(page, "kb-qwerty", "{shift}");
+  const boxShadow = () => shiftKey.evaluate((el) => getComputedStyle(el).boxShadow);
+
+  await shiftKey.evaluate((el, classes) => el.classList.add(classes.shift, classes.caps), {
+    shift: DOM.classes.keyShiftActive,
+    caps: DOM.classes.keyCapsLock,
+  });
+  await expect.poll(boxShadow).toMatch(CAPS_RING);
+
+  await shiftKey.hover();
+  await expect.poll(boxShadow).toMatch(CAPS_RING);
+
+  await shiftKey.evaluate((el: HTMLElement) => el.focus());
+  await expect.poll(boxShadow).toMatch(CAPS_RING);
+});

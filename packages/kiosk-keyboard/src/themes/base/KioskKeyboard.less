@@ -577,13 +577,25 @@
         outline-color: @sapUiContentContrastFocusColor;
       }
     }
+  }
 
-    /* Variant: Caps Lock indicator */
-    &--capsLock {
-      box-shadow: 0 0 0 2px @sapUiButtonEmphasizedBackground;
-      /* Only animate the ring; background/color snaps instantly via --shiftActive's transition: none. */
-      transition: box-shadow 0.1s ease;
-    }
+  /* Variant: Caps Lock indicator.
+
+     Compounded to (0,3,0) rather than written as the lone `&--capsLock`: the
+     ring is the only signal that the mode is latched, and `:hover` and
+     `:focus-visible` both declare box-shadow on `.ui5KioskKey` at (0,2,0), so a
+     single class loses to them and the ring disappears exactly while Caps Lock
+     is on. `--shiftActive` is always present alongside `--capsLock` (isCapsLock
+     implies isShifted, and the renderer nests the class), and the base class is
+     unconditional, so the compound matches whenever the lone class would.
+
+     It now also outranks the `:active`/`--pressed`/`--highlight` flattening,
+     which is deliberate: a latched mode indicator should not blink out under
+     transient press feedback. */
+  .ui5KioskKey.ui5KioskKey--shiftActive.ui5KioskKey--capsLock {
+    box-shadow: 0 0 0 2px @sapUiButtonEmphasizedBackground;
+    /* Only animate the ring; background/color snaps instantly via --shiftActive's transition: none. */
+    transition: box-shadow 0.1s ease;
   }
 
   /* Width-responsive @container */

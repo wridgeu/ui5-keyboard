@@ -506,8 +506,21 @@
   }
 }
 
-/* Variant: Caps Lock indicator */
-.kiosk-key--caps-lock {
+/* Variant: Caps Lock indicator.
+
+   Compounded to (0,3,0) rather than written as the lone `.kiosk-key--caps-lock`:
+   the ring is the only signal that the mode is latched, and `:hover` and
+   `:focus-visible` both declare box-shadow on `.kiosk-key` at (0,2,0) -- with the
+   `@media (hover: none)` block re-declaring hover later still -- so a single
+   class loses to them and the ring disappears exactly while Caps Lock is on.
+   `--shift-active` is always present alongside `--caps-lock` (isCapsLock implies
+   isShifted), and the base class is unconditional, so the compound matches
+   whenever the lone class would.
+
+   It now also outranks the `:active`/`--pressed`/`--highlight` flattening, which
+   is deliberate: a latched mode indicator should not blink out under transient
+   press feedback. */
+.kiosk-key.kiosk-key--shift-active.kiosk-key--caps-lock {
   box-shadow: 0 0 0 2px var(--sapButton_Emphasized_Background, #0070f2);
   /* Only animate the ring; background/color snaps instantly via shift-active's transition: none. */
   transition: box-shadow 0.1s ease;
