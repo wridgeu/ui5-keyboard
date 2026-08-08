@@ -136,6 +136,24 @@ jobs:
           # exist yet, instead of failing with "Get Pages site failed".
           enablement: true
 
+      # configure-pages above only creates a site that does not exist; against an
+      # existing one it performs a GET and succeeds. So a site left on the legacy
+      # (branch) build type stays there, GitHub serves Jekyll over the repo root
+      # -- rendering README.md as the site and 404ing flp.html -- and every step
+      # here still reports success. That is exactly what happened: 8 consecutive
+      # green deploys published nothing. Fail loudly instead of deploying an
+      # artifact nothing will serve.
+      - name: Assert Pages serves this workflow's artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          build_type=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type)
+          if [ "$build_type" != "workflow" ]; then
+            echo "::error::Pages build_type is '$build_type', not 'workflow'. GitHub is serving a branch build, so this artifact would be uploaded and ignored. Fix: Settings > Pages > Source: GitHub Actions (or: gh api -X PUT repos/${GITHUB_REPOSITORY}/pages -f build_type=workflow)."
+            exit 1
+          fi
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
