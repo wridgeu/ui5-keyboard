@@ -249,7 +249,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
 
       if (phase === "LV") {
         const tIdx = COMPAT_TO_T.get(code);
-        if (tIdx !== undefined && lIdx !== undefined) {
+        if (tIdx !== undefined) {
           curT = tIdx;
           phase = "LVT";
           updateComposition(compState, el, composeSyllable(curL, curV, curT));
