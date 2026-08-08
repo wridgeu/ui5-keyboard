@@ -105,21 +105,27 @@ Requires `npm_execpath` (set by npm for every script it runs), so it must be run
 Drift check for the deliberately hand-duplicated kiosk twin modules
 (`packages/kiosk-keyboard/src` vs `packages/kiosk-keyboard-webc/src`).
 
-- Compares an explicit manifest of 30 pairs (19 `layouts/*` files plus 11 core
+- Compares an explicit manifest of 31 pairs (19 `layouts/*` files, 11 core
   helpers: `grapheme`, `auto-repeat`, `shift-state`, `composition-utils`,
   `key-token`, `key-action-meta`, `layout-constraint`, `latin-variants`,
-  `announcement-queue`, `layout-meta`, and `custom-layout-fold`) after
-  normalization: comments stripped (string-aware), relative `.js` import
-  suffixes removed, each line trimmed and blank lines dropped. Intra-line
-  spacing is left to oxfmt. Nothing else is equated: a normalizer that rewrites
-  a line also hides real drift on it, so the set stays limited to differences
-  the two packaging conventions force. The count is pinned by
-  `EXPECTED_PAIR_COUNT`, so the manifest and the number move together.
+  `announcement-queue`, `layout-meta`, `custom-layout-fold`, plus
+  `middleware/kana-dakuten`) after normalization: comments stripped
+  (string-aware), relative `.js` import suffixes removed, the `../internal/` vs
+  `../core/` helper directory a middleware module imports through equated, each
+  line trimmed and blank lines dropped. Intra-line spacing is left to oxfmt.
+  Nothing else is equated: a normalizer that rewrites a line also hides real
+  drift on it, so the set stays limited to differences the two packaging
+  conventions force. The count is pinned by `EXPECTED_PAIR_COUNT`, so the
+  manifest and the number move together.
 - Fails with a unified-diff-style report naming the drifted pair; a missing
   file or a shrunken manifest is a hard failure, never a silent skip.
 - Intentionally divergent or framework-adapted modules (e.g.
-  `middleware/kana-dakuten.ts`) are listed as unchecked at the top of the
-  script, each with a reason.
+  `middleware/hangul-compose.ts`, whose `commitPreedit` differs by framework)
+  are listed as unchecked at the top of the script, each with a reason.
+- Three completeness guards (`layouts/`, `internal/` <-> `core/`, `middleware/`)
+  fail on any same-named pair that is in neither the checked nor the unchecked
+  list, so a newly hand-duplicated module cannot skip the check by never being
+  registered.
 
 Adversarial validation record: `docs/specs/2026-06-11-twin-drift-check-adversarial-hypotheses.md`.
 

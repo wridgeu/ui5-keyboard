@@ -8,9 +8,11 @@
  * duplicated by hand and must stay logically identical. Hand-syncing has
  * already missed one-sided fixes, so this check compares each twin pair after
  * normalizing away the differences that are legitimate (comments, blank lines,
- * `.js` ESM import suffixes) and fails with the first drifting
- * line when anything else drifts. Intra-line spacing is left to oxfmt (run
- * before this check in the same pipeline), so the normalizer does not collapse it.
+ * `.js` ESM import suffixes, and the `../internal/` vs `../core/` helper
+ * directory a middleware module imports through) and fails with the first
+ * drifting line when anything else drifts. Intra-line spacing is left to oxfmt
+ * (run before this check in the same pipeline), so the normalizer does not
+ * collapse it.
  *
  * Deliberately UNCHECKED twin modules (framework-adapted or intentionally
  * divergent; compared by humans, not by this script):
@@ -21,8 +23,10 @@
  *   self-contained responsibilities (F-key dispatch, arrow-key grid navigation,
  *   plus the kiosk-only controls delegation) into the framework-adapted
  *   controller files listed below, shrinking this surface.
- * - middleware/kana-dakuten.ts: known semantic divergence between the twins.
- * - middleware/hangul-compose.ts: framework-adapted wiring differs.
+ * - middleware/hangul-compose.ts: `commitPreedit` differs -- kiosk re-inserts
+ *   the committed syllable through insertText so UI5's setValue/liveChange
+ *   pipeline observes it, where webc rewrites `el.value` in place. The rest of
+ *   the module is in sync. (middleware/kana-dakuten.ts is byte-checked.)
  * - internal/layout-registry.ts <-> core/layout-registry.ts: both are
  *   module-scoped const Maps, but the twins diverge in their diagnostics --
  *   kiosk logs through sap/base/Log, webc through console.
@@ -138,6 +142,17 @@ const UNCHECKED_CORE_TWINS = [
   "responsive-sizing-controller",
 ];
 
+// src/middleware/ is its own tier: the modules sit under the same path in both
+// packages and reach their helpers through ../internal/ vs ../core/, which the
+// normalizer equates.
+const MIDDLEWARE = ["kana-dakuten"];
+
+// Middleware whose twins are deliberately NOT byte-compared. `commitPreedit` is
+// the only divergence left: kiosk re-inserts the committed syllable through
+// insertText so UI5's setValue/liveChange pipeline observes it, where webc
+// rewrites `el.value` in place.
+const UNCHECKED_MIDDLEWARE_TWINS = ["hangul-compose"];
+
 const PAIRS = [
   ...LAYOUTS.map((name) => ({
     label: `layouts/${name}.ts`,
@@ -149,11 +164,16 @@ const PAIRS = [
     kiosk: path.join(kioskRoot, "src", "internal", `${name}.ts`),
     webc: path.join(webcRoot, "src", "core", `${name}.ts`),
   })),
+  ...MIDDLEWARE.map((name) => ({
+    label: `middleware/${name}.ts`,
+    kiosk: path.join(kioskRoot, "src", "middleware", `${name}.ts`),
+    webc: path.join(webcRoot, "src", "middleware", `${name}.ts`),
+  })),
 ];
 
 // Guard against the manifest silently shrinking (a dropped entry would make
 // the check pass while comparing fewer pairs).
-const EXPECTED_PAIR_COUNT = 30;
+const EXPECTED_PAIR_COUNT = 31;
 
 /**
  * Removes line and block comments, but ONLY outside string literals: a `//` or
@@ -223,6 +243,13 @@ function stripComments(src) {
 
 const RELATIVE_JS_SUFFIX = /((?:from|import)\s*\(?\s*["'])(\.{1,2}\/[^"']*)\.js(["'])/g;
 
+// The one directory name the two packaging conventions force apart: a module
+// under src/middleware/ reaches its helpers through ../internal/ in kiosk and
+// ../core/ in webc. Scoped to those two literal prefixes so it cannot equate
+// anything else -- a genuinely wrong cross-directory import stays visible here
+// (and is a tsc error regardless).
+const TWIN_HELPER_DIR = /((?:from|import)\s*\(?\s*["'])\.\.\/(?:internal|core)\//g;
+
 /**
  * Normalizes one twin source file into comparable lines.
  *
@@ -235,6 +262,7 @@ function normalize(filePath) {
     line = line.trim();
     if (!line) continue;
     line = line.replace(RELATIVE_JS_SUFFIX, "$1$2$3"); // webc ESM `.js` suffixes
+    line = line.replace(TWIN_HELPER_DIR, "$1../TWIN_HELPERS/"); // kiosk internal/ <-> webc core/
     lines.push(line);
   }
   return lines;
@@ -283,6 +311,18 @@ reconcile("layouts/", tsBasenames(path.join(webcRoot, "src", "layouts")), LAYOUT
 const webcCore = new Set(tsBasenames(path.join(webcRoot, "src", "core")));
 const sharedCoreNames = tsBasenames(path.join(kioskRoot, "src", "internal")).filter((name) => webcCore.has(name));
 reconcile("internal/ <-> core/", sharedCoreNames, [...CORE_MODULES, ...UNCHECKED_CORE_TWINS]);
+
+// middleware/ is a flat tier under the same path in both packages: every .ts
+// must be a checked pair or explicitly unchecked. Without this a third
+// hand-duplicated middleware would skip the drift check entirely.
+reconcile("middleware/", tsBasenames(path.join(kioskRoot, "src", "middleware")), [
+  ...MIDDLEWARE,
+  ...UNCHECKED_MIDDLEWARE_TWINS,
+]);
+reconcile("middleware/", tsBasenames(path.join(webcRoot, "src", "middleware")), [
+  ...MIDDLEWARE,
+  ...UNCHECKED_MIDDLEWARE_TWINS,
+]);
 
 console.log(`Comparing ${PAIRS.length} twin pairs (kiosk-keyboard <-> kiosk-keyboard-webc)...`);
 

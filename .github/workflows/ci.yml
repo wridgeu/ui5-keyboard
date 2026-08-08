@@ -78,7 +78,7 @@ jobs:
         run: npm run test:patches
 
       # Compares the deliberately hand-duplicated kiosk <-> kiosk-webc twin
-      # modules (layouts + core helpers) after normalization; see
+      # modules (layouts + core helpers + middleware) after normalization; see
       # tools/check-twin-drift.mjs for the pair manifest.
       - name: Twin-drift check
         run: npm run test:twin-drift
