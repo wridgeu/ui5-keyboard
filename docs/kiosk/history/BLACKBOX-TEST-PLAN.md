@@ -38,6 +38,9 @@ public events, and input behavior from a consumer perspective.
 
 ### 2) Suite: `packages/kiosk-keyboard/test/qunit/KioskKeyboard-input-blackbox.qunit.ts`
 
+> This suite no longer exists. Its coverage was absorbed into
+> `KioskKeyboard.qunit.ts`, which had grown duplicates of six of its seven tests.
+
 1. **Default typing into `targetInput`**
    - Associate `sap.m.Input` and assert text insertion for printable keys.
 2. **Backspace and space behavior**
