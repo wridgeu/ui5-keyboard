@@ -73,7 +73,7 @@ jobs:
         with:
           registry-url: https://registry.npmjs.org
 
-      # prepublishOnly copies LICENSE and builds; OIDC auth via id-token: write
+      # prepublishOnly builds; OIDC auth via id-token: write
       - run: npm publish -w packages/hotkeys --provenance --access public
         env:
           NODE_AUTH_TOKEN: ""

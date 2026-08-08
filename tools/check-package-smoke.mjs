@@ -17,12 +17,13 @@ const packages = [
   {
     name: "ui5-lib-hotkeys",
     workspace: "packages/hotkeys",
-    requiredFiles: ["README.md", "dist/.ui5/build-manifest.json", "dist/resources/ui5/hotkeys/library.js"],
+    requiredFiles: ["LICENSE", "README.md", "dist/.ui5/build-manifest.json", "dist/resources/ui5/hotkeys/library.js"],
   },
   {
     name: "ui5-lib-kiosk-keyboard",
     workspace: "packages/kiosk-keyboard",
     requiredFiles: [
+      "LICENSE",
       "README.md",
       "src/KioskKeyboard.gen.d.ts",
       "src/CustomLayout.gen.d.ts",
@@ -34,6 +35,7 @@ const packages = [
     name: "kiosk-keyboard-webc",
     workspace: "packages/kiosk-keyboard-webc",
     requiredFiles: [
+      "LICENSE",
       "README.md",
       "dist/Assets.js",
       "dist/KioskKeyboard.js",

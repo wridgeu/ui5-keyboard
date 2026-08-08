@@ -217,10 +217,6 @@ serving. Each package's `test:qunit` prefixes the check: `hotkeys` on 8081,
 `check-port-free.test.mjs` covers it, and is picked up by `test:lint-plugins`
 (`node --test tools/*.test.mjs`).
 
-## `copy-license.mjs`
-
-Copies the monorepo's root `LICENSE` into the current working directory (the package being published) so `npm publish` includes it in the tarball. Each publishable package calls it from its `prepublishOnly` script (`node ../../tools/copy-license.mjs`).
-
 ## `trim-pages-dist.mjs`
 
 Prunes the self-hosted GitHub Pages demo dist (`packages/demo-app/dist`) after a `ui5 build --all` with the SAPUI5 framework (`ui5-pages.yaml`). `--all` bundles the entire `sap.ushell` dependency closure (~560 MB); this trims it to the subset the keyboard launchpad actually loads (~150 MB) via three production trims:

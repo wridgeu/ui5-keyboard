@@ -24,8 +24,7 @@
     "dist/**/*",
     "src/**/*",
     "ui5.yaml",
-    "README.md",
-    "LICENSE"
+    "README.md"
   ],
   "type": "module",
   "main": "dist/resources/ui5/kiosk/library.js",
@@ -34,7 +33,7 @@
     "generate": "ts-interface-generator --jsdoc verbose",
     "prebuild": "npm run generate",
     "build": "ui5 build --clean-dest --create-build-manifest",
-    "prepublishOnly": "node ../../tools/copy-license.mjs && npm run build",
+    "prepublishOnly": "npm run build",
     "start": "npm run start:qunit",
     "start:qunit": "ui5 serve --port 8082 -o \"test-resources/sap/ui/qunit/testrunner.html?testpage=%2Ftest-resources%2Fui5%2Fkiosk%2Fqunit%2Ftestsuite.qunit.html&autostart=true\"",
     "start:visual": "ui5 serve --port 8082 -o test-resources/ui5/kiosk/e2e/visual/index.html",
