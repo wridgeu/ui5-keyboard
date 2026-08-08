@@ -1,5 +1,6 @@
 import clamp from "@ui5/webcomponents-base/dist/util/clamp.js";
 import { graphemeLengthAfter, graphemeLengthBefore } from "./grapheme.js";
+import { endComposition, type CompositionState } from "./composition-utils.js";
 
 /** Cursor position tuple: [selectionStart, selectionEnd]. */
 type CursorPos = [number, number];
@@ -64,6 +65,19 @@ export function insertText(
   const inputType = text === "\n" ? "insertLineBreak" : "insertText";
   dom.dispatchEvent(new InputEvent("input", { bubbles: true, inputType, data: text }));
   return [newPos, newPos];
+}
+
+/**
+ * Ends an active composition and returns its preedit text. The component writes
+ * the target's value directly, so the preedit already IS the committed text and
+ * the range needs no splice-and-reinsert.
+ *
+ * Returns the committed text, empty when the preedit was.
+ */
+export function commitComposition(state: CompositionState, dom: HTMLInputElement | HTMLTextAreaElement): string {
+  const text = dom.value.slice(state.preeditStart, state.preeditStart + state.preeditLength);
+  endComposition(state, dom);
+  return text;
 }
 
 /**

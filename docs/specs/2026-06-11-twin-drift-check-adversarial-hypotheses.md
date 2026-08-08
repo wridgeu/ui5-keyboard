@@ -104,10 +104,19 @@ exemption reasons. `kana-dakuten` was listed as a "known semantic divergence"
 but normalizes to **zero** differing lines once the `../internal/` vs `../core/`
 helper-directory prefix is equated, so it is now a checked pair (manifest 30 ->
 31). `hangul-compose` was listed as "framework-adapted wiring differs", which is
-true but too vague to review against; its only remaining divergence is
-`commitPreedit` (11 normalized lines), and the reason now says so. The
-`charCodeAt`/`codePointAt` and dead-conjunct differences that also separated the
-twins were fixed rather than exempted.
+true but too vague to review against; its only divergence was `commitPreedit`
+(11 normalized lines). The `charCodeAt`/`codePointAt` and dead-conjunct
+differences that also separated the twins were fixed rather than exempted.
+
+Those 11 lines are now gone too, so no middleware is exempt. `commitPreedit`'s
+framework-specific half moved into the `input-operations` adapter pair
+(`commitComposition`: kiosk splices the preedit out and re-inserts it through
+`insertText` so UI5's `setValue`/`liveChange` sees it, webc returns the text it
+already wrote), which is where `kana-dakuten` already sends `insertText`. That
+leaves `hangul-compose` byte-identical and byte-checked (manifest 31 -> 32), and
+`UNCHECKED_MIDDLEWARE_TWINS` empty. It matters because the exemption covered
+~290 lines that no guard was reading: the jamo tables, the L/LV/LVT phase
+machine, and T-stealing.
 
 The normalizer widening is scoped to the two literal prefixes `../internal/` and
 `../core/` after a `from`/`import`, so it cannot equate anything else; a wrong
@@ -125,5 +134,10 @@ cross-directory import inside a middleware twin stays visible here and is a
   pre-change script, with the two files deliberately **divergent**
   (`export const x = 1;` vs `export const y = 2;`), exits **0** and reports
   "All twin pairs are in sync". That is the exact green-lie this guard removes.
+- **H9 (new): a one-sided edit inside `hangul-compose` fails.** Two probes, one
+  per package, each in the region the exemption used to cover: `[0x3131, 0]` ->
+  `[0x3130, 0]` in the kiosk `COMPAT_TO_L` table, and `[27, 18]` -> `[27, 17]` in
+  the webc `T_TO_L` map -> exit 1 both times, diff naming the line. Exit 0 after
+  each revert. Both were silently green while the module was exempt.
 
 All reverts left `git status` clean.

@@ -23,10 +23,6 @@
  *   self-contained responsibilities (F-key dispatch, arrow-key grid navigation,
  *   plus the kiosk-only controls delegation) into the framework-adapted
  *   controller files listed below, shrinking this surface.
- * - middleware/hangul-compose.ts: `commitPreedit` differs -- kiosk re-inserts
- *   the committed syllable through insertText so UI5's setValue/liveChange
- *   pipeline observes it, where webc rewrites `el.value` in place. The rest of
- *   the module is in sync. (middleware/kana-dakuten.ts is byte-checked.)
  * - internal/layout-registry.ts <-> core/layout-registry.ts: both are
  *   module-scoped const Maps, but the twins diverge in their diagnostics --
  *   kiosk logs through sap/base/Log, webc through console.
@@ -145,13 +141,14 @@ const UNCHECKED_CORE_TWINS = [
 // src/middleware/ is its own tier: the modules sit under the same path in both
 // packages and reach their helpers through ../internal/ vs ../core/, which the
 // normalizer equates.
-const MIDDLEWARE = ["kana-dakuten"];
+const MIDDLEWARE = ["hangul-compose", "kana-dakuten"];
 
-// Middleware whose twins are deliberately NOT byte-compared. `commitPreedit` is
-// the only divergence left: kiosk re-inserts the committed syllable through
-// insertText so UI5's setValue/liveChange pipeline observes it, where webc
-// rewrites `el.value` in place.
-const UNCHECKED_MIDDLEWARE_TWINS = ["hangul-compose"];
+// Middleware whose twins are deliberately NOT byte-compared. Empty: a
+// middleware's framework-specific step belongs in the input-operations adapter
+// (`commitComposition`, `insertText`), which leaves the middleware itself
+// identical. Add a name here, with the reason, only when that is genuinely
+// impossible.
+const UNCHECKED_MIDDLEWARE_TWINS = [];
 
 const PAIRS = [
   ...LAYOUTS.map((name) => ({
@@ -173,7 +170,7 @@ const PAIRS = [
 
 // Guard against the manifest silently shrinking (a dropped entry would make
 // the check pass while comparing fewer pairs).
-const EXPECTED_PAIR_COUNT = 31;
+const EXPECTED_PAIR_COUNT = 32;
 
 /**
  * Removes line and block comments, but ONLY outside string literals: a `//` or
@@ -274,13 +271,21 @@ if (PAIRS.length !== EXPECTED_PAIR_COUNT) {
 }
 
 /**
- * Fails if a twin module exists in both packages but is not accounted for in
- * the manifest, so a newly hand-duplicated file cannot silently skip the drift
- * check (the EXPECTED_PAIR_COUNT guard only catches the manifest shrinking, not
- * a new pair being forgotten).
+ * Fails if a module that should be a twin is not accounted for in the manifest,
+ * so a newly hand-duplicated file cannot silently skip the drift check (the
+ * EXPECTED_PAIR_COUNT guard only catches the manifest shrinking, not a new pair
+ * being forgotten).
+ *
+ * Which basenames "should be a twin" is the caller's call, and the two tiers
+ * differ. layouts/ and middleware/ pass each package's whole listing: every
+ * module there is expected to exist on both sides, so a one-sided file is drift
+ * and is meant to fail (registering it then fails on the missing twin file
+ * instead). internal/ <-> core/ passes the intersection, because those two
+ * directories also hold differently-named framework adapters and package-only
+ * modules that are out of scope by design.
  *
  * @param {string} label  directory pair description for the error message
- * @param {string[]} present  basenames present in both packages
+ * @param {string[]} present  basenames to account for
  * @param {string[]} registered  basenames accounted for (checked + unchecked)
  */
 function reconcile(label, present, registered) {

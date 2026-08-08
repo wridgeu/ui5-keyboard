@@ -2,6 +2,7 @@ import Element from "sap/ui/core/Element";
 import type { TargetElement } from "./types";
 import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
 import { graphemeLengthAfter, graphemeLengthBefore } from "./grapheme";
+import { endComposition, type CompositionState } from "./composition-utils";
 
 /** Cursor position tuple: [selectionStart, selectionEnd]. */
 export type CursorPos = [number, number];
@@ -72,6 +73,27 @@ export function insertText(
     // May throw on certain input types (e.g. type="number")
   }
   return [newPos, newPos];
+}
+
+/**
+ * Ends an active composition and hands its preedit text to the host as a real
+ * edit: the preedit range is spliced out of the raw DOM and re-inserted through
+ * {@link insertText}, so UI5's `setValue` / `liveChange` pipeline observes the
+ * committed text. This is the sync step {@link endComposition} documents as the
+ * caller's contract.
+ *
+ * Returns the committed text, empty when the preedit was.
+ */
+export function commitComposition(state: CompositionState, dom: HTMLInputElement | HTMLTextAreaElement): string {
+  const start = state.preeditStart;
+  const text = dom.value.slice(start, start + state.preeditLength);
+  dom.value = dom.value.slice(0, start) + dom.value.slice(start + state.preeditLength);
+  state.preeditLength = 0;
+  endComposition(state, dom);
+  if (text) {
+    insertText(dom, text, [start, start]);
+  }
+  return text;
 }
 
 /**

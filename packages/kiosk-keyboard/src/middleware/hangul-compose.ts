@@ -7,7 +7,7 @@ import {
   endComposition,
   isComposing,
 } from "../internal/composition-utils";
-import { insertText } from "../internal/input-operations";
+import { commitComposition, insertText } from "../internal/input-operations";
 
 const S_BASE = 0xac00;
 const V_COUNT = 21;
@@ -150,19 +150,9 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
 
   function commitPreedit(el: HTMLInputElement | HTMLTextAreaElement): string | null {
     if (!isComposing(compState)) return null;
-    const start = compState.preeditStart;
-    const text = el.value.slice(start, start + compState.preeditLength);
-    // Splice the preedit out of the raw DOM, end composition, then re-insert
-    // the committed text through insertText so the host's setValue/liveChange
-    // pipeline observes the syllable. The composition-utils contract documents
-    // this requirement; without it the UI5 model and DOM drift apart.
-    el.value = el.value.slice(0, start) + el.value.slice(start + compState.preeditLength);
-    compState.preeditLength = 0;
-    endComposition(compState, el);
-    if (text) {
-      insertText(el, text, [start, start]);
-    }
-    return text || null;
+    // How the preedit reaches the host is the one framework-specific step in
+    // this middleware, so it lives in the input-operations adapter.
+    return commitComposition(compState, el) || null;
   }
 
   return {
