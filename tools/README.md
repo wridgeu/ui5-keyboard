@@ -105,11 +105,12 @@ Requires `npm_execpath` (set by npm for every script it runs), so it must be run
 Drift check for the deliberately hand-duplicated kiosk twin modules
 (`packages/kiosk-keyboard/src` vs `packages/kiosk-keyboard-webc/src`).
 
-- Compares an explicit manifest of 31 pairs (19 `layouts/*` files, 11 core
+- Compares an explicit manifest of 32 pairs (19 `layouts/*` files, 11 core
   helpers: `grapheme`, `auto-repeat`, `shift-state`, `composition-utils`,
   `key-token`, `key-action-meta`, `layout-constraint`, `latin-variants`,
-  `announcement-queue`, `layout-meta`, `custom-layout-fold`, plus
-  `middleware/kana-dakuten`) after normalization: comments stripped
+  `announcement-queue`, `layout-meta`, `custom-layout-fold`, and both
+  `middleware/*` modules: `hangul-compose` and `kana-dakuten`) after
+  normalization: comments stripped
   (string-aware), relative `.js` import suffixes removed, the `../internal/` vs
   `../core/` helper directory a middleware module imports through equated, each
   line trimmed and blank lines dropped. Intra-line spacing is left to oxfmt.
@@ -119,9 +120,12 @@ Drift check for the deliberately hand-duplicated kiosk twin modules
   manifest and the number move together.
 - Fails with a unified-diff-style report naming the drifted pair; a missing
   file or a shrunken manifest is a hard failure, never a silent skip.
-- Intentionally divergent or framework-adapted modules (e.g.
-  `middleware/hangul-compose.ts`, whose `commitPreedit` differs by framework)
-  are listed as unchecked at the top of the script, each with a reason.
+- Intentionally divergent or framework-adapted modules (`KioskKeyboard.ts`, the
+  `internal/` <-> `core/` adapters and controllers) are listed as unchecked at
+  the top of the script, each with a reason. No `middleware/` module is exempt:
+  `UNCHECKED_MIDDLEWARE_TWINS` is empty, because a middleware's
+  framework-specific step belongs in the `input-operations` adapter
+  (`commitComposition`, `insertText`), which leaves the middleware identical.
 - Three completeness guards (`layouts/`, `internal/` <-> `core/`, `middleware/`)
   fail on any same-named pair that is in neither the checked nor the unchecked
   list, so a newly hand-duplicated module cannot skip the check by never being

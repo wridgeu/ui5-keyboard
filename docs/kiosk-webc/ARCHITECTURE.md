@@ -546,6 +546,8 @@ All default values are declared on `:host` with standard specificity. Consumer s
 | `.kiosk-key--caps-lock`    | box-shadow ring            | Caps lock indicator              |
 | `.kiosk-key--highlight`    | `--sapButton_Active_*`     | Physical key highlight           |
 
+The caps-lock ring is the one variant whose rule is not written on its own class: it ships as the compound `.kiosk-key.kiosk-key--shift-active.kiosk-key--caps-lock` (0,3,0) so it outranks the `box-shadow` that `:hover` and `:focus-visible` declare at (0,2,0), and the latch signal does not blink out under transient press feedback. `--caps-lock` never appears without `--shift-active` (`isCapsLock` implies `isShifted`), so the compound matches every latched key. An override targeting `.kiosk-key--caps-lock` alone loses to the default; match the compound's specificity.
+
 ### Accessibility CSS
 
 - `@media (prefers-reduced-motion: reduce)`: disables transitions and transforms
