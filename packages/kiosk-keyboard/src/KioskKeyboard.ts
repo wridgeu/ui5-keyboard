@@ -907,7 +907,7 @@ export default class KioskKeyboard extends Control {
         this.fireLayoutChange(parameters);
       },
       resetShiftState: () => this._shiftState.reset(),
-      endComposition: () => this._endComposition(),
+      endComposition: () => this._dropComposition("commit"),
       focusAnchorValue: () => this._focusAnchorValue(),
       reseatFocusAnchor: (value) => this._reseatFocusAnchor(value),
       reapplyAutoCompact: () => this._autoCompact.reapply(),
@@ -980,11 +980,7 @@ export default class KioskKeyboard extends Control {
   }
 
   override exit(): void {
-    if (this._middleware) {
-      this._middleware.reset();
-      this._middleware = null;
-      this._middlewareFactory = null;
-    }
+    this._dropComposition("reset");
     KioskKeyboard._instances.delete(this);
     const wasLastInstance = KioskKeyboard._instances.size === 0;
 
@@ -1114,17 +1110,17 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Commits any in-progress composition to the target and drops the middleware,
-   * so the next key starts a fresh composition. A no-op when no composition is
-   * active. Called on every real editing-context switch (layout, target, or
-   * keyboardType change).
+   * Ends any in-progress composition and drops the middleware together with the
+   * factory that produced it, so the next key re-resolves from scratch.
+   * `"commit"` flushes the buffer to the target - what every real editing-context
+   * switch (layout, target, or keyboardType change) does with a half-typed
+   * syllable; `"reset"` discards it. A no-op when no composition is active.
    */
-  private _endComposition(): void {
-    if (this._middleware) {
-      this._middleware.commit();
-      this._middleware = null;
-      this._middlewareFactory = null;
-    }
+  private _dropComposition(mode: "commit" | "reset"): void {
+    if (!this._middleware) return;
+    this._middleware[mode]();
+    this._middleware = null;
+    this._middlewareFactory = null;
   }
 
   /**
@@ -1193,11 +1189,7 @@ export default class KioskKeyboard extends Control {
   reset(): this {
     // Abort (not commit) any in-progress composition: reset discards the
     // interaction rather than flushing a half-formed syllable to the target.
-    if (this._middleware) {
-      this._middleware.reset();
-      this._middleware = null;
-      this._middlewareFactory = null;
-    }
+    this._dropComposition("reset");
     this._backspaceRepeat.stop();
     this._variantPopup.stop();
     this._variantPopup.dismissOpen();
@@ -1249,7 +1241,7 @@ export default class KioskKeyboard extends Control {
     // Mirrors the `{layout:}` key path and the web component's focusin handling.
     // A same-input refocus (caret reposition) keeps the composition going.
     if (isRealSwitch) {
-      this._endComposition();
+      this._dropComposition("commit");
     }
 
     // A real target switch is a new editing context: drop a user-driven
@@ -1349,7 +1341,7 @@ export default class KioskKeyboard extends Control {
     this._layoutState.clearUserOverride();
     // End any in-progress composition so the next key resolves against the new
     // effective layout, the way a layout switch does.
-    this._endComposition();
+    this._dropComposition("commit");
     // A constraint pins the rendered surface and suppresses the tier, so lifting one
     // re-opens the tier question for the layout that surfaces from under it.
     this._autoCompact.reapply();
@@ -2252,7 +2244,7 @@ export default class KioskKeyboard extends Control {
     const factory = registryGetMiddlewareFactory(this._layoutState.resolvedName(), this._foldCache.get().middleware);
     if (factory !== this._middlewareFactory) {
       // Commit rather than reset: the characters already typed are the user's.
-      this._endComposition();
+      this._dropComposition("commit");
       this._middlewareFactory = factory;
     }
     if (!this._keyAffectsComposition(keyValue)) return false;

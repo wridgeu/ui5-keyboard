@@ -189,7 +189,7 @@ npm run build               # Build library dist/ artifacts (required before sta
 | `npm run start:kiosk:visual` | Kiosk visual test page (same server as kiosk) | 8082 |
 | `npm run start:kiosk-webc`   | Kiosk web component standalone demo (Vite)    | 8084 |
 
-The test runners start their own servers on fixed ports (8081-8086) when debugging port conflicts. See the **Port Map** in [docs/shared/TESTING.md](./docs/shared/TESTING.md) for the full list and which config owns each port.
+The test runners start their own servers on fixed ports. See the **Port Map** in [docs/shared/TESTING.md](./docs/shared/TESTING.md) for the full list and which config owns each port.
 
 ### Build
 

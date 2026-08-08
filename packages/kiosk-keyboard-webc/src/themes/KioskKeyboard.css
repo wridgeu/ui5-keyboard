@@ -506,8 +506,17 @@
   }
 }
 
-/* Variant: Caps Lock indicator */
-.kiosk-key--caps-lock {
+/* Variant: Caps Lock indicator.
+
+   The ring is the only signal that the mode is latched, and `:hover` and
+   `:focus-visible` both declare box-shadow on `.kiosk-key` at (0,2,0) -- with the
+   `@media (hover: none)` block re-declaring hover later still -- so it is written
+   at (0,3,0) to outrank them. `--shift-active` is always present alongside
+   `--caps-lock` (isCapsLock implies isShifted) and the base class is
+   unconditional, so the compound matches every latched key. Outranking the
+   `:active`/`--highlight` flattening is deliberate too: a latched mode indicator
+   must not blink out under transient press feedback. */
+.kiosk-key.kiosk-key--shift-active.kiosk-key--caps-lock {
   box-shadow: 0 0 0 2px var(--sapButton_Emphasized_Background, #0070f2);
   /* Only animate the ring; background/color snaps instantly via shift-active's transition: none. */
   transition: box-shadow 0.1s ease;
@@ -531,10 +540,14 @@
 /* Accessibility */
 
 @media (prefers-reduced-motion: reduce) {
+  /* The Caps Lock ring declares its own `transition` at (0,3,0), so it is listed
+     here in full: a lone `.kiosk-key` loses to it on specificity and the ring
+     would keep fading in over 0.1s on every latch. */
   .kiosk-key,
   .kiosk-key:hover,
   .kiosk-key:active,
   .kiosk-key.kiosk-key--highlight,
+  .kiosk-key.kiosk-key--shift-active.kiosk-key--caps-lock,
   .kiosk-keyboard--docked,
   .kiosk-keyboard--hidden {
     transition: none;
@@ -581,12 +594,15 @@
     }
   }
 
-  .kiosk-key--caps-lock {
-    border-color: Highlight;
-    /* box-shadow is forced to none in forced-colors mode, so use outline
-       as the visible indicator for caps lock instead. */
-    outline: 2px solid Highlight;
-    outline-offset: -1px;
+  /* Variant: Caps Lock indicator. box-shadow is forced to none here, so the
+     latch signal moves onto the key's border, not its outline: outline is the
+     focus indicator, and a latched key that takes focus would trade one signal
+     for the other. `--shift-active` fills the key with Highlight, so the ring is
+     drawn in HighlightText, and at (0,3,0) so it outranks that fill's own
+     border-color. */
+  .kiosk-key.kiosk-key--shift-active.kiosk-key--caps-lock {
+    border-color: HighlightText;
+    border-width: 2px;
   }
 }
 

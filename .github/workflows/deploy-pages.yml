@@ -9,7 +9,7 @@ name: Deploy Pages
 # the UI5 runtime + ushell shell into the artifact, then trims it down with
 # tools/trim-pages-dist.mjs (~560 MB -> ~150 MB).
 #
-# The build job's Setup Pages step provisions the Pages site on first run
+# The deploy job's Setup Pages step provisions the Pages site on first run
 # (configure-pages enablement: true, source "GitHub Actions"), so no manual repo
 # Settings step is required; this also lets a fresh fork deploy with no setup.
 
@@ -48,10 +48,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # configure-pages calls the Pages REST API (GET, and createPagesSite when
-      # enablement is true), which requires the pages/id-token grants on this job.
-      pages: write
-      id-token: write
     # Self-hosting SAPUI5 downloads + builds its ushell dependency closure on a
     # cold ~/.ui5 cache, which is heavier than the OpenUI5 build.
     timeout-minutes: 30
@@ -112,13 +108,6 @@ jobs:
           </html>
           HTML
 
-      - name: Setup Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-        with:
-          # Provision the Pages site (source "GitHub Actions") if it does not
-          # exist yet, instead of failing with "Get Pages site failed".
-          enablement: true
-
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
@@ -135,6 +124,36 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Runs here rather than in `build`: configure-pages needs pages/id-token,
+      # and the deploy job already holds both, so keeping it out of the build job
+      # leaves that job (which installs and builds the whole workspace) on a
+      # contents:read token. Its outputs are unused, so placement only has to put
+      # it ahead of deploy-pages.
+      - name: Setup Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+        with:
+          # Provision the Pages site (source "GitHub Actions") if it does not
+          # exist yet, instead of failing with "Get Pages site failed".
+          enablement: true
+
+      # configure-pages above only creates a site that does not exist; against an
+      # existing one it performs a GET and succeeds. So a site left on the legacy
+      # (branch) build type stays there, GitHub serves Jekyll over the repo root
+      # -- rendering README.md as the site and 404ing flp.html -- and every step
+      # here still reports success. That is exactly what happened: 8 consecutive
+      # green deploys published nothing. Fail loudly instead of deploying an
+      # artifact nothing will serve.
+      - name: Assert Pages serves this workflow's artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          build_type=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type)
+          if [ "$build_type" != "workflow" ]; then
+            echo "::error::Pages build_type is '$build_type', not 'workflow'. GitHub is serving a branch build, so this artifact would be uploaded and ignored. Fix: Settings > Pages > Source: GitHub Actions (or: gh api -X PUT repos/${GITHUB_REPOSITORY}/pages -f build_type=workflow)."
+            exit 1
+          fi
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

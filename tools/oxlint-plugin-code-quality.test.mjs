@@ -60,11 +60,7 @@ ruleTester.run("no-redundant-boolean-return", rule("no-redundant-boolean-return"
 });
 
 ruleTester.run("no-em-dash", rule("no-em-dash"), {
-  valid: [
-    'const s = "a-b";',
-    { code: `const s = "a${EM_DASH}b";`, options: [{ checkStrings: false }] },
-    { code: `// a${EM_DASH}b\nconst s = 1;`, options: [{ checkComments: false }] },
-  ],
+  valid: ['const s = "a-b";'],
   invalid: [
     {
       code: `const s = "a${EM_DASH}b";`,

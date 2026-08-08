@@ -368,6 +368,11 @@ QUnit.test("keyPress preventDefault skips input insertion", async (assert) => {
   tapKey(kb, "q");
   assert.strictEqual(input.getValue(), "", "Value unchanged after preventDefault");
 
+  // preventDefault is per-event, not a latch that arms once: a second key must
+  // still be suppressed by the same handler.
+  tapKey(kb, "y");
+  assert.strictEqual(input.getValue(), "", "Still unchanged for second key");
+
   input.destroy();
   kb.destroy();
 });
@@ -420,6 +425,46 @@ QUnit.test("Backspace deletes last character from target input", async (assert) 
   tapKey(kb, "{backspace}");
 
   assert.strictEqual(input.getValue(), "ab", "Last character deleted");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// Two discrete taps from an explicit caret, not the auto-repeat path: the
+// session has to advance its own cursor after the first delete, or the second
+// deletes the wrong character.
+QUnit.test("Consecutive backspaces delete from the tracked caret", async (assert) => {
+  const input = new Input({ value: "abc" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(3, 3);
+
+  tapKey(kb, "{backspace}");
+  assert.strictEqual(input.getValue(), "ab", "One character removed by backspace");
+
+  tapKey(kb, "{backspace}");
+  assert.strictEqual(input.getValue(), "a", "Second backspace removes another character");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Space key inserts a space character", async (assert) => {
+  const input = new Input({ value: "hi" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(2, 2);
+
+  tapKey(kb, " ");
+  assert.strictEqual(input.getValue(), "hi ", "Space character appended");
 
   input.destroy();
   kb.destroy();
@@ -1658,6 +1703,7 @@ QUnit.test("Typing with no target input does not throw", async (assert) => {
   // No target set - tap should not throw
   tapKey(kb, "a");
   tapKey(kb, "{backspace}");
+  tapKey(kb, " ");
   tapKey(kb, "{enter}");
 
   assert.ok(true, "No errors when typing without a target input");

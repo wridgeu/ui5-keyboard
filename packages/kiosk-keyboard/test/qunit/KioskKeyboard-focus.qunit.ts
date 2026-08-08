@@ -879,44 +879,62 @@ QUnit.test("getAccessibilityInfo reports focusable=false when disabled", async (
   kb.destroy();
 });
 
-QUnit.test("setEnabled(false) redirects focus to target input when a key has focus", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
+// setEnabled(false) and setVisible(false) share the focus-release path, so both
+// are driven from one table. They diverge only for a docked keyboard (setVisible
+// closes it, setEnabled leaves it open); those two tests stay separate below.
+(["setEnabled", "setVisible"] as const).forEach((setter) => {
+  QUnit.test(`${setter}(false) redirects focus to target input when a key has focus`, async (assert) => {
+    const input = new Input();
+    input.placeAt("qunit-fixture");
+    const kb = new KioskKeyboard({ controls: [input.getId()] });
+    await placeAndWait(kb);
 
-  // Focus the input first to activate the target via focus delegation
-  input.focus();
+    // Focus the input first to activate the target via focus delegation
+    input.focus();
 
-  // Focus a key on the keyboard
-  const firstKey = getFirstKeyElement(kb);
-  firstKey.focus();
-  assert.strictEqual(document.activeElement, firstKey, "Key has focus before disabling");
+    // Focus a key on the keyboard
+    const firstKey = getFirstKeyElement(kb);
+    firstKey.focus();
+    assert.strictEqual(document.activeElement, firstKey, `Key has focus before ${setter}(false)`);
 
-  kb.setEnabled(false);
-  await waitForRender();
+    kb[setter](false);
+    await waitForRender();
 
-  assert.strictEqual(
-    document.activeElement,
-    input.getFocusDomRef(),
-    "Focus redirected to target input after disabling",
-  );
+    assert.strictEqual(
+      document.activeElement,
+      input.getFocusDomRef(),
+      `Focus redirected to target input after ${setter}(false)`,
+    );
 
-  input.destroy();
-  kb.destroy();
-});
+    input.destroy();
+    kb.destroy();
+  });
 
-QUnit.test("setEnabled(false) without focus on keyboard does not throw", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
+  QUnit.test(`${setter}(false) leaves focus alone when it is outside the keyboard`, async (assert) => {
+    const outside = new Input();
+    outside.placeAt("qunit-fixture");
+    const kb = new KioskKeyboard();
+    await placeAndWait(kb);
 
-  // Focus is not on the keyboard
-  kb.setEnabled(false);
-  await waitForRender();
+    // Anchor focus outside the keyboard rather than relying on whatever the
+    // previous test left behind: the guard under test is the
+    // `!myDom.contains(active)` early return, which only means anything against
+    // focus this test actually established.
+    outside.focus();
+    assert.strictEqual(document.activeElement, outside.getFocusDomRef(), "Focus is outside the keyboard to begin with");
 
-  assert.ok(true, "No error when disabling a keyboard that does not have focus");
+    kb[setter](false);
+    await waitForRender();
 
-  kb.destroy();
+    assert.strictEqual(
+      document.activeElement,
+      outside.getFocusDomRef(),
+      `Focus untouched by ${setter}(false) when the keyboard never had it`,
+    );
+
+    outside.destroy();
+    kb.destroy();
+  });
 });
 
 QUnit.test("setEnabled(false) keeps docked keyboard open but disabled", async (assert) => {
@@ -937,41 +955,6 @@ QUnit.test("setEnabled(false) keeps docked keyboard open but disabled", async (a
 
   assert.ok(kb.isOpen(), "Keyboard is still open after re-enabling");
   assert.notOk(hasKeyboardClass(kb, DOM.classes.rootDisabled), "Disabled CSS class is removed");
-
-  kb.destroy();
-});
-
-QUnit.test("setVisible(false) redirects focus to target input when a key has focus", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  // Focus the input first to activate the target via focus delegation
-  input.focus();
-
-  // Focus a key on the keyboard
-  const firstKey = getFirstKeyElement(kb);
-  firstKey.focus();
-  assert.strictEqual(document.activeElement, firstKey, "Key has focus before hiding");
-
-  kb.setVisible(false);
-  await waitForRender();
-
-  assert.strictEqual(document.activeElement, input.getFocusDomRef(), "Focus redirected to target input after hiding");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("setVisible(false) without focus on keyboard does not throw", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  kb.setVisible(false);
-  await waitForRender();
-
-  assert.ok(true, "No error when hiding a keyboard that does not have focus");
 
   kb.destroy();
 });

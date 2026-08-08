@@ -1,11 +1,12 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/internal/dom-contract.js";
 import { openPage, key, expectKeyboardVisualMatch } from "./helpers.js";
 
 // Forced-colors (high contrast) visual regression (desktop + device matrix).
 // Media is emulated before navigation so the control renders in the target mode.
-// (prefers-reduced-motion is not tested: the keyboard has no idle animation, so
-// it renders identically to the default, adding no regression coverage.)
+// (prefers-reduced-motion is not snapshotted: the keyboard has no idle
+// animation, so it renders identically to the default; what it suppresses is
+// asserted on computed styles below.)
 
 test("kb-qwerty-forced-colors", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
@@ -46,3 +47,74 @@ for (const stateClass of [DOM.classes.keyHighlight, DOM.classes.keyPressed, DOM.
     expect(highlighted.hint).not.toBe(restingHint);
   });
 }
+
+// The Caps Lock ring is the only signal that the mode is latched, so it has to
+// outrank the transient interaction states painted on the same key: `:hover` and
+// `:focus-visible` both declare `box-shadow` on `.ui5KioskKey` at (0,2,0), which
+// a lone `--capsLock` class loses to. Polled rather than read once: the ring
+// declares `transition: box-shadow 0.1s ease`, so an immediate read returns the
+// pre-transition value.
+const CAPS_RING = /0px 0px 0px 2px/;
+
+const latchCapsLock = (shiftKey: Locator) =>
+  shiftKey.evaluate((el, classes) => el.classList.add(classes.shift, classes.caps), {
+    shift: DOM.classes.keyShiftActive,
+    caps: DOM.classes.keyCapsLock,
+  });
+
+test("kb-caps-lock-ring-survives-hover-and-focus", async ({ page }) => {
+  await openPage(page);
+  const shiftKey = key(page, "kb-qwerty", "{shift}");
+  const boxShadow = () => shiftKey.evaluate((el) => getComputedStyle(el).boxShadow);
+
+  await latchCapsLock(shiftKey);
+  await expect.poll(boxShadow).toMatch(CAPS_RING);
+
+  await shiftKey.hover();
+  await expect.poll(boxShadow).toMatch(CAPS_RING);
+
+  await shiftKey.evaluate((el: HTMLElement) => el.focus());
+  await expect.poll(boxShadow).toMatch(CAPS_RING);
+});
+
+// The ring carries the only `transition` a latched key has, and it declares it
+// at (0,3,0): reduced motion suppresses it only because the reduce block matches
+// the same compound. The ring assertion keeps the timing one honest - a harness
+// serving no theme CSS reports `0s` for every key.
+test("kb-caps-lock-ring-does-not-animate-under-reduced-motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openPage(page);
+  const shiftKey = key(page, "kb-qwerty", "{shift}");
+
+  await latchCapsLock(shiftKey);
+  await expect(shiftKey).toHaveCSS("box-shadow", CAPS_RING);
+  await expect(shiftKey).toHaveCSS("transition-duration", "0s");
+});
+
+// Under forced colors `box-shadow` is dropped, so the latch signal moves to the
+// border. It must not move onto `outline`, which the same key needs for its
+// focus indicator: the outline assertions prove `:focus-visible` really engaged,
+// so the border assertion below cannot pass vacuously.
+test("kb-caps-lock-indicator-survives-focus-in-forced-colors", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await openPage(page);
+  const shiftKey = key(page, "kb-qwerty", "{shift}");
+  const styles = () =>
+    shiftKey.evaluate((el) => {
+      const computed = getComputedStyle(el);
+      return { border: computed.borderTopColor, outline: computed.outlineStyle };
+    });
+
+  await shiftKey.evaluate((el, cls) => el.classList.add(cls), DOM.classes.keyShiftActive);
+  const shiftOnly = await styles();
+
+  await latchCapsLock(shiftKey);
+  const latched = await styles();
+  expect(latched.border, "the latched key is bordered apart from a plain shift key").not.toBe(shiftOnly.border);
+  expect(latched.outline, "the resting key draws no outline").toBe("none");
+
+  await shiftKey.evaluate((el: HTMLElement) => el.focus());
+  const focused = await styles();
+  expect(focused.outline, "focus draws the focus outline").not.toBe("none");
+  expect(focused.border, "the latch signal survives focus").toBe(latched.border);
+});

@@ -38,6 +38,12 @@ public events, and input behavior from a consumer perspective.
 
 ### 2) Suite: `packages/kiosk-keyboard/test/qunit/KioskKeyboard-input-blackbox.qunit.ts`
 
+> This suite no longer exists. `KioskKeyboard.qunit.ts` had grown a counterpart
+> for most of it, so it was folded in there, carrying over the four behaviours
+> that were genuinely unique to it: two consecutive backspaces from an explicit
+> caret, space insertion into a target, `preventDefault` suppressing a second
+> key, and a space tap in the no-target sweep.
+
 1. **Default typing into `targetInput`**
    - Associate `sap.m.Input` and assert text insertion for printable keys.
 2. **Backspace and space behavior**

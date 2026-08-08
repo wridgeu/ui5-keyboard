@@ -40,9 +40,6 @@ sap.ui.define([], () => {
       "KioskKeyboard-renderer-blackbox": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Renderer Black-Box",
       },
-      "KioskKeyboard-input-blackbox": {
-        title: "QUnit tests for ui5.kiosk - KioskKeyboard Input Black-Box",
-      },
       "KioskKeyboard-backspace-repeat": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Backspace Auto-Repeat",
       },

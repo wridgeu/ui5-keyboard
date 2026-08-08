@@ -1,6 +1,6 @@
 // Import the source ESM entry so Vite transpiles TS on the fly and
 // deduplicates the UI5 WC framework. No tsc pre-build needed.
-import { KioskKeyboard } from "../../src/bundle.esm.ts";
+import "../../src/bundle.esm.ts";
 import { setTheme } from "@ui5/webcomponents-base/dist/config/Theme.js";
 
 const THEME_BACKGROUNDS = {

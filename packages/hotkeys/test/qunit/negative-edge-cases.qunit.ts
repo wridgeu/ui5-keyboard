@@ -492,73 +492,29 @@ QUnit.test("isDispatchSuspended returns false after destroy", (assert) => {
 
 QUnit.module("Negative / Edge-Case - Destroyed manager method calls", freshManagerHooks());
 
-QUnit.test("register() on destroyed manager throws", (assert) => {
-  const manager = createHotkeyManager();
-  manager.destroy();
+// One row per `_assertAlive` call site in HotkeyManager. `register()` gets a
+// single row: `_assertAlive` is its first statement, ahead of any sequence
+// parsing, so a "G I" spelling exercises nothing the plain key does not.
+const destroyedGuardCases: [name: string, call: (manager: ReturnType<typeof createHotkeyManager>) => unknown][] = [
+  ["register", (manager) => manager.register("F5", () => {})],
+  ["createRecorder", (manager) => manager.createRecorder({ onRecord: () => {} })],
+  ["createGroup", (manager) => manager.createGroup()],
+  ["setUnhandledHandler", (manager) => manager.setUnhandledHandler(() => {})],
+  ["addGenericRootId", (manager) => manager.addGenericRootId("custom-root")],
+  ["removeGenericRootId", (manager) => manager.removeGenericRootId("custom-root")],
+  ["suspendDispatch", (manager) => manager.suspendDispatch("after-destroy")],
+  ["pushScope", (manager) => manager.pushScope("editor")],
+  ["popScope", (manager) => manager.popScope("editor")],
+  ["resetToGlobalScope", (manager) => manager.resetToGlobalScope()],
+];
 
-  assert.throws(() => manager.register("F5", () => {}), /destroyed/i, "register() throws on destroyed manager");
-});
+destroyedGuardCases.forEach(([name, call]) => {
+  QUnit.test(`${name}() on destroyed manager throws`, (assert) => {
+    const manager = createHotkeyManager();
+    manager.destroy();
 
-QUnit.test("createRecorder() on destroyed manager throws", (assert) => {
-  const manager = createHotkeyManager();
-  manager.destroy();
-
-  assert.throws(
-    () => manager.createRecorder({ onRecord: () => {} }),
-    /destroyed/i,
-    "createRecorder() throws on destroyed manager",
-  );
-});
-
-QUnit.test("register() sequence on destroyed manager throws", (assert) => {
-  const manager = createHotkeyManager();
-  manager.destroy();
-
-  assert.throws(
-    () => manager.register("G I", () => {}),
-    /destroyed/i,
-    "register() with sequence throws on destroyed manager",
-  );
-});
-
-QUnit.test("createGroup() on destroyed manager throws", (assert) => {
-  const manager = createHotkeyManager();
-  manager.destroy();
-
-  assert.throws(() => manager.createGroup(), /destroyed/i, "createGroup() throws on destroyed manager");
-});
-
-QUnit.test("setUnhandledHandler() on destroyed manager throws", (assert) => {
-  const manager = createHotkeyManager();
-  manager.destroy();
-
-  assert.throws(
-    () => manager.setUnhandledHandler(() => {}),
-    /destroyed/i,
-    "setUnhandledHandler() throws on destroyed manager",
-  );
-});
-
-QUnit.test("addGenericRootId() on destroyed manager throws", (assert) => {
-  const manager = createHotkeyManager();
-  manager.destroy();
-
-  assert.throws(
-    () => manager.addGenericRootId("custom-root"),
-    /destroyed/i,
-    "addGenericRootId() throws on destroyed manager",
-  );
-});
-
-QUnit.test("removeGenericRootId() on destroyed manager throws", (assert) => {
-  const manager = createHotkeyManager();
-  manager.destroy();
-
-  assert.throws(
-    () => manager.removeGenericRootId("custom-root"),
-    /destroyed/i,
-    "removeGenericRootId() throws on destroyed manager",
-  );
+    assert.throws(() => call(manager), /destroyed/i, `${name}() throws on destroyed manager`);
+  });
 });
 
 // ══════════════════════════════════════════════

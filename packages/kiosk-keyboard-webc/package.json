@@ -22,8 +22,7 @@
   "files": [
     "dist/**/*",
     "src/**/*",
-    "README.md",
-    "LICENSE"
+    "README.md"
   ],
   "type": "module",
   "sideEffects": [
@@ -81,7 +80,7 @@
     "start": "vite --port 8084 --open /test/pages/index.html",
     "prestart:key-style-demo": "npm run generate",
     "start:key-style-demo": "vite --port 8084 --open /test/pages/key-style-demo.html",
-    "prepublishOnly": "node ../../tools/copy-license.mjs && npm run build",
+    "prepublishOnly": "npm run build",
     "pretypecheck": "npm run generate",
     "typecheck": "tsc --noEmit --composite false",
     "pretest": "npm run generate",

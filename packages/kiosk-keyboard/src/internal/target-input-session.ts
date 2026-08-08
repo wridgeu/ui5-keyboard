@@ -82,18 +82,15 @@ export default class TargetInputSession {
     this._cursorPos = pos;
   }
 
+  /**
+   * Fires the pending `change` on the current target and clears the dirty flag.
+   *
+   * The capture and the fire happen in the same tick, so this is the immediate
+   * form of {@link captureAndClearDirty} rather than a second implementation of
+   * its guard chain.
+   */
   fireChangeIfDirty(): void {
-    if (!this._targetDirty) return;
-    this._targetDirty = false;
-
-    const element = this._getTargetElement();
-    if (!element) return;
-
-    const dom = resolveWithCustomResolver(element.getFocusDomRef(), this._customResolver);
-    if (dom instanceof HTMLTextAreaElement) return;
-    if (dom) {
-      opsFireTargetChange(element, dom.value);
-    }
+    this.captureAndClearDirty()?.();
   }
 
   /**

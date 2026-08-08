@@ -7,7 +7,7 @@ import {
   endComposition,
   isComposing,
 } from "../core/composition-utils.js";
-import { insertText } from "../core/input-operations.js";
+import { commitComposition, insertText } from "../core/input-operations.js";
 
 const S_BASE = 0xac00;
 const V_COUNT = 21;
@@ -150,9 +150,9 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
 
   function commitPreedit(el: HTMLInputElement | HTMLTextAreaElement): string | null {
     if (!isComposing(compState)) return null;
-    const text = el.value.slice(compState.preeditStart, compState.preeditStart + compState.preeditLength);
-    endComposition(compState, el);
-    return text || null;
+    // How the preedit reaches the host is the one framework-specific step in
+    // this middleware, so it lives in the input-operations adapter.
+    return commitComposition(compState, el) || null;
   }
 
   return {
@@ -190,9 +190,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
         return false;
       }
 
-      // codePointAt is the modern Unicode-correct primitive. The length === 1
-      // guard above keeps us in the BMP, so the result fits in a UTF-16 unit.
-      const code = key.codePointAt(0)!;
+      const code = key.charCodeAt(0);
       const lIdx = COMPAT_TO_L.get(code);
       const vIdx = COMPAT_TO_V.get(code);
 

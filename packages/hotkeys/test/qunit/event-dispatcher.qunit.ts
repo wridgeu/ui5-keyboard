@@ -7,6 +7,8 @@ import { createHotkeyManager, destroyHotkeyManager, fireBlur, fireKey, fireKeyOn
 // Mirrors FOCUS_PATH_FALLBACK_TTL_MS in src/internal/FocusFallbackTracker.ts.
 const FOCUS_PATH_FALLBACK_TTL_MS = 1200;
 
+const fixture = document.getElementById("qunit-fixture")!;
+
 let manager: HotkeyManager;
 
 QUnit.module("EventDispatcher & Suspend Guard", {
@@ -284,7 +286,7 @@ QUnit.test("Interceptor error is isolated - pipeline keeps working", (assert) =>
 
 QUnit.test("Target-scoped: composedPath match", (assert) => {
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let fired = false;
   manager.register(
@@ -297,15 +299,13 @@ QUnit.test("Target-scoped: composedPath match", (assert) => {
 
   fireKeyOn(target, "Escape");
   assert.ok(fired, "Callback fires when event is within target");
-
-  target.remove();
 });
 
 QUnit.test("Target-scoped: composedPath miss", (assert) => {
   const target = document.createElement("div");
   const other = document.createElement("div");
-  document.body.appendChild(target);
-  document.body.appendChild(other);
+  fixture.appendChild(target);
+  fixture.appendChild(other);
 
   let fired = false;
   manager.register(
@@ -318,16 +318,13 @@ QUnit.test("Target-scoped: composedPath miss", (assert) => {
 
   fireKeyOn(other, "Escape");
   assert.notOk(fired, "Callback does NOT fire when event is outside target");
-
-  target.remove();
-  other.remove();
 });
 
 QUnit.test("Target-scoped: activeElement fallback path match", (assert) => {
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let fired = false;
   manager.register(
@@ -342,14 +339,12 @@ QUnit.test("Target-scoped: activeElement fallback path match", (assert) => {
   fireKey("Escape");
 
   assert.ok(fired, "Callback fires when activeElement is inside target even if event path is untargeted");
-
-  target.remove();
 });
 
 QUnit.test("Target-scoped: stale target reference with same DOM id still matches", (assert) => {
   const original = document.createElement("div");
   original.id = "hk-stale-target";
-  document.body.appendChild(original);
+  fixture.appendChild(original);
 
   let fired = false;
   manager.register(
@@ -366,13 +361,11 @@ QUnit.test("Target-scoped: stale target reference with same DOM id still matches
 
   fireKeyOn(replacement, "Escape");
   assert.ok(fired, "Callback still fires when target DOM node is replaced with same id");
-
-  replacement.remove();
 });
 
 QUnit.test("Target-scoped: target priority over document (stopPropagation: true)", (assert) => {
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let untargetedFired = false;
   let targetFired = false;
@@ -393,13 +386,11 @@ QUnit.test("Target-scoped: target priority over document (stopPropagation: true)
   fireKeyOn(target, "Escape");
   assert.ok(targetFired, "Target-scoped callback fired (target has priority)");
   assert.notOk(untargetedFired, "Untargeted callback skipped (target stopPropagation: true)");
-
-  target.remove();
 });
 
 QUnit.test("Target-scoped: target without stopPropagation + document - both fire", (assert) => {
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let untargetedFired = false;
   let targetFired = false;
@@ -419,15 +410,13 @@ QUnit.test("Target-scoped: target without stopPropagation + document - both fire
   fireKeyOn(target, "Escape");
   assert.ok(targetFired, "Target-scoped callback fired first");
   assert.ok(untargetedFired, "Untargeted callback also fired (target stopPropagation: false)");
-
-  target.remove();
 });
 
 QUnit.test("Target-scoped: nested targets, innermost wins", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
-  document.body.appendChild(outer);
+  fixture.appendChild(outer);
 
   let outerFired = false;
   let innerFired = false;
@@ -450,15 +439,13 @@ QUnit.test("Target-scoped: nested targets, innermost wins", (assert) => {
   fireKeyOn(inner, "Escape");
   assert.ok(innerFired, "Innermost target callback fired");
   assert.notOk(outerFired, "Outer target callback did NOT fire (innermost wins)");
-
-  outer.remove();
 });
 
 QUnit.test("Target-scoped: nested targets, different keys fire independently", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
-  document.body.appendChild(outer);
+  fixture.appendChild(outer);
 
   let outerFired = false;
   let innerFired = false;
@@ -485,15 +472,13 @@ QUnit.test("Target-scoped: nested targets, different keys fire independently", (
   innerFired = false;
   fireKeyOn(inner, "F5");
   assert.ok(outerFired, "Outer callback fires for F5 (inner is in composedPath)");
-
-  outer.remove();
 });
 
 QUnit.test("Unhandled: target mismatch reason", (assert) => {
   const target = document.createElement("div");
   const other = document.createElement("div");
-  document.body.appendChild(target);
-  document.body.appendChild(other);
+  fixture.appendChild(target);
+  fixture.appendChild(other);
 
   let unhandledCtx: UnhandledContext | null = null;
   manager.setUnhandledHandler((ctx) => {
@@ -504,9 +489,6 @@ QUnit.test("Unhandled: target mismatch reason", (assert) => {
   fireKeyOn(other, "Escape");
   assert.ok(unhandledCtx !== null, "Unhandled callback fired");
   assert.strictEqual(unhandledCtx!.reason, UnhandledReason.TargetMismatch, "Reason is TargetMismatch");
-
-  target.remove();
-  other.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -679,7 +661,7 @@ QUnit.test("Nested targets - default remains innermost with stopPropagation: fal
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
-  document.body.appendChild(outer);
+  fixture.appendChild(outer);
 
   let outerFired = false;
   let innerFired = false;
@@ -702,15 +684,13 @@ QUnit.test("Nested targets - default remains innermost with stopPropagation: fal
   fireKeyOn(inner, "Escape");
   assert.ok(innerFired, "Innermost target callback fired");
   assert.notOk(outerFired, "Outer target callback did NOT fire (no bubbling by default)");
-
-  outer.remove();
 });
 
 QUnit.test("Nested targets - stopPropagation on inner does not change default non-bubbling", (assert) => {
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
-  document.body.appendChild(outer);
+  fixture.appendChild(outer);
 
   let outerFired = false;
   let innerFired = false;
@@ -733,8 +713,6 @@ QUnit.test("Nested targets - stopPropagation on inner does not change default no
   fireKeyOn(inner, "Escape");
   assert.ok(innerFired, "Inner callback fired");
   assert.notOk(outerFired, "Outer callback did NOT fire");
-
-  outer.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -745,7 +723,7 @@ QUnit.test("Target-scoped: option governs bubbling, not callback event.stopPropa
   const outer = document.createElement("div");
   const inner = document.createElement("div");
   outer.appendChild(inner);
-  document.body.appendChild(outer);
+  fixture.appendChild(outer);
 
   let outerFired = false;
   let innerFired = false;
@@ -771,8 +749,6 @@ QUnit.test("Target-scoped: option governs bubbling, not callback event.stopPropa
   fireKeyOn(inner, "Escape");
   assert.ok(innerFired, "Innermost target callback fired");
   assert.notOk(outerFired, "Outer target did NOT fire (innermost wins)");
-
-  outer.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -787,8 +763,8 @@ QUnit.test("Unhandled reason is fresh per event (no stale skip info)", (assert) 
 
   const target = document.createElement("div");
   const other = document.createElement("div");
-  document.body.appendChild(target);
-  document.body.appendChild(other);
+  fixture.appendChild(target);
+  fixture.appendChild(other);
 
   // Register target-scoped Escape
   manager.register("Escape", () => {}, { target });
@@ -800,9 +776,6 @@ QUnit.test("Unhandled reason is fresh per event (no stale skip info)", (assert) 
   // Fire a totally different key with no registration → should be NoMatch, NOT stale TargetMismatch
   fireKey("F9");
   assert.strictEqual(reasons[1], UnhandledReason.NoMatch, "Second event: NoMatch (not stale TargetMismatch)");
-
-  target.remove();
-  other.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -998,7 +971,7 @@ QUnit.test("Active-scope target takes precedence over global-scope target", (ass
   const outerTarget = document.createElement("div");
   const innerTarget = document.createElement("div");
   outerTarget.appendChild(innerTarget);
-  document.body.appendChild(outerTarget);
+  fixture.appendChild(outerTarget);
 
   let globalFired = false;
   let scopedFired = false;
@@ -1027,12 +1000,11 @@ QUnit.test("Active-scope target takes precedence over global-scope target", (ass
   assert.notOk(globalFired, "Global-scope target callback did NOT fire (active scope wins)");
 
   manager.popScope("testScope");
-  outerTarget.remove();
 });
 
 QUnit.test("GLOBAL_SCOPE: no duplicate matching when active scope is global", (assert) => {
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let callCount = 0;
   manager.register(
@@ -1046,8 +1018,6 @@ QUnit.test("GLOBAL_SCOPE: no duplicate matching when active scope is global", (a
   // Active scope is already GLOBAL_SCOPE (default)
   fireKeyOn(target, "Escape");
   assert.strictEqual(callCount, 1, "Callback fired exactly once (no duplicate global pass)");
-
-  target.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1088,7 +1058,7 @@ QUnit.test("Recorder stopImmediatePropagation blocks non-library window listener
 
 QUnit.test("composedPath fallback - event with empty composedPath uses target fallback", (assert) => {
   const target = document.createElement("div");
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let fired = false;
   manager.register(
@@ -1112,8 +1082,6 @@ QUnit.test("composedPath fallback - event with empty composedPath uses target fa
 
   // With fallback [event.target, document, window], the target element IS in the path
   assert.ok(fired, "Target-scoped hotkey fires via composedPath fallback");
-
-  target.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1156,7 +1124,7 @@ QUnit.test("Target-scoped iframe document does not match main window events", (a
   // Create a same-origin iframe
   const iframe = document.createElement("iframe");
   iframe.srcdoc = "<!DOCTYPE html><html><body></body></html>";
-  document.body.appendChild(iframe);
+  fixture.appendChild(iframe);
 
   iframe.addEventListener("load", () => {
     try {
@@ -1199,7 +1167,7 @@ QUnit.test("Three-tier: focus in inner → only inner fires", (assert) => {
   const input = document.createElement("input");
   inner.appendChild(input);
   outer.appendChild(inner);
-  document.body.appendChild(outer);
+  fixture.appendChild(outer);
 
   let untargetedFired = false;
   let outerFired = false;
@@ -1228,8 +1196,6 @@ QUnit.test("Three-tier: focus in inner → only inner fires", (assert) => {
   assert.ok(innerFired, "Inner target fired");
   assert.notOk(outerFired, "Outer target did NOT fire (innermost wins)");
   assert.notOk(untargetedFired, "Untargeted did NOT fire (stopPropagation)");
-
-  outer.remove();
 });
 
 QUnit.test("Three-tier: focus in outer (not inner) → outer fires", (assert) => {
@@ -1240,7 +1206,7 @@ QUnit.test("Three-tier: focus in outer (not inner) → outer fires", (assert) =>
   inner.appendChild(input);
   outer.appendChild(inner);
   outer.appendChild(outerButton);
-  document.body.appendChild(outer);
+  fixture.appendChild(outer);
 
   let untargetedFired = false;
   let outerFired = false;
@@ -1270,8 +1236,6 @@ QUnit.test("Three-tier: focus in outer (not inner) → outer fires", (assert) =>
   assert.ok(outerFired, "Outer target fired");
   assert.notOk(innerFired, "Inner target did NOT fire (event outside inner)");
   assert.notOk(untargetedFired, "Untargeted did NOT fire (stopPropagation)");
-
-  outer.remove();
 });
 
 QUnit.test("Three-tier: focus outside all targets → untargeted fires", (assert) => {
@@ -1279,8 +1243,8 @@ QUnit.test("Three-tier: focus outside all targets → untargeted fires", (assert
   const inner = document.createElement("div");
   const outside = document.createElement("div");
   outer.appendChild(inner);
-  document.body.appendChild(outer);
-  document.body.appendChild(outside);
+  fixture.appendChild(outer);
+  fixture.appendChild(outside);
 
   let untargetedFired = false;
   let outerFired = false;
@@ -1309,9 +1273,6 @@ QUnit.test("Three-tier: focus outside all targets → untargeted fires", (assert
   assert.ok(untargetedFired, "Untargeted fallback fired");
   assert.notOk(outerFired, "Outer target did NOT fire");
   assert.notOk(innerFired, "Inner target did NOT fire");
-
-  outer.remove();
-  outside.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1325,8 +1286,8 @@ QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → s
   const outside = document.createElement("input");
   inner.appendChild(input);
   outer.appendChild(inner);
-  document.body.appendChild(outer);
-  document.body.appendChild(outside);
+  fixture.appendChild(outer);
+  fixture.appendChild(outside);
 
   let innerCount = 0;
   let outerCount = 0;
@@ -1364,9 +1325,6 @@ QUnit.test("Repeated Escape: first fires inner, focus leaves to non-target → s
   assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire again");
   assert.strictEqual(outerCount, 0, "Second Escape: outer did not fire");
   assert.strictEqual(untargetedCount, 1, "Second Escape: untargeted fallback fired");
-
-  outer.remove();
-  outside.remove();
 });
 
 QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → second fires outer", (assert) => {
@@ -1377,7 +1335,7 @@ QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → se
   inner.appendChild(input);
   outer.appendChild(inner);
   outer.appendChild(outerButton);
-  document.body.appendChild(outer);
+  fixture.appendChild(outer);
 
   let innerCount = 0;
   let outerCount = 0;
@@ -1413,8 +1371,6 @@ QUnit.test("Repeated Escape: first fires inner, focus moves to outer area → se
   assert.strictEqual(innerCount, 1, "Second Escape: inner did NOT fire");
   assert.strictEqual(outerCount, 1, "Second Escape: outer target fired");
   assert.strictEqual(untargetedCount, 0, "Second Escape: untargeted did not fire (outer stopPropagation)");
-
-  outer.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1427,7 +1383,7 @@ QUnit.test("activeElement in inner target wins over outer target on untargeted d
   const input = document.createElement("input");
   inner.appendChild(input);
   outer.appendChild(inner);
-  document.body.appendChild(outer);
+  fixture.appendChild(outer);
 
   let innerFired = false;
   let outerFired = false;
@@ -1456,8 +1412,6 @@ QUnit.test("activeElement in inner target wins over outer target on untargeted d
 
   assert.ok(innerFired, "Inner target fires (innermost-wins via activeElement augmentation)");
   assert.notOk(outerFired, "Outer target does NOT fire");
-
-  outer.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1469,7 +1423,7 @@ QUnit.test("Stale-ref registration found via id merge when fresh-ref has differe
   // register F5 on the new node. Pressing Escape on the new node must
   // still find the stale-ref registration via the id-based index merge.
   const container = document.createElement("div");
-  document.body.appendChild(container);
+  fixture.appendChild(container);
 
   const oldTarget = document.createElement("div");
   oldTarget.id = "rerenderTarget";
@@ -1508,8 +1462,6 @@ QUnit.test("Stale-ref registration found via id merge when fresh-ref has differe
 
   assert.ok(escapeFired, "Stale-ref Escape registration fires via id merge");
   assert.notOk(f5Fired, "Fresh-ref F5 registration does NOT fire for Escape");
-
-  container.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1533,7 +1485,7 @@ QUnit.test("Focus bounces to body, Escape still matches previous target", (asser
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let fired = false;
   manager.register(
@@ -1554,15 +1506,13 @@ QUnit.test("Focus bounces to body, Escape still matches previous target", (asser
   fireKey("Escape");
 
   assert.ok(fired, "Target-scoped hotkey fires via focus fallback after blur to body");
-
-  target.remove();
 });
 
 QUnit.test("Blur-to-body fallback is one-shot for repeated Escape", (assert) => {
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let targetCount = 0;
   let untargetedCount = 0;
@@ -1589,8 +1539,6 @@ QUnit.test("Blur-to-body fallback is one-shot for repeated Escape", (assert) => 
 
   assert.strictEqual(targetCount, 1, "First Escape uses blur fallback, second does not");
   assert.strictEqual(untargetedCount, 1, "Second Escape falls back to untargeted handler");
-
-  target.remove();
 });
 
 QUnit.test("Focus moves to real non-target element - old target does NOT fire", (assert) => {
@@ -1598,8 +1546,8 @@ QUnit.test("Focus moves to real non-target element - old target does NOT fire", 
   const input = document.createElement("input");
   const outside = document.createElement("input");
   target.appendChild(input);
-  document.body.appendChild(target);
-  document.body.appendChild(outside);
+  fixture.appendChild(target);
+  fixture.appendChild(outside);
 
   let targetFired = false;
   let untargetedFired = false;
@@ -1627,16 +1575,13 @@ QUnit.test("Focus moves to real non-target element - old target does NOT fire", 
 
   assert.notOk(targetFired, "Target-scoped hotkey does NOT fire (focus genuinely moved away)");
   assert.ok(untargetedFired, "Untargeted fallback fires instead");
-
-  target.remove();
-  outside.remove();
 });
 
 QUnit.test(`Fallback expires after TTL (${FOCUS_PATH_FALLBACK_TTL_MS} ms)`, (assert) => {
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let targetFired = false;
   let untargetedFired = false;
@@ -1663,15 +1608,13 @@ QUnit.test(`Fallback expires after TTL (${FOCUS_PATH_FALLBACK_TTL_MS} ms)`, (ass
 
   assert.notOk(targetFired, "Target-scoped hotkey does NOT fire after TTL expiry");
   assert.ok(untargetedFired, "Untargeted handler fires instead");
-
-  target.remove();
 });
 
 QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let targetFired = false;
   let untargetedFired = false;
@@ -1695,8 +1638,6 @@ QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
 
   assert.notOk(targetFired, "Target-scoped hotkey does NOT fire for non-Escape via focus fallback");
   assert.ok(untargetedFired, "Untargeted handler fires for F5");
-
-  target.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1718,7 +1659,7 @@ QUnit.test("addGenericRootId makes element act as generic root for focus fallbac
   // Create a custom container that acts as a generic root (e.g. a shell container)
   const shell = document.createElement("div");
   shell.id = "myShellRoot";
-  document.body.appendChild(shell);
+  fixture.appendChild(shell);
 
   const target = document.createElement("div");
   const input = document.createElement("input");
@@ -1749,16 +1690,13 @@ QUnit.test("addGenericRootId makes element act as generic root for focus fallbac
   fireKeyOn(shell, "Escape");
 
   assert.ok(targetFired, "Target-scoped hotkey fires because shell is treated as generic root");
-
-  target.remove();
-  shell.remove();
 });
 
 QUnit.test("removeGenericRootId restores normal behavior for element", (assert) => {
   const container = document.createElement("div");
   container.id = "tempRoot";
   container.tabIndex = 0;
-  document.body.appendChild(container);
+  fixture.appendChild(container);
 
   const target = document.createElement("div");
   const input = document.createElement("input");
@@ -1792,9 +1730,6 @@ QUnit.test("removeGenericRootId restores normal behavior for element", (assert) 
 
   assert.notOk(targetFired, "Target-scoped hotkey does NOT fire after removeGenericRootId");
   assert.ok(untargetedFired, "Untargeted handler fires instead");
-
-  target.remove();
-  container.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1804,7 +1739,7 @@ QUnit.test("removeGenericRootId restores normal behavior for element", (assert) 
 QUnit.test("Disconnected activeElement does not augment path", (assert) => {
   const target = document.createElement("div");
   target.tabIndex = 0;
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let fired = false;
   manager.register(
@@ -1832,7 +1767,7 @@ QUnit.test("Rapid Escape within TTL fires target handler only once (one-shot)", 
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let callCount = 0;
   manager.register(
@@ -1854,8 +1789,6 @@ QUnit.test("Rapid Escape within TTL fires target handler only once (one-shot)", 
   // Second Escape immediately - hasUnconsumedBlur is false, fallback not used
   fireKey("Escape");
   assert.strictEqual(callCount, 1, "Second Escape does NOT fire - one-shot consumed");
-
-  target.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1866,7 +1799,7 @@ QUnit.test("targetIdIndex: replacing element with same id fires exactly once", (
   const original = document.createElement("div");
   original.id = "merge-dedup-test";
   original.tabIndex = 0;
-  document.body.appendChild(original);
+  fixture.appendChild(original);
 
   let callCount = 0;
   manager.register(
@@ -1882,15 +1815,13 @@ QUnit.test("targetIdIndex: replacing element with same id fires exactly once", (
   const replacement = document.createElement("div");
   replacement.id = "merge-dedup-test";
   replacement.tabIndex = 0;
-  document.body.appendChild(replacement);
+  fixture.appendChild(replacement);
 
   // Focus the replacement and fire key - Set dedup prevents double-fire
   replacement.focus();
   fireKeyOn(replacement, "F7");
 
   assert.strictEqual(callCount, 1, "Fires exactly once despite element replacement with same id");
-
-  replacement.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1909,7 +1840,7 @@ QUnit.module("Shadow DOM target matching", {
 QUnit.test("activeElement inside shadow DOM matches host-level target", (assert) => {
   // Create a host element with a shadow root containing an input
   const host = document.createElement("div");
-  document.body.appendChild(host);
+  fixture.appendChild(host);
 
   const shadow = host.attachShadow({ mode: "open" });
   const shadowInput = document.createElement("input");
@@ -1934,14 +1865,12 @@ QUnit.test("activeElement inside shadow DOM matches host-level target", (assert)
   fireKeyOn(host, "Escape");
 
   assert.ok(fired, "Target-scoped hotkey fires when focus is inside shadow DOM of target host");
-
-  host.remove();
 });
 
 QUnit.test("nested shadow DOM: target on outer host matches when focus is two shadow roots deep", (assert) => {
   // outer host > shadow root > inner host > shadow root > input
   const outerHost = document.createElement("div");
-  document.body.appendChild(outerHost);
+  fixture.appendChild(outerHost);
 
   const outerShadow = outerHost.attachShadow({ mode: "open" });
   const innerHost = document.createElement("div");
@@ -1967,8 +1896,6 @@ QUnit.test("nested shadow DOM: target on outer host matches when focus is two sh
   fireKeyOn(outerHost, "Escape");
 
   assert.ok(fired, "Target-scoped hotkey fires when focus is two shadow roots deep inside target host");
-
-  outerHost.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -1990,7 +1917,7 @@ QUnit.test("Non-Escape key: activeElement inside target matches via augmentation
   const target = document.createElement("div");
   const input = document.createElement("input");
   target.appendChild(input);
-  document.body.appendChild(target);
+  fixture.appendChild(target);
 
   let targetFired = false;
   let untargetedFired = false;
@@ -2015,8 +1942,6 @@ QUnit.test("Non-Escape key: activeElement inside target matches via augmentation
 
   assert.ok(targetFired, "Target-scoped F5 fires via activeElement augmentation");
   assert.notOk(untargetedFired, "Untargeted F5 suppressed by stopPropagation");
-
-  target.remove();
 });
 
 // ──────────────────────────────────────────────
@@ -2039,7 +1964,7 @@ QUnit.test("Element with data-sap-ui-area is treated as generic root for focus f
   const uiArea = document.createElement("div");
   uiArea.setAttribute("data-sap-ui-area", "");
   uiArea.id = "uiAreaRoot";
-  document.body.appendChild(uiArea);
+  fixture.appendChild(uiArea);
 
   const target = document.createElement("div");
   const input = document.createElement("input");
@@ -2064,7 +1989,4 @@ QUnit.test("Element with data-sap-ui-area is treated as generic root for focus f
   fireKeyOn(uiArea, "Escape");
 
   assert.ok(targetFired, "Target-scoped Escape fires via focus fallback when event target is a UIArea root");
-
-  target.remove();
-  uiArea.remove();
 });
