@@ -8,7 +8,7 @@ Fixes five bugs in the Custom Elements Manifest (CEM) generation tooling.
 
 **Pinned at 2.22.0:**
 
-The patch applies cleanly to the pristine `2.22.0` package as published on npm (patch-package requires the filename version to match the installed version, so a clean `npm install` confirms it); none of the five bugs were fixed upstream across the `2.20.0` → `2.22.0` bumps. The patch filename tracks the pinned version.
+The patch applies cleanly to the pristine `2.22.0` package as published on npm (patch-package warns when the filename version does not match the installed version, so a clean `npm install` confirms it); none of the five bugs were fixed upstream across the `2.20.0` → `2.22.0` bumps. The patch filename tracks the pinned version.
 
 **Note on upstream ownership:**
 
@@ -113,20 +113,6 @@ The same bug exists in both `handlers.js` (member descriptions) and `class-jsdoc
 +}).join('');
 ```
 
-### Bug 6: Type reference module paths use platform-dependent separators (removed)
-
-> **Removed from the patch (April 2026).** Documented here for historical context.
-
-**File:** `lib/cem/utils.mjs`
-
-The `getTypeReferenceModulePath` function uses `path.join()` and `path.dirname()` to resolve relative type references. On Windows, `path.join()` produces backslashes (`dist\types.js`), but CEM module paths must use forward slashes because `ui5-tooling-modules` normalizes resolved filesystem paths to forward slashes before matching them against CEM class aliases. A CEM with backslash paths creates aliases that never match.
-
-The fix was to use `path.posix.join()` and `path.posix.dirname()` instead of the platform-dependent equivalents.
-
-**Why it was removed:**
-
-The class was flattened from a re-export pattern (`KioskKeyboard.ts` re-exporting from `KioskKeyboardCore.ts`) into a single file. This eliminated the cross-module type references that were the primary trigger for the path normalization issue. With all types defined in the same module, `getTypeReferenceModulePath` is no longer called for our component's type references, making the patch unnecessary. The upstream bug still exists for components that use cross-module type references on Windows, but it no longer affects this project.
-
 ### Upstream
 
 Repository: https://github.com/UI5/webcomponents.
@@ -136,6 +122,8 @@ These patches should be removed once the upstream issues are resolved. As of `@u
 ## less-openui5+0.11.6
 
 Adds `@container` and `@layer` at-rule support to the vendored LESS 1.6.3 parser, and resolves the parent selector inside conditional group rules.
+
+**Pinned at 0.11.6:** exact, like `@ui5/webcomponents-tools` above. A range would let `npm update` move the installed version in the lockfile alone, leaving the patch filename claiming a version that is no longer installed; patch-package would warn and apply anyway. The pin keeps any move off 0.11.6 a reviewable `package.json` diff. `@ui5/builder`'s own `^0.11.6` edge floats independently, which is what `apply-nested.mjs`'s vendored-fork-version gate exists to catch.
 
 **Files:**
 

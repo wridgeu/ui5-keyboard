@@ -69,6 +69,12 @@
       }
     },
     {
+      "files": ["packages/*/test/pages/*.js"],
+      "rules": {
+        "import/no-unassigned-import": "off"
+      }
+    },
+    {
       "files": ["tools/*.ts", "tools/*.mjs", "patches/*.mjs"],
       "rules": {
         "no-console": "off"
@@ -93,11 +99,11 @@
       }
     },
     {
-      "files": ["packages/*/test/e2e/**/*.ts"],
+      "files": ["packages/*/test/e2e/**/*.{ts,js}"],
       "rules": {
         "test-guardrails/no-hard-wait": "error"
       }
     }
   ],
-  "ignorePatterns": ["dist/", "node_modules/", "**/*.js", "**/*.gen.d.ts"]
+  "ignorePatterns": ["dist/", "node_modules/", "**/*.gen.d.ts"]
 }
