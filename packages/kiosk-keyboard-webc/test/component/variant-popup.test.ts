@@ -139,6 +139,22 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     pointerUp();
   });
 
+  it("opens the popup on a host that was given an id after its first render", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    // `id` is not a decorated property, so assigning it re-renders nothing; the
+    // render the popup's own state change triggers is what re-emits every key
+    // id under the new prefix, while the gesture is already under way.
+    kb.id = "renamed";
+    await holdOpen(requireKey(kb, "a"));
+
+    const popover = popoverEl(kb);
+    expect(popover, "ui5-popover rendered").to.exist;
+    expect(popover!.open, "opened in the top layer").to.equal(true);
+    expect(popover!.opener, "anchored to the held key").to.equal(requireKey(kb, "a"));
+    expect(optionGlyphs(kb)).to.deep.equal(["ä", "à", "â"]);
+    pointerUp();
+  });
+
   it("exposes the variant-popup and variant-option parts when open", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     await holdOpen(requireKey(kb, "a"));

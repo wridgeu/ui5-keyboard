@@ -803,8 +803,10 @@ class KioskKeyboard extends UI5Element {
     announceDismiss: () => {
       this._announcements.announce(getText("ARIA_VARIANTS_CLOSED", "Variants closed"));
     },
-    focusKey: (keyId) => {
-      this.shadowRoot?.getElementById(keyId)?.focus();
+    focusKey: (pos) => {
+      this.shadowRoot
+        ?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyByPosition(pos.row, pos.col))
+        ?.focus();
     },
     notifyTouchCommit: () => {
       this._variantCommittedTouch = true;
@@ -1699,6 +1701,8 @@ class KioskKeyboard extends UI5Element {
    */
   private _resolveVariantOpenState(keyEl: HTMLElement): VariantPopupState | null {
     if (this.disabled) return null;
+    const anchorKey = keyPositionOf(keyEl);
+    if (!anchorKey) return null;
     const variants = this._variantsForKey(keyEl);
     if (!variants || variants.length === 0) return null;
 
@@ -1710,7 +1714,7 @@ class KioskKeyboard extends UI5Element {
     const label = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}", String(glyphs.length), base);
 
     return {
-      anchorKeyId: keyEl.id,
+      anchorKey,
       // Keys are flex:1 1 0, so width (unlike height and font-size) has no token
       // to cascade into the popover. offsetWidth gives the resting border-box,
       // unaffected by the pressed scale() transform on the held key.
