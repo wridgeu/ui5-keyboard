@@ -26,7 +26,7 @@ noted in H7.
 | Suite              | Command                                                                                                                          |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | webc unit          | `npx vitest run test/unit/…` in `packages/kiosk-keyboard-webc`                                                                   |
-| webc component     | `npx web-test-runner test/component/kiosk-keyboard.test.ts --config web-test-runner.config.mjs`                                  |
+| webc component     | `npx web-test-runner test/component/<file>.test.ts --config web-test-runner.config.mjs`                                          |
 | kiosk focus module | `npx ui5-test-runner --url ".../Test.qunit.html?testsuite=…&test=KioskKeyboard-focus"` against a running `ui5 serve --port 8082` |
 
 The kiosk module was driven directly rather than through `npm run test:qunit` so a fault could be
@@ -139,12 +139,25 @@ A second assertion was added in the same pass: the test read the _first_ `[tabin
 than asserting there is only one, so a regression leaving a stale tab stop earlier in DOM order
 would have gone unnoticed. It now asserts `tabStops.length === 1`.
 
-## Cleared, and what remains uncovered
+### H8 — the variant-popup regression test would pass without its fix
 
-All seven hypotheses were seen red and reverted; all six touched production files were verified
-byte-identical to their pre-injection copies afterwards, and the full gate set was re-run green.
+webc's variant popup carries the same coordinate: `VariantPopupState.anchorKey` replaced
+`anchorKeyId`, so opening the popover, matching a re-press against the open anchor, and restoring
+focus on dismiss all resolve through `keyByPosition`. The popup's own state change is what triggers
+the render that re-emits every key id under the new prefix, so the gesture loses its anchor
+mid-flight — a second, independent instance of #232, not a variation of the two above.
 
-Known residual, deliberately not addressed here: webc's variant-popup path still resolves its anchor
-element by `id` (`src/core/variant-popup-controller.ts`, `src/KioskKeyboard.ts#focusKey`). That is
-unchanged from `main` and outside this change's scope, but it means the rule "the element `id` is
-written, never read" holds for the focus state and not yet package-wide.
+**Fault:** restored `src/KioskKeyboard.ts`, `src/core/dom-utils.ts`, `src/core/key-grid-navigation.ts`
+and `src/core/variant-popup-controller.ts` to `main`, leaving the tests as written.
+
+**Observed red:** `test/component/variant-popup.test.ts` — **58 passed, 1 failed**, failing exactly
+`opens the popup on a host that was given an id after its first render: opened in the top layer:
+expected false to equal true`. The popup never opened, which is the user-visible defect.
+
+## Cleared
+
+All eight hypotheses were seen red and reverted; every touched production file was verified
+byte-identical to its pre-injection copy afterwards, and the full gate set was re-run green.
+
+The rule "the element `id` is written, never read" holds package-wide: no key lookup in either twin
+resolves through `getElementById` or parses a coordinate back out of an id.

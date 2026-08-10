@@ -1686,13 +1686,6 @@ class KioskKeyboard extends UI5Element {
 
   // ── Accent-variant popup ──
 
-  /** The effective `variants` list of a rendered key element, from its grid position. */
-  private _variantsForKey(keyEl: HTMLElement): string[] | undefined {
-    const pos = keyPositionOf(keyEl);
-    if (!pos) return undefined;
-    return this._getResolvedLayout()[pos.row]?.[pos.col]?.variants;
-  }
-
   /**
    * Resolves the accent-variant popup state for `keyEl`, surfacing the
    * uppercase forms (incl. `ẞ` for `ß`) while Shift/Caps is active. Returns
@@ -1703,7 +1696,7 @@ class KioskKeyboard extends UI5Element {
     if (this.disabled) return null;
     const anchorKey = keyPositionOf(keyEl);
     if (!anchorKey) return null;
-    const variants = this._variantsForKey(keyEl);
+    const variants = this._getResolvedLayout()[anchorKey.row]?.[anchorKey.col]?.variants;
     if (!variants || variants.length === 0) return null;
 
     const value = keyEl.dataset.key!;

@@ -428,7 +428,7 @@ The deferred close via `requestAnimationFrame` handles the case where focus brie
 The component implements roving tabindex for physical keyboard users:
 
 - One key has `tabindex="0"`, all others have `tabindex="-1"`
-- Arrow keys move focus by row/column, resolving the target through the `data-row-index` / `data-key-index` coordinate; key elements carry the ID pattern `{controlId}-key-{row}-{col}`
+- Arrow keys move focus by the grid coordinate each key publishes in `data-row-index` / `data-key-index`. The element ID pattern `{controlId}-key-{row}-{col}` is what the template uses as the JSX reconciliation key.
 - Home/End move to first/last key in the row
 - Enter/Space activate the focused key
 - `_lastFocusedKey` tracks the grid position across re-renders

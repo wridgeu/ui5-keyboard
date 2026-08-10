@@ -221,8 +221,7 @@ QUnit.test("Arrow navigation resolves the neighbour by grid coordinate, not by e
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const firstRowKeys = getRowKeys(kb, 0);
-  const [origin, neighbour] = [firstRowKeys[0], firstRowKeys[1]];
+  const [origin, neighbour] = getRowKeys(kb, 0);
 
   // Coordinates intact, ids garbage: resolution must not depend on the id.
   origin.id = "scrambled-origin";
