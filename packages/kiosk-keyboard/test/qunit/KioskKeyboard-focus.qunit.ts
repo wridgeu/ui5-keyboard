@@ -6,13 +6,16 @@ import StepInput from "sap/m/StepInput";
 import VBox from "sap/m/VBox";
 import XMLView from "sap/ui/core/mvc/XMLView";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
+import type { KeyPosition } from "ui5/kiosk/internal/dom";
 import {
   getFirstKeyElement,
   getFocusableKeys,
   getKeyboardDom,
+  getRequiredKeyElement,
   getRowKeys,
   hasKeyboardClass,
   placeAndWait,
+  simulateTap,
   tapKey,
   waitForRender,
 } from "./test-helpers";
@@ -210,6 +213,75 @@ QUnit.test("ArrowDown with column overflow clamps to last key", async (assert) =
   const secondRowKeys = getRowKeys(kb, 1);
   const expectedTarget = secondRowKeys[Math.min(lastCol, secondRowKeys.length - 1)];
   assert.strictEqual(document.activeElement, expectedTarget, "Focus clamped to last key in target row");
+
+  kb.destroy();
+});
+
+QUnit.test("Arrow navigation resolves the neighbour by grid coordinate, not by element id", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const firstRowKeys = getRowKeys(kb, 0);
+  const [origin, neighbour] = [firstRowKeys[0], firstRowKeys[1]];
+
+  // Coordinates intact, ids garbage: resolution must not depend on the id.
+  origin.id = "scrambled-origin";
+  neighbour.id = "scrambled-neighbour";
+
+  origin.setAttribute("tabindex", "0");
+  origin.focus();
+
+  origin.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", keyCode: 39, bubbles: true }));
+
+  assert.strictEqual(document.activeElement, neighbour, "Focus moved to the coordinate neighbour");
+
+  kb.destroy();
+});
+
+QUnit.test("Row-wrapping navigation remembers the key it landed on", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const firstRowKeys = getRowKeys(kb, 0);
+  const lastKeyFirstRow = firstRowKeys[firstRowKeys.length - 1];
+
+  lastKeyFirstRow.setAttribute("tabindex", "0");
+  lastKeyFirstRow.focus();
+  lastKeyFirstRow.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", keyCode: 39, bubbles: true }));
+
+  const landed = getRowKeys(kb, 1)[0];
+
+  kb.invalidate();
+  await waitForRender();
+
+  assert.strictEqual(kb.getFocusDomRef(), landed, "getFocusDomRef returns the wrapped-to key");
+  assert.strictEqual(landed.getAttribute("tabindex"), "0", "The wrapped-to key keeps the roving tab stop");
+
+  kb.destroy();
+});
+
+QUnit.test("Column-clamping navigation remembers the key it landed on", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setKeyboardType(KeyboardType.Numpad);
+  await placeAndWait(kb);
+
+  const rowCount = getKeyboardDom(kb).querySelectorAll(DOM.selectors.row).length;
+  const wideRowKeys = getRowKeys(kb, rowCount - 2);
+  const narrowRowKeys = getRowKeys(kb, rowCount - 1);
+  assert.ok(wideRowKeys.length > narrowRowKeys.length, "The last row is narrower than the one above it");
+
+  const origin = wideRowKeys[wideRowKeys.length - 1];
+  origin.setAttribute("tabindex", "0");
+  origin.focus();
+  origin.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", keyCode: 40, bubbles: true }));
+
+  const landed = narrowRowKeys[narrowRowKeys.length - 1];
+
+  kb.invalidate();
+  await waitForRender();
+
+  assert.strictEqual(kb.getFocusDomRef(), landed, "getFocusDomRef returns the clamped-to key");
+  assert.strictEqual(landed.getAttribute("tabindex"), "0", "The clamped-to key keeps the roving tab stop");
 
   kb.destroy();
 });
@@ -704,16 +776,23 @@ QUnit.test("controls rebinds delegate when control is destroyed and recreated wi
 // Focus save / restore (getFocusInfo / applyFocusInfo)
 // ──────────────────────────────────────────────
 
-QUnit.test("getFocusInfo returns lastFocusedKeyId", async (assert) => {
+QUnit.test("getFocusInfo returns lastFocusedKey", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  // Tap a key to set _lastFocusedKeyId
+  // Tap a key to record it as last focused
   tapKey(kb, "q");
 
-  const info = kb.getFocusInfo() as { lastFocusedKeyId: string | null };
-  assert.ok(info.lastFocusedKeyId, "lastFocusedKeyId is set after tapping a key");
-  assert.ok(info.lastFocusedKeyId!.includes("key-"), "ID looks like a key element ID");
+  const qKey = getRequiredKeyElement(kb, "q");
+  const info = kb.getFocusInfo() as { lastFocusedKey: KeyPosition | null };
+  assert.deepEqual(
+    info.lastFocusedKey,
+    {
+      row: Number(qKey.getAttribute(DOM.attributes.rowIndex)),
+      col: Number(qKey.getAttribute(DOM.attributes.keyIndex)),
+    },
+    "lastFocusedKey is the grid position of the tapped key",
+  );
 
   kb.destroy();
 });
@@ -724,7 +803,7 @@ QUnit.test("applyFocusInfo restores focus to previously focused key", async (ass
 
   // Tap 'q' to set it as last focused
   tapKey(kb, "q");
-  const info = kb.getFocusInfo() as { lastFocusedKeyId: string };
+  const info = kb.getFocusInfo() as { lastFocusedKey: KeyPosition };
 
   // Focus something else
   const firstKey = getFirstKeyElement(kb);
@@ -734,7 +813,9 @@ QUnit.test("applyFocusInfo restores focus to previously focused key", async (ass
   // Restore focus to the saved key
   kb.applyFocusInfo(info);
 
-  const restoredEl = document.getElementById(info.lastFocusedKeyId);
+  const restoredEl = getKeyboardDom(kb).querySelector<HTMLElement>(
+    DOM.selectors.keyByPosition(info.lastFocusedKey.row, info.lastFocusedKey.col),
+  );
   assert.strictEqual(document.activeElement, restoredEl, "Focus restored to previously focused key");
   assert.strictEqual(restoredEl!.getAttribute("tabindex"), "0", "Restored key has tabindex=0");
 
@@ -745,8 +826,8 @@ QUnit.test("applyFocusInfo falls back to first key when saved key is gone", asyn
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  // Apply focus info with a nonexistent key ID
-  kb.applyFocusInfo({ lastFocusedKeyId: "nonexistent-key-id" });
+  // Apply focus info with a coordinate outside the rendered grid
+  kb.applyFocusInfo({ lastFocusedKey: { row: 99, col: 99 } });
 
   const firstKey = getFirstKeyElement(kb);
   assert.strictEqual(document.activeElement, firstKey, "Focus falls back to first key");
@@ -788,6 +869,25 @@ QUnit.test("getFocusDomRef returns last focused key", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("getFocusDomRef resolves the remembered key inside the keyboard's own DOM", async (assert) => {
+  const first = new KioskKeyboard();
+  const second = new KioskKeyboard();
+  await placeAndWait(first);
+  await placeAndWait(second);
+
+  // Both keyboards remember the same grid coordinate.
+  const firstKey = getRowKeys(first, 1)[1];
+  const secondKey = getRowKeys(second, 1)[1];
+  simulateTap(first, firstKey);
+  simulateTap(second, secondKey);
+
+  assert.strictEqual(first.getFocusDomRef(), firstKey, "First keyboard resolves its own key");
+  assert.strictEqual(second.getFocusDomRef(), secondKey, "Second keyboard resolves its own key");
+
+  first.destroy();
+  second.destroy();
+});
+
 // ──────────────────────────────────────────────
 // Focus management - disabled / hidden state
 // ──────────────────────────────────────────────
@@ -796,7 +896,7 @@ QUnit.test("getFocusInfo includes control id", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const info = kb.getFocusInfo() as { id: string; lastFocusedKeyId: string | null };
+  const info = kb.getFocusInfo() as { id: string; lastFocusedKey: KeyPosition | null };
   assert.strictEqual(info.id, kb.getId(), "id matches the control's ID");
 
   kb.destroy();
@@ -834,7 +934,7 @@ QUnit.test("applyFocusInfo is a no-op when keyboard is disabled", async (assert)
   await placeAndWait(kb);
 
   tapKey(kb, "q");
-  const info = kb.getFocusInfo() as { lastFocusedKeyId: string };
+  const info = kb.getFocusInfo() as { lastFocusedKey: KeyPosition | null };
 
   kb.setEnabled(false);
   await waitForRender();
@@ -999,7 +1099,7 @@ QUnit.test("setVisible(false) closes docked keyboard", async (assert) => {
     const kb = new KioskKeyboard();
     await placeAndWait(kb);
 
-    // No lastFocusedKeyId -> fallback path focuses the first key.
+    // No lastFocusedKey -> fallback path focuses the first key.
     kb.applyFocusInfo({ preventScroll });
 
     assert.strictEqual(

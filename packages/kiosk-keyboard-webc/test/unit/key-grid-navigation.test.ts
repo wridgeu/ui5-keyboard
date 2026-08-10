@@ -1,11 +1,11 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { KeyGridNavigation, type KeyGridNavigationHost } from "../../src/core/key-grid-navigation.js";
+import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 import type { LayoutDefinition } from "../../src/types.js";
 
 // QWERTY-shaped variable-width grid: the case a single-`rowSize`
 // ItemNavigation cannot express, and the reason this navigator is hand-rolled.
 const ROW_LENS = [11, 10, 9, 9, 5];
-const COMPONENT_ID = "kb";
 
 function buildLayout(rowLens: number[]): LayoutDefinition {
   return rowLens.map((len) => Array.from({ length: len }, (_, c) => ({ value: `k${c}` })));
@@ -17,13 +17,16 @@ interface Grid {
   keyAt: (row: number, col: number) => HTMLElement;
   press: (el: HTMLElement, key: string, opts?: KeyboardEventInit) => KeyboardEvent;
   release: (el: HTMLElement, key: string, opts?: KeyboardEventInit) => KeyboardEvent;
-  tabbableIds: () => string[];
+  tabbable: () => Array<{ row: number; col: number }>;
 }
 
 /**
  * Renders the grid into a real (jsdom) shadow root the way the component does,
  * wires the navigator as the keydown handler, and exposes helpers to drive and
  * observe it through its public surface only.
+ *
+ * The keys carry no `id`: navigation resolves through the grid coordinate
+ * alone, so a fixture without ids proves no lookup falls back to one.
  */
 function makeGrid(rowLens: number[] = ROW_LENS, rtl = false): Grid {
   const host = document.createElement("div");
@@ -36,10 +39,11 @@ function makeGrid(rowLens: number[] = ROW_LENS, rtl = false): Grid {
     rowEl.className = "kiosk-row";
     for (let c = 0; c < len; c++) {
       const key = document.createElement("div");
-      key.id = `${COMPONENT_ID}-key-${r}-${c}`;
       key.className = "kiosk-key";
       key.setAttribute("role", "button");
       key.setAttribute("data-key", `k${c}`);
+      key.setAttribute(DOM.attributes.rowIndex, String(r));
+      key.setAttribute(DOM.attributes.keyIndex, String(c));
       key.setAttribute("tabindex", r === 0 && c === 0 ? "0" : "-1");
       rowEl.appendChild(key);
     }
@@ -50,14 +54,14 @@ function makeGrid(rowLens: number[] = ROW_LENS, rtl = false): Grid {
   const hostBridge: KeyGridNavigationHost = {
     getResolvedLayout: () => layout,
     getShadowRoot: () => shadow,
-    getComponentId: () => COMPONENT_ID,
     isRtl: () => rtl,
   };
   const nav = new KeyGridNavigation(hostBridge);
   shadow.addEventListener("keydown", (e) => nav.onKeyDown(e as KeyboardEvent));
   shadow.addEventListener("keyup", (e) => nav.onKeyUp(e as KeyboardEvent));
 
-  const keyAt = (row: number, col: number) => shadow.getElementById(`${COMPONENT_ID}-key-${row}-${col}`) as HTMLElement;
+  const keyAt = (row: number, col: number) =>
+    shadow.querySelector<HTMLElement>(DOM.selectors.keyByPosition(row, col)) as HTMLElement;
 
   const press = (el: HTMLElement, key: string, opts: KeyboardEventInit = {}) => {
     el.focus();
@@ -72,10 +76,13 @@ function makeGrid(rowLens: number[] = ROW_LENS, rtl = false): Grid {
     return ev;
   };
 
-  const tabbableIds = () =>
-    Array.from(shadow.querySelectorAll<HTMLElement>('.kiosk-key[tabindex="0"]')).map((k) => k.id);
+  const tabbable = () =>
+    Array.from(shadow.querySelectorAll<HTMLElement>(DOM.selectors.focusableKey)).map((k) => ({
+      row: Number(k.getAttribute(DOM.attributes.rowIndex)),
+      col: Number(k.getAttribute(DOM.attributes.keyIndex)),
+    }));
 
-  return { nav, shadow, keyAt, press, release, tabbableIds };
+  return { nav, shadow, keyAt, press, release, tabbable };
 }
 
 let grids: Grid[] = [];
@@ -94,26 +101,26 @@ describe("KeyGridNavigation - arrow movement", () => {
   it("ArrowRight moves to the next column in the same row", () => {
     const g = grid();
     const ev = g.press(g.keyAt(0, 0), "ArrowRight");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-0-1");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 1 });
     expect(ev.defaultPrevented).toBe(true);
   });
 
   it("ArrowLeft moves to the previous column in the same row", () => {
     const g = grid();
     g.press(g.keyAt(0, 5), "ArrowLeft");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-0-4");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 4 });
   });
 
   it("ArrowDown moves to the same column in the next row", () => {
     const g = grid();
     g.press(g.keyAt(0, 3), "ArrowDown");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-1-3");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 1, col: 3 });
   });
 
   it("ArrowUp moves to the same column in the previous row", () => {
     const g = grid();
     g.press(g.keyAt(2, 3), "ArrowUp");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-1-3");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 1, col: 3 });
   });
 });
 
@@ -121,13 +128,13 @@ describe("KeyGridNavigation - row-boundary continuation (APG layout grid)", () =
   it("ArrowRight at the row end continues onto the first key of the next row", () => {
     const g = grid();
     g.press(g.keyAt(0, 10), "ArrowRight"); // row 0 has 11 keys (0..10)
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-1-0");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 1, col: 0 });
   });
 
   it("ArrowLeft at the row start continues onto the last key of the previous row", () => {
     const g = grid();
     g.press(g.keyAt(1, 0), "ArrowLeft");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-0-10");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 10 });
   });
 });
 
@@ -135,7 +142,7 @@ describe("KeyGridNavigation - edges do not wrap (focus stays, scroll prevented)"
   it("ArrowLeft at the first key of the grid stays put", () => {
     const g = grid();
     const ev = g.press(g.keyAt(0, 0), "ArrowLeft");
-    expect(g.nav.getLastFocusedKeyId()).toBeNull();
+    expect(g.nav.getLastFocusedKey()).toBeNull();
     expect(g.keyAt(0, 0).getAttribute("tabindex")).toBe("0");
     expect(ev.defaultPrevented).toBe(true); // handled key: page does not scroll
   });
@@ -143,21 +150,21 @@ describe("KeyGridNavigation - edges do not wrap (focus stays, scroll prevented)"
   it("ArrowRight at the last key of the grid stays put", () => {
     const g = grid();
     const ev = g.press(g.keyAt(4, 4), "ArrowRight"); // last row, last key
-    expect(g.nav.getLastFocusedKeyId()).toBeNull();
+    expect(g.nav.getLastFocusedKey()).toBeNull();
     expect(ev.defaultPrevented).toBe(true);
   });
 
   it("ArrowUp at the top row stays put", () => {
     const g = grid();
     const ev = g.press(g.keyAt(0, 3), "ArrowUp");
-    expect(g.nav.getLastFocusedKeyId()).toBeNull();
+    expect(g.nav.getLastFocusedKey()).toBeNull();
     expect(ev.defaultPrevented).toBe(true);
   });
 
   it("ArrowDown at the bottom row stays put", () => {
     const g = grid();
     const ev = g.press(g.keyAt(4, 0), "ArrowDown");
-    expect(g.nav.getLastFocusedKeyId()).toBeNull();
+    expect(g.nav.getLastFocusedKey()).toBeNull();
     expect(ev.defaultPrevented).toBe(true);
   });
 });
@@ -167,21 +174,21 @@ describe("KeyGridNavigation - column clamping on variable-width rows", () => {
     const g = grid();
     // row 0 col 10 -> row 1 (10 keys, max col 9): clamp to col 9, not skip a row
     g.press(g.keyAt(0, 10), "ArrowDown");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-1-9");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 1, col: 9 });
   });
 
   it("ArrowDown clamps again descending into an even narrower row", () => {
     const g = grid();
     // row 1 col 9 -> row 2 (9 keys, max col 8): clamp to col 8
     g.press(g.keyAt(1, 9), "ArrowDown");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-2-8");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 2, col: 8 });
   });
 
   it("ArrowUp keeps the column when the target row is wide enough (no clamp)", () => {
     const g = grid();
     // row 1 col 9 -> row 0 (11 keys): no clamp needed, stays col 9
     g.press(g.keyAt(1, 9), "ArrowUp");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-0-9");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 9 });
   });
 });
 
@@ -189,25 +196,25 @@ describe("KeyGridNavigation - Home / End", () => {
   it("Home moves to the first column of the current row", () => {
     const g = grid();
     g.press(g.keyAt(1, 5), "Home");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-1-0");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 1, col: 0 });
   });
 
   it("End moves to the last column of the current row", () => {
     const g = grid();
     g.press(g.keyAt(1, 5), "End");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-1-9");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 1, col: 9 });
   });
 
   it("Ctrl+Home jumps to the first key of the whole grid", () => {
     const g = grid();
     g.press(g.keyAt(3, 3), "Home", { ctrlKey: true });
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-0-0");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 0 });
   });
 
   it("Ctrl+End jumps to the last key of the whole grid", () => {
     const g = grid();
     g.press(g.keyAt(1, 2), "End", { ctrlKey: true });
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-4-4");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 4, col: 4 });
   });
 });
 
@@ -215,26 +222,26 @@ describe("KeyGridNavigation - RTL horizontal arrows", () => {
   it("ArrowLeft moves visually forward within the row", () => {
     const g = grid(ROW_LENS, true);
     g.press(g.keyAt(0, 0), "ArrowLeft");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-0-1");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 1 });
   });
 
   it("ArrowRight stays put at the first key of the grid", () => {
     const g = grid(ROW_LENS, true);
     const ev = g.press(g.keyAt(0, 0), "ArrowRight");
-    expect(g.nav.getLastFocusedKeyId()).toBeNull();
+    expect(g.nav.getLastFocusedKey()).toBeNull();
     expect(ev.defaultPrevented).toBe(true);
   });
 
   it("ArrowRight at the start of a row continues onto the previous row", () => {
     const g = grid(ROW_LENS, true);
     g.press(g.keyAt(1, 0), "ArrowRight");
-    expect(g.nav.getLastFocusedKeyId()).toBe(`kb-key-0-${ROW_LENS[0]! - 1}`);
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: ROW_LENS[0]! - 1 });
   });
 
   it("ArrowLeft at the end of a row continues onto the next row", () => {
     const g = grid(ROW_LENS, true);
     g.press(g.keyAt(0, ROW_LENS[0]! - 1), "ArrowLeft");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-1-0");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 1, col: 0 });
   });
 });
 
@@ -247,7 +254,7 @@ describe("KeyGridNavigation - activation (Enter / Space)", () => {
     const ev = g.press(key, "Enter");
     expect(onClick).toHaveBeenCalledOnce();
     expect(ev.defaultPrevented).toBe(true);
-    expect(g.nav.getLastFocusedKeyId()).toBeNull();
+    expect(g.nav.getLastFocusedKey()).toBeNull();
   });
 
   it("Space does not activate on press, but suppresses the page scroll", () => {
@@ -307,14 +314,14 @@ describe("KeyGridNavigation - activation (Enter / Space)", () => {
 describe("KeyGridNavigation - roving tabindex", () => {
   it("keeps exactly one key tabbable as focus moves", () => {
     const g = grid();
-    expect(g.tabbableIds()).toEqual(["kb-key-0-0"]);
+    expect(g.tabbable()).toEqual([{ row: 0, col: 0 }]);
 
     let current = g.keyAt(0, 0);
     for (const key of ["ArrowRight", "ArrowDown", "ArrowDown", "End", "ArrowUp"]) {
       g.press(current, key);
-      const tabbable = g.tabbableIds();
+      const tabbable = g.tabbable();
       expect(tabbable).toHaveLength(1);
-      current = g.shadow.getElementById(tabbable[0]!) as HTMLElement;
+      current = g.keyAt(tabbable[0]!.row, tabbable[0]!.col);
     }
   });
 
@@ -333,23 +340,43 @@ describe("KeyGridNavigation - non-key and no-op events", () => {
     g.shadow.appendChild(stray);
     const ev = g.press(stray, "ArrowRight");
     expect(ev.defaultPrevented).toBe(false);
-    expect(g.nav.getLastFocusedKeyId()).toBeNull();
+    expect(g.nav.getLastFocusedKey()).toBeNull();
   });
 
   it("ignores unhandled keys", () => {
     const g = grid();
     const ev = g.press(g.keyAt(0, 0), "Escape");
     expect(ev.defaultPrevented).toBe(false);
-    expect(g.nav.getLastFocusedKeyId()).toBeNull();
+    expect(g.nav.getLastFocusedKey()).toBeNull();
+  });
+
+  it("ignores a key element that carries no grid coordinate", () => {
+    const g = grid();
+    const origin = g.keyAt(0, 0);
+    origin.removeAttribute(DOM.attributes.rowIndex);
+    const ev = g.press(origin, "ArrowRight");
+    expect(ev.defaultPrevented).toBe(false);
+    expect(g.nav.getLastFocusedKey()).toBeNull();
+  });
+});
+
+describe("KeyGridNavigation - element ids take no part in resolution", () => {
+  it("moves onto the coordinate neighbour whatever id it carries", () => {
+    const g = grid();
+    const target = g.keyAt(0, 1);
+    target.id = "not-a-key-id";
+    g.press(g.keyAt(0, 0), "ArrowRight");
+    expect(g.shadow.activeElement).toBe(target);
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 1 });
   });
 });
 
 describe("KeyGridNavigation - last-focused-key tracking", () => {
-  it("exposes and clears the last focused key id", () => {
+  it("exposes and clears the last focused key position", () => {
     const g = grid();
     g.press(g.keyAt(0, 0), "ArrowRight");
-    expect(g.nav.getLastFocusedKeyId()).toBe("kb-key-0-1");
-    g.nav.setLastFocusedKeyId(null);
-    expect(g.nav.getLastFocusedKeyId()).toBeNull();
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 1 });
+    g.nav.setLastFocusedKey(null);
+    expect(g.nav.getLastFocusedKey()).toBeNull();
   });
 });

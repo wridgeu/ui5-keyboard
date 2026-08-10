@@ -2069,6 +2069,69 @@ describe("kiosk-keyboard", () => {
     });
   });
 
+  // ── Host id reassignment ──
+
+  describe("host id reassignment", () => {
+    it("ArrowRight still moves focus after the host id is assigned", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const originKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByPosition(1, 0))!;
+      const targetKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByPosition(1, 1))!;
+      originKey.focus();
+      expect(el.shadowRoot!.activeElement, "the origin key holds focus before the id is assigned").to.equal(originKey);
+
+      // `id` is not a decorated property, so assigning it neither invalidates
+      // the component nor changes the rendered DOM: navigation off the focused
+      // key has to keep working against the keys already on screen.
+      el.id = "renamed";
+      originKey.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+
+      expect(el.shadowRoot!.activeElement, "ArrowRight focuses row 1, column 1").to.equal(targetKey);
+      expect(targetKey.getAttribute("tabindex"), "roving tabindex follows the move").to.equal("0");
+    });
+
+    it("keeps the roving tab stop on its key across a layout switch after the host id is assigned", async () => {
+      const host = document.createElement("div");
+      const input = document.createElement("input");
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.setAttribute("layout", "qwerty");
+      host.append(input, el);
+      await fixture(host);
+      await nextRender();
+
+      // Arrow onto the comma key, then move focus off the keyboard: what has to
+      // survive the switch is the remembered tab stop, which is not DOM focus.
+      // The comma sits at (4, 1) in `qwerty` and at (2, 2) in `numeric`, so a
+      // tab stop that carried the old coordinate over instead of following the
+      // key cannot satisfy the final assertion.
+      const originKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByPosition(4, 0))!;
+      originKey.focus();
+      originKey.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      const anchoredValue = (el.shadowRoot!.activeElement as HTMLElement).dataset.key;
+      expect(anchoredValue, "ArrowRight anchored on the comma key at row 4, column 1").to.equal(",");
+      input.focus();
+
+      el.id = "renamed";
+      // Re-render under the assigned id, so the rendered key ids carry it.
+      el.disabled = true;
+      await nextRender();
+      el.disabled = false;
+      await nextRender();
+      const reRendered = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByPosition(0, 3))!;
+      expect(reRendered.id, "the re-render re-emitted key ids under the assigned host id").to.contain("renamed");
+
+      el.layout = "numeric";
+      await nextRender();
+
+      const tabStops = el.shadowRoot!.querySelectorAll<HTMLElement>(DOM.selectors.focusableKey);
+      expect(tabStops.length, "the roving tabindex leaves exactly one tab stop").to.equal(1);
+      expect(tabStops[0]!.dataset.key, "the tab stop follows the key it was seated on").to.equal(anchoredValue);
+      expect(tabStops[0]!.getAttribute(DOM.attributes.keyIndex), "seated at the comma's column in numeric").to.equal(
+        "2",
+      );
+    });
+  });
+
   // ── keyboard-type-change event ──
 
   describe("keyboard-type-change event", () => {

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
-import { classifyRow, resolveInputOrTextarea, resolveWithCustomResolver } from "../../src/core/dom-utils.js";
+import {
+  classifyRow,
+  keyPositionOf,
+  resolveInputOrTextarea,
+  resolveWithCustomResolver,
+} from "../../src/core/dom-utils.js";
+import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 
 describe("resolveInputOrTextarea", () => {
   it("returns native input directly", () => {
@@ -166,5 +172,44 @@ describe("classifyRow", () => {
 
   it("returns undefined for a mixed/character row", () => {
     expect(classifyRow([{ value: "{fkey:F1}" }, { value: "a" }])).toBeUndefined();
+  });
+});
+
+describe("keyPositionOf", () => {
+  function keyEl(row?: string, col?: string): HTMLElement {
+    const el = document.createElement("div");
+    if (row !== undefined) el.setAttribute(DOM.attributes.rowIndex, row);
+    if (col !== undefined) el.setAttribute(DOM.attributes.keyIndex, col);
+    return el;
+  }
+
+  it("reads the pair the template publishes", () => {
+    expect(keyPositionOf(keyEl("2", "7"))).toEqual({ row: 2, col: 7 });
+  });
+
+  it("reads a zero coordinate", () => {
+    expect(keyPositionOf(keyEl("0", "0"))).toEqual({ row: 0, col: 0 });
+  });
+
+  it("returns null when the row index is missing", () => {
+    expect(keyPositionOf(keyEl(undefined, "3"))).toBeNull();
+  });
+
+  it("returns null when the key index is missing", () => {
+    expect(keyPositionOf(keyEl("3"))).toBeNull();
+  });
+
+  it("returns null when both are missing", () => {
+    expect(keyPositionOf(keyEl())).toBeNull();
+  });
+
+  it("returns null for an empty attribute value", () => {
+    expect(keyPositionOf(keyEl("", "0"))).toBeNull();
+    expect(keyPositionOf(keyEl("0", ""))).toBeNull();
+  });
+
+  it("returns null for a non-integer coordinate", () => {
+    expect(keyPositionOf(keyEl("1.5", "0"))).toBeNull();
+    expect(keyPositionOf(keyEl("0", "x"))).toBeNull();
   });
 });

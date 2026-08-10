@@ -16,7 +16,7 @@ import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
 import type { ChangeInfo } from "@ui5/webcomponents-base/dist/UI5Element.js";
 
 import { ShiftState } from "./core/shift-state.js";
-import { resolveWithCustomResolver, keyElementId, KEY_ID_SUFFIX_RE } from "./core/dom-utils.js";
+import { resolveWithCustomResolver, keyPositionOf, type KeyPosition } from "./core/dom-utils.js";
 import { insertText, handleBackspace } from "./core/input-operations.js";
 import {
   getLayoutOrDefault,
@@ -834,7 +834,6 @@ class KioskKeyboard extends UI5Element {
   private readonly _keyGridNav = new KeyGridNavigation({
     getResolvedLayout: () => this._getResolvedLayout(),
     getShadowRoot: () => this.shadowRoot,
-    getComponentId: () => this._componentId,
     isRtl: () => this.effectiveDir === "rtl",
   });
 
@@ -975,7 +974,7 @@ class KioskKeyboard extends UI5Element {
 
     this._autoShow.unregister();
 
-    this._keyGridNav.setLastFocusedKeyId(null);
+    this._keyGridNav.setLastFocusedKey(null);
     this._restoreKeyFocus = false;
   }
 
@@ -1444,16 +1443,9 @@ class KioskKeyboard extends UI5Element {
     return getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard");
   }
 
-  _getFocusPosition(layout: LayoutDefinition): { row: number; col: number } {
-    const lastFocusedKeyId = this._keyGridNav.getLastFocusedKeyId();
-    if (lastFocusedKeyId) {
-      const match = lastFocusedKeyId.match(KEY_ID_SUFFIX_RE);
-      if (match) {
-        const r = Number.parseInt(match[1]!, 10);
-        const c = Number.parseInt(match[2]!, 10);
-        if (layout[r]?.[c]) return { row: r, col: c };
-      }
-    }
+  _getFocusPosition(layout: LayoutDefinition): KeyPosition {
+    const last = this._keyGridNav.getLastFocusedKey();
+    if (last && layout[last.row]?.[last.col]) return last;
     return { row: 0, col: 0 };
   }
 
@@ -1469,8 +1461,10 @@ class KioskKeyboard extends UI5Element {
     const active = shadow.activeElement;
     const focused =
       active instanceof HTMLElement ? active.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook) : null;
-    const lastFocusedKeyId = this._keyGridNav.getLastFocusedKeyId();
-    const anchor = focused ?? (lastFocusedKeyId ? shadow.getElementById(lastFocusedKeyId) : null);
+    const last = this._keyGridNav.getLastFocusedKey();
+    const anchor =
+      focused ??
+      (last ? shadow.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyByPosition(last.row, last.col)) : null);
     return {
       value: anchor?.getAttribute(KIOSK_KEYBOARD_DOM.attributes.key) ?? null,
       focused: focused !== null,
@@ -1496,12 +1490,12 @@ class KioskKeyboard extends UI5Element {
    */
   private _reseatFocusAnchor(anchor: FocusAnchor): void {
     const layout = anchor.value === null ? [] : this._getResolvedLayout();
-    let id: string | null = null;
-    for (let row = 0; row < layout.length && id === null; row++) {
+    let pos: KeyPosition | null = null;
+    for (let row = 0; row < layout.length && pos === null; row++) {
       const col = layout[row]!.findIndex((key) => key.value === anchor.value);
-      if (col !== -1) id = keyElementId(this._componentId, row, col);
+      if (col !== -1) pos = { row, col };
     }
-    this._keyGridNav.setLastFocusedKeyId(id);
+    this._keyGridNav.setLastFocusedKey(pos);
     this._restoreKeyFocus = anchor.focused;
   }
 
@@ -1692,11 +1686,9 @@ class KioskKeyboard extends UI5Element {
 
   /** The effective `variants` list of a rendered key element, from its grid position. */
   private _variantsForKey(keyEl: HTMLElement): string[] | undefined {
-    const match = keyEl.id.match(KEY_ID_SUFFIX_RE);
-    if (!match) return undefined;
-    const row = Number.parseInt(match[1]!, 10);
-    const col = Number.parseInt(match[2]!, 10);
-    return this._getResolvedLayout()[row]?.[col]?.variants;
+    const pos = keyPositionOf(keyEl);
+    if (!pos) return undefined;
+    return this._getResolvedLayout()[pos.row]?.[pos.col]?.variants;
   }
 
   /**

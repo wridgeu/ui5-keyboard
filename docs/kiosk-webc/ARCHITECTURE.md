@@ -428,10 +428,10 @@ The deferred close via `requestAnimationFrame` handles the case where focus brie
 The component implements roving tabindex for physical keyboard users:
 
 - One key has `tabindex="0"`, all others have `tabindex="-1"`
-- Arrow keys move focus by row/column using element ID pattern: `{controlId}-key-{row}-{col}`
+- Arrow keys move focus by row/column, resolving the target through the `data-row-index` / `data-key-index` coordinate; key elements carry the ID pattern `{controlId}-key-{row}-{col}`
 - Home/End move to first/last key in the row
 - Enter/Space activate the focused key
-- `_lastFocusedKeyId` tracks position across re-renders
+- `_lastFocusedKey` tracks the grid position across re-renders
 
 ## Physical Key Highlight
 

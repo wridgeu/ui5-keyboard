@@ -1,15 +1,26 @@
 import Log from "sap/base/Log";
 import { parseKeyAction } from "./key-token";
 import { NAV_KEY_NAMES } from "./key-action-meta";
+import { KIOSK_KEYBOARD_DOM } from "./dom-contract";
+
+/** A key's place in the resolved layout: zero-based row and column. */
+export interface KeyPosition {
+  row: number;
+  col: number;
+}
 
 /**
- * Regex to extract row and column indices from a key element ID.
- *
- * Key elements use the pattern `{controlId}-key-{row}-{col}`.
- * This regex is shared between the renderer (which constructs IDs)
- * and the control (which parses them for focus navigation).
+ * The grid position a rendered key occupies, from the coordinate the renderer
+ * publishes on it, or `null` for an element that carries no usable coordinate.
  */
-export const KEY_ID_SUFFIX_RE = /-key-(\d+)-(\d+)$/;
+export function keyPositionOf(el: Element): KeyPosition | null {
+  const rowAttr = el.getAttribute(KIOSK_KEYBOARD_DOM.attributes.rowIndex);
+  const colAttr = el.getAttribute(KIOSK_KEYBOARD_DOM.attributes.keyIndex);
+  if (rowAttr === null || colAttr === null || rowAttr === "" || colAttr === "") return null;
+  const row = Number(rowAttr);
+  const col = Number(colAttr);
+  return Number.isInteger(row) && Number.isInteger(col) ? { row, col } : null;
+}
 
 /**
  * Constructs the DOM element ID for a key at a given grid position.

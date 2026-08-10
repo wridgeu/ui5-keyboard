@@ -866,11 +866,12 @@ QUnit.test("switching to a UI-language layout clears the language from reused la
 // Grid coordinate publication
 // ──────────────────────────────────────────────
 
-// Every key publishes its grid coordinate twice: in the element id, which
-// arrow-key navigation parses to move, and in the two data attributes consumer
-// CSS and tests select on. Either one disagreeing with the key's place in the
-// DOM points at a key the user sees somewhere else, so both are checked, along
-// with the `keyByPosition` selector consumers reach the attributes through.
+// Every key publishes its grid coordinate twice: in the element id, which the
+// renderer's patcher matches nodes by, and in the two data attributes arrow-key
+// navigation, consumer CSS and tests select on. Either one disagreeing with the
+// key's place in the DOM points at a key the user sees somewhere else, so both
+// are checked, along with the `keyByPosition` selector consumers reach the
+// attributes through.
 QUnit.test("keys carry the grid coordinate they occupy", async (assert) => {
   for (const layout of KioskKeyboard.getRegisteredLayoutNames()) {
     const kb = new KioskKeyboard({ layout });

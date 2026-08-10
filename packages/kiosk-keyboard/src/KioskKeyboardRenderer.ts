@@ -3,7 +3,7 @@ import IconPool from "sap/ui/core/IconPool";
 import type KioskKeyboard from "./KioskKeyboard";
 import type { KeyDefinition, LayoutDefinition } from "./types";
 import { getText } from "./internal/i18n-registry";
-import { KEY_ID_SUFFIX_RE, classifyRow, keyElementId } from "./internal/dom";
+import { classifyRow, keyElementId, type KeyPosition } from "./internal/dom";
 import { parseKeyAction } from "./internal/key-token";
 import { SPECIAL_KEY_ICONS, getKeyIcon, validateKeyIcon } from "./internal/key-icons";
 import { KeyboardType } from "./library";
@@ -96,19 +96,12 @@ const KioskKeyboardRenderer = {
     });
   },
 
-  resolveFocusTarget(oControl: KioskKeyboard, layout: LayoutDefinition): { row: number; col: number } | null {
+  resolveFocusTarget(oControl: KioskKeyboard, layout: LayoutDefinition): KeyPosition | null {
     // No keys to render -> no roving tabindex target.
     if (!layout[0]?.[0]) return null;
 
-    const sLastFocusedId = oControl.getFocusInfo().lastFocusedKeyId;
-    if (sLastFocusedId) {
-      const match = sLastFocusedId.match(KEY_ID_SUFFIX_RE);
-      if (match) {
-        const row = Number.parseInt(match[1]!, 10);
-        const col = Number.parseInt(match[2]!, 10);
-        if (layout[row]?.[col]) return { row, col };
-      }
-    }
+    const last = oControl.getFocusInfo().lastFocusedKey;
+    if (last && layout[last.row]?.[last.col]) return last;
 
     return { row: 0, col: 0 };
   },
