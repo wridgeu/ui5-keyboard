@@ -35,3 +35,4 @@ Dated design specifications and adversarial-validation records, kept for context
 | [Token-list Attributes (#223, #224)](./2026-08-05-token-list-attributes-design.md)                    | Whitespace after a comma in `controls` and `suppress`, fixed at the type layer.                |
 | [Consolidation Audit (#174)](./2026-08-05-issue-174-consolidation-audit.md)                           | Ranked backlog for the repo-wide consolidation pass, and what implementation changed about it. |
 | [Key-Position Adversarial Hypotheses](./2026-08-10-key-position-adversarial-hypotheses.md)            | Adversarial validation of the grid coordinate as persisted focus state, per CLAUDE.md §7.      |
+| [Native Text Insertion (#230)](./2026-08-11-native-text-insertion-design.md)                          | Inserting through `execCommand` so `maxlength` and the browser undo stack survive.             |
