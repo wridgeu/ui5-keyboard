@@ -21,8 +21,8 @@ import { getText } from "./internal/i18n-registry";
 import {
   resolveWithCustomResolver,
   isParticipating,
-  keyElementId,
-  KEY_ID_SUFFIX_RE,
+  keyPositionOf,
+  type KeyPosition,
   type TargetResolverFn,
 } from "./internal/dom";
 import {
@@ -837,7 +837,7 @@ export default class KioskKeyboard extends Control {
       setLiveRegionText: (text) => this._setLiveRegionText(text),
     });
     this._shiftState = new ShiftState(() => this._syncShiftState());
-    this._keyGridNav = new KeyGridNavigation(this.getId(), KIOSK_KEYBOARD_DOM);
+    this._keyGridNav = new KeyGridNavigation(KIOSK_KEYBOARD_DOM);
     // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
     this.addDelegate(this._keyGridNav, true);
     this._open = false;
@@ -1631,19 +1631,24 @@ export default class KioskKeyboard extends Control {
     return this._keyGridNav.getFocusableDomRef();
   }
 
-  override getFocusInfo(): { id: string; lastFocusedKeyId: string | null } {
-    return { id: this.getId(), lastFocusedKeyId: this._keyGridNav.getLastFocusedKeyId() };
+  override getFocusInfo(): { id: string; lastFocusedKey: KeyPosition | null } {
+    return { id: this.getId(), lastFocusedKey: this._keyGridNav.getLastFocusedKey() };
   }
 
-  override applyFocusInfo(oFocusInfo: { id?: string; preventScroll?: boolean; lastFocusedKeyId?: string }): this {
+  override applyFocusInfo(oFocusInfo: {
+    id?: string;
+    preventScroll?: boolean;
+    lastFocusedKey?: KeyPosition | null;
+  }): this {
     // Disabled keyboard: the renderer set all keys to tabindex="-1".
     // Do not restore focus - it would undo the renderer's decision.
     if (!this.getEnabled()) {
       return this;
     }
 
-    if (oFocusInfo.lastFocusedKeyId) {
-      const el = document.getElementById(oFocusInfo.lastFocusedKeyId);
+    const pos = oFocusInfo.lastFocusedKey;
+    if (pos) {
+      const el = this.getDomRef()?.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByPosition(pos.row, pos.col));
       if (el instanceof HTMLElement) {
         el.setAttribute("tabindex", "0");
         this._focusWithOptions(el, oFocusInfo.preventScroll);
@@ -1684,8 +1689,9 @@ export default class KioskKeyboard extends Control {
       active instanceof HTMLElement && active.classList.contains(KIOSK_KEYBOARD_DOM.classes.key) && dom.contains(active)
         ? active
         : null;
-    const lastFocusedKeyId = this._keyGridNav.getLastFocusedKeyId();
-    const anchor = focused ?? (lastFocusedKeyId ? document.getElementById(lastFocusedKeyId) : null);
+    const last = this._keyGridNav.getLastFocusedKey();
+    const anchor =
+      focused ?? (last ? dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByPosition(last.row, last.col)) : null);
     return anchor?.getAttribute(KIOSK_KEYBOARD_DOM.attributes.key) ?? null;
   }
 
@@ -1700,7 +1706,7 @@ export default class KioskKeyboard extends Control {
    * `autoCompact` width swap alike - so the arrangement a width picks is no
    * different to navigate than one that was asked for.
    *
-   * DOM focus follows on its own: the recorded id is what the renderer gives
+   * DOM focus follows on its own: the recorded position is what the renderer gives
    * `tabindex="0"` and what `applyFocusInfo` restores focus to, and the framework
    * only calls `applyFocusInfo` when focus was inside the control before the
    * patch. Focus on the target input, the ordinary case for a pointer user, is
@@ -1711,11 +1717,11 @@ export default class KioskKeyboard extends Control {
     for (let row = 0; row < layout.length; row++) {
       const col = layout[row]!.findIndex((key) => key.value === value);
       if (col !== -1) {
-        this._keyGridNav.setLastFocusedKeyId(keyElementId(this.getId(), row, col));
+        this._keyGridNav.setLastFocusedKey({ row, col });
         return;
       }
     }
-    this._keyGridNav.setLastFocusedKeyId(null);
+    this._keyGridNav.setLastFocusedKey(null);
   }
 
   // ── Accessibility ──
@@ -1914,11 +1920,9 @@ export default class KioskKeyboard extends Control {
    * behavior to build the option listbox.
    */
   private _resolveKeyVariants(keyEl: HTMLElement): { base: string; glyphs: string[] } | null {
-    const match = keyEl.id.match(KEY_ID_SUFFIX_RE);
-    if (!match) return null;
-    const row = Number.parseInt(match[1]!, 10);
-    const col = Number.parseInt(match[2]!, 10);
-    const key = this._getResolvedLayout()[row]?.[col];
+    const pos = keyPositionOf(keyEl);
+    if (!pos) return null;
+    const key = this._getResolvedLayout()[pos.row]?.[pos.col];
     const variants = key?.variants;
     if (!variants || variants.length === 0) return null;
     const shift = this._isShiftActive();
@@ -2139,7 +2143,7 @@ export default class KioskKeyboard extends Control {
     if (el !== pressed) return;
     if (!keyValue) return;
 
-    this._keyGridNav.setLastFocusedKeyId(pressed.id);
+    this._keyGridNav.setLastFocusedKey(keyPositionOf(pressed));
 
     // A held Backspace already deleted via auto-repeat; skip the release delete
     // so lifting off does not remove one extra character.

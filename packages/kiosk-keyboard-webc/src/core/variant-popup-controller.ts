@@ -1,5 +1,6 @@
 import type Popover from "@ui5/webcomponents/dist/Popover.js";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
+import { keyPositionOf, type KeyPosition } from "./dom-utils.js";
 
 /**
  * Press-and-hold threshold that opens the accent-variant popup (ms). Kept
@@ -10,7 +11,7 @@ export const VARIANT_HOLD_MS = 450;
 
 /** Reactive accent-variant popup state the host template renders from. */
 export interface VariantPopupState {
-  anchorKeyId: string;
+  anchorKey: KeyPosition;
   anchorKeyWidth: number;
   base: string;
   glyphs: string[];
@@ -51,8 +52,8 @@ interface VariantPopupControllerHost {
   announce(text: string): void;
   /** Announces popup dismissal through the live region. */
   announceDismiss(): void;
-  /** Restores focus to the key with this id once the popup has closed. */
-  focusKey(keyId: string): void;
+  /** Restores focus to the key at this grid position once the popup has closed. */
+  focusKey(pos: KeyPosition): void;
   /** Signal that a touch drag-release just committed, so the host swallows the trailing synthesized touchend. */
   notifyTouchCommit(): void;
 }
@@ -200,6 +201,12 @@ export class VariantPopupController {
     return true;
   }
 
+  /** Whether `keyEl` is the key the open popup is anchored to. */
+  private _isAnchoredTo(state: VariantPopupState, keyEl: HTMLElement): boolean {
+    const pos = keyPositionOf(keyEl);
+    return pos !== null && pos.row === state.anchorKey.row && pos.col === state.anchorKey.col;
+  }
+
   /**
    * Opens `keyEl` once any live popup has closed, since overwriting the state
    * while it is open would swap the glyphs under the previous anchor. Returns
@@ -208,7 +215,7 @@ export class VariantPopupController {
   private _requestOpen(keyEl: HTMLElement): boolean {
     const state = this._host.getPopupState();
     if (!state) return this.openFor(keyEl);
-    if (state.anchorKeyId === keyEl.id) return false;
+    if (this._isAnchoredTo(state, keyEl)) return false;
     if (!this._host.resolveOpenState(keyEl)) return false;
     this.close();
     // Parked after `close()`, which abandons any earlier re-anchor. A close that
@@ -237,7 +244,12 @@ export class VariantPopupController {
     if (!popover) return;
 
     if (!popover.open) {
-      const anchor = this._host.getShadowRoot()?.getElementById(state.anchorKeyId) ?? null;
+      const anchor =
+        this._host
+          .getShadowRoot()
+          ?.querySelector<HTMLElement>(
+            KIOSK_KEYBOARD_DOM.selectors.keyByPosition(state.anchorKey.row, state.anchorKey.col),
+          ) ?? null;
       if (!anchor) return;
       popover.opener = anchor;
       popover.addEventListener("close", this._onPopoverClose, { once: true });
@@ -396,7 +408,7 @@ export class VariantPopupController {
     // Restore focus to the origin key only when focus was still inside the popup
     // (Escape, keyboard commit, option click). An outside press that moved focus
     // elsewhere keeps it there.
-    if (hadFocus) this._host.focusKey(state.anchorKeyId);
+    if (hadFocus) this._host.focusKey(state.anchorKey);
 
     // Hand the popup to a key that asked for it while this one was closing. The
     // state write above un-rendered the popover, so the next render takes the
@@ -425,8 +437,8 @@ export class VariantPopupController {
     // press is still down is multi-touch, which would disarm finger one's
     // pending release-swallow. Both still reach `_onKeyClick`, which dismisses
     // and types; only the suppression needs settling.
-    const openAnchorKeyId = this._host.getPopupState()?.anchorKeyId;
-    if (openAnchorKeyId !== undefined && (openAnchorKeyId === keyEl.id || this._pointerId !== null)) {
+    const openState = this._host.getPopupState();
+    if (openState !== null && (this._isAnchoredTo(openState, keyEl) || this._pointerId !== null)) {
       if (this._pointerId === null) this._clearSuppression();
       return;
     }

@@ -459,8 +459,8 @@ The "would this keyboard claim" check uses `_wouldClaimInput()`, which consults 
 The control implements roving tabindex for arrow key navigation:
 
 - Exactly one key carries `tabindex="0"`, all others `tabindex="-1"`. `KioskKeyboardRenderer.resolveFocusTarget()` restores it to the last focused key's `{row}-{col}` when that coordinate still exists in the layout, falling back to `{0,0}` (and to no target at all for an empty layout); `internal/key-grid-navigation.ts` moves it as focus travels.
-- Arrow keys move focus by row/column using element ID pattern: `{controlId}-key-{row}-{col}`.
-- `_lastFocusedKeyId` tracks the last focused key for `getFocusDomRef()` and `applyFocusInfo()`.
+- Arrow keys move focus by the grid coordinate each key publishes in `data-row-index` / `data-key-index`. The element ID pattern `{controlId}-key-{row}-{col}` is what the renderer's patcher matches nodes by across a re-render.
+- `_lastFocusedKey` tracks the last focused key's grid position for `getFocusDomRef()` and `applyFocusInfo()`.
 
 ## Theming
 
@@ -597,7 +597,7 @@ packages/kiosk-keyboard/
                                requested, source), the autoCompact tier, the effective name
       layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins,
                                resolved per attribute against the folded custom layouts
-      dom.ts                  DOM/key ID utilities + input resolver
+      dom.ts                  DOM/key coordinate + key ID utilities + input resolver
       dom-contract.ts         Zero-dep CSS class / data attribute / selector contract
       i18n-registry.ts        i18n resolution: base bundle + optional I18nResolver callback
       detect-keyboard-type.ts Auto-type detection

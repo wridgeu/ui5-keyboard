@@ -1,5 +1,5 @@
 import EventProvider from "sap/ui/base/EventProvider";
-import { KEY_ID_SUFFIX_RE, keyElementId } from "./dom";
+import { keyPositionOf, type KeyPosition } from "./dom";
 import type { KioskKeyboardDomContract } from "./dom-contract";
 
 /**
@@ -23,12 +23,10 @@ import type { KioskKeyboardDomContract } from "./dom-contract";
 export default class KeyGridNavigation extends EventProvider {
   private _rootRef: HTMLElement | null = null;
   private _dom: KioskKeyboardDomContract;
-  private _lastFocusedKeyId: string | null = null;
-  private _controlId: string;
+  private _lastFocusedKey: KeyPosition | null = null;
 
-  constructor(controlId: string, dom: KioskKeyboardDomContract) {
+  constructor(dom: KioskKeyboardDomContract) {
     super();
-    this._controlId = controlId;
     this._dom = dom;
   }
 
@@ -36,20 +34,24 @@ export default class KeyGridNavigation extends EventProvider {
     this._rootRef = root;
   }
 
-  getLastFocusedKeyId(): string | null {
-    return this._lastFocusedKeyId;
+  getLastFocusedKey(): KeyPosition | null {
+    return this._lastFocusedKey;
   }
 
-  setLastFocusedKeyId(id: string | null): void {
-    this._lastFocusedKeyId = id;
+  setLastFocusedKey(pos: KeyPosition | null): void {
+    this._lastFocusedKey = pos;
   }
 
   getFocusableDomRef(): HTMLElement | null {
     return (
-      (this._lastFocusedKeyId && document.getElementById(this._lastFocusedKeyId)) ||
-      this._rootRef?.querySelector<HTMLElement>(this._dom.selectors.key) ||
-      null
+      this._keyAt(this._lastFocusedKey) ?? this._rootRef?.querySelector<HTMLElement>(this._dom.selectors.key) ?? null
     );
+  }
+
+  /** The rendered key at a grid position, inside this control's own DOM. */
+  private _keyAt(pos: KeyPosition | null): HTMLElement | null {
+    if (!pos) return null;
+    return this._rootRef?.querySelector<HTMLElement>(this._dom.selectors.keyByPosition(pos.row, pos.col)) ?? null;
   }
 
   // ── UI5 pseudo-event handlers (dispatched via addDelegate) ──
@@ -132,13 +134,13 @@ export default class KeyGridNavigation extends EventProvider {
   }
 
   private _move(current: HTMLElement, dRow: number, dCol: number): void {
-    const match = current.id.match(KEY_ID_SUFFIX_RE);
-    if (!match) return;
+    const from = keyPositionOf(current);
+    if (!from) return;
 
-    const row = Number.parseInt(match[1]!, 10) + dRow;
-    const col = Number.parseInt(match[2]!, 10) + dCol;
+    const row = from.row + dRow;
+    const col = from.col + dCol;
 
-    let next: HTMLElement | null = document.getElementById(keyElementId(this._controlId, row, col));
+    let next: HTMLElement | null = this._keyAt({ row, col });
 
     if (!next) {
       if (dCol !== 0 && dRow === 0) {
@@ -170,12 +172,12 @@ export default class KeyGridNavigation extends EventProvider {
     current.setAttribute("tabindex", "-1");
     next.setAttribute("tabindex", "0");
     next.focus();
-    this._lastFocusedKeyId = next.id;
+    this._lastFocusedKey = keyPositionOf(next);
   }
 
   override destroy(): void {
     this._rootRef = null;
-    this._lastFocusedKeyId = null;
+    this._lastFocusedKey = null;
     super.destroy();
   }
 }

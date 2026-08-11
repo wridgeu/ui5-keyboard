@@ -1,16 +1,14 @@
-import { KEY_ID_SUFFIX_RE, keyElementId } from "./dom-utils.js";
+import { keyPositionOf, type KeyPosition } from "./dom-utils.js";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
 import type { LayoutDefinition } from "../types.js";
 
 /**
  * Bridge to the host keyboard's rendered grid: the resolved layout (to compute
- * row/column bounds and clamp targets), its shadow root (where keys live), and
- * its component id (to build key element ids).
+ * row/column bounds and clamp targets) and its shadow root (where keys live).
  */
 export interface KeyGridNavigationHost {
   getResolvedLayout(): LayoutDefinition;
   getShadowRoot(): ShadowRoot | null;
-  getComponentId(): string;
   /** Whether the host renders right-to-left, mirroring the horizontal arrows. */
   isRtl(): boolean;
 }
@@ -36,22 +34,22 @@ export interface KeyGridNavigationHost {
  * Navigation is driven by the resolved layout (logical rows/columns), not the
  * rendered geometry, so responsive reflow of the key faces does not affect it.
  *
- * Tracks the last focused key id so the roving tabindex can be restored after a
- * re-render; the host reads it through {@link getLastFocusedKeyId} and clears it
- * on disconnect via {@link setLastFocusedKeyId}.
+ * Tracks the last focused key's grid position so the roving tabindex can be
+ * restored after a re-render; the host reads it through {@link getLastFocusedKey}
+ * and clears it on disconnect via {@link setLastFocusedKey}.
  */
 export class KeyGridNavigation {
-  private _lastFocusedKeyId: string | null = null;
+  private _lastFocusedKey: KeyPosition | null = null;
   private _spaceKeyDownTarget: HTMLElement | null = null;
 
   constructor(private readonly _host: KeyGridNavigationHost) {}
 
-  getLastFocusedKeyId(): string | null {
-    return this._lastFocusedKeyId;
+  getLastFocusedKey(): KeyPosition | null {
+    return this._lastFocusedKey;
   }
 
-  setLastFocusedKeyId(id: string | null): void {
-    this._lastFocusedKeyId = id;
+  setLastFocusedKey(pos: KeyPosition | null): void {
+    this._lastFocusedKey = pos;
   }
 
   onKeyDown(e: KeyboardEvent): void {
@@ -59,13 +57,11 @@ export class KeyGridNavigation {
     if (!keyEl) return;
 
     const layout = this._host.getResolvedLayout();
-    const match = keyEl.id.match(KEY_ID_SUFFIX_RE);
-    if (!match) return;
+    const from = keyPositionOf(keyEl);
+    if (!from) return;
 
-    const fromRow = Number.parseInt(match[1]!, 10);
-    const fromCol = Number.parseInt(match[2]!, 10);
-    let row = fromRow;
-    let col = fromCol;
+    let row = from.row;
+    let col = from.col;
 
     // In RTL the row is mirrored (.kiosk-row is display:flex), so the arrow
     // that moves focus visually forward is ArrowLeft. Mirrors the variant popup.
@@ -141,15 +137,16 @@ export class KeyGridNavigation {
     // A handled navigation key: always prevent the default (e.g. page scroll),
     // even at an edge where focus does not move.
     e.preventDefault();
-    if (row === fromRow && col === fromCol) return;
+    if (row === from.row && col === from.col) return;
 
-    const id = keyElementId(this._host.getComponentId(), row, col);
-    const nextEl = this._host.getShadowRoot()?.getElementById(id) ?? null;
+    const nextEl =
+      this._host.getShadowRoot()?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyByPosition(row, col)) ??
+      null;
     if (nextEl) {
       keyEl.setAttribute("tabindex", "-1");
       nextEl.setAttribute("tabindex", "0");
       nextEl.focus();
-      this._lastFocusedKeyId = id;
+      this._lastFocusedKey = { row, col };
     }
   }
 

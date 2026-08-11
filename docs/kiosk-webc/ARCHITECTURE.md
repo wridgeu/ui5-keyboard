@@ -23,7 +23,7 @@ types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutS
                           event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
 core/
-  dom-utils.ts            Key element IDs, input/textarea resolver (shadow DOM aware)
+  dom-utils.ts            Key grid coordinates + element IDs, input/textarea resolver (shadow DOM aware)
   dom-contract.ts         Zero-dependency single source of truth for CSS classes, data attributes, selectors, part names
   shift-state.ts          Shift/Caps Lock state machine
   grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
@@ -428,10 +428,10 @@ The deferred close via `requestAnimationFrame` handles the case where focus brie
 The component implements roving tabindex for physical keyboard users:
 
 - One key has `tabindex="0"`, all others have `tabindex="-1"`
-- Arrow keys move focus by row/column using element ID pattern: `{controlId}-key-{row}-{col}`
+- Arrow keys move focus by the grid coordinate each key publishes in `data-row-index` / `data-key-index`. The element ID pattern `{controlId}-key-{row}-{col}` is what the template uses as the JSX reconciliation key.
 - Home/End move to first/last key in the row
 - Enter/Space activate the focused key
-- `_lastFocusedKeyId` tracks position across re-renders
+- `_lastFocusedKey` tracks the grid position across re-renders
 
 ## Physical Key Highlight
 
