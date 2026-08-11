@@ -41,9 +41,119 @@ function resolveVerticalCaret(value: string, caret: number, direction: -1 | 1): 
   return nextLineStart + Math.min(column, nextLineLen);
 }
 
+/** Returns the focused element, descending through open shadow roots. */
+function activeElement(): globalThis.Element | null {
+  let active = document.activeElement;
+  while (active?.shadowRoot?.activeElement) {
+    active = active.shadowRoot.activeElement;
+  }
+  return active;
+}
+
+/**
+ * Performs `command` as a platform edit over [start, end] of `dom`, so the
+ * browser records it on its undo stack and applies `maxlength` itself.
+ *
+ * Returns whether the platform ran it. `false` means the caller must do the
+ * edit itself.
+ */
+function nativeEdit(
+  dom: HTMLInputElement | HTMLTextAreaElement,
+  start: number,
+  end: number,
+  command: () => boolean,
+): boolean {
+  if (typeof document.execCommand !== "function") return false;
+  // The command edits whatever is focused, never the element it is handed
+  if (activeElement() !== dom) return false;
+  try {
+    dom.setSelectionRange(start, end);
+  } catch {
+    // May throw on certain input types (e.g. type="number")
+    return false;
+  }
+  try {
+    return command();
+  } catch {
+    // May throw where the command is unsupported
+    return false;
+  }
+}
+
+/**
+ * Truncates `text` to the room `maxLength` leaves once [start, end] is
+ * replaced.
+ *
+ * Mirrors the platform: the limit counts UTF-16 code units, and a surrogate
+ * pair is never split.
+ */
+function clampToMaxLength(
+  dom: HTMLInputElement | HTMLTextAreaElement,
+  text: string,
+  start: number,
+  end: number,
+): string {
+  const max = dom.maxLength;
+  if (max < 0) return text;
+  const room = max - (dom.value.length - (end - start));
+  if (room <= 0) return "";
+  if (text.length <= room) return text;
+  const lastUnit = text.charCodeAt(room - 1);
+  const isHighSurrogate = lastUnit >= 0xd800 && lastUnit <= 0xdbff;
+  return text.slice(0, isHighSurrogate ? room - 1 : room);
+}
+
+/**
+ * Runs `command` as a platform edit and brings the owning UI5 element back in
+ * step with the DOM value it produced.
+ *
+ * Returns whether the platform ran it.
+ *
+ * A platform edit dispatches a real `input` event, and most editable controls
+ * turn that into `liveChange` themselves - `sap.m.Input` from its `oninput`
+ * handler, `sap.m.SearchField` from a listener bound in `onAfterRendering`.
+ * This watches the element for that `liveChange` while the edit runs and fires
+ * one itself only when none arrived.
+ */
+function nativeEditWithSync(
+  dom: HTMLInputElement | HTMLTextAreaElement,
+  element: Element | undefined,
+  start: number,
+  end: number,
+  command: () => boolean,
+  customResolver?: TargetResolverFn | null,
+): boolean {
+  if (!element) return nativeEdit(dom, start, end, command);
+
+  let announced = false;
+  const observer = () => {
+    announced = true;
+  };
+
+  let ran = false;
+  element.attachEvent("liveChange", observer);
+  try {
+    ran = nativeEdit(dom, start, end, command);
+    if (ran) {
+      writeTargetValue(element, dom.value, customResolver);
+    }
+  } finally {
+    element.detachEvent("liveChange", observer);
+  }
+
+  if (ran && !announced) {
+    fireTargetLiveChange(element, dom.value);
+  }
+  return ran;
+}
+
 /**
  * Inserts text at the given cursor position (or the DOM selection when
  * omitted) in the given input/textarea, replacing any active selection.
+ *
+ * Runs as a platform edit when the target is focused, so the insertion joins
+ * the browser's undo stack and honours `maxlength`; otherwise the value is
+ * assigned and `maxlength` applied in JS.
  *
  * Returns the new cursor position so the caller can track it in JS
  * without relying on the DOM's `selectionStart`/`selectionEnd` which
@@ -57,10 +167,21 @@ export function insertText(
 ): CursorPos | null {
   if (dom.readOnly || dom.disabled) return null;
   const [start, end] = resolveCursor(dom, cursor);
-  const newValue = dom.value.slice(0, start) + text + dom.value.slice(end);
-  const newPos = start + text.length;
-
   const element = Element.closestTo(dom);
+  const command = () => document.execCommand("insertText", false, text);
+
+  if (nativeEditWithSync(dom, element, start, end, command, customResolver)) {
+    // maxlength may have truncated the insertion
+    const pos = dom.selectionStart ?? start;
+    return [pos, pos];
+  }
+
+  const clamped = clampToMaxLength(dom, text, start, end);
+  if (!clamped && start === end) return [start, start];
+
+  const newValue = dom.value.slice(0, start) + clamped + dom.value.slice(end);
+  const newPos = start + clamped.length;
+
   if (element) {
     setTargetValue(element, newValue, customResolver);
   } else {
@@ -100,6 +221,10 @@ export function commitComposition(state: CompositionState, dom: HTMLInputElement
  * Deletes the grapheme cluster before the cursor, or removes the
  * active selection, in the given input/textarea.
  *
+ * The range to remove is resolved here and only its removal runs as a platform
+ * edit, so the cluster stays the library's notion of one while the deletion
+ * joins the browser's undo stack.
+ *
  * Returns the new cursor position, or `null` when nothing was deleted
  * (cursor already at position 0 with no selection).
  */
@@ -111,32 +236,39 @@ export function handleBackspace(
   if (dom.readOnly || dom.disabled) return null;
   const [start, end] = resolveCursor(dom, cursor);
 
-  let newValue: string;
-  let newPos: number;
+  let from: number;
+  let to: number;
 
   if (start !== end) {
-    newValue = dom.value.slice(0, start) + dom.value.slice(end);
-    newPos = start;
+    from = start;
+    to = end;
   } else if (start > 0) {
-    const deleteLen = graphemeLengthBefore(dom.value, start);
-    newValue = dom.value.slice(0, start - deleteLen) + dom.value.slice(start);
-    newPos = start - deleteLen;
+    from = start - graphemeLengthBefore(dom.value, start);
+    to = start;
   } else {
     return null;
   }
 
   const element = Element.closestTo(dom);
+
+  if (nativeEditWithSync(dom, element, from, to, () => document.execCommand("delete"), customResolver)) {
+    const pos = dom.selectionStart ?? from;
+    return [pos, pos];
+  }
+
+  const newValue = dom.value.slice(0, from) + dom.value.slice(to);
+
   if (element) {
     setTargetValue(element, newValue, customResolver);
   } else {
     dom.value = newValue;
   }
   try {
-    dom.setSelectionRange(newPos, newPos);
+    dom.setSelectionRange(from, from);
   } catch {
     // May throw on certain input types (e.g. type="number")
   }
-  return [newPos, newPos];
+  return [from, from];
 }
 
 /**
@@ -187,24 +319,32 @@ export function handleNavigation(
 }
 
 /**
- * Sets the value on the UI5 element associated with the given DOM element.
- *
- * Prefers the typed `setValue()` method (e.g. `InputBase.setValue`) over
- * `setProperty("value")` because direct setProperty only updates the property
- * bag - InputBase.getValue() reads from the DOM when rendered, causing desync.
- *
- * Falls back to setting the DOM value directly for custom controls without
- * a `value` metadata property. Also fires `liveChange` when the event exists.
+ * Sets the value on the UI5 element associated with the given DOM element and
+ * announces it as a live edit.
  */
 export function setTargetValue(
   element: TargetElement,
   newValue: string,
   customResolver?: TargetResolverFn | null,
 ): void {
-  const metadata = element.getMetadata();
+  writeTargetValue(element, newValue, customResolver);
+  fireTargetLiveChange(element, newValue);
+}
+
+/**
+ * Writes the value onto the UI5 element associated with the given DOM element.
+ *
+ * Prefers the typed `setValue()` method (e.g. `InputBase.setValue`) over
+ * `setProperty("value")` because direct setProperty only updates the property
+ * bag - InputBase.getValue() reads from the DOM when rendered, causing desync.
+ *
+ * Falls back to setting the DOM value directly for custom controls without
+ * a `value` metadata property.
+ */
+function writeTargetValue(element: TargetElement, newValue: string, customResolver?: TargetResolverFn | null): void {
   if ("setValue" in element && typeof element.setValue === "function") {
     (element.setValue as (v: string) => unknown).call(element, newValue);
-  } else if (metadata.hasProperty("value")) {
+  } else if (element.getMetadata().hasProperty("value")) {
     element.setProperty("value", newValue);
   } else {
     // Fallback for custom controls without a "value" metadata property:
@@ -214,8 +354,14 @@ export function setTargetValue(
       dom.value = newValue;
     }
   }
-  if (metadata.hasEvent("liveChange")) {
-    element.fireEvent("liveChange", { value: newValue });
+}
+
+/**
+ * Fires a `liveChange` event on the given UI5 element, if it supports one.
+ */
+function fireTargetLiveChange(element: TargetElement, value: string): void {
+  if (element.getMetadata().hasEvent("liveChange")) {
+    element.fireEvent("liveChange", { value });
   }
 }
 

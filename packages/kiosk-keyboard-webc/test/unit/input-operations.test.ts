@@ -114,6 +114,62 @@ describe("insertText", () => {
     insertText(el, "X");
     expect(fired).toBe(false);
   });
+
+  it("clamps to maxLength on an empty field", () => {
+    const el = mockInput("", 0);
+    el.maxLength = 3;
+    const pos = insertText(el, "abcdef");
+    expect(el.value).toBe("abc");
+    expect(pos).toEqual([3, 3]);
+  });
+
+  it("clamps to the room left in a partially filled field", () => {
+    const el = mockInput("a", 1);
+    el.maxLength = 3;
+    const pos = insertText(el, "bcdef");
+    expect(el.value).toBe("abc");
+    expect(pos).toEqual([3, 3]);
+  });
+
+  it("inserts nothing when maxLength is already reached", () => {
+    const el = mockInput("abc", 3);
+    el.maxLength = 3;
+    let fired = false;
+    el.addEventListener(
+      "input",
+      () => {
+        fired = true;
+      },
+      { once: true },
+    );
+    const pos = insertText(el, "d");
+    expect(el.value).toBe("abc");
+    expect(pos).toEqual([3, 3]);
+    expect(fired).toBe(false);
+  });
+
+  it("counts the replaced selection as free room", () => {
+    const el = mockInput("abc", 0, 3);
+    el.maxLength = 3;
+    const pos = insertText(el, "xyz");
+    expect(el.value).toBe("xyz");
+    expect(pos).toEqual([3, 3]);
+  });
+
+  it("does not split a surrogate pair when clamping", () => {
+    const el = mockInput("", 0);
+    el.maxLength = 3;
+    insertText(el, "👍👍");
+    expect(el.value, "the pair lands whole on two code units rather than filling the third").toBe("👍");
+  });
+
+  it("inserts unclamped when maxLength is unset", () => {
+    const el = mockInput("", 0);
+    expect(el.maxLength).toBe(-1);
+    const pos = insertText(el, "abcdef");
+    expect(el.value).toBe("abcdef");
+    expect(pos).toEqual([6, 6]);
+  });
 });
 
 describe("handleBackspace", () => {
@@ -225,6 +281,14 @@ describe("handleBackspace", () => {
     );
     handleBackspace(el);
     expect(fired).toBe(false);
+  });
+
+  it("deletes at a saturated maxLength", () => {
+    const el = mockInput("abc", 3);
+    el.maxLength = 3;
+    const pos = handleBackspace(el);
+    expect(el.value).toBe("ab");
+    expect(pos).toEqual([2, 2]);
   });
 });
 

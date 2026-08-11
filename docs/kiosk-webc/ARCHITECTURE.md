@@ -33,7 +33,7 @@ core/
   custom-layout-fold.ts   Folds the customLayouts slot into the per-facet lookup maps the resolution paths read, plus the diagnostics it reports
   layout-fold-cache.ts    LayoutFoldCache: caches that fold against the slotted elements and their revisions, and dedupes its diagnostics
   layout-state.ts         LayoutState: which layout is active and who asked for it (base, requested, source), the autoCompact tier, the effective name
-  input-operations.ts     Target input text operations (insert, backspace, navigation)
+  input-operations.ts     Target input text operations (insert, backspace, navigation), edits run as a platform edit on a focused target
   keyboard-type-detector.ts  Auto-type detection (data attributes, inputmode, HTML type)
   fkey-controller.ts      FKeyController: F-key dispatch (Virtual fires key-press + caret nav; Native synthesizes keydown)
   key-grid-navigation.ts  KeyGridNavigation: arrow-key/Home/End grid navigation across rendered keys (WAI-ARIA grid)

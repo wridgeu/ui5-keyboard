@@ -8,6 +8,10 @@ import {
   fireTargetChange,
   type CursorPos,
 } from "ui5/kiosk/internal/input-operations";
+import Control from "sap/ui/core/Control";
+import Input from "sap/m/Input";
+import type RenderManager from "sap/ui/core/RenderManager";
+import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 
 const fixture = document.getElementById("qunit-fixture")!;
 
@@ -29,6 +33,82 @@ function makeTextarea(value: string, cursor: CursorPos): HTMLTextAreaElement {
   ta.setSelectionRange(cursor[0], cursor[1]);
   return ta;
 }
+
+/** Runtime interface for the generated accessors on the fixture controls. */
+interface ValueInputControl extends Control {
+  getValue(): string;
+}
+
+const ValueInputBase = Control.extend("test.IoValueInput", {
+  metadata: {
+    properties: {
+      value: { type: "string", defaultValue: "" },
+    },
+    events: {
+      liveChange: { parameters: { value: { type: "string" } } },
+    },
+  },
+  renderer: {
+    apiVersion: 2,
+    render(rm: RenderManager, ctrl: ValueInputControl) {
+      rm.openStart("div", ctrl).openEnd();
+      rm.voidStart("input")
+        .attr("id", ctrl.getId() + "-inner")
+        .attr("type", "text")
+        .attr("value", ctrl.getValue())
+        .voidEnd();
+      rm.close("div");
+    },
+  },
+  getFocusDomRef(this: Control) {
+    return document.getElementById(this.getId() + "-inner");
+  },
+});
+
+/** Minimal UI5 Control wrapping a single <input>, with a liveChange event and no `oninput` handler. */
+const ValueInput = ValueInputBase as new (settings?: object) => ValueInputControl;
+
+/**
+ * Minimal UI5 Control shaped like `sap.m.SearchField`: a `liveChange` event and
+ * no `oninput` handler, announcing edits from an `input` listener it binds
+ * itself.
+ */
+const SearchLikeInput = (ValueInputBase as typeof Control).extend("test.IoSearchLikeInput", {
+  // apiVersion is read as an own property of the renderer, never inherited
+  renderer: { apiVersion: 2 },
+  onAfterRendering(this: ValueInputControl) {
+    const dom = this.getFocusDomRef() as HTMLInputElement | null;
+    dom?.addEventListener("input", () => {
+      this.fireEvent("liveChange", { value: dom.value });
+    });
+  },
+}) as new (settings?: object) => ValueInputControl;
+
+const controls: { destroy(): void }[] = [];
+
+/** Renders a control into the fixture and registers it for teardown. */
+async function renderControl<T extends { placeAt(id: string): void; destroy(): void }>(ctrl: T): Promise<T> {
+  controls.push(ctrl);
+  ctrl.placeAt("qunit-fixture");
+  await nextUIUpdate();
+  return ctrl;
+}
+
+/** Focuses a rendered control's inner input, the precondition for the platform edit path. */
+function focusInner(ctrl: { getFocusDomRef(): Element | null }): HTMLInputElement {
+  const dom = ctrl.getFocusDomRef() as HTMLInputElement;
+  dom.focus();
+  return dom;
+}
+
+/** QUnit hooks for the modules that render controls through {@link renderControl}. */
+const renderedControlHooks = {
+  async afterEach() {
+    controls.forEach((c) => c.destroy());
+    controls.length = 0;
+    await nextUIUpdate();
+  },
+};
 
 // ──────────────────────────────────────────────
 // insertText
@@ -127,6 +207,55 @@ QUnit.test("Returns null and does not modify a disabled input", (assert) => {
   const result = insertText(input, "X", [1, 1]);
   assert.strictEqual(result, null, "Returns null for disabled input");
   assert.strictEqual(input.value, "abc", "Value unchanged");
+});
+
+QUnit.test("Clamps to the room left in a partially filled field", (assert) => {
+  // Unfocused input: the browser never sees the edit, so the JS clamp applies
+  const input = makeInput("a", [1, 1]);
+  input.maxLength = 3;
+  const result = insertText(input, "bcdef", [1, 1]);
+
+  assert.strictEqual(input.value, "abc", "Insertion truncated to the two free code units");
+  assert.deepEqual(result, [3, 3], "Cursor after the truncated insertion");
+});
+
+QUnit.test("Inserts nothing when maxLength is already reached", (assert) => {
+  const input = makeInput("abc", [3, 3]);
+  input.maxLength = 3;
+  const result = insertText(input, "d", [3, 3]);
+
+  assert.strictEqual(input.value, "abc", "Value unchanged");
+  assert.deepEqual(result, [3, 3], "Cursor stays at the end");
+});
+
+QUnit.test("Counts the replaced selection as free room", (assert) => {
+  const input = makeInput("abc", [0, 3]);
+  input.maxLength = 3;
+  const result = insertText(input, "xyz", [0, 3]);
+
+  assert.strictEqual(input.value, "xyz", "Selection replaced in full");
+  assert.deepEqual(result, [3, 3], "Cursor at end of the replacement");
+});
+
+QUnit.test("Does not split a surrogate pair when clamping", (assert) => {
+  const input = makeInput("", [0, 0]);
+  input.maxLength = 3;
+  const result = insertText(input, "\u{1F44D}\u{1F44D}", [0, 0]);
+
+  assert.strictEqual(input.value, "\u{1F44D}", "Second thumbs-up dropped whole");
+  assert.strictEqual(input.value.length, 2, "Two code units, one short of the three maxLength allows");
+  assert.deepEqual(result, [2, 2], "Cursor after the single emoji");
+});
+
+QUnit.test("Inserts unclamped when maxLength is unset", (assert) => {
+  const input = makeInput("", [0, 0]);
+
+  assert.strictEqual(input.maxLength, -1, "maxLength unset");
+
+  const result = insertText(input, "abcdef", [0, 0]);
+
+  assert.strictEqual(input.value, "abcdef", "Full text inserted");
+  assert.deepEqual(result, [6, 6], "Cursor after all inserted chars");
 });
 
 // ──────────────────────────────────────────────
@@ -630,4 +759,177 @@ QUnit.test("Does not fire when change event not supported", (assert) => {
 
   fireTargetChange(element, "test");
   assert.notOk(eventFired, "No event fired");
+});
+
+// ──────────────────────────────────────────────
+// insertText - platform edit on a focused target
+// ──────────────────────────────────────────────
+
+QUnit.module("input-operations - native insertText", renderedControlHooks);
+
+QUnit.test("Enforces maxLength through the platform edit", async (assert) => {
+  // maxlength is the browser's to apply; UI5's setValue does not enforce it
+  const ctrl = await renderControl(new Input({ maxLength: 3 }));
+  const dom = focusInner(ctrl);
+  let inputEvents = 0;
+  dom.addEventListener("input", () => {
+    inputEvents++;
+  });
+
+  const result = insertText(dom, "abcd", [0, 0]);
+
+  assert.strictEqual(dom.value, "abc", "Insertion truncated to maxLength");
+  assert.deepEqual(result, [3, 3], "Cursor read back from the truncated insertion");
+  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+});
+
+QUnit.test("Syncs the UI5 value property with the edited DOM value", async (assert) => {
+  const ctrl = await renderControl(new Input({ value: "ab" }));
+  const dom = focusInner(ctrl);
+  let inputEvents = 0;
+  dom.addEventListener("input", () => {
+    inputEvents++;
+  });
+
+  insertText(dom, "X", [2, 2]);
+
+  assert.strictEqual(dom.value, "abX", "DOM value carries the insertion");
+  assert.strictEqual(ctrl.getProperty("value"), "abX", "Property matches the DOM value");
+  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+});
+
+QUnit.test("Fires liveChange exactly once on sap.m.Input", async (assert) => {
+  const ctrl = await renderControl(new Input({ value: "ab" }));
+  const values: unknown[] = [];
+  ctrl.attachLiveChange((event) => {
+    values.push(event.getParameter("value"));
+  });
+  const dom = focusInner(ctrl);
+  let inputEvents = 0;
+  dom.addEventListener("input", () => {
+    inputEvents++;
+  });
+
+  insertText(dom, "X", [2, 2]);
+
+  assert.deepEqual(values, ["abX"], "Only the control's own liveChange fired");
+  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+});
+
+QUnit.test("Fires liveChange for a target without an oninput handler", async (assert) => {
+  const ctrl = await renderControl(new ValueInput({ value: "ab" }));
+  const values: unknown[] = [];
+  ctrl.attachEvent("liveChange", (event: { getParameter: (name: string) => unknown }) => {
+    values.push(event.getParameter("value"));
+  });
+  const dom = focusInner(ctrl);
+  let inputEvents = 0;
+  dom.addEventListener("input", () => {
+    inputEvents++;
+  });
+
+  insertText(dom, "X", [2, 2]);
+
+  assert.strictEqual(dom.value, "abX", "DOM value carries the insertion");
+  assert.deepEqual(values, ["abX"], "liveChange fired once");
+  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+});
+
+QUnit.test("Fires liveChange once for a control that binds the input event itself", async (assert) => {
+  const ctrl = await renderControl(new SearchLikeInput({ value: "ab" }));
+  const values: unknown[] = [];
+  ctrl.attachEvent("liveChange", (event: { getParameter: (name: string) => unknown }) => {
+    values.push(event.getParameter("value"));
+  });
+  const dom = focusInner(ctrl);
+  let inputEvents = 0;
+  dom.addEventListener("input", () => {
+    inputEvents++;
+  });
+
+  insertText(dom, "X", [2, 2]);
+
+  assert.deepEqual(values, ["abX"], "Only the control's own liveChange fired");
+  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+});
+
+QUnit.test("Undo reverts the DOM value; the value property keeps the pre-undo text", async (assert) => {
+  const ctrl = await renderControl(new Input({ value: "hello" }));
+  const dom = focusInner(ctrl);
+  let inputEvents = 0;
+  dom.addEventListener("input", () => {
+    inputEvents++;
+  });
+
+  insertText(dom, "!", [5, 5]);
+  assert.strictEqual(dom.value, "hello!", "Insertion applied");
+  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+
+  document.execCommand("undo");
+
+  assert.strictEqual(dom.value, "hello", "Undo reverted the DOM value");
+  assert.strictEqual(
+    ctrl.getProperty("value"),
+    "hello!",
+    "Property stays at the pre-undo text - sap.m.Input writes it from oninput only under valueLiveUpdate",
+  );
+});
+
+// ──────────────────────────────────────────────
+// insertText - focus guard
+// ──────────────────────────────────────────────
+
+QUnit.module("input-operations - focus guard", {
+  afterEach() {
+    fixture.innerHTML = "";
+  },
+});
+
+QUnit.test("Editing an unfocused target leaves the focused element untouched", (assert) => {
+  const focused = makeInput("keep", [4, 4]);
+  const target = makeInput("abc", [1, 1]);
+  focused.focus();
+
+  const result = insertText(target, "X", [1, 1]);
+
+  assert.strictEqual(focused.value, "keep", "Focused input unchanged");
+  assert.strictEqual(target.value, "aXbc", "Target edited");
+  assert.deepEqual(result, [2, 2], "Cursor after the inserted text");
+});
+
+// ──────────────────────────────────────────────
+// handleBackspace - platform edit on a focused target
+// ──────────────────────────────────────────────
+
+QUnit.module("input-operations - native handleBackspace", renderedControlHooks);
+
+QUnit.test("Deletes an entire surrogate-pair emoji", async (assert) => {
+  const ctrl = await renderControl(new Input({ value: "a😀b" }));
+  const dom = focusInner(ctrl);
+  let inputEvents = 0;
+  dom.addEventListener("input", () => {
+    inputEvents++;
+  });
+
+  const result = handleBackspace(dom, [3, 3]);
+
+  assert.strictEqual(dom.value, "ab", "Entire emoji deleted in one backspace");
+  assert.deepEqual(result, [1, 1], "Cursor moved back by 2 code units (one grapheme)");
+  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+});
+
+QUnit.test("Deletes an entire ZWJ sequence", async (assert) => {
+  const emoji = "👨‍👩‍👧"; // ZWJ family
+  const ctrl = await renderControl(new Input({ value: `a${emoji}b` }));
+  const dom = focusInner(ctrl);
+  let inputEvents = 0;
+  dom.addEventListener("input", () => {
+    inputEvents++;
+  });
+
+  const result = handleBackspace(dom, [1 + emoji.length, 1 + emoji.length]);
+
+  assert.strictEqual(dom.value, "ab", "ZWJ sequence fully deleted");
+  assert.deepEqual(result, [1, 1], "Cursor after 'a'");
+  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
 });

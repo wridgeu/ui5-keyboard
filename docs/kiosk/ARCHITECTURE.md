@@ -148,11 +148,15 @@ The key insight: all state transitions (steps 2-7) complete **before** the chang
 
 The keyboard operates on the target's inner DOM element (`getFocusDomRef()`) for cursor-aware operations:
 
-1. **Text insertion**: Reads `selectionStart`/`selectionEnd`, splices the new text in, updates cursor position.
-2. **Backspace**: Deletes the selection (if any) or the character before the cursor.
+1. **Text insertion**: Resolves the cursor range, then inserts over it.
+2. **Backspace**: Deletes the selection (if any) or the grapheme cluster before the cursor.
 3. **Enter**: Inserts `\n` for `<textarea>`. For single-line `<input>`, fires a `change` event on the target control (matching physical Enter key behavior).
 
-After modifying the DOM value, `setTargetValue()` (`internal/input-operations.ts`) writes it back through the UI5 element for data binding integration. It prefers a typed `setValue()` method (`InputBase.setValue`), falls back to `setProperty("value")` when the control declares a `value` property, and finally to the inner DOM value for custom controls that declare neither. A `liveChange` event is raised afterwards, gated on `metadata.hasEvent("liveChange")`. The element is typed as `TargetElement` (`internal/types.ts`), not a specific control class, so no control type is a hard dependency.
+Insertion and backspace run as a **platform edit** when the target is focused: the range is selected and `document.execCommand("insertText" | "delete")` performs it, so the browser applies `maxlength` and records the edit on its own undo stack. The cluster to delete is still resolved in JS beforehand, because the engines disagree on what one is. When the target is not focused, or the command is unavailable or declines, the value is assigned instead and `maxlength` is applied in JS. Rationale and measurements: `docs/specs/2026-08-11-native-text-insertion-design.md`.
+
+`setTargetValue()` (`internal/input-operations.ts`) writes the value back through the UI5 element for data binding integration. It prefers a typed `setValue()` method (`InputBase.setValue`), falls back to `setProperty("value")` when the control declares a `value` property, and finally to the inner DOM value for custom controls that declare neither. A `liveChange` event is raised afterwards, gated on `metadata.hasEvent("liveChange")`.
+
+After a platform edit the same write runs from the resulting DOM value, which costs no second DOM write because `InputBase.updateDomValue` returns early when the DOM already matches — leaving the undo stack intact. `liveChange` is then raised only if the control did not already raise its own in response to the real `input` event, which is observed rather than inferred: controls reach that event by different routes (`sap.m.Input` via `oninput`, `sap.m.SearchField` via a listener it binds itself). The element is typed as `TargetElement` (`internal/types.ts`), not a specific control class, so no control type is a hard dependency.
 
 ### Backspace Press-and-Hold Auto-Repeat
 
@@ -601,7 +605,7 @@ packages/kiosk-keyboard/
       dom-contract.ts         Zero-dep CSS class / data attribute / selector contract
       i18n-registry.ts        i18n resolution: base bundle + optional I18nResolver callback
       detect-keyboard-type.ts Auto-type detection
-      input-operations.ts     Text insertion/backspace/enter ops
+      input-operations.ts     Text insertion/backspace/enter ops, run as a platform edit on a focused target
       target-input-session.ts Target state + commit handling
       focus-claim-service.ts  Auto-show claim decisions
       key-grid-navigation.ts  Keyboard grid navigation delegate
