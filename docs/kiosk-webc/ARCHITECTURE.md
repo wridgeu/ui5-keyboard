@@ -23,7 +23,7 @@ types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutS
                           event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
 core/
-  dom-utils.ts            Key element IDs, input/textarea resolver (shadow DOM aware)
+  dom-utils.ts            Key grid coordinates + element IDs, input/textarea resolver (shadow DOM aware)
   dom-contract.ts         Zero-dependency single source of truth for CSS classes, data attributes, selectors, part names
   shift-state.ts          Shift/Caps Lock state machine
   grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)

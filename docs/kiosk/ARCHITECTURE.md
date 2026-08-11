@@ -597,7 +597,7 @@ packages/kiosk-keyboard/
                                requested, source), the autoCompact tier, the effective name
       layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins,
                                resolved per attribute against the folded custom layouts
-      dom.ts                  DOM/key ID utilities + input resolver
+      dom.ts                  DOM/key coordinate + key ID utilities + input resolver
       dom-contract.ts         Zero-dep CSS class / data attribute / selector contract
       i18n-registry.ts        i18n resolution: base bundle + optional I18nResolver callback
       detect-keyboard-type.ts Auto-type detection
