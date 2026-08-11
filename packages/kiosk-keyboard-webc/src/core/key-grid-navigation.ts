@@ -146,7 +146,7 @@ export class KeyGridNavigation {
       keyEl.setAttribute("tabindex", "-1");
       nextEl.setAttribute("tabindex", "0");
       nextEl.focus();
-      this._lastFocusedKey = keyPositionOf(nextEl);
+      this._lastFocusedKey = { row, col };
     }
   }
 

@@ -1,6 +1,8 @@
-# Adversarial hypotheses — the grid coordinate as persisted focus state
+# The grid coordinate as persisted focus state: adversarial hypotheses
 
-_Date: 2026-08-10 · Scope: `packages/kiosk-keyboard`, `packages/kiosk-keyboard-webc` · Per CLAUDE.md §7_
+- Date: 2026-08-10
+- Issue: #232 (arrow navigation and the roving tab stop after a host id assignment)
+- Scope: `packages/kiosk-keyboard`, `packages/kiosk-keyboard-webc`, per CLAUDE.md §7
 
 The persisted focus state became the grid coordinate `{row, col}`, resolved through
 `KIOSK_KEYBOARD_DOM.selectors.keyByPosition` and scoped to the control root (kiosk) or the shadow
@@ -154,9 +156,27 @@ and `src/core/variant-popup-controller.ts` to `main`, leaving the tests as writt
 `opens the popup on a host that was given an id after its first render: opened in the top layer:
 expected false to equal true`. The popup never opened, which is the user-visible defect.
 
+### H9 — nothing stops a holder writing through the coordinate it was handed
+
+The persisted state used to be a string, which no accessor could hand out editably. `getFocusInfo()`,
+`KioskKeyboardRenderer.resolveFocusTarget()` and webc's `_getFocusPosition()` return the live
+`_lastFocusedKey` object, so a caller could now edit the navigator's state without going through
+`setLastFocusedKey`. No suite can see this: every write in either twin replaces the reference, so the
+invariant holds today and only a future edit could break it. The guard has to be the type.
+
+**Fault:** added `pos.row = 0;` to kiosk `applyFocusInfo`, inside the branch that reads the handed-out
+position.
+
+**Observed red:** `typecheck:kiosk` — `src/KioskKeyboard.ts(1651,11): error TS2540: Cannot assign to
+'row' because it is a read-only property.`
+
+`KeyPosition` declares `readonly row` / `readonly col` in both twins. That the whole repo — both
+`src/`, both test suites, both e2e projects and the demo app — still typechecks clean under it is the
+evidence that the invariant already held everywhere; the type now holds it.
+
 ## Cleared
 
-All eight hypotheses were seen red and reverted; every touched production file was verified
+All nine hypotheses were seen red and reverted; every touched production file was verified
 byte-identical to its pre-injection copy afterwards, and the full gate set was re-run green.
 
 The rule "the element `id` is written, never read" holds package-wide: no key lookup in either twin

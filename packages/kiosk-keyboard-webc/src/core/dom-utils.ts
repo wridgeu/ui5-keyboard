@@ -4,8 +4,8 @@ import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
 
 /** A key's place in the resolved layout: zero-based row and column. */
 export interface KeyPosition {
-  row: number;
-  col: number;
+  readonly row: number;
+  readonly col: number;
 }
 
 /**

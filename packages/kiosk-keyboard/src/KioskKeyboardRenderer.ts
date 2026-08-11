@@ -128,7 +128,7 @@ const KioskKeyboardRenderer = {
     oControl: KioskKeyboard,
     row: LayoutDefinition[number],
     ri: number,
-    focusTarget: { row: number; col: number } | null,
+    focusTarget: KeyPosition | null,
   ): void {
     rm.openStart("div", `${oControl.getId()}-row-${ri}`);
     rm.class(KIOSK_KEYBOARD_DOM.classes.row);
@@ -154,7 +154,7 @@ const KioskKeyboardRenderer = {
     key: KeyDefinition,
     ri: number,
     ci: number,
-    focusTarget: { row: number; col: number } | null,
+    focusTarget: KeyPosition | null,
   ): void {
     // Resolve icon and label once per key, pass to all sub-hooks
     const { _getKeyLabel } = oControl._getRendererApi();
@@ -206,7 +206,7 @@ const KioskKeyboardRenderer = {
     key: KeyDefinition,
     ri: number,
     ci: number,
-    focusTarget: { row: number; col: number } | null,
+    focusTarget: KeyPosition | null,
     label: string,
   ): void {
     const { _isShiftActive, _isCapsLock, _getKeyAriaLabel } = oControl._getRendererApi();
