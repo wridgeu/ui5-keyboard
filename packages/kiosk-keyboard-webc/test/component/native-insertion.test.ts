@@ -17,30 +17,38 @@ interface Setup {
 }
 
 /**
- * Renders a qwerty keyboard targeting `input`, next to a second focusable
+ * Renders a qwerty keyboard targeting `target`, next to a second focusable
  * input the keyboard is never pointed at.
  */
-async function setup(options: { value?: string; maxLength?: number } = {}): Promise<Setup> {
+async function mount<T extends HTMLInputElement | HTMLTextAreaElement>(
+  target: T,
+): Promise<{ kb: KioskKeyboard; decoy: HTMLInputElement }> {
   const container = document.createElement("div");
-  const input = document.createElement("input");
-  input.type = "text";
-  if (options.maxLength !== undefined) input.maxLength = options.maxLength;
   const decoy = document.createElement("input");
   decoy.type = "text";
   decoy.value = DECOY_VALUE;
   const kb = document.createElement("kiosk-keyboard") as KioskKeyboard;
   kb.setAttribute("layout", "qwerty");
-  container.append(input, decoy, kb);
+  container.append(target, decoy, kb);
 
   await fixture(container);
-  kb.setTargetElement(input);
+  kb.setTargetElement(target);
   await renderFinished();
+  return { kb, decoy };
+}
+
+/** Mounts a text `<input>` as the target. */
+async function setup(options: { value?: string; maxLength?: number } = {}): Promise<Setup> {
+  const input = document.createElement("input");
+  input.type = "text";
+  if (options.maxLength !== undefined) input.maxLength = options.maxLength;
+  const { kb, decoy } = await mount(input);
   if (options.value !== undefined) input.value = options.value;
   return { kb, input, decoy };
 }
 
 /** Focuses `el` with the caret parked after its last character. */
-function focusAtEnd(el: HTMLInputElement): void {
+function focusAtEnd(el: HTMLInputElement | HTMLTextAreaElement): void {
   el.focus();
   el.setSelectionRange(el.value.length, el.value.length);
 }
@@ -66,6 +74,20 @@ describe("native text insertion", () => {
 
     document.execCommand("undo");
     expect(input.value, "undo reverts the insert").to.equal("ab");
+  });
+
+  it("inserts a newline into a focused textarea, and undo reverts it", async () => {
+    const textarea = document.createElement("textarea");
+    const { kb } = await mount(textarea);
+    textarea.value = "ab";
+    focusAtEnd(textarea);
+
+    requireKey(kb, "{enter}").click();
+    expect(textarea.value, "Enter inserts a newline rather than firing change").to.equal("ab\n");
+    expect(textarea.selectionStart).to.equal(3);
+
+    document.execCommand("undo");
+    expect(textarea.value, "the newline was a revertible transaction").to.equal("ab");
   });
 
   it("undoes a backspace through the platform undo stack", async () => {

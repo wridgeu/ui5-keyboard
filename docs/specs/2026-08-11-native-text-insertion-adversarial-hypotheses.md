@@ -78,6 +78,23 @@ native text insertion > undoes an inserted character through the platform undo s
 native text insertion > undoes a backspace through the platform undo stack
 ```
 
+### 2.2.1 The same injection against the textarea path
+
+The `"\n"` a textarea receives from Enter (`target-input-session.ts:62` kiosk, `KioskKeyboard.ts:1601` webc) is a
+platform edit in production, because the keyboard keeps focus on the target. Every earlier fixture used an
+unfocused textarea and so measured the fallback. One focused-textarea test per twin closes that, and the §2.2
+injection clears them:
+
+- kiosk, red 63/72 — one more than the eight of §2.2, and the new one is
+  `input-operations - native insertText ▶ Inserts a newline into a focused textarea`, failing on its
+  `input`-event count.
+- webc, red 348/351 — one more than the two undo tests of §2.2:
+  `native text insertion > inserts a newline into a focused textarea, and undo reverts it`, failing with
+  `expected 'ab\n' to equal 'ab'`.
+
+So the web component now has three discriminators rather than the two §3 warns about, and the textarea path is
+no longer covered only by fallback-path fixtures.
+
 ### 2.3 Disable the focus guard
 
 `nativeEdit`'s `if (activeElement() !== dom) return false;` neutered.
@@ -135,11 +152,11 @@ So each twin now carries an explicit discriminator, and the two are necessarily 
 | twin  | fallback dispatches an `input` event?                                                | discriminator                                      |
 | ----- | ------------------------------------------------------------------------------------ | -------------------------------------------------- |
 | kiosk | no — `setTargetValue` → `updateDomValue` → jQuery `.val()`, which dispatches nothing | assert exactly one `input` event per platform edit |
-| webc  | yes — the fallback synthesises one                                                   | the undo tests, and only those                     |
+| webc  | yes — the fallback synthesises one                                                   | the three undo tests, and only those               |
 
 Every kiosk test in the two platform-path modules asserts the event count, so §2.2's injection now
 takes all of them red rather than two. The web component has no such lever — a count of one is what
-both of its paths produce — which leaves its two undo tests carrying the whole load. **If those two
+both of its paths produce — which leaves its three undo tests carrying the whole load. **If those three
 are ever weakened or skipped, nothing in the webc suite will notice a silent regression to the
 fallback.**
 

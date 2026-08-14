@@ -108,7 +108,7 @@ So the choice is not "deprecated API vs modern API", it is "deprecated API vs th
 
 1. **The three commands used are universally supported.** `queryCommandSupported("insertText" | "delete" | "undo")` returns `true` in all three engines. These are the commands editors depend on; they are the part of `execCommand` that is not going anywhere, because removing them would break every rich-text editor on the web.
 2. **The risk is bounded by construction.** Every call site keeps the assignment as a fallback, taken whenever the native path is unavailable or declines. If an engine ever drops the command, the library degrades to today's behaviour rather than failing.
-3. **The blast radius is two functions.** `insertText` and `handleBackspace` per package. Nothing else in either package writes a target's value.
+3. **The blast radius is two functions.** `insertText` and `handleBackspace` per package. The only other writer of a target's value is the Hangul preedit, which keeps assigning (§3.8).
 
 ## 3. Mechanism
 
@@ -223,7 +223,7 @@ So `nativeEditWithSync` attaches a `liveChange` listener for the duration of the
 ### 3.8 Residuals
 
 - **`getProperty("value")` goes stale again after a user-driven Ctrl+Z.** A native undo fires `input` with `inputType: "historyUndo"`, which UI5 handles the same way as any other `input` — property written only under `valueLiveUpdate`. The library is not in that call path and cannot sync it. `getValue()` still reads correctly. Documented, not fixed; fixing it would mean listening to the target's `input` events, which is a larger change than #230.
-- **Composition paths keep assigning.** `updateComposition` (`composition-utils.ts:38`) writes preedit text by assignment on both twins. Preedit is transient, replaced on every update and never a discrete undo step, so routing it natively would add undo entries a physical IME would not produce. `commitComposition` reaches the native path through `insertText`, so committed text is a proper undo transaction. Unchanged by this design.
+- **The Hangul preedit keeps assigning, and that discards the stack.** `updateComposition` (`composition-utils.ts:36` kiosk, `:38` webc) writes preedit text by assignment on both twins, and the kiosk `commitComposition` splices the preedit back out the same way (`input-operations.ts:211`) before re-inserting. Routing preedit natively is not the fix: it is transient, replaced on every update and never a discrete undo step, so it would add entries a physical IME never produces. But §2.4 measured that an assignment does not merely skip the stack, it discards what the user already earned — so under `hangul-compose` the natively committed syllable is the only entry left on it, and everything typed before that commit stops being undoable. `kana-dakuten` is unaffected: it composes through `insertText` over a range and never assigns. Out of scope for #230; closing it means a native preedit representation, not a smaller change.
 
 ## 4. Test plan
 
@@ -248,6 +248,8 @@ New tests:
 | single `liveChange` from a bound listener      | kiosk   | `test/qunit/`                          | a `SearchField`-shaped control is not double-fired (§3.7)                                        |
 | grapheme backspace on the platform path        | kiosk   | `test/qunit/`                          | surrogate-pair emoji and ZWJ sequence each delete as one cluster                                 |
 | the platform performed the edit                | kiosk   | `test/qunit/`                          | exactly one `input` event per platform edit — the kiosk fallback dispatches none                 |
+| newline into a focused textarea                | kiosk   | `test/qunit/`                          | Enter's `"\n"` takes the platform path on a `sap.m.TextArea`, property synced                    |
+| newline into a focused textarea                | webc    | `test/component/`                      | `{enter}` inserts `"\n"` and `execCommand("undo")` reverts it                                    |
 | clamp arithmetic                               | both    | webc `test/unit/`, kiosk `test/qunit/` | room, saturation, replaced selection, surrogate pair, unset `maxLength`, backspace at saturation |
 | no `input` event when the clamp leaves no room | webc    | `test/unit/`                           | a saturated insert is silent, not a spurious empty `insertText`                                  |
 

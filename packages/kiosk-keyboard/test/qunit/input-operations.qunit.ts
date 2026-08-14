@@ -10,6 +10,7 @@ import {
 } from "ui5/kiosk/internal/input-operations";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
+import TextArea from "sap/m/TextArea";
 import type RenderManager from "sap/ui/core/RenderManager";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 
@@ -95,8 +96,8 @@ async function renderControl<T extends { placeAt(id: string): void; destroy(): v
 }
 
 /** Focuses a rendered control's inner input, the precondition for the platform edit path. */
-function focusInner(ctrl: { getFocusDomRef(): Element | null }): HTMLInputElement {
-  const dom = ctrl.getFocusDomRef() as HTMLInputElement;
+function focusInner(ctrl: { getFocusDomRef(): Element | null }): HTMLInputElement | HTMLTextAreaElement {
+  const dom = ctrl.getFocusDomRef() as HTMLInputElement | HTMLTextAreaElement;
   dom.focus();
   return dom;
 }
@@ -847,6 +848,20 @@ QUnit.test("Fires liveChange once for a control that binds the input event itsel
   insertText(dom, "X", [2, 2]);
 
   assert.deepEqual(values, ["abX"], "Only the control's own liveChange fired");
+  assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
+});
+
+QUnit.test("Inserts a newline into a focused textarea", async (assert) => {
+  // The shape TargetInputSession.handleEnter drives: Enter in a textarea inserts "\n"
+  const ctrl = await renderControl(new TextArea({ value: "ab" }));
+  const dom = focusInner(ctrl);
+  const inputEvents = countInputEvents(dom);
+
+  const result = insertText(dom, "\n", [2, 2]);
+
+  assert.strictEqual(dom.value, "ab\n", "Newline inserted");
+  assert.deepEqual(result, [3, 3], "Cursor after the newline");
+  assert.strictEqual(ctrl.getProperty("value"), "ab\n", "Property matches the DOM value");
   assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 });
 
