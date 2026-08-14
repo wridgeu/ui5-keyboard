@@ -101,6 +101,18 @@ function focusInner(ctrl: { getFocusDomRef(): Element | null }): HTMLInputElemen
   return dom;
 }
 
+/** Starts counting `input` events on `dom`; the returned function reads the count so far. */
+function countInputEvents(dom: HTMLElement): () => number {
+  let count = 0;
+  dom.addEventListener("input", () => {
+    count++;
+  });
+  return () => count;
+}
+
+/** The discriminator between the two paths: only the platform edit dispatches a real `input` event. */
+const ONE_PLATFORM_EVENT = "The platform performed the edit - the fallback dispatches no input event";
+
 /** QUnit hooks for the modules that render controls through {@link renderControl}. */
 const renderedControlHooks = {
   async afterEach() {
@@ -771,31 +783,25 @@ QUnit.test("Enforces maxLength through the platform edit", async (assert) => {
   // maxlength is the browser's to apply; UI5's setValue does not enforce it
   const ctrl = await renderControl(new Input({ maxLength: 3 }));
   const dom = focusInner(ctrl);
-  let inputEvents = 0;
-  dom.addEventListener("input", () => {
-    inputEvents++;
-  });
+  const inputEvents = countInputEvents(dom);
 
   const result = insertText(dom, "abcd", [0, 0]);
 
   assert.strictEqual(dom.value, "abc", "Insertion truncated to maxLength");
   assert.deepEqual(result, [3, 3], "Cursor read back from the truncated insertion");
-  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+  assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 });
 
 QUnit.test("Syncs the UI5 value property with the edited DOM value", async (assert) => {
   const ctrl = await renderControl(new Input({ value: "ab" }));
   const dom = focusInner(ctrl);
-  let inputEvents = 0;
-  dom.addEventListener("input", () => {
-    inputEvents++;
-  });
+  const inputEvents = countInputEvents(dom);
 
   insertText(dom, "X", [2, 2]);
 
   assert.strictEqual(dom.value, "abX", "DOM value carries the insertion");
   assert.strictEqual(ctrl.getProperty("value"), "abX", "Property matches the DOM value");
-  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+  assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 });
 
 QUnit.test("Fires liveChange exactly once on sap.m.Input", async (assert) => {
@@ -805,15 +811,12 @@ QUnit.test("Fires liveChange exactly once on sap.m.Input", async (assert) => {
     values.push(event.getParameter("value"));
   });
   const dom = focusInner(ctrl);
-  let inputEvents = 0;
-  dom.addEventListener("input", () => {
-    inputEvents++;
-  });
+  const inputEvents = countInputEvents(dom);
 
   insertText(dom, "X", [2, 2]);
 
   assert.deepEqual(values, ["abX"], "Only the control's own liveChange fired");
-  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+  assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 });
 
 QUnit.test("Fires liveChange for a target without an oninput handler", async (assert) => {
@@ -823,16 +826,13 @@ QUnit.test("Fires liveChange for a target without an oninput handler", async (as
     values.push(event.getParameter("value"));
   });
   const dom = focusInner(ctrl);
-  let inputEvents = 0;
-  dom.addEventListener("input", () => {
-    inputEvents++;
-  });
+  const inputEvents = countInputEvents(dom);
 
   insertText(dom, "X", [2, 2]);
 
   assert.strictEqual(dom.value, "abX", "DOM value carries the insertion");
   assert.deepEqual(values, ["abX"], "liveChange fired once");
-  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+  assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 });
 
 QUnit.test("Fires liveChange once for a control that binds the input event itself", async (assert) => {
@@ -842,28 +842,22 @@ QUnit.test("Fires liveChange once for a control that binds the input event itsel
     values.push(event.getParameter("value"));
   });
   const dom = focusInner(ctrl);
-  let inputEvents = 0;
-  dom.addEventListener("input", () => {
-    inputEvents++;
-  });
+  const inputEvents = countInputEvents(dom);
 
   insertText(dom, "X", [2, 2]);
 
   assert.deepEqual(values, ["abX"], "Only the control's own liveChange fired");
-  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+  assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 });
 
 QUnit.test("Undo reverts the DOM value; the value property keeps the pre-undo text", async (assert) => {
   const ctrl = await renderControl(new Input({ value: "hello" }));
   const dom = focusInner(ctrl);
-  let inputEvents = 0;
-  dom.addEventListener("input", () => {
-    inputEvents++;
-  });
+  const inputEvents = countInputEvents(dom);
 
   insertText(dom, "!", [5, 5]);
   assert.strictEqual(dom.value, "hello!", "Insertion applied");
-  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+  assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 
   document.execCommand("undo");
 
@@ -906,30 +900,24 @@ QUnit.module("input-operations - native handleBackspace", renderedControlHooks);
 QUnit.test("Deletes an entire surrogate-pair emoji", async (assert) => {
   const ctrl = await renderControl(new Input({ value: "a😀b" }));
   const dom = focusInner(ctrl);
-  let inputEvents = 0;
-  dom.addEventListener("input", () => {
-    inputEvents++;
-  });
+  const inputEvents = countInputEvents(dom);
 
   const result = handleBackspace(dom, [3, 3]);
 
   assert.strictEqual(dom.value, "ab", "Entire emoji deleted in one backspace");
   assert.deepEqual(result, [1, 1], "Cursor moved back by 2 code units (one grapheme)");
-  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+  assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 });
 
 QUnit.test("Deletes an entire ZWJ sequence", async (assert) => {
   const emoji = "👨‍👩‍👧"; // ZWJ family
   const ctrl = await renderControl(new Input({ value: `a${emoji}b` }));
   const dom = focusInner(ctrl);
-  let inputEvents = 0;
-  dom.addEventListener("input", () => {
-    inputEvents++;
-  });
+  const inputEvents = countInputEvents(dom);
 
   const result = handleBackspace(dom, [1 + emoji.length, 1 + emoji.length]);
 
   assert.strictEqual(dom.value, "ab", "ZWJ sequence fully deleted");
   assert.deepEqual(result, [1, 1], "Cursor after 'a'");
-  assert.strictEqual(inputEvents, 1, "The platform performed the edit - the fallback dispatches no input event");
+  assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 });
