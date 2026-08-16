@@ -126,13 +126,12 @@ export function insertText(
     return [pos, pos];
   }
 
-  const value = dom.value;
   const inserted = clampToMaxLength(dom, text, start, end);
   if (!inserted && start === end) return [start, start];
 
   const newPos = start + inserted.length;
 
-  dom.value = value.slice(0, start) + inserted + value.slice(end);
+  dom.value = dom.value.slice(0, start) + inserted + dom.value.slice(end);
   try {
     dom.setSelectionRange(newPos, newPos);
   } catch {
@@ -169,7 +168,6 @@ export function commitComposition(state: CompositionState, dom: HTMLInputElement
  */
 export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cursor?: CursorPos): CursorPos | null {
   if (dom.readOnly || dom.disabled) return null;
-  const value = dom.value;
   const [start, end] = resolveCursor(dom, cursor);
 
   let from: number;
@@ -179,7 +177,7 @@ export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cur
     from = start;
     to = end;
   } else if (start > 0) {
-    from = start - graphemeLengthBefore(value, start);
+    from = start - graphemeLengthBefore(dom.value, start);
     to = start;
   } else {
     return null;
@@ -190,7 +188,7 @@ export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cur
     return [pos, pos];
   }
 
-  dom.value = value.slice(0, from) + value.slice(to);
+  dom.value = dom.value.slice(0, from) + dom.value.slice(to);
   try {
     dom.setSelectionRange(from, from);
   } catch {
