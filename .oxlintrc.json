@@ -13,6 +13,10 @@
     {
       "name": "comment-quality",
       "specifier": "./tools/oxlint-plugin-comment-quality.mjs"
+    },
+    {
+      "name": "anti-slop",
+      "specifier": "./tools/oxlint/anti-slop/index.ts"
     }
   ],
   "categories": {
@@ -41,7 +45,22 @@
     "comment-quality/no-hedging-comment": "warn",
     "comment-quality/no-edit-narration": "warn",
     "comment-quality/no-issue-reference-comment": "warn",
-    "comment-quality/no-obvious-comment": "warn"
+    "comment-quality/no-obvious-comment": "warn",
+    "anti-slop/no-chained-type-assertions": "error",
+    "anti-slop/no-conditional-empty-object-spread": "error",
+    "anti-slop/no-known-value-widening": "error",
+    "anti-slop/no-module-mocking": "error",
+    "anti-slop/no-object-parameters": "error",
+    "anti-slop/no-reflect-apply": "error",
+    "anti-slop/no-reflect-get": "error",
+    "anti-slop/no-runtime-typeof": "error",
+    "anti-slop/no-shape-in-symbol-names": "error",
+    "anti-slop/no-unknown-parameters": "error",
+    "anti-slop/no-unknown-returns": "error",
+    "anti-slop/no-unknown-type-aliases": "error",
+    "anti-slop/no-unsafe-dictionary-type": "error",
+    "anti-slop/no-widen-then-assert": "error",
+    "anti-slop/require-safety-comment-for-type-assertion": "error"
   },
   "overrides": [
     {
@@ -53,6 +72,12 @@
         "no-console": "off",
         "import/no-unassigned-import": "off",
         "code-quality/no-double-type-assertion": "off"
+      }
+    },
+    {
+      "files": ["packages/*/test/**"],
+      "rules": {
+        "anti-slop/require-safety-comment-for-type-assertion": "off"
       }
     },
     {
@@ -105,5 +130,5 @@
       }
     }
   ],
-  "ignorePatterns": ["dist/", "node_modules/", "**/*.gen.d.ts"]
+  "ignorePatterns": ["dist/", "node_modules/", "**/*.gen.d.ts", "tools/oxlint/anti-slop/**"]
 }
