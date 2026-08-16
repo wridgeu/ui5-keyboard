@@ -165,6 +165,9 @@ fallback.**
 - **Firefox and WebKit.** Both browser suites run Chromium only (web-test-runner's `playwrightLauncher`
   and ui5-test-runner's puppeteer). The cross-engine behaviour the design rests on was measured
   directly (design doc §1, §3.3) but is not guarded by CI on every run.
+- **Keycap-focused activation.** Every fixture in both browser suites activates keys by `click()` with the target
+  focused, so all of them measure the pointer path. Enter/Space on a focused keycap always takes the fallback instead,
+  and nothing asserts it. Design doc §3.8 records what that costs.
 - **The `document.hasFocus()` false case.** A backgrounded document could in principle decline the
   command; the guard covers the element, not the document. No engine was observed declining on that
   basis, and the fallback would absorb it.
