@@ -35,4 +35,3 @@
 *.html linguist-vendored
 *.less linguist-vendored
 *.gen.d.ts linguist-generated
-tools/oxlint/anti-slop/** linguist-vendored

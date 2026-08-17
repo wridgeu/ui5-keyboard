@@ -82,10 +82,9 @@ export default class PhysicalKeyHighlight {
     this._highlightKey(event.key, down);
 
     // UI5 event delegation wraps the native event; unwrap to access
-    // getModifierState which is not forwarded to the wrapper. The optional call
-    // covers a wrapper that reached here without one.
+    // getModifierState which is not forwarded to the wrapper.
     const native = event.originalEvent ?? event;
-    const capsLock = native.getModifierState?.("CapsLock") ?? false;
+    const capsLock = typeof native.getModifierState === "function" && native.getModifierState("CapsLock");
     this._shiftState.syncFromPhysical(native.shiftKey, capsLock);
   }
 

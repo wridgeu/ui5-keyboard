@@ -30,6 +30,7 @@ describe("resolveInputOrTextarea", () => {
   it("returns null for non-element", () => {
     expect(resolveInputOrTextarea(null)).toBeNull();
     expect(resolveInputOrTextarea(undefined)).toBeNull();
+    // @ts-expect-error a value only plain JS can supply, which is what the guard covers
     expect(resolveInputOrTextarea("string")).toBeNull();
   });
 

@@ -1,21 +1,11 @@
 /*
- * This suite exists to prove the duck-typed half of `enableRouterIntegration`'s documented
- * contract: "A UI5 Router or any object with `attachBeforeRouteMatched` /
- * `detachBeforeRouteMatched`". Both suppressions below are that contract, not shortcuts, and
- * both apply uniformly to every occurrence in the file rather than to a special case:
- *
- * - `no-chained-type-assertions`: `MockRouter as unknown as Router` is the point. The parameter
- *   is declared as the `Router` class while the JSDoc promises any object carrying the two
- *   methods, so exercising the promise requires handing it something that is deliberately not a
- *   Router. Satisfying the rule would mean implementing the whole class, which would test the
- *   opposite of what this file is for. A real Router is not a substitute: it would prove only
- *   the concrete path, and driving it needs `fireBeforeRouteMatched`, which UI5 marks
- *   `@ui5-protected`.
- * - `no-object-parameters`: the mock's `listener` parameters mirror UI5's own declaration,
- *   `attachBeforeRouteMatched(fnFunction, oListener?: object)`. A narrower type here would no
- *   longer match the framework signature the production code calls through.
+ * This suite proves the duck-typed half of `enableRouterIntegration`'s documented contract:
+ * "A UI5 Router or any object with `attachBeforeRouteMatched` / `detachBeforeRouteMatched`".
+ * The parameter is declared as the `Router` class, so exercising that promise means handing it
+ * something deliberately not a Router - hence `MockRouter as unknown as Router` throughout. A
+ * real Router is not a substitute: it would prove only the concrete path, and driving it needs
+ * `fireBeforeRouteMatched`, which UI5 marks `@ui5-protected`.
  */
-/* oxlint-disable anti-slop/no-chained-type-assertions, anti-slop/no-object-parameters */
 import type Router from "sap/ui/core/routing/Router";
 import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
 import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";

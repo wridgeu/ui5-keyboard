@@ -69,12 +69,8 @@ export default class Component extends UIComponent {
         if (this.isDestroyed()) return;
         this._routeMatchedHandler();
       })
-      // A rejection reason has no schema to parse against. `JSONModel.dataLoaded()` swallows load
-      // failures itself, so what lands here is whatever the `then` above threw, and `unknown` is
-      // the honest type with the `instanceof Error` check below as the parse. The alternatives are
-      // worse: dropping the annotation types `err` as `any`, since `Promise.catch` declares its
-      // reason `any`, and naming a domain type would assert a shape nothing verified.
-      // oxlint-disable-next-line anti-slop/no-unknown-parameters
+      // Annotated because `Promise.catch` declares its reason `any`; the `instanceof Error` check
+      // below is the parse.
       .catch((err: unknown) => {
         Log.warning(
           "State model fixture failed to load",

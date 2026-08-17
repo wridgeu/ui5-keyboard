@@ -239,29 +239,14 @@ export enum LayoutFacet {
  * value, which would turn one malformed layout into a broken control. The shape check
  * that reports and skips lives in the fold.
  */
-// UI5 hands this to `DataType.createType` as an untyped `isValid` and `ManagedObject.validateProperty`
-// calls it with whatever a caller wrote for `CustomLayout`'s `rows`: an XML attribute run through
-// `JSON.parse`, a model binding result, a `setRows` argument from plain JS. Annotating it with the
-// `LayoutRows` type declared below would assume the answer this function exists to produce, leaving a
-// check that can only ever return true.
-// oxlint-disable-next-line anti-slop/no-unknown-parameters
 function isLayoutRows(value: unknown): boolean {
   return value === null || Array.isArray(value);
 }
 
 /** A long-press variant table, or `null` for none. Per-entry validation is the fold's. */
-// UI5 hands this to `DataType.createType` as an untyped `isValid` and `ManagedObject.validateProperty`
-// calls it with whatever a caller wrote for `CustomLayout`'s `variants`: an XML attribute run through
-// `JSON.parse`, a model binding result, a `setVariants` argument from plain JS. Annotating it with the
-// `VariantOverrideTable` type declared below would assume the answer this function exists to produce.
-// oxlint-disable-next-line anti-slop/no-unknown-parameters
 function isVariantTable(value: unknown): boolean {
-  // The `object` base type this one is derived from accepts `typeof v === "object" || typeof v === "function"`,
-  // and UI5 runs the base check before this one, so a function still reaches here and the `typeof` is what
-  // rejects it. There is no earlier boundary to parse at: `validateProperty` calls this before the value is
-  // allowed to become the property, and the per-entry parse the rule wants belongs to the fold, which runs
-  // later and reports rather than throws.
-  // oxlint-disable-next-line anti-slop/no-runtime-typeof
+  // The `object` base type this one derives from accepts a function as well, and UI5 runs the base
+  // check first, so the `typeof` here is what rejects one.
   return value === null || (typeof value === "object" && !Array.isArray(value));
 }
 

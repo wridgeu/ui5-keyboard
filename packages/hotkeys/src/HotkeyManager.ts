@@ -49,15 +49,11 @@ const idGen = createIdGenerator("hk_");
 /**
  * Resolve the public target option into the internal discriminated union.
  * Functions become `callback` targets for lazy dispatch-time resolution.
- *
- * A node is recognized by `nodeType`, the marker every DOM node carries, so a
- * node from another realm (an iframe document) resolves as an `element` target
- * the way a same-realm one does.
  */
 function resolveTarget(target: Element | (() => Element | null) | null | undefined): ResolvedTarget {
   if (target == null) return null; // oxlint-disable-line eqeqeq -- intentional nullish check
-  if ("nodeType" in target) return { kind: "element", el: target };
-  return { kind: "callback", fn: target };
+  if (typeof target === "function") return { kind: "callback", fn: target };
+  return { kind: "element", el: target };
 }
 
 /**

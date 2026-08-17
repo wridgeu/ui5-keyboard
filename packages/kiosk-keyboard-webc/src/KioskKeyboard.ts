@@ -86,13 +86,8 @@ import "@ui5/webcomponents-icons/dist/locked.js";
 import "@ui5/webcomponents-icons/dist/nav-back.js";
 
 // ── Icon name map (used by the template to render <ui5-icon>) ──
-// `_resolveKeyIcon` reads `ICON_MAP[key.value]` for whatever token a custom layout
-// declares, so the open `string` key is the contract; under `satisfies` the key union
-// collapses to the four built-in tokens and that lookup stops compiling. A `Map` is the
-// clean alternative, but this table is hand-mirrored by kiosk's `SPECIAL_KEY_ICONS`,
-// which ships as the documented-stable public static `KioskKeyboard.SPECIAL_KEY_ICONS`
-// and cannot change shape, so both stay `Record`.
-// oxlint-disable-next-line anti-slop/no-known-value-widening
+// The open `string` key is the contract: `_resolveKeyIcon` looks this up by whatever token a
+// custom layout declares. Hand-mirrored by kiosk's `SPECIAL_KEY_ICONS`.
 const ICON_MAP: Readonly<Record<string, string>> = {
   "{shift}": SPECIAL_KEY_ICON_NAMES.shift,
   "{shift:capsLock}": SPECIAL_KEY_ICON_NAMES.capsLock,
@@ -139,13 +134,8 @@ type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
 type TargetSource = "autoShow" | "explicit";
 
 /** Display and ARIA labels for built-in special keys. */
-// `_getKeyLabel` and `_getKeyAriaLabel` look this up by `key.value`, any token a custom
-// layout declares, so the open `string` key is the contract; under `satisfies` the key
-// union collapses to the four built-in tokens and both lookups stop compiling. A `Map`
-// would lint clean, but this table is hand-mirrored by kiosk's `SPECIAL_KEY_I18N` and
-// moves with `SPECIAL_KEY_ICONS`, whose shape the public static
-// `KioskKeyboard.SPECIAL_KEY_ICONS` pins, so all four special-key tables stay `Record`.
-// oxlint-disable-next-line anti-slop/no-known-value-widening
+// The open `string` key is the contract: `_getKeyLabel` and `_getKeyAriaLabel` look this up by
+// `key.value`, any token a custom layout declares. Hand-mirrored by kiosk's `SPECIAL_KEY_I18N`.
 const SPECIAL_KEY_LABELS: Record<string, string> = {
   "{shift}": SPECIAL_KEY_I18N_KEYS.shift,
   "{enter}": SPECIAL_KEY_I18N_KEYS.enter,

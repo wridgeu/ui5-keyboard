@@ -822,12 +822,6 @@ export default class KioskKeyboard extends Control {
    * A `customLayouts` bound to a model populates asynchronously and therefore does not
    * contribute to the layout chosen here.
    */
-  // `oScope` is UI5's scope object for resolving string-based type and formatter references in
-  // binding infos, passed by whoever constructs the control and only forwarded to
-  // `super.applySettings`, whose base declaration types it `oScope?: object`. Nothing here reads a
-  // member of it, and narrowing an override's parameter below its base declaration is not open to
-  // us anyway, so a named owner type would only state a shape UI5 does not guarantee.
-  // oxlint-disable-next-line anti-slop/no-object-parameters
   override applySettings(mSettings: $KioskKeyboardSettings, oScope?: object): this {
     // Destructure rather than `delete`: the caller's settings object is never mutated.
     const { customLayouts, ...rest } = mSettings ?? {};

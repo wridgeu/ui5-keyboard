@@ -12,12 +12,8 @@ const SAP_ICON_PREFIX = "sap-icon://";
  */
 
 /** Default icons for special keys - used when the key has no explicit icon. */
-// `getKeyIcon(keyValue: string)` reads `SPECIAL_KEY_ICONS[keyValue]` for whatever token a
-// custom layout declares, so the open `string` key is the contract; inferring the four
-// literal keys makes that lookup a TS7053 error under `noUncheckedIndexedAccess`. The table
-// is also re-exported as the documented-stable public static `KioskKeyboard.SPECIAL_KEY_ICONS`
-// and is hand-mirrored by the webc element's `ICON_MAP`, so all four tables stay `Record`.
-// oxlint-disable-next-line anti-slop/no-known-value-widening
+// The open `string` key is the contract: `getKeyIcon` looks this up by whatever token a custom
+// layout declares. Re-exported as the public static `KioskKeyboard.SPECIAL_KEY_ICONS`.
 export const SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = {
   "{backspace}": SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.backspace,
   "{shift}": SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.shift,

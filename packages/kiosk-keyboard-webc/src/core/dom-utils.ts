@@ -29,7 +29,7 @@ export function keyElementId(controlId: string, row: number, col: number): strin
 }
 
 /** Type guard: returns true if the value is an HTMLInputElement or HTMLTextAreaElement. */
-function isInputOrTextarea(el: EventTarget | null): el is HTMLInputElement | HTMLTextAreaElement {
+function isInputOrTextarea(el: EventTarget | null | undefined): el is HTMLInputElement | HTMLTextAreaElement {
   return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 }
 
@@ -43,23 +43,15 @@ function isInputOrTextarea(el: EventTarget | null): el is HTMLInputElement | HTM
  * - nested web components (e.g. ui5-step-input → ui5-input → native input)
  *   up to `maxDepth` levels of shadow DOM nesting
  */
-// `el` is an unparsed DOM candidate and this function is the parser for it: the
-// `instanceof HTMLElement` check on the next line is the narrowing, and answering `null` for
-// everything else is the contract callers rely on. Every TypeScript caller already narrows before
-// calling, so the annotation is not what protects them; it is untyped-JS consumers, who reach this
-// module through the package's `./dist/*` subpath export, that make the runtime check load-bearing.
-// The kiosk twin spells the same parameter `EventTarget | null | undefined` and is equally total.
-// oxlint-disable-next-line anti-slop/no-unknown-parameters
-export function resolveInputOrTextarea(el: unknown, maxDepth = 3): HTMLInputElement | HTMLTextAreaElement | null {
-  if (!(el instanceof HTMLElement)) {
-    return null;
-  }
-
+export function resolveInputOrTextarea(
+  el: EventTarget | null | undefined,
+  maxDepth = 3,
+): HTMLInputElement | HTMLTextAreaElement | null {
   if (isInputOrTextarea(el)) {
     return el;
   }
 
-  if (maxDepth <= 0) {
+  if (!(el instanceof HTMLElement) || maxDepth <= 0) {
     return null;
   }
 

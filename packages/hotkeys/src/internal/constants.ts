@@ -24,21 +24,12 @@ export const MODIFIER_KEYS: ReadonlySet<string> = new Set(["Control", "Shift", "
 export const MODIFIER_ORDER: readonly CanonicalModifier[] = ["Control", "Alt", "Shift", "Meta"];
 
 /**
- * Alias spelling to canonical modifier, or to the "Mod" pseudo-modifier.
- * Keyed by raw hotkey segment, so a lookup on an unknown segment yields
- * `undefined` at runtime.
- */
-export interface ModifierAliasTable {
-  readonly [alias: string]: CanonicalModifier | "Mod";
-}
-
-/**
  * Maps common modifier aliases to their canonical form.
  * "Mod" is a pseudo-modifier resolved at runtime based on platform.
  *
  * @since 0.1.0
  */
-export const MODIFIER_ALIASES: ModifierAliasTable = {
+export const MODIFIER_ALIASES: Readonly<Record<string, CanonicalModifier | "Mod">> = {
   Control: "Control",
   Ctrl: "Control",
   ctrl: "Control",
@@ -58,19 +49,11 @@ export const MODIFIER_ALIASES: ModifierAliasTable = {
 };
 
 /**
- * Key name spelling to canonical `event.key` value. Keyed by raw key name, so
- * a lookup on an unknown name yields `undefined` at runtime.
- */
-export interface KeyAliasTable {
-  readonly [alias: string]: string;
-}
-
-/**
  * Maps common key name aliases to their canonical `event.key` values.
  *
  * @since 0.1.0
  */
-export const KEY_ALIASES: KeyAliasTable = {
+export const KEY_ALIASES: Readonly<Record<string, string>> = {
   Esc: "Escape",
   esc: "Escape",
   escape: "Escape",
@@ -129,19 +112,11 @@ export const STANDARD_MODIFIER_LABELS = {
 } as const satisfies Record<CanonicalModifier, string>;
 
 /**
- * Canonical `event.key` value to its display symbol. Keyed by any key name, so
- * a lookup on a key without a symbol yields `undefined` at runtime.
- */
-export interface KeyDisplayTable {
-  readonly [key: string]: string;
-}
-
-/**
  * Display symbols for special keys.
  *
  * @since 0.1.0
  */
-export const KEY_DISPLAY_SYMBOLS: KeyDisplayTable = {
+export const KEY_DISPLAY_SYMBOLS: Readonly<Record<string, string>> = {
   ArrowUp: "\u2191",
   ArrowDown: "\u2193",
   ArrowLeft: "\u2190",

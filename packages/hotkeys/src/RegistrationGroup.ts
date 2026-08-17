@@ -89,7 +89,7 @@ export default class RegistrationGroup {
     const handler = (event: Router$BeforeRouteMatchedEvent) => {
       this._manager.resetToGlobalScope();
       const routeName = event.getParameter("name");
-      if (routeName) {
+      if (typeof routeName === "string" && routeName) {
         this._manager.pushScope(routeName);
       }
     };

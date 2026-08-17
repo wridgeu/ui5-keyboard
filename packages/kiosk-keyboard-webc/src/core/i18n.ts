@@ -111,13 +111,9 @@ export function getText(key: string, fallback: string, ...args: (string | number
   if (_resolver) {
     try {
       const override = _resolver(key, _getLanguage(), resolved);
-      // `override` is whatever the consumer's resolver returned. `setI18nResolver` is public API on
-      // a web component consumed from untyped JS, so the declared `string | undefined` return is a
-      // promise rather than a guarantee, and this is the only check standing between that value and
-      // the rendered key label. Branching on the domain value instead (`override !== undefined`)
-      // would pass a number or object into `_formatMessage`, which returns its input unchanged when
-      // `args` is empty, so `getText` would hand a non-string back to its callers.
-      // oxlint-disable-next-line anti-slop/no-runtime-typeof
+      // A string overrides, anything else keeps the base text: the declared return type is
+      // unenforceable across a call into consumer code, and `override !== undefined` would let a
+      // number through `_formatMessage`, which returns its input unchanged when `args` is empty.
       if (typeof override === "string") return _formatMessage(override, args);
     } catch (err) {
       console.warn("[kiosk-keyboard] i18n resolver threw:", err);

@@ -70,34 +70,6 @@ narrating preamble form is `no-narrator-comment`'s job.
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding rule entry in `.oxlintrc.json`.
 
-## `oxlint/anti-slop/`
-
-Vendored copy of the [anti-slop](https://github.com/dmmulroy/anti-slop) oxlint plugin, which
-rejects low-evidence TypeScript: assertion chains, `unknown` in a contract, dictionaries with no
-value type, annotations that discard inference. It complements the three house plugins above,
-which match on comment text and statement shape rather than on type evidence.
-
-The project ships as source to be vendored rather than depended on, so the copy under
-`tools/oxlint/anti-slop/` is owned by this repo and may be edited. It is excluded from `lint`
-and from `fmt` (it uses its own formatting) via `ignorePatterns` in `.oxlintrc.json` and
-`.oxfmtrc.json`, and marked `linguist-vendored`. `tools/tsconfig.json` covers only `./*.mjs`,
-so `typecheck:tools` does not read it. Upstream drift is not tracked; re-copy from the source
-repo deliberately.
-
-All 15 rules run at `error`. One override, in `.oxlintrc.json`:
-
-| Rule                                        | Scope                          |
-| ------------------------------------------- | ------------------------------ |
-| `require-safety-comment-for-type-assertion` | off under `packages/*/test/**` |
-
-Test files assert against deliberately invalid values, so their casts have no invariant to
-state and a `// SAFETY:` line on each would be filler. This mirrors the existing decision to
-disable `code-quality/no-double-type-assertion` in tests. Every other rule applies everywhere,
-including tests.
-
-`@oxlint/plugins` is a dev dependency because the vendored source imports `defineRule` and
-`eslintCompatPlugin` from it; keep its version in step with `oxlint`.
-
 ## `oxlint-plugin-*.test.mjs`
 
 Unit tests for the custom rules, using oxlint's own `RuleTester` (exported from
