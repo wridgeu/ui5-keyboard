@@ -33,7 +33,7 @@ QUnit.test("Register and fire simple hotkey", (assert) => {
 
   fireKey("Escape");
   assert.ok(fired, "Escape callback fired");
-  assert.ok(receivedEvent! instanceof KeyboardEvent, "Received KeyboardEvent");
+  assert.ok(receivedEvent instanceof KeyboardEvent, "Received KeyboardEvent");
 });
 
 QUnit.test("Register and fire Ctrl+S", (assert) => {
