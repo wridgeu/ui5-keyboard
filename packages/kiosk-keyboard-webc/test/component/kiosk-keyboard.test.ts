@@ -2788,6 +2788,19 @@ describe("kiosk-keyboard", () => {
   // ── CSS Parts ──
 
   describe("CSS parts", () => {
+    /** Every part token the given layouts put into the shadow DOM. */
+    async function renderedPartsOf(...layouts: string[]): Promise<Set<string>> {
+      const rendered = new Set<string>();
+      for (const layout of layouts) {
+        const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="${layout}"></kiosk-keyboard> `);
+        await nextRender();
+        for (const node of el.shadowRoot!.querySelectorAll("[part]")) {
+          for (const token of node.getAttribute("part")!.split(" ")) rendered.add(token);
+        }
+      }
+      return rendered;
+    }
+
     it("exposes a frozen parts list and exportParts string on DOM contract", () => {
       expect(DOM.parts).to.deep.equal([
         "keyboard",
@@ -2800,30 +2813,47 @@ describe("kiosk-keyboard", () => {
         "key-icon",
         "variant-popup",
         "variant-option",
+        "key-shift",
+        "key-backspace",
+        "key-enter",
+        "key-space",
+        "key-layout",
+        "key-layout-base",
+        "key-layout-arabic",
+        "key-layout-fkeys",
+        "key-layout-ja-kana",
+        "key-layout-ja-kana-compact",
+        "key-layout-ja-romaji",
+        "key-layout-ko-hangul",
+        "key-layout-nav",
+        "key-layout-numeric",
+        "key-layout-numpad",
+        "key-layout-qwerty",
+        "key-layout-qwerty-es",
+        "key-layout-qwertz-de",
+        "key-layout-special",
       ]);
       expect(Object.isFrozen(DOM.parts)).to.be.true;
-      expect(DOM.exportParts).to.equal(
-        "keyboard, row, key, modifier, action, fkey, key-label, key-icon, variant-popup, variant-option",
-      );
+      expect(DOM.exportParts).to.equal(DOM.parts.join(", "));
     });
 
-    it("all declared parts appear in rendered shadow DOM", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="fkeys"></kiosk-keyboard> `);
-      await nextRender();
-
-      const allPartElements = el.shadowRoot!.querySelectorAll("[part]");
-      const renderedParts = new Set<string>();
-      for (const node of allPartElements) {
-        for (const token of node.getAttribute("part")!.split(" ")) {
-          renderedParts.add(token);
-        }
-      }
+    it("all structural parts appear in rendered shadow DOM", async () => {
+      const rendered = await renderedPartsOf("fkeys");
 
       // The variant-popup / variant-option parts only render while the accent
-      // popup is open; they are covered in variant-popup.test.ts.
-      const alwaysRendered = DOM.parts.filter((p) => p !== "variant-popup" && p !== "variant-option");
-      for (const declared of alwaysRendered) {
-        expect(renderedParts.has(declared), `part "${declared}" found in rendered DOM`).to.be.true;
+      // popup is open; they are covered in variant-popup.test.ts. The per-key
+      // parts are conditional on the key, and covered by the tests below.
+      for (const declared of ["keyboard", "row", "key", "modifier", "action", "fkey", "key-label", "key-icon"]) {
+        expect(rendered.has(declared), `part "${declared}" found in rendered DOM`).to.be.true;
+      }
+    });
+
+    it("renders no part the contract does not declare", async () => {
+      const declared = new Set(DOM.parts);
+      const rendered = await renderedPartsOf("qwerty", "fkeys", "numeric", "special", "nav", "ja-kana");
+
+      for (const token of rendered) {
+        expect(declared.has(token), `rendered part "${token}" is declared in the DOM contract`).to.be.true;
       }
     });
 
@@ -2857,7 +2887,7 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       const shift = queryKey(el, "{shift}")!;
       expect(shift).to.not.be.null;
-      expect(shift.getAttribute("part")).to.equal("key modifier");
+      expect(shift.getAttribute("part")).to.equal("key modifier key-shift");
     });
 
     it("exposes 'key action' part on action keys", async () => {
@@ -2865,7 +2895,52 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       const enter = queryKey(el, "{enter}")!;
       expect(enter).to.not.be.null;
-      expect(enter.getAttribute("part")).to.equal("key action");
+      expect(enter.getAttribute("part")).to.equal("key action key-enter");
+    });
+
+    it("names each built-in special key so one key can be styled alone", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      expect(queryKey(el, "{backspace}")!.getAttribute("part")).to.equal("key action key-backspace");
+      expect(queryKey(el, " ")!.getAttribute("part")).to.equal("key key-space");
+    });
+
+    it("names a layout-switch key generically and by its target", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      const toNumeric = queryKey(el, "{layout:numeric}")!;
+      expect(toNumeric).to.not.be.null;
+      const parts = toNumeric.getAttribute("part")!.split(" ");
+      expect(parts).to.include("key-layout");
+      expect(parts).to.include("key-layout-numeric");
+    });
+
+    it("leaves character keys anonymous, so no glyph becomes public API", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      for (const value of ["a", "q", "1"]) {
+        const key = queryKey(el, value);
+        if (key) expect(key.getAttribute("part"), `part of "${value}"`).to.equal("key");
+      }
+    });
+
+    it("is reachable through ::part() from outside the shadow root", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      const style = document.createElement("style");
+      style.textContent = "kiosk-keyboard::part(key-enter) { outline-style: dotted; }";
+      document.head.appendChild(style);
+      try {
+        const enter = queryKey(el, "{enter}")!;
+        expect(getComputedStyle(enter).outlineStyle).to.equal("dotted");
+        expect(getComputedStyle(queryKey(el, "{shift}")!).outlineStyle).to.not.equal("dotted");
+      } finally {
+        style.remove();
+      }
     });
 
     it("exposes 'key-label' part on text labels", async () => {

@@ -1187,20 +1187,45 @@ kiosk-keyboard::part(key) {
 
 Multi-name parts allow targeting specific key types. `::part(key)` matches all keys, while `::part(modifier)` or `::part(action)` match only those subtypes.
 
-### Forwarding Parts (`exportparts`)
+### Styling a single key
 
-CSS `::part()` selectors do not cross multiple shadow DOM boundaries. If you wrap `<kiosk-keyboard>` inside another web component, you must forward the parts using the `exportparts` attribute on the inner `<kiosk-keyboard>` element.
+The category parts above reach a _group_ of keys. To reach one key, use its per-key part name. The keys carry a `data-key` attribute too, but that one is shadow-trapped and unreachable from outside — and `::part()` accepts pseudo-classes but neither attribute nor class selectors, so `::part(key)[data-key="{enter}"]` is invalid rather than merely unsupported.
 
-The `KioskKeyboard.DOM.exportParts` constant provides a ready-to-use attribute value:
+| Per-key part        | Key                                                                                                        |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `key-shift`         | The `{shift}` key                                                                                          |
+| `key-backspace`     | The `{backspace}` key                                                                                      |
+| `key-enter`         | The `{enter}` key                                                                                          |
+| `key-space`         | The space key                                                                                              |
+| `key-layout`        | Every `{layout:*}` switch key                                                                              |
+| `key-layout-<name>` | The switch key for one built-in layout — `key-layout-numeric`, `key-layout-special`, `key-layout-fkeys`, … |
+| `key-layout-base`   | The switch back to the tracked base layout (`{layout:base}`)                                               |
 
-```html
-<!-- Inside my-wrapper's shadow DOM template -->
-<kiosk-keyboard
-  exportparts="keyboard, row, key, modifier, action, fkey, key-label, key-icon, variant-popup, variant-option"
-></kiosk-keyboard>
+```css
+/* Example: make Enter the accent key and tint the numeric switcher */
+kiosk-keyboard::part(key-enter) {
+  background: var(--sapButton_Emphasized_Background);
+}
+kiosk-keyboard::part(key-layout-numeric) {
+  font-weight: bold;
+}
 ```
 
-Or programmatically:
+Per-key parts combine with the category ones, so `{enter}` renders as `part="key action key-enter"` and the numeric switcher as `part="key modifier key-layout key-layout-numeric"`.
+
+Two boundaries are deliberate:
+
+- **Character keys get no per-key part.** `a`, `1` and `ä` render as `part="key"` alone. Naming every glyph would make each one public API that can never change; style character keys as a group, or reach one by position from your own layout.
+- **Custom layouts get `key-layout` only.** A `{layout:*}` key pointing at a slotted `<kiosk-keyboard-custom-layout>` carries no `key-layout-<name>` twin, because the name is yours rather than the component's. The set of part names stays closed, which is what lets `exportparts` — which has no wildcard form — forward all of them.
+
+> [!NOTE]
+> The UI5 control twin needs none of this: it renders into light DOM, so its `[data-key]` attribute is directly targetable with an ordinary attribute selector. See [per-key styling in the `kiosk-keyboard` README](../kiosk-keyboard/README.md#custom-key-icons).
+
+### Forwarding Parts (`exportparts`)
+
+CSS `::part()` selectors do not cross multiple shadow DOM boundaries, and `exportparts` has no wildcard form. If you wrap `<kiosk-keyboard>` inside another web component, you must forward the parts using the `exportparts` attribute on the inner `<kiosk-keyboard>` element.
+
+The `KioskKeyboard.DOM.exportParts` constant provides a ready-to-use attribute value listing every part, so a hand-written list cannot fall behind:
 
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";

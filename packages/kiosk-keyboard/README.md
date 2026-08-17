@@ -1647,6 +1647,25 @@ The control uses SAP LESS theme parameters for all visual states:
 
 Supported themes: `sap_horizon`, `sap_horizon_dark`, `sap_horizon_hcb`, `sap_horizon_hcw`.
 
+### Styling a single key
+
+The control renders into the light DOM, so page CSS reaches any one key through the `data-key` attribute the renderer writes — no shadow boundary, no part names, no `!important`:
+
+```css
+/* Tint just the Enter key, and just the switch to the numeric layout */
+.ui5KioskKey[data-key="{enter}"] {
+  background: var(--sapButton_Emphasized_Background);
+}
+.ui5KioskKey[data-key="{layout:numeric}"] {
+  font-weight: bold;
+}
+```
+
+The value is the key's authored `value`, so `{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`, a space, or a single character all work, as does `[data-shift-value]` for the shifted face. Both attributes are part of the [DOM Contract](#dom-contract). Swapping a key's _glyph_ rather than its box is covered under [Custom key icons](#custom-key-icons).
+
+> [!NOTE]
+> The web component twin cannot offer this: its `data-key` is inside a shadow root, and `::part()` takes no attribute selectors. It exposes a bounded set of per-key `::part()` names instead — see [Styling a single key in the `kiosk-keyboard-webc` README](../kiosk-keyboard-webc/README.md#styling-a-single-key).
+
 ### Public CSS Custom Properties
 
 The documented `--ui5KioskKeyboard-*` variables are the supported styling API. Internal `--_ui5KioskKeyboard-*` aliases and renderer classes remain private implementation details and may change without notice.

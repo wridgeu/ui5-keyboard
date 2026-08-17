@@ -1,5 +1,5 @@
 import type KioskKeyboard from "./KioskKeyboard.js";
-import { classifyRow, keyElementId } from "./core/dom-utils.js";
+import { classifyRow, keyElementId, keyPart } from "./core/dom-utils.js";
 import { parseKeyAction } from "./core/key-token.js";
 import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./core/grapheme.js";
 
@@ -61,7 +61,8 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
               const id = keyElementId(this._componentId, rowIndex, colIndex);
               const isFocusTarget = rowIndex === focusPos.row && colIndex === focusPos.col;
               const isShift = key.value === "{shift}";
-              const keyKind = parseKeyAction(key.value).kind;
+              const keyAction = parseKeyAction(key.value);
+              const keyKind = keyAction.kind;
               const isFkey = keyKind === "fkey";
               // Only a key that types a character carries the layout's script:
               // space and the action tokens take their label from i18n, and a
@@ -108,7 +109,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                     [KIOSK_KEYBOARD_DOM.classes.keyHighlight]: this._highlightedKey === key.value.toLowerCase(),
                     [KIOSK_KEYBOARD_DOM.classes.keyDual]: isDual,
                   }}
-                  part={`key${key.type === "modifier" ? " modifier" : key.type === "action" ? " action" : ""}${isFkey ? " fkey" : ""}`}
+                  part={keyPart(keyAction, key.type)}
                   role="button"
                   tabindex={!this.disabled && isFocusTarget ? 0 : -1}
                   data-key={key.value}

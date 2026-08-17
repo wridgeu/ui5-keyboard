@@ -1,11 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   classifyRow,
+  keyPart,
   keyPositionOf,
   resolveInputOrTextarea,
   resolveWithCustomResolver,
 } from "../../src/core/dom-utils.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
+import { parseKeyAction } from "../../src/core/key-token.js";
+import { getRegisteredLayoutNames } from "../../src/core/layout-registry.js";
 
 /**
  * A resolver return of the wrong element type, which the resolver signature
@@ -221,5 +224,88 @@ describe("keyPositionOf", () => {
   it("returns null for a non-integer coordinate", () => {
     expect(keyPositionOf(keyEl("1.5", "0"))).toBeNull();
     expect(keyPositionOf(keyEl("0", "x"))).toBeNull();
+  });
+});
+
+describe("keyPart", () => {
+  const partOf = (value: string, type?: Parameters<typeof keyPart>[1]) => keyPart(parseKeyAction(value), type);
+
+  it("names a character key by category alone", () => {
+    expect(partOf("a")).toBe("key");
+    expect(partOf("a", "default")).toBe("key");
+    expect(partOf("A", "default")).toBe("key");
+  });
+
+  it("names the space key", () => {
+    expect(partOf(" ", "space")).toBe("key key-space");
+  });
+
+  it("names the fixed action keys alongside their category", () => {
+    expect(partOf("{shift}", "modifier")).toBe("key modifier key-shift");
+    expect(partOf("{backspace}", "action")).toBe("key action key-backspace");
+    expect(partOf("{enter}", "action")).toBe("key action key-enter");
+  });
+
+  it("keeps the fkey part for function keys", () => {
+    expect(partOf("{fkey:F1}", "modifier")).toBe("key modifier fkey");
+    expect(partOf("{fkey:ArrowLeft}", "modifier")).toBe("key modifier fkey");
+  });
+
+  it("names a switch to a built-in layout by its target", () => {
+    expect(partOf("{layout:numeric}", "modifier")).toBe("key modifier key-layout key-layout-numeric");
+    expect(partOf("{layout:ja-kana}", "modifier")).toBe("key modifier key-layout key-layout-ja-kana");
+  });
+
+  it("names the base sentinel like any other target", () => {
+    expect(partOf("{layout:base}", "modifier")).toBe("key modifier key-layout key-layout-base");
+  });
+
+  it("matches the target case-insensitively, as the registry does", () => {
+    expect(partOf("{layout:NUMERIC}", "modifier")).toBe("key modifier key-layout key-layout-numeric");
+  });
+
+  it("gives a switch to a custom layout the generic part only", () => {
+    expect(partOf("{layout:my-tenant-layout}", "modifier")).toBe("key modifier key-layout");
+  });
+
+  it("gives an unknown token no per-key part", () => {
+    expect(partOf("{nope}")).toBe("key");
+    expect(partOf("{layout:}")).toBe("key");
+  });
+
+  it("emits only part names the contract declares", () => {
+    const declared = new Set(DOM.parts);
+    const values = [
+      "a",
+      " ",
+      "{shift}",
+      "{backspace}",
+      "{enter}",
+      "{fkey:F1}",
+      "{layout:base}",
+      "{layout:numeric}",
+      "{layout:my-tenant-layout}",
+      "{nope}",
+    ];
+    for (const value of values) {
+      for (const token of partOf(value, "modifier").split(" ")) {
+        expect(declared.has(token), `part "${token}" from "${value}" is declared`).toBe(true);
+      }
+    }
+  });
+});
+
+describe("declared CSS parts", () => {
+  it("carries one key-layout part per built-in layout, plus the base sentinel", () => {
+    const declared = DOM.parts.filter((p) => p.startsWith("key-layout-")).map((p) => p.slice("key-layout-".length));
+    expect(declared.toSorted()).toEqual([...getRegisteredLayoutNames(), "base"].toSorted());
+  });
+
+  it("names every part with a selectable CSS identifier", () => {
+    // `::part()` takes an ident, so a name carrying the braces or colons of a
+    // key token would be declarable but never selectable.
+    for (const part of DOM.parts) {
+      expect(part, `part "${part}" is a valid ident`).toMatch(/^[a-z][a-z0-9-]*$/);
+    }
   });
 });
