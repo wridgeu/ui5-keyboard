@@ -39,9 +39,75 @@ function resolveVerticalCaret(value: string, caret: number, direction: -1 | 1): 
   return nextLineStart + Math.min(column, nextLineLen);
 }
 
+/** Returns the focused element, descending through open shadow roots. */
+function activeElement(): Element | null {
+  let active = document.activeElement;
+  while (active?.shadowRoot?.activeElement) {
+    active = active.shadowRoot.activeElement;
+  }
+  return active;
+}
+
+/**
+ * Performs `command` as a platform edit over [start, end] of `dom`, so the
+ * browser records it on its undo stack and applies `maxlength` itself.
+ *
+ * Returns whether the platform ran it. `false` means the caller must do the
+ * edit itself.
+ */
+function nativeEdit(
+  dom: HTMLInputElement | HTMLTextAreaElement,
+  start: number,
+  end: number,
+  command: () => boolean,
+): boolean {
+  if (typeof document.execCommand !== "function") return false;
+  // The command edits whatever is focused, never the element it is handed
+  if (activeElement() !== dom) return false;
+  try {
+    dom.setSelectionRange(start, end);
+  } catch {
+    // May throw on certain input types (e.g. type="number")
+    return false;
+  }
+  try {
+    return command();
+  } catch {
+    // May throw where the command is unsupported
+    return false;
+  }
+}
+
+/**
+ * Truncates `text` to the room `maxLength` leaves once [start, end] is
+ * replaced.
+ *
+ * Mirrors the platform: the limit counts UTF-16 code units, and a surrogate
+ * pair is never split.
+ */
+function clampToMaxLength(
+  dom: HTMLInputElement | HTMLTextAreaElement,
+  text: string,
+  start: number,
+  end: number,
+): string {
+  const max = dom.maxLength;
+  if (max < 0) return text;
+  const room = max - (dom.value.length - (end - start));
+  if (room <= 0) return "";
+  if (text.length <= room) return text;
+  const lastUnit = text.charCodeAt(room - 1);
+  const isHighSurrogate = lastUnit >= 0xd800 && lastUnit <= 0xdbff;
+  return text.slice(0, isHighSurrogate ? room - 1 : room);
+}
+
 /**
  * Inserts text at the given cursor position (or the DOM selection when
  * omitted) in the given input/textarea, replacing any active selection.
+ *
+ * Runs as a platform edit when the target is focused, so the insertion joins
+ * the browser's undo stack and honours `maxlength`; otherwise the value is
+ * assigned, `maxlength` applied in JS, and an `input` event dispatched.
  *
  * Returns the new cursor position, or `null` when the element is
  * read-only or disabled.
@@ -52,18 +118,27 @@ export function insertText(
   cursor?: CursorPos,
 ): CursorPos | null {
   if (dom.readOnly || dom.disabled) return null;
-  const value = dom.value;
   const [start, end] = resolveCursor(dom, cursor);
-  const newPos = start + text.length;
 
-  dom.value = value.slice(0, start) + text + value.slice(end);
+  if (nativeEdit(dom, start, end, () => document.execCommand("insertText", false, text))) {
+    // maxlength may have truncated the insertion
+    const pos = dom.selectionStart ?? start;
+    return [pos, pos];
+  }
+
+  const inserted = clampToMaxLength(dom, text, start, end);
+  if (!inserted && start === end) return [start, start];
+
+  const newPos = start + inserted.length;
+
+  dom.value = dom.value.slice(0, start) + inserted + dom.value.slice(end);
   try {
     dom.setSelectionRange(newPos, newPos);
   } catch {
     // May throw on certain input types (e.g. type="number")
   }
-  const inputType = text === "\n" ? "insertLineBreak" : "insertText";
-  dom.dispatchEvent(new InputEvent("input", { bubbles: true, inputType, data: text }));
+  const inputType = inserted === "\n" ? "insertLineBreak" : "insertText";
+  dom.dispatchEvent(new InputEvent("input", { bubbles: true, inputType, data: inserted }));
   return [newPos, newPos];
 }
 
@@ -84,36 +159,43 @@ export function commitComposition(state: CompositionState, dom: HTMLInputElement
  * Deletes the grapheme cluster before the cursor, or removes the
  * active selection, in the given input/textarea.
  *
+ * The range to remove is resolved here and only its removal runs as a platform
+ * edit, so the cluster stays the library's notion of one while the deletion
+ * joins the browser's undo stack.
+ *
  * Returns the new cursor position, or `null` when nothing was deleted
  * or the element is read-only/disabled.
  */
 export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cursor?: CursorPos): CursorPos | null {
   if (dom.readOnly || dom.disabled) return null;
-  const value = dom.value;
   const [start, end] = resolveCursor(dom, cursor);
 
-  let newValue: string;
-  let newPos: number;
+  let from: number;
+  let to: number;
 
   if (start !== end) {
-    newValue = value.slice(0, start) + value.slice(end);
-    newPos = start;
+    from = start;
+    to = end;
   } else if (start > 0) {
-    const deleteLen = graphemeLengthBefore(value, start);
-    newValue = value.slice(0, start - deleteLen) + value.slice(start);
-    newPos = start - deleteLen;
+    from = start - graphemeLengthBefore(dom.value, start);
+    to = start;
   } else {
     return null;
   }
 
-  dom.value = newValue;
+  if (nativeEdit(dom, from, to, () => document.execCommand("delete"))) {
+    const pos = dom.selectionStart ?? from;
+    return [pos, pos];
+  }
+
+  dom.value = dom.value.slice(0, from) + dom.value.slice(to);
   try {
-    dom.setSelectionRange(newPos, newPos);
+    dom.setSelectionRange(from, from);
   } catch {
     // May throw on certain input types (e.g. type="number")
   }
   dom.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "deleteContentBackward" }));
-  return [newPos, newPos];
+  return [from, from];
 }
 
 /**
