@@ -37,4 +37,3 @@ Dated design specifications and adversarial-validation records, kept for context
 | [Key-Position Adversarial Hypotheses](./2026-08-10-key-position-adversarial-hypotheses.md)              | Adversarial validation of the grid coordinate as persisted focus state, per CLAUDE.md §7.      |
 | [Native Text Insertion (#230)](./2026-08-11-native-text-insertion-design.md)                            | Inserting through `execCommand` so `maxlength` and the browser undo stack survive.             |
 | [Native Insertion Adversarial Hypotheses](./2026-08-11-native-text-insertion-adversarial-hypotheses.md) | Adversarial validation of the native-insertion suites, per CLAUDE.md §7.                       |
-| [Full-repo Deslop Pass](./2026-08-16-full-repo-deslop-pass.md)                                          | What the comment/type-evidence sweep changed, and why the anti-slop plugin was not adopted.    |
