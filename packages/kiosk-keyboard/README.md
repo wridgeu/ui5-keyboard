@@ -49,6 +49,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a themed, accessible virtual ke
 - [Docked Mode](#docked-mode)
 - [Auto-Show](#auto-show)
   - [Input Detection](#input-detection)
+- [Text Insertion](#text-insertion)
 - [Interop Cookbook](#interop-cookbook)
 - [Auto-Type](#auto-type)
 - [controls](#controls)
@@ -1148,6 +1149,23 @@ myCustomInput.attachBrowserEvent("focusout", () => {
   keyboard.close();
 });
 ```
+
+## Text Insertion
+
+Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack — Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends.
+
+When the target does not hold focus — a programmatic `setControls()` + `show()` that never moved focus, for instance — or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; the eventing is not.
+
+|                                    | Target focused (platform edit)                                                             | Target not focused (assignment) |
+| ---------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------- |
+| `maxlength`                        | Applied by the browser                                                                     | Applied in JS                   |
+| Browser undo stack                 | Edit recorded                                                                              | Not recorded                    |
+| DOM `input` event on the target    | One, dispatched by the platform                                                            | None                            |
+| `liveChange` on the target control | One — the control's own where it raises one from `input`, otherwise raised by the keyboard | One, raised by the keyboard     |
+
+So `liveChange` fires once per edit either way and data binding stays in step on both paths. Bind to it rather than to the DOM `input` event: **a raw `input` listener on the target's DOM element observes the keyboard's edits only while that target holds focus.** An edit that a saturated `maxlength` leaves empty writes nothing and raises nothing.
+
+Read-only and disabled targets are never written to.
 
 ## Interop Cookbook
 

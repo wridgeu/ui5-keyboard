@@ -1,6 +1,6 @@
 # Feature: Backward Compatibility: Kiosk Keyboard Library
 
-> Status: Rejected (2026-03-31). The current minUI5Version of 1.144 is intentional; lowering it is not a priority at this time.
+> Status: Rejected (2026-03-31). Declaring a floor above the API baseline is intentional; dropping to 1.118 is not a priority. The analysis below is written against the 1.144 floor of the time; the manifest declares 1.136.0 today, still above the 1.118 proposed here.
 
 ## Problem
 

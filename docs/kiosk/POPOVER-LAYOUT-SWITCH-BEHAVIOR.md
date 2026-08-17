@@ -2,7 +2,7 @@
 
 ## Affects
 
-KioskKeyboard (Full type) inside `sap.m.Popover` on scrollable pages, on every OpenUI5 version this library supports (1.136.0 through 1.150.0).
+KioskKeyboard (Full type) inside `sap.m.Popover` on scrollable pages, on every OpenUI5 version this library supports (1.136.0 onward, verified through 1.150.0).
 
 ## Symptom
 

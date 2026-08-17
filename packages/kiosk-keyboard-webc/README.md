@@ -362,6 +362,20 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | `keyboard-type-change`  | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                                                                                                 |
 | `active-control-change` | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the active control changes (auto-show focus switch or programmatic `setTargetElement`).                                                                                |
 
+## Text Insertion
+
+Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack — Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends. An input inside an open shadow root qualifies; the focus check descends shadow roots to find it.
+
+When the target does not hold focus — after `setTargetElement()` without a focus move, for instance — or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; what dispatches the `input` event is not.
+
+|                    | Target focused (platform edit)  | Target not focused (assignment)                                                                          |
+| ------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `maxlength`        | Applied by the browser          | Applied in JS                                                                                            |
+| Browser undo stack | Edit recorded                   | Not recorded                                                                                             |
+| `input` event      | One, dispatched by the platform | One synthesized `InputEvent` (`inputType` of `insertText`, `insertLineBreak` or `deleteContentBackward`) |
+
+Either path produces exactly one `input` event per edit, so a listener on the target sees every edit regardless. An edit that a saturated `maxlength` leaves empty writes nothing and dispatches nothing. Read-only and disabled targets are never written to.
+
 ## Methods
 
 | Method                     | Description                                                                                                                                                                                           |

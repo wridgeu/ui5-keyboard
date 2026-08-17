@@ -619,7 +619,7 @@ All built-in layouts and middleware are bundled with the component (direct impor
 | Shadow DOM        | No (UI5 light DOM)                                                   | Yes (native shadow DOM)                                          |
 | Styling           | LESS with `@sapUi*` parameters                                       | CSS with `--sap*` custom properties                              |
 | Target resolution | UI5 association + `Element.closestTo()`                              | DOM ID + `resolveInputOrTextarea()` (shadow DOM aware)           |
-| Data binding      | UI5 `setValue()` / `fireLiveChange()`                                | Native `InputEvent` dispatch                                     |
+| Value write       | Platform edit, else `setValue()` / `fireLiveChange()`                | Platform edit, else assignment + synthesized `InputEvent`        |
 | i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook           | UI5 WC `i18nBundle` + custom resolver                            |
 | Grid navigation   | Extracted to `internal/key-grid-navigation.ts` (`KeyGridNavigation`) | Extracted to `core/key-grid-navigation.ts` (`KeyGridNavigation`) |
 | Tag               | `<kiosk:KioskKeyboard />` (XML)                                      | `<kiosk-keyboard>` (HTML)                                        |
