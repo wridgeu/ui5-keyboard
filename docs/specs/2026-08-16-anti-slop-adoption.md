@@ -111,7 +111,20 @@ forever, so reporting a finding as blocked is only half an answer. Each of the 4
 `// oxlint-disable-next-line` preceded by its reason, which is the mechanism `tools/README.md`
 already prescribes for the `test-guardrails/no-hard-wait` opt-out. This is per-site and reviewed:
 a NEW violation of those rules still fails the build, and the justification sits where the next
-reader will find it. No rule was weakened and no file-level or block-level disable was used.
+reader will find it. No rule was weakened in `.oxlintrc.json`.
+
+One file takes a file-level disable instead: `packages/hotkeys/test/qunit/router-integration.qunit.ts`
+suppresses `no-chained-type-assertions` and `no-object-parameters` for the whole file, under one
+rationale at the top. That suite exists to prove the duck-typed half of `enableRouterIntegration`'s
+documented contract, so `MockRouter as unknown as Router` is the subject of the test rather than a
+shortcut, and it recurs fifteen times with the identical justification. Fifteen copies of the same
+two paragraphs would be worse than one statement of them.
+
+The alternative was tried and rejected: replacing the mock with a real `Router` forces the suite
+to drive `fireBeforeRouteMatched`, which UI5 marks `@ui5-protected`, and it proves only the
+concrete-Router path while the JSDoc promise goes untested. It also fails `lint:ui5`, because
+`ui5lint` reads `new Proxy(router, …)` as constructing a Router and reports the deprecated
+`oConfig.async` default.
 
 The adversarial verify step is what makes this trustworthy and must not be dropped on resume: it
 caught a real shipping regression that a green-looking unit had introduced (a `typeof` guard in
@@ -129,8 +142,12 @@ Recorded because a reviewer correctly pointed out they were otherwise only in a 
   downcast rather than a reinterpretation through the top type. It is not held up as a pattern to
   copy: laundering a deliberately-wrong test value through an intermediate type usually is a dodge,
   and these two survive only because the intermediate is a real supertype.
-- **`fireBeforeRouteMatched` is `@ui5-protected`** in the pinned framework, and
-  `router-integration.qunit.ts` now drives 18 call sites through it. This arrived when the
+- ~~**`fireBeforeRouteMatched` is `@ui5-protected`**~~ **Resolved.** The swap to real `Router`
+  instances was reverted and `router-integration.qunit.ts` is back on its hand-rolled
+  `MockRouter`, so the suite touches no protected framework API and keeps the duck-typed
+  coverage it was always the point of. See the file-level disable noted in section 5. Original
+  finding, kept because it explains that disable:
+  `router-integration.qunit.ts` drove 18 call sites through it. This arrived when the
   hand-rolled `MockRouter` was replaced with real `Router` instances. The duck-typed half of
   `enableRouterIntegration`'s documented contract ("a UI5 Router or any object with
   `attachBeforeRouteMatched` / `detachBeforeRouteMatched`") lost its only coverage in that swap and
