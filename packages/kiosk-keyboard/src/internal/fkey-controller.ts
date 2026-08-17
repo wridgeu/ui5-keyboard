@@ -27,18 +27,24 @@ export interface FKeyHost {
  */
 export default class FKeyController {
   /** Native actions executed in `fKeyMode="Native"` when not prevented. */
-  private static readonly _NATIVE_FKEY_ACTIONS: Record<string, (() => void) | undefined> = {
-    F5: () => {
-      location.reload();
-    },
-    F11: () => {
-      if (document.fullscreenElement) {
-        void document.exitFullscreen?.().catch(() => undefined);
-      } else {
-        void document.documentElement.requestFullscreen?.().catch(() => undefined);
-      }
-    },
-  };
+  private static readonly _NATIVE_FKEY_ACTIONS = new Map<string, () => void>([
+    [
+      "F5",
+      () => {
+        location.reload();
+      },
+    ],
+    [
+      "F11",
+      () => {
+        if (document.fullscreenElement) {
+          void document.exitFullscreen?.().catch(() => undefined);
+        } else {
+          void document.documentElement.requestFullscreen?.().catch(() => undefined);
+        }
+      },
+    ],
+  ]);
 
   /** Tracks unsupported native F-key names already warned about. */
   private static readonly _WARNED_UNSUPPORTED_NATIVE_FKEYS = new Set<string>();
@@ -119,7 +125,7 @@ export default class FKeyController {
   }
 
   private static _executeNativeFKeyAction(fkeyName: string): void {
-    FKeyController._NATIVE_FKEY_ACTIONS[fkeyName]?.();
+    FKeyController._NATIVE_FKEY_ACTIONS.get(fkeyName)?.();
   }
 
   private static _isNativeDispatchableFKey(fkeyName: string): boolean {

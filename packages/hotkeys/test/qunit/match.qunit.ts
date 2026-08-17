@@ -3,20 +3,11 @@ import { parseHotkey } from "ui5/hotkeys/parse";
 import { Platform } from "ui5/hotkeys/library";
 
 /**
- * Create a minimal mock KeyboardEvent for testing.
+ * Create an undispatched KeyboardEvent carrying the given key and modifier state.
+ * Unset fields keep the constructor's defaults.
  */
-function mockKeyEvent(overrides: Partial<KeyboardEvent> & { key: string }): KeyboardEvent {
-  return {
-    key: overrides.key,
-    code: overrides.code ?? "",
-    ctrlKey: overrides.ctrlKey ?? false,
-    shiftKey: overrides.shiftKey ?? false,
-    altKey: overrides.altKey ?? false,
-    metaKey: overrides.metaKey ?? false,
-    repeat: overrides.repeat ?? false,
-    isComposing: overrides.isComposing ?? false,
-    keyCode: overrides.keyCode ?? 0,
-  } as unknown as KeyboardEvent;
+function mockKeyEvent(init: KeyboardEventInit & { key: string }): KeyboardEvent {
+  return new KeyboardEvent("keydown", init);
 }
 
 QUnit.module("match - matchesKeyboardEvent");

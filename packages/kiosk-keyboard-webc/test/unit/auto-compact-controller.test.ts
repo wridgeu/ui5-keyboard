@@ -6,6 +6,13 @@ function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
+/** The part of an observation the controller reads, and the only part the fake reports. */
+interface BorderBoxObservation {
+  readonly borderBoxSize: readonly ResizeObserverSize[];
+}
+
+type ObservationCallback = (entries: readonly BorderBoxObservation[], observer: FakeResizeObserver) => void;
+
 /**
  * Stands in for the observer jsdom does not ship. It also gives the tests the one
  * thing a real observer cannot: an observation delivered at a moment of their
@@ -17,7 +24,7 @@ class FakeResizeObserver {
   readonly observed: Element[] = [];
   disconnected = false;
 
-  constructor(private readonly _callback: ResizeObserverCallback) {
+  constructor(private readonly _callback: ObservationCallback) {
     FakeResizeObserver.instances.push(this);
   }
 
@@ -33,10 +40,7 @@ class FakeResizeObserver {
 
   /** Delivers a border-box inline size the way the real observer reports one. */
   deliver(inlineSize: number): void {
-    this._callback(
-      [{ borderBoxSize: [{ inlineSize, blockSize: 0 }] }] as unknown as ResizeObserverEntry[],
-      this as unknown as ResizeObserver,
-    );
+    this._callback([{ borderBoxSize: [{ inlineSize, blockSize: 0 }] }], this);
   }
 }
 

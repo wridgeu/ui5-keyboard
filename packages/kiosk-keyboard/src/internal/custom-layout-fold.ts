@@ -219,12 +219,19 @@ export function foldCustomLayouts(
       rowsDeclared.add(name);
     }
 
+    // The three guards below degrade one facet rather than throwing. They are inert for a spec
+    // that came through the aggregation, since `validateProperty` coerces to the declared type,
+    // and load-bearing for a hand-built spec and for the drift-pinned webc twin, whose
+    // `@property()` neither coerces nor validates. `spec.compact?.trim()` would throw and take
+    // the whole custom layout down with it.
     const lang = typeof spec.keycapLang === "string" ? spec.keycapLang.trim() : "";
     // Names a layout, so it is normalized the way every layout name is.
     const compact = typeof spec.compact === "string" ? spec.compact.trim().toLowerCase() : "";
     const patch: LayoutMeta = {
       ...(lang && { lang }),
       ...(compact && { compact }),
+      // `boolean`, not truthy and not `!== undefined`: `false` is a role the author chose, while
+      // `null` has to leave the tier below standing.
       ...(typeof spec.secondary === "boolean" && { secondary: spec.secondary }),
     };
     if (Object.keys(patch).length > 0) meta.set(name, { ...meta.get(name), ...patch });
@@ -245,6 +252,7 @@ export function foldCustomLayouts(
 
     if (facets.has("Middleware")) middleware.set(name, null);
     if (spec.middleware !== undefined) {
+      // A diagnostic rather than a `TypeError` at composition time, for the same reason as above.
       if (typeof spec.middleware !== "function") diagnostics.push({ code: "invalid-middleware", layout: name });
       else {
         if (middlewareDeclared.has(name)) diagnostics.push({ code: "duplicate-middleware", layout: name });
@@ -302,12 +310,12 @@ export function describeDiagnostic(d: LayoutDiagnostic, vocab: DiagnosticVocabul
         `where every key has a non-empty string "value". The custom layout's other facets still apply.`
       );
     case "invalid-variants": {
-      const shape =
+      const expectation =
         `is not a variant table. Expected a non-empty object mapping lowercase base letters ` +
         `to arrays of non-empty glyph strings; an empty array suppresses that letter.`;
       // The host raises this code for its own `defaultVariants`, which names no layout.
-      if (!d.layout) return `"defaultVariants" ${shape}`;
-      return `"variants" ${on} ${shape} To opt "${d.layout}" out entirely use suppress="Variants".`;
+      if (!d.layout) return `"defaultVariants" ${expectation}`;
+      return `"variants" ${on} ${expectation} To opt "${d.layout}" out entirely use suppress="Variants".`;
     }
     case "invalid-middleware":
       return (

@@ -7,8 +7,7 @@ const BUILT_IN_LAYOUT = "ko-hangul";
 describe("middleware-registry", () => {
   describe("getMiddlewareFactory", () => {
     it("returns the registered factory function for a built-in layout", () => {
-      const factory = getMiddlewareFactory(BUILT_IN_LAYOUT);
-      expect(typeof factory).toBe("function");
+      expect(getMiddlewareFactory(BUILT_IN_LAYOUT)).toBeInstanceOf(Function);
     });
 
     it("each factory call creates a fresh instance", () => {
@@ -25,8 +24,8 @@ describe("middleware-registry", () => {
       // rendered layout, so the middleware lookup must normalize identically -
       // otherwise `<kiosk-keyboard layout="Ko-Hangul">` renders Hangul but never
       // engages composition.
-      expect(typeof getMiddlewareFactory("Ko-Hangul")).toBe("function");
-      expect(typeof getMiddlewareFactory("  KO-HANGUL  ")).toBe("function");
+      expect(getMiddlewareFactory("Ko-Hangul")).toBeInstanceOf(Function);
+      expect(getMiddlewareFactory("  KO-HANGUL  ")).toBeInstanceOf(Function);
     });
 
     it("instance map shadows the built-in factory", () => {

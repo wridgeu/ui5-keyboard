@@ -193,7 +193,7 @@ export default class KioskProgrammatic extends BaseController {
 
   private _addLayoutOption(name: string): void {
     const viewModel = this._getViewModel();
-    const layouts = viewModel.getProperty("/layouts") as { key: string; text: string }[];
+    const layouts: { key: string; text: string }[] = viewModel.getProperty("/layouts");
     if (layouts.some((entry) => entry.key === name)) return;
     viewModel.setProperty("/layouts", [...layouts, { key: name, text: name }]);
   }
@@ -203,6 +203,8 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   private _setRouteActive(active: boolean): void {
+    // SAFETY: the view declares `<kiosk:KioskKeyboard id="progKeyboard">`; the route handler
+    // can also run once the view is being destroyed, which the `undefined` covers.
     const kb = this.byId("progKeyboard") as KioskKeyboard | undefined;
     if (!kb) return;
 
@@ -223,6 +225,9 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   private _getKeyboard(): KioskKeyboard {
+    // SAFETY: the view declares `<kiosk:KioskKeyboard id="progKeyboard">`, and every caller
+    // either runs from a control event on the live view or, on the router path, only after
+    // `_setRouteActive` resolved the same id and returned when it was missing.
     return this.byId("progKeyboard") as KioskKeyboard;
   }
 
@@ -235,6 +240,8 @@ export default class KioskProgrammatic extends BaseController {
   }
 
   private _getViewModel(): JSONModel {
+    // SAFETY: `onInit` set a JSONModel under `_MODEL_NAME` on this view, and nothing
+    // replaces it, so the model this reads back is that JSONModel.
     return this.getView()!.getModel(KioskProgrammatic._MODEL_NAME) as JSONModel;
   }
 }

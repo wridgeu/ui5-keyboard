@@ -29,7 +29,16 @@ const otherMw = (): never => {
 /** Only these two names resolve without rows, so everything else is an `unknown-target`. */
 const isBuiltIn = (name: string): boolean => name === "qwerty" || name === "ja-kana";
 
-const fold = (...specs: CustomLayoutSpec[]): CustomLayoutFold => foldCustomLayouts(specs, isBuiltIn);
+/**
+ * A spec as the slot delivers it. `middleware` reaches the fold from an attribute
+ * or from plain JS, where nothing has checked it is callable, which is what the
+ * `invalid-middleware` diagnostic exists for.
+ */
+type DeclaredSpec = Omit<CustomLayoutSpec, "middleware"> & {
+  readonly middleware?: CustomLayoutSpec["middleware"] | string | number;
+};
+
+const fold = (...specs: DeclaredSpec[]): CustomLayoutFold => foldCustomLayouts(specs as CustomLayoutSpec[], isBuiltIn);
 const codes = (f: CustomLayoutFold): DiagnosticCode[] => f.diagnostics.map((d) => d.code);
 
 const VOCAB: DiagnosticVocabulary = {
@@ -171,7 +180,7 @@ describe("custom-layout-fold diagnostics", () => {
   });
 
   it("invalid-rows: a rejected rows drops only that facet, and reports alone", () => {
-    const f = fold({ name: "notalayout", rows: [] as unknown as LayoutDefinition, keycapLang: "pl" });
+    const f = fold({ name: "notalayout", rows: [], keycapLang: "pl" });
     expect(codes(f), "never also unknown-target: one mistake, one warning").toEqual(["invalid-rows"]);
     expect(f.layouts).toBeUndefined();
     expect(f.layoutMeta!.get("notalayout")!.lang, "the other facets still apply").toBe("pl");
@@ -184,7 +193,7 @@ describe("custom-layout-fold diagnostics", () => {
   });
 
   it("invalid-middleware: a non-function factory is dropped", () => {
-    const f = fold({ name: "qwerty", middleware: "nope" as unknown as () => never });
+    const f = fold({ name: "qwerty", middleware: "nope" });
     expect(codes(f)).toEqual(["invalid-middleware"]);
     expect(f.middleware).toBeUndefined();
   });
@@ -227,8 +236,8 @@ describe("describeDiagnostic", () => {
   it("every code renders a sentence naming the twin's own surface", () => {
     const f = fold(
       { name: "" },
-      { name: "typo", locales: ["pl", " "], suppress: ["Varients"], middleware: 1 as unknown as () => never },
-      { name: "x", rows: [] as unknown as LayoutDefinition },
+      { name: "typo", locales: ["pl", " "], suppress: ["Varients"], middleware: 1 },
+      { name: "x", rows: [] },
       { name: "x", rows: ROWS, variants: { A: [] } },
       { name: "x", rows: ROWS, middleware: mw },
       { name: "x", middleware: otherMw, locales: ["pl"] },

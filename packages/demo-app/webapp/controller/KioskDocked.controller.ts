@@ -51,6 +51,8 @@ export default class KioskDocked extends BaseController {
   }
 
   private _setKeyboardRouteActive(active: boolean): void {
+    // SAFETY: KioskDocked.view.xml declares dockedKeyboard as a ui5.kiosk.KioskKeyboard; the
+    // undefined arm covers the routeMatched that arrives after the view is destroyed.
     const keyboard = this.byId("dockedKeyboard") as KioskKeyboard | undefined;
     if (!keyboard) return;
 
@@ -71,6 +73,8 @@ export default class KioskDocked extends BaseController {
   }
 
   private _getViewModel(): JSONModel {
+    // SAFETY: onInit sets a JSONModel on this view under _MODEL_NAME, and nothing else
+    // registers anything under that key.
     return this.getView()!.getModel(KioskDocked._MODEL_NAME) as JSONModel;
   }
 }

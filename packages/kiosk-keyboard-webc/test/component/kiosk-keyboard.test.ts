@@ -37,6 +37,15 @@ function setInvalidValue(target: any, property: string, value: string): void {
   target[property] = value;
 }
 
+/**
+ * A resolver return of the wrong element type, which the resolver signature
+ * forbids but a plain-JS consumer can hand back. The runtime type guard exists
+ * for exactly this, so the test has to be able to produce one.
+ */
+function asResolvedInput(el: HTMLDivElement | HTMLInputElement): HTMLInputElement {
+  return el as HTMLInputElement;
+}
+
 describe("kiosk-keyboard", () => {
   // ── Render ──
 
@@ -418,7 +427,7 @@ describe("kiosk-keyboard", () => {
       // and fall through to the built-in resolver which finds the <input>
       // inside the wrapper.
       const badDiv = document.createElement("div");
-      kb.setTargetResolver(() => badDiv as unknown as HTMLInputElement);
+      kb.setTargetResolver(() => asResolvedInput(badDiv));
 
       try {
         queryKey(kb, "z")!.click();
@@ -764,8 +773,8 @@ describe("kiosk-keyboard", () => {
         queryKey(el, "{shift}")!.click();
         await nextRender();
 
-        // After the improvement, shift toggle should not trigger
-        // getComputedStyle calls (responsive sizing deferred to ResizeObserver)
+        // Shift toggle should not trigger getComputedStyle calls (responsive
+        // sizing deferred to ResizeObserver)
         expect(gcsCount, "getComputedStyle calls during shift toggle").to.equal(0);
       } finally {
         window.getComputedStyle = origGCS;
@@ -2200,7 +2209,7 @@ describe("kiosk-keyboard", () => {
 
   describe("invalid value clamping", () => {
     it("clamps invalid enum values back to their defaults", async () => {
-      const cases: [property: string, expectedDefault: string][] = [
+      const cases: [property: "keyboardType" | "fKeyMode" | "mobileKeyboard", expectedDefault: string][] = [
         ["keyboardType", "Full"],
         ["fKeyMode", "Virtual"],
         ["mobileKeyboard", "Auto"],
@@ -2210,7 +2219,7 @@ describe("kiosk-keyboard", () => {
         await nextRender();
         setInvalidValue(el, property, "InvalidValue");
         await nextRender();
-        expect((el as unknown as Record<string, unknown>)[property]).to.equal(expectedDefault);
+        expect(el[property]).to.equal(expectedDefault);
       }
     });
   });

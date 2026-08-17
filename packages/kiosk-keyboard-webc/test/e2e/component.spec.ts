@@ -37,7 +37,7 @@ test.describe("rendering", () => {
 
 test.describe("key interaction", () => {
   test("types into the target input", async ({ page }) => {
-    await page.evaluate(() => (document.getElementById("kb-docked") as HTMLElement & { close(): void })?.close());
+    await page.evaluate(() => (document.getElementById("kb-docked") as HTMLElement & { close(): void }).close());
     await waitForDockedClosed(page, "kb-docked");
 
     await page.locator("#text-input").click();
@@ -49,7 +49,7 @@ test.describe("key interaction", () => {
           const key = kb.shadowRoot?.querySelector('[data-key="a"]') as HTMLElement | null;
           if (key) {
             key.click();
-            return (document.getElementById("text-input") as HTMLInputElement)?.value;
+            return (document.getElementById("text-input") as HTMLInputElement).value;
           }
         }
       }
@@ -89,7 +89,7 @@ test.describe("docked mode", () => {
 test.describe("nav layout and arrow keys", () => {
   test.beforeEach(async ({ page }) => {
     // Close docked so it does not auto-show on input focus.
-    await page.evaluate(() => (document.getElementById("kb-docked") as HTMLElement & { close(): void })?.close());
+    await page.evaluate(() => (document.getElementById("kb-docked") as HTMLElement & { close(): void }).close());
     await waitForDockedClosed(page, "kb-docked");
   });
 

@@ -132,12 +132,12 @@ export function keyboardEventToHotkey(event: KeyboardEvent): string | null {
   }
 
   // Follow canonical MODIFIER_ORDER
-  const modifierFlags: Record<CanonicalModifier, boolean> = {
+  const modifierFlags = {
     Control: event.ctrlKey,
     Alt: event.altKey,
     Shift: event.shiftKey,
     Meta: event.metaKey,
-  };
+  } satisfies Record<CanonicalModifier, boolean>;
   const modifiers = MODIFIER_ORDER.filter((m) => modifierFlags[m]);
 
   const normalizedKey = normalizeKeyName(key);

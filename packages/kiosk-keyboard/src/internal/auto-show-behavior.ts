@@ -25,13 +25,13 @@ interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" 
   getAutoType(): boolean;
   getKeyboardType(): KeyboardType;
   getControls(): string[];
-  show(): unknown;
-  close(): unknown;
+  show(): void;
+  close(): void;
   isOpen(): boolean;
 
   _getActiveTargetId(): string;
   _getEffectiveResolver(): TargetResolverFn | null;
-  _setActiveTarget(target?: string | Control): unknown;
+  _setActiveTarget(target?: string | Control): void;
   _syncControls(): void;
   _resolveClaimableControl(target: EventTarget | null): Control | null;
   _wouldClaimInput(target: EventTarget | null): boolean;
@@ -90,7 +90,7 @@ export default class AutoShowBehavior extends BaseObject {
       this._host._syncControls();
     }
 
-    const target = event.target as HTMLElement;
+    const target = event.target instanceof Node ? event.target : null;
 
     // Ignore focus on the keyboard itself; the rAF callback's own
     // dom.contains(active) guard will keep the keyboard open.
@@ -138,7 +138,7 @@ export default class AutoShowBehavior extends BaseObject {
   private _onDocumentFocusOut(event: FocusEvent): void {
     if (!this._host.getDocked() || !this._host.isOpen()) return;
 
-    const related = event.relatedTarget as HTMLElement | null;
+    const related = event.relatedTarget instanceof Node ? event.relatedTarget : null;
 
     // Fast path: focus staying on the keyboard itself
     const myDom = this._host.getDomRef();
@@ -158,7 +158,7 @@ export default class AutoShowBehavior extends BaseObject {
     this._deferredCloseId = requestAnimationFrame(() => {
       this._deferredCloseId = null;
       if (!this._host.getDocked() || !this._host.isOpen()) return;
-      const active = document.activeElement as HTMLElement | null;
+      const active = document.activeElement;
       const dom = this._host.getDomRef();
       if (dom && active && dom.contains(active)) return;
       if (this._host._wouldClaimInput(active)) return;

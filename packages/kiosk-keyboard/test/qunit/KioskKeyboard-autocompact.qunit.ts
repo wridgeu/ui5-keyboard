@@ -189,11 +189,11 @@ QUnit.test("Switching autoCompact off gives the requested layout back", async (a
 async function mountBound(width: number, mode: "TwoWay" | "OneWay"): Promise<Mounted & { model: JSONModel }> {
   const model = new JSONModel({ layout: "home" });
   const mounted = await mount(width, {
-    layout: { path: "/layout", mode } as unknown as string,
+    layout: { path: "/layout", mode },
     autoCompact: true,
     customLayouts: pair(),
     models: model,
-  } as unknown as $KioskKeyboardSettings);
+  });
   return { ...mounted, model };
 }
 
@@ -277,10 +277,10 @@ QUnit.test("A counterpart whose rows arrive from a model re-tiers on arrival", a
     autoCompact: true,
     customLayouts: [
       new CustomLayout({ name: "home", rows: home, compact: "home-c" }),
-      new CustomLayout({ name: "home-c", rows: "{/rows}" as unknown as LayoutDefinition }),
+      new CustomLayout({ name: "home-c", rows: "{/rows}" }),
     ],
     models: model,
-  } as unknown as $KioskKeyboardSettings);
+  });
   assert.deepEqual(changes, [], "the counterpart has no rows yet, so there is nothing to swap to");
 
   model.setProperty("/rows", homeCompact);
@@ -480,7 +480,7 @@ QUnit.test("A request drops a tier announcement that has not reached the live re
   // The tier writes its announcement for the next render. Driving it directly is
   // what puts a request in the same frame, which a resize cannot do: the observer
   // and the frame it applies from settle before the test regains control.
-  (kb as unknown as { _applyCompactTier(narrow: boolean, crossed: boolean): void })._applyCompactTier(true, true);
+  kb._applyCompactTier(true, true);
   assert.strictEqual(kb.getLayout(), "ja-kana-compact", "the tier swapped");
 
   kb.setLayout("qwerty");

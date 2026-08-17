@@ -32,12 +32,12 @@ QUnit.test("setKeyboardType fires keyboardTypeChange event", (assert) => {
   const kb = new KioskKeyboard();
   const events: Array<{ keyboardType: string; previousKeyboardType: string; autoDetected: boolean }> = [];
 
-  kb.attachEvent("keyboardTypeChange", (event: { getParameters: () => Record<string, unknown> }) => {
+  kb.attachKeyboardTypeChange((event) => {
     const params = event.getParameters();
     events.push({
-      keyboardType: params.keyboardType as string,
-      previousKeyboardType: params.previousKeyboardType as string,
-      autoDetected: params.autoDetected as boolean,
+      keyboardType: params.keyboardType!,
+      previousKeyboardType: params.previousKeyboardType!,
+      autoDetected: params.autoDetected!,
     });
   });
 
@@ -72,12 +72,12 @@ QUnit.test("resetKeyboardType fires keyboardTypeChange when type was different",
 
   kb.setKeyboardType(KeyboardType.Numpad);
 
-  kb.attachEvent("keyboardTypeChange", (event: { getParameters: () => Record<string, unknown> }) => {
+  kb.attachKeyboardTypeChange((event) => {
     const params = event.getParameters();
     events.push({
-      keyboardType: params.keyboardType as string,
-      previousKeyboardType: params.previousKeyboardType as string,
-      autoDetected: params.autoDetected as boolean,
+      keyboardType: params.keyboardType!,
+      previousKeyboardType: params.previousKeyboardType!,
+      autoDetected: params.autoDetected!,
     });
   });
 
@@ -118,12 +118,12 @@ QUnit.test("autoType fires keyboardTypeChange with autoDetected=true", async (as
     autoType: true,
   });
 
-  kb.attachEvent("keyboardTypeChange", (event: { getParameters: () => Record<string, unknown> }) => {
+  kb.attachKeyboardTypeChange((event) => {
     const params = event.getParameters();
     events.push({
-      keyboardType: params.keyboardType as string,
-      previousKeyboardType: params.previousKeyboardType as string,
-      autoDetected: params.autoDetected as boolean,
+      keyboardType: params.keyboardType!,
+      previousKeyboardType: params.previousKeyboardType!,
+      autoDetected: params.autoDetected!,
     });
   });
 

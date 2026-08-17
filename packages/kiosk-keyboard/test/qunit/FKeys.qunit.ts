@@ -119,7 +119,6 @@ QUnit.test("Standalone fkeys layout contains F1-F12 + ABC + Enter", async (asser
 });
 
 QUnit.test("F-keys carry data-fkey and keep the modifier category; non-fkey modifiers do not", async (assert) => {
-  const DOM = KioskKeyboard.DOM;
   const kb = new KioskKeyboard({ layout: "fkeys" });
   await placeAndWait(kb);
 
@@ -324,12 +323,9 @@ QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (a
     pressedKey = e.getParameter("key");
   });
 
-  const statics = FKeyController as unknown as {
-    _executeNativeFKeyAction: (fkeyName: string) => void;
-  };
-  const originalAction = statics._executeNativeFKeyAction;
+  const originalAction = FKeyController["_executeNativeFKeyAction"];
   let nativeAction = "";
-  statics._executeNativeFKeyAction = (fkeyName: string) => {
+  FKeyController["_executeNativeFKeyAction"] = (fkeyName: string) => {
     nativeAction = fkeyName;
   };
 
@@ -342,7 +338,7 @@ QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (a
     assert.strictEqual(nativeAction, "F5", "Native action executed when event is not prevented");
     assert.strictEqual(pressedKey, "F5", "keyPress still fires in Native mode");
   } finally {
-    statics._executeNativeFKeyAction = originalAction;
+    FKeyController["_executeNativeFKeyAction"] = originalAction;
   }
 
   input.destroy();
@@ -372,12 +368,9 @@ QUnit.test("Native fKeyMode skips native action when keydown is prevented", asyn
     pressedKey = e.getParameter("key");
   });
 
-  const statics = FKeyController as unknown as {
-    _executeNativeFKeyAction: (fkeyName: string) => void;
-  };
-  const originalAction = statics._executeNativeFKeyAction;
+  const originalAction = FKeyController["_executeNativeFKeyAction"];
   let actionCalls = 0;
-  statics._executeNativeFKeyAction = () => {
+  FKeyController["_executeNativeFKeyAction"] = () => {
     actionCalls += 1;
   };
 
@@ -387,7 +380,7 @@ QUnit.test("Native fKeyMode skips native action when keydown is prevented", asyn
     assert.strictEqual(actionCalls, 0, "Native action not executed when synthetic keydown is prevented");
     assert.strictEqual(pressedKey, "F5", "keyPress still fires when native action is blocked");
   } finally {
-    statics._executeNativeFKeyAction = originalAction;
+    FKeyController["_executeNativeFKeyAction"] = originalAction;
   }
 
   input.destroy();
@@ -415,12 +408,9 @@ QUnit.test("keyPress preventDefault prevents native dispatch and native action",
     e.preventDefault();
   });
 
-  const statics = FKeyController as unknown as {
-    _executeNativeFKeyAction: (fkeyName: string) => void;
-  };
-  const originalAction = statics._executeNativeFKeyAction;
+  const originalAction = FKeyController["_executeNativeFKeyAction"];
   let actionCalls = 0;
-  statics._executeNativeFKeyAction = () => {
+  FKeyController["_executeNativeFKeyAction"] = () => {
     actionCalls += 1;
   };
 
@@ -430,7 +420,7 @@ QUnit.test("keyPress preventDefault prevents native dispatch and native action",
     assert.strictEqual(dispatched, 0, "No synthetic keydown dispatched when keyPress is prevented");
     assert.strictEqual(actionCalls, 0, "No native action when keyPress is prevented");
   } finally {
-    statics._executeNativeFKeyAction = originalAction;
+    FKeyController["_executeNativeFKeyAction"] = originalAction;
   }
 
   input.destroy();

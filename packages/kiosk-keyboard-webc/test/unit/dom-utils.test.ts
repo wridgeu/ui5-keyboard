@@ -7,6 +7,15 @@ import {
 } from "../../src/core/dom-utils.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 
+/**
+ * A resolver return of the wrong element type, which the resolver signature
+ * forbids but a plain-JS consumer can hand back. The runtime type guard exists
+ * for exactly this, so the tests have to be able to produce one.
+ */
+function asResolvedInput(el: HTMLDivElement | HTMLInputElement): HTMLInputElement {
+  return el as HTMLInputElement;
+}
+
 describe("resolveInputOrTextarea", () => {
   it("returns native input directly", () => {
     const input = document.createElement("input");
@@ -21,6 +30,7 @@ describe("resolveInputOrTextarea", () => {
   it("returns null for non-element", () => {
     expect(resolveInputOrTextarea(null)).toBeNull();
     expect(resolveInputOrTextarea(undefined)).toBeNull();
+    // @ts-expect-error a value only plain JS can supply, which is what the guard covers
     expect(resolveInputOrTextarea("string")).toBeNull();
   });
 
@@ -139,7 +149,7 @@ describe("resolveWithCustomResolver", () => {
     wrapper.appendChild(input);
 
     const div = document.createElement("div");
-    expect(resolveWithCustomResolver(wrapper, () => div as unknown as HTMLInputElement)).toBe(input);
+    expect(resolveWithCustomResolver(wrapper, () => asResolvedInput(div))).toBe(input);
   });
 
   it("catches throwing resolver and falls back to built-in", () => {

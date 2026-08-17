@@ -29,7 +29,7 @@ export function keyElementId(controlId: string, row: number, col: number): strin
 }
 
 /** Type guard: returns true if the value is an HTMLInputElement or HTMLTextAreaElement. */
-function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTextAreaElement {
+function isInputOrTextarea(el: EventTarget | null | undefined): el is HTMLInputElement | HTMLTextAreaElement {
   return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 }
 
@@ -43,7 +43,10 @@ function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTextAreaEl
  * - nested web components (e.g. ui5-step-input → ui5-input → native input)
  *   up to `maxDepth` levels of shadow DOM nesting
  */
-export function resolveInputOrTextarea(el: unknown, maxDepth = 3): HTMLInputElement | HTMLTextAreaElement | null {
+export function resolveInputOrTextarea(
+  el: EventTarget | null | undefined,
+  maxDepth = 3,
+): HTMLInputElement | HTMLTextAreaElement | null {
   if (isInputOrTextarea(el)) {
     return el;
   }

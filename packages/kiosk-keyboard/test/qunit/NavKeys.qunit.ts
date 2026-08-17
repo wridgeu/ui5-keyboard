@@ -314,9 +314,8 @@ QUnit.test("nav is treated as secondary layout and returns to base via {layout:b
 });
 
 QUnit.test("Consumers can compose fkey-row + nav-row + base layout", async (assert) => {
-  const base = KioskKeyboard.getRegisteredLayout("qwerty");
+  const base = KioskKeyboard.getRegisteredLayout("qwerty")!;
   assert.ok(base, "qwerty base layout exists");
-  if (!base) return;
 
   const composite: LayoutDefinition = [fkeyRow, navRow, ...base];
 

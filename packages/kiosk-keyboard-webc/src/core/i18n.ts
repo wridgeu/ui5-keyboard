@@ -15,7 +15,6 @@ import type { I18nText } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
 import getLocale from "@ui5/webcomponents-base/dist/locale/getLocale.js";
 
-// Import generated i18n defaults (typed key constants with defaultText fallbacks)
 import * as I18N from "../generated/i18n/i18n-defaults.js";
 
 const I18N_NAMESPACE = "kiosk-keyboard-webc";
@@ -64,14 +63,6 @@ export function setI18nResolver(fn: I18nResolver | null): void {
   _resolver = fn;
 }
 
-/**
- * Get a translated text for the given i18n key.
- *
- * Resolution order:
- * 1. Resolver callback (if set and returns a string)
- * 2. UI5 WC i18n bundle (locale-aware, loaded from JSON assets)
- * 3. Default text from i18n-defaults.ts (English fallback)
- */
 type I18nKey = keyof typeof I18N;
 
 /** Fills `{0}`/`{1}`/… placeholders in a default text when no bundle is active. */
@@ -84,10 +75,20 @@ function _formatMessage(text: string, args: (string | number)[]): string {
 }
 
 function lookupI18nText(key: string): I18nText | undefined {
+  // SAFETY: `Object.hasOwn` has just confirmed `key` names an own export of the
+  // generated defaults module, and `I18nKey` is exactly that module's key set.
   // oxlint-disable-next-line import/namespace -- key is a runtime lookup, guarded by Object.hasOwn
   return Object.hasOwn(I18N, key) ? I18N[key as I18nKey] : undefined;
 }
 
+/**
+ * Get a translated text for the given i18n key.
+ *
+ * Resolution order:
+ * 1. Resolver callback (if set and returns a string)
+ * 2. UI5 WC i18n bundle (locale-aware, loaded from JSON assets)
+ * 3. Default text from i18n-defaults.ts (English fallback)
+ */
 export function getText(key: string, fallback: string, ...args: (string | number)[]): string {
   const i18nText = lookupI18nText(key);
   const defaultText = i18nText?.defaultText ?? fallback;
@@ -110,6 +111,9 @@ export function getText(key: string, fallback: string, ...args: (string | number
   if (_resolver) {
     try {
       const override = _resolver(key, _getLanguage(), resolved);
+      // A string overrides, anything else keeps the base text: the declared return type is
+      // unenforceable across a call into consumer code, and `override !== undefined` would let a
+      // number through `_formatMessage`, which returns its input unchanged when `args` is empty.
       if (typeof override === "string") return _formatMessage(override, args);
     } catch (err) {
       console.warn("[kiosk-keyboard] i18n resolver threw:", err);

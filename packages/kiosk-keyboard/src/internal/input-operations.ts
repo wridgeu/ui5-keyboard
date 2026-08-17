@@ -63,6 +63,9 @@ function nativeEdit(
   end: number,
   command: () => boolean,
 ): boolean {
+  // `lib.dom` types `execCommand` as always present, but it is deprecated and absent in
+  // non-browser DOM shims. Probed before `setSelectionRange` has moved the caret, rather than
+  // left to the `catch` below.
   if (typeof document.execCommand !== "function") return false;
   // The command edits whatever is focused, never the element it is handed
   if (activeElement() !== dom) return false;
@@ -342,8 +345,10 @@ export function setTargetValue(
  * a `value` metadata property.
  */
 function writeTargetValue(element: TargetElement, newValue: string, customResolver?: TargetResolverFn | null): void {
+  // `in` narrows the member to `unknown`, so the `typeof` is what makes it callable. `element` is
+  // whatever control the target resolver landed on, where `setValue` may be a data member.
   if ("setValue" in element && typeof element.setValue === "function") {
-    (element.setValue as (v: string) => unknown).call(element, newValue);
+    element.setValue(newValue);
   } else if (element.getMetadata().hasProperty("value")) {
     element.setProperty("value", newValue);
   } else {

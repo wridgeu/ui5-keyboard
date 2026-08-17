@@ -55,7 +55,7 @@ describe("composition-utils", () => {
         committed = (e as CompositionEvent).data;
       });
       startComposition(state, input);
-      updateComposition(state, input, "が"); // が
+      updateComposition(state, input, "が");
       endComposition(state, input);
       expect(input.value).toBe("helloが");
       expect(committed).toBe("が");

@@ -92,24 +92,24 @@ export const KEY_ALIASES: Readonly<Record<string, string>> = {
  *
  * @since 0.1.0
  */
-export const MAC_MODIFIER_SYMBOLS: Readonly<Record<CanonicalModifier, string>> = {
+export const MAC_MODIFIER_SYMBOLS = {
   Control: "\u2303",
   Alt: "\u2325",
   Shift: "\u21E7",
   Meta: "\u2318",
-};
+} as const satisfies Record<CanonicalModifier, string>;
 
 /**
  * Windows/Linux modifier display labels (joined with "+").
  *
  * @since 0.1.0
  */
-export const STANDARD_MODIFIER_LABELS: Readonly<Record<CanonicalModifier, string>> = {
+export const STANDARD_MODIFIER_LABELS = {
   Control: "Ctrl",
   Alt: "Alt",
   Shift: "Shift",
   Meta: "Win",
-};
+} as const satisfies Record<CanonicalModifier, string>;
 
 /**
  * Display symbols for special keys.

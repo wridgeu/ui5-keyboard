@@ -17,6 +17,9 @@ interface NavigatorUAData {
  */
 export function detectPlatform(): Platform {
   // Modern API (Chromium-based browsers)
+  // SAFETY: lib.dom declares no `userAgentData`, so the intersection only adds it as an
+  // optional property of the same `navigator`. Nothing is claimed about it being present:
+  // the read is guarded below, and every non-Chromium browser takes the legacy path.
   const uaData = (navigator as Navigator & { userAgentData?: NavigatorUAData }).userAgentData;
   if (uaData?.platform) {
     return resolvePlatformString(uaData.platform.toLowerCase());

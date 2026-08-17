@@ -61,6 +61,9 @@ function nativeEdit(
   end: number,
   command: () => boolean,
 ): boolean {
+  // `lib.dom` types `execCommand` as always present, but it is deprecated and absent in
+  // non-browser DOM shims. Probed before `setSelectionRange` has moved the caret, rather than
+  // left to the `catch` below.
   if (typeof document.execCommand !== "function") return false;
   // The command edits whatever is focused, never the element it is handed
   if (activeElement() !== dom) return false;

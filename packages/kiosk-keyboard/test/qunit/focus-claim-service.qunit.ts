@@ -1,5 +1,6 @@
 import FocusClaimService from "ui5/kiosk/internal/focus-claim-service";
 import Control from "sap/ui/core/Control";
+import type { $ControlSettings } from "sap/ui/core/Control";
 import Input from "sap/m/Input";
 import type RenderManager from "sap/ui/core/RenderManager";
 import TextArea from "sap/m/TextArea";
@@ -17,6 +18,13 @@ interface TypedInputControl extends Control {
   getInputType(): string;
   getInputDisabled(): boolean;
   getInputReadOnly(): boolean;
+}
+
+/** What the generated constructor accepts: the base control's settings plus TypedInput's own properties. */
+interface TypedInputSettings extends $ControlSettings {
+  inputType?: string;
+  inputDisabled?: boolean;
+  inputReadOnly?: boolean;
 }
 
 /** Minimal UI5 Control wrapping a single <input> with configurable type/disabled/readOnly. */
@@ -44,7 +52,7 @@ const TypedInput = Control.extend("test.FcsTypedInput", {
   getFocusDomRef(this: Control) {
     return document.getElementById(this.getId() + "-inner");
   },
-}) as new (settings?: object) => TypedInputControl;
+}) as new (settings?: TypedInputSettings) => TypedInputControl;
 
 function createService(
   overrides: {

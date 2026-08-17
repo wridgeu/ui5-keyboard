@@ -7,15 +7,24 @@ import { customLayout, requireKey } from "../helpers/fixtures.js";
 const nextRender = renderFinished;
 
 /**
- * Spy middleware factory wired through a slotted `<kiosk-keyboard-custom-layout>`.
- * `created` proves whether the keyboard instantiated the middleware at all;
- * `handled` records the keys routed through it; `commits` counts forced commits
- * of an in-progress composition.
+ * What a spy middleware observed. `created` proves whether the keyboard
+ * instantiated the middleware at all; `handled` records the keys routed through
+ * it; `commits` counts forced commits of an in-progress composition.
  */
-function spyMiddleware(): {
-  calls: { created: number; handled: string[]; commits: number };
+interface MiddlewareCalls {
+  created: number;
+  handled: string[];
+  commits: number;
+}
+
+/** A spy middleware factory and the record it writes into. */
+interface SpyMiddleware {
+  calls: MiddlewareCalls;
   factory: () => CompositionMiddleware;
-} {
+}
+
+/** Spy middleware factory wired through a slotted `<kiosk-keyboard-custom-layout>`. */
+function spyMiddleware(): SpyMiddleware {
   const calls = { created: 0, handled: [] as string[], commits: 0 };
   const factory = (): CompositionMiddleware => {
     calls.created++;

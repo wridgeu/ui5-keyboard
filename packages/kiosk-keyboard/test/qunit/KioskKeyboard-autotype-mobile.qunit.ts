@@ -21,11 +21,11 @@ let savedDeviceFlags: Record<string, boolean> = {};
 
 type DeviceProfile = Record<"phone" | "tablet" | "desktop", boolean>;
 
-const deviceProfiles: Record<string, DeviceProfile> = {
+const deviceProfiles = {
   phone: { phone: true, tablet: false, desktop: false },
   tablet: { phone: false, tablet: true, desktop: false },
   desktop: { phone: false, tablet: false, desktop: true },
-};
+} satisfies Record<string, DeviceProfile>;
 
 function emulateDevice(profile: keyof typeof deviceProfiles): void {
   for (const [key, value] of Object.entries(deviceProfiles[profile])) {
@@ -792,7 +792,7 @@ QUnit.test("Binding keyboardType turns autoType off, so detection never reaches 
     docked: true,
     autoShow: true,
     autoType: true,
-    keyboardType: { path: "/type", mode: "TwoWay" } as unknown as KeyboardType,
+    keyboardType: { path: "/type", mode: "TwoWay" },
     models: model,
   });
   await placeAndWait(kb);

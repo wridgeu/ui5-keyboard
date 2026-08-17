@@ -5,6 +5,8 @@ import { shiftedGlyph } from "./latin-variants";
 import type { KeyDefinition } from "../types";
 
 /** Map from special key value to [i18nKey, fallback]. */
+// The open `string` key is the contract: `getKeyLabel` and `getKeyAriaLabel` look this up by
+// `key.value`, any token a custom layout declares.
 const SPECIAL_KEY_I18N: Record<string, [string, string]> = {
   "{backspace}": [SPECIAL_KEY_I18N_KEYS.backspace, "Backspace"],
   "{enter}": [SPECIAL_KEY_I18N_KEYS.enter, "Enter"],

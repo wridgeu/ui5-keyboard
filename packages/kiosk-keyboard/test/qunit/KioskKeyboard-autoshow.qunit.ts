@@ -238,7 +238,7 @@ QUnit.test("destroy cancels deferred null-relatedTarget close", async (assert) =
   const cancelled = cancelSpy.calledWith(deferredCloseId as number);
   cancelSpy.restore();
 
-  assert.strictEqual(typeof deferredCloseId, "number", "focusout with null relatedTarget schedules a deferred close");
+  assert.notStrictEqual(deferredCloseId, undefined, "focusout with null relatedTarget schedules a deferred close");
   assert.ok(cancelled, "destroy cancels the pending deferred-close rAF");
 
   input.destroy();

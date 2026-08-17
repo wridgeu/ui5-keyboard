@@ -101,12 +101,12 @@ QUnit.test("keyboardTypeChange event on auto-detected transitions", async (asser
     autoType: true,
   });
 
-  kb.attachEvent("keyboardTypeChange", (event: { getParameters: () => Record<string, unknown> }) => {
+  kb.attachKeyboardTypeChange((event) => {
     const params = event.getParameters();
     events.push({
-      keyboardType: params.keyboardType as string,
-      previousKeyboardType: params.previousKeyboardType as string,
-      autoDetected: params.autoDetected as boolean,
+      keyboardType: params.keyboardType!,
+      previousKeyboardType: params.previousKeyboardType!,
+      autoDetected: params.autoDetected!,
     });
   });
 
@@ -333,8 +333,8 @@ QUnit.test(
     assert.strictEqual(kb.getActiveControl()?.getId(), inputA.getId(), "Target is inputA after focus");
 
     // Compose a partial syllable in inputA: ㅎ + ㅏ → 하 (still composing)
-    tapKey(kb, "ㅎ"); // ㅎ
-    tapKey(kb, "ㅏ"); // ㅏ
+    tapKey(kb, "ㅎ");
+    tapKey(kb, "ㅏ");
     assert.strictEqual(domA.value, "하", "inputA shows composing 하 (preedit live)");
 
     // Switch target to inputB mid-composition
@@ -347,7 +347,7 @@ QUnit.test(
 
     // The next keypress starts a FRESH composition on inputB; inputA's state
     // must not leak (the bug produced 한 in inputB and corrupted offsets).
-    tapKey(kb, "ㄴ"); // ㄴ
+    tapKey(kb, "ㄴ");
     assert.strictEqual(domB.value, "ᄂ", "inputB starts fresh with ㄴ (leading jamo), no leak from inputA");
     assert.strictEqual(domA.value, "하", "inputA is unchanged by typing into inputB");
 

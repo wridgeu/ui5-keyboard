@@ -3,7 +3,7 @@ import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
-const LAYOUT_DESCRIPTIONS: Record<string, string> = {
+const LAYOUT_DESCRIPTIONS = {
   emoji:
     "3 rows of emojis (Unicode) + bottom row with Space, Backspace, and Done. Demonstrates Unicode character values.",
   "ip-address": "3x3 digit grid + dot/0/backspace row + full-width Enter. Minimal pad for IP address entry.",
@@ -13,7 +13,9 @@ const LAYOUT_DESCRIPTIONS: Record<string, string> = {
     'Arabic-Indic digits shipped as their own element, <demo:ArabicDigitsCustomLayout>, rather than as bare rows. The declared keycapLang="ar" is emitted on each keycap label, so a screen reader announces them with Arabic pronunciation rules instead of the UI language.',
   "icon-label":
     "Icon + label rendering modes: SAP icons, Unicode/emoji icons, icon-only, built-in special keys with dual rendering, and capsLock overrides. Double-tap Shift on row 3 to see capsLockLabel/capsLockIcon.",
-};
+} satisfies Record<string, string>;
+
+type GalleryLayoutName = keyof typeof LAYOUT_DESCRIPTIONS;
 
 /**
  * Custom layouts gallery - five layouts declared as `<kiosk:CustomLayout>` child
@@ -75,11 +77,15 @@ export default class KioskCustomLayouts extends BaseController {
   }
 
   private _switchVariantLayout(name: string): void {
+    // SAFETY: the view declares `<kiosk:KioskKeyboard id="variantKeyboard">`, so the
+    // view-local id resolves to that control for as long as this controller lives.
     (this.byId("variantKeyboard") as KioskKeyboard).setLayout(name);
     this.getStateModel().setProperty("/variantLayout", name);
   }
 
-  private _switchLayout(name: string): void {
+  private _switchLayout(name: GalleryLayoutName): void {
+    // SAFETY: the view declares `<kiosk:KioskKeyboard id="customKeyboard">`, so the
+    // view-local id resolves to that control for as long as this controller lives.
     const kb = this.byId("customKeyboard") as KioskKeyboard;
     kb.resetKeyboardType();
     kb.setLayout(name);

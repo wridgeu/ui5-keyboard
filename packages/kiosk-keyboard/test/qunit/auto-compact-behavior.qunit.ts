@@ -15,7 +15,7 @@ function nextFrame(): Promise<void> {
  * is applied from a frame of its own, never from the observation callback" is
  * assertable rather than inferred.
  */
-class FakeResizeObserver {
+class FakeResizeObserver implements ResizeObserver {
   static instances: FakeResizeObserver[] = [];
   readonly observed: Element[] = [];
   disconnected = false;
@@ -28,18 +28,23 @@ class FakeResizeObserver {
     this.observed.push(target);
   }
 
+  unobserve(target: Element): void {
+    const index = this.observed.indexOf(target);
+    if (index !== -1) this.observed.splice(index, 1);
+  }
+
   disconnect(): void {
     this.disconnected = true;
   }
 
   /** Delivers a border-box inline size the way the real observer reports one. */
   deliver(inlineSize: number): void {
-    this.deliverEntries([{ borderBoxSize: [{ inlineSize, blockSize: 0 }] }] as unknown as ResizeObserverEntry[]);
+    this.deliverEntries([{ borderBoxSize: [{ inlineSize, blockSize: 0 }] }]);
   }
 
-  /** Delivers entries verbatim, for shapes a border-box inline size cannot express. */
-  deliverEntries(entries: ResizeObserverEntry[]): void {
-    this._callback(entries, this as unknown as ResizeObserver);
+  /** Delivers entries verbatim, for observations a border-box inline size cannot express. */
+  deliverEntries(entries: readonly Partial<ResizeObserverEntry>[]): void {
+    this._callback(entries as ResizeObserverEntry[], this);
   }
 }
 
@@ -73,7 +78,7 @@ function thresholdPx(): number {
 QUnit.module("AutoCompactBehavior", {
   beforeEach() {
     FakeResizeObserver.instances = [];
-    window.ResizeObserver = FakeResizeObserver as unknown as typeof ResizeObserver;
+    window.ResizeObserver = FakeResizeObserver;
     dom = fixtureElement();
     hostDom = dom;
     enabled = true;
@@ -289,7 +294,7 @@ QUnit.test("The threshold follows the custom property", async (assert) => {
 QUnit.test("An entry without a border box is ignored", async (assert) => {
   behavior.syncObserver(dom);
 
-  observer().deliverEntries([{}] as unknown as ResizeObserverEntry[]);
+  observer().deliverEntries([{}]);
   await nextFrame();
   assert.deepEqual(applied, [], "no width was reported, so no tier was evaluated");
 

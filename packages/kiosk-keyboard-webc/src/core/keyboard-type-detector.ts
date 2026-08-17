@@ -7,7 +7,12 @@ import type { KeyboardType } from "../types.js";
 type KeyboardTypeValue = Exclude<`${KeyboardType}`, "Numeric">;
 
 /** Valid values for the `data-keyboard-type` explicit override attribute. */
-const VALID_DATA_OVERRIDES: ReadonlySet<KeyboardTypeValue> = new Set(["Full", "Numpad"]);
+const VALID_DATA_OVERRIDES: ReadonlySet<string> = new Set<KeyboardTypeValue>(["Full", "Numpad"]);
+
+/** Whether an authored `data-keyboard-type` value names a keyboard type auto-detection can return. */
+function isDataOverride(value: string): value is KeyboardTypeValue {
+  return VALID_DATA_OVERRIDES.has(value);
+}
 
 /** Numeric input modes that map to Numpad keyboard. */
 const NUMPAD_INPUT_MODES: ReadonlySet<string> = new Set(["numeric", "decimal", "tel"]);
@@ -47,8 +52,8 @@ function closestDataKeyboardType(el: Element): string | null {
 export function detectKeyboardType(dom: HTMLInputElement | HTMLTextAreaElement): KeyboardTypeValue {
   // 1. Explicit override via data attribute (crosses shadow DOM boundaries)
   const explicit = closestDataKeyboardType(dom);
-  if (explicit !== null && (VALID_DATA_OVERRIDES as ReadonlySet<string>).has(explicit)) {
-    return explicit as KeyboardTypeValue;
+  if (explicit !== null && isDataOverride(explicit)) {
+    return explicit;
   }
 
   // 2. Check inputmode attribute. `inputmode` is an enumerated HTML

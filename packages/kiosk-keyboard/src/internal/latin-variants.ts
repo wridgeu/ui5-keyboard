@@ -21,6 +21,9 @@ export type VariantTable = Readonly<Record<string, readonly string[]>>;
  * Ordered Latin-diacritic variants keyed by lowercase base letter. The base
  * letter itself is the tap default and is not included in its list.
  */
+// Annotated rather than inferred: narrowing to the eleven literal base letters would drop
+// `readonly` from the values and the index signature a consumer reads it by, on a
+// documented-stable export.
 export const LATIN_DIACRITIC_VARIANTS: VariantTable = {
   a: ["à", "á", "â", "ä", "æ", "ã", "å", "ā"],
   c: ["ç", "ć", "č"],

@@ -22,7 +22,7 @@ QUnit.test("the library publishes the table without publishing its type name", a
   // runtime assignment for both names, publishing `ui5.kiosk.VariantTable` as
   // `undefined`. The type has to leave through a separate `export type`, which
   // only this assertion distinguishes from the collapsed form.
-  const library = (await import("ui5/kiosk/library")) as unknown as Record<string, unknown>;
+  const library = await import("ui5/kiosk/library");
   assert.strictEqual(
     library.LATIN_DIACRITIC_VARIANTS,
     LATIN_DIACRITIC_VARIANTS,
@@ -171,7 +171,7 @@ QUnit.test("a table keyed __proto__ contributes an own entry, not a prototype", 
   const table = resolveVariantTable("qwerty", named("qwerty", polluted))!;
   assert.strictEqual(Object.getPrototypeOf(table), null, "the merged table has a null prototype");
   assert.ok(Object.hasOwn(table, "__proto__"), "the key lands as an own property");
-  assert.strictEqual(({} as Record<string, unknown>).x, undefined, "Object.prototype is unpolluted");
+  assert.notOk(Object.hasOwn(Object.prototype, "x"), "Object.prototype is unpolluted");
 });
 
 QUnit.test("a suppressing named entry with no table of its own opts the layout out", (assert) => {

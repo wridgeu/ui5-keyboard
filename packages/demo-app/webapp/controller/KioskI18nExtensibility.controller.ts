@@ -6,7 +6,7 @@ import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
-const MODE_DESCRIPTIONS: Record<string, string> = {
+const MODE_DESCRIPTIONS = {
   default:
     "Built-in English aria-labels (no customization). Special keys show icons; their text is only exposed to screen readers.",
   french:
@@ -14,9 +14,9 @@ const MODE_DESCRIPTIONS: Record<string, string> = {
   override:
     'Partial English overrides via resolver. Enter -> "Go", Backspace -> "Delete", keyboard aria-label -> "Touch Keyboard".',
   hook: 'Programmatic resolver. Uppercases special-key aria-labels (SHIFT, ENTER, etc.) and sets the keyboard aria-label to "Custom Keyboard".',
-};
+} satisfies Record<string, string>;
 
-const FRENCH_TEXTS: Record<string, string> = {
+const FRENCH_TEXTS = {
   KIOSK_KEYBOARD_LABEL: "Clavier virtuel",
   KIOSK_KEYBOARD_ROLEDESCRIPTION: "clavier",
   KEY_SHIFT: "Maj",
@@ -30,13 +30,18 @@ const FRENCH_TEXTS: Record<string, string> = {
   ARIA_SHIFT_OFF: "Majuscule d\u00e9sactiv\u00e9e",
   ARIA_KEYBOARD_OPENED: "Clavier virtuel ouvert",
   ARIA_KEYBOARD_CLOSED: "Clavier virtuel ferm\u00e9",
-};
+} satisfies Record<string, string>;
 
-const OVERRIDE_TEXTS: Record<string, string> = {
+const OVERRIDE_TEXTS = {
   KIOSK_KEYBOARD_LABEL: "Touch Keyboard",
   KEY_ENTER: "Go",
   KEY_BACKSPACE: "Delete",
-};
+} satisfies Record<string, string>;
+
+/** Narrows an incoming key to one the given table actually declares. */
+function declares<Table extends object>(table: Table, key: string): key is string & keyof Table {
+  return key in table;
+}
 
 /**
  * i18n extensibility demo - shows customization via setI18nResolver():
@@ -74,7 +79,7 @@ export default class KioskI18nExtensibility extends BaseController {
     this._inspectorDelegate = {
       onAfterRendering: () => this._updateAriaInspector(),
     };
-    (this.byId("i18nKeyboard") as KioskKeyboard).addEventDelegate(this._inspectorDelegate, this);
+    this.byId("i18nKeyboard")!.addEventDelegate(this._inspectorDelegate, this);
 
     const router = this.getRouter();
     router.getRoute(Scope.KioskI18nExtensibility)?.attachPatternMatched(this._onPatternMatched, this);
@@ -86,7 +91,7 @@ export default class KioskI18nExtensibility extends BaseController {
     router.getRoute(Scope.KioskI18nExtensibility)?.detachPatternMatched(this._onPatternMatched, this);
     router.detachRouteMatched(this._onRouteMatched, this);
     if (this._inspectorDelegate) {
-      (this.byId("i18nKeyboard") as KioskKeyboard | undefined)?.removeEventDelegate(this._inspectorDelegate);
+      this.byId("i18nKeyboard")?.removeEventDelegate(this._inspectorDelegate);
     }
     this._resetI18n();
   }
@@ -109,7 +114,8 @@ export default class KioskI18nExtensibility extends BaseController {
         break;
     }
 
-    this._getViewModel().setData({ activeMode: key, modeDescription: MODE_DESCRIPTIONS[key] ?? "" }, true);
+    const description = declares(MODE_DESCRIPTIONS, key) ? MODE_DESCRIPTIONS[key] : "";
+    this._getViewModel().setData({ activeMode: key, modeDescription: description }, true);
   }
 
   onNavBack(): void {
@@ -124,11 +130,11 @@ export default class KioskI18nExtensibility extends BaseController {
   }
 
   private _applyFrench(): void {
-    KioskKeyboard.setI18nResolver((key) => FRENCH_TEXTS[key]);
+    KioskKeyboard.setI18nResolver((key) => (declares(FRENCH_TEXTS, key) ? FRENCH_TEXTS[key] : undefined));
   }
 
   private _applyOverrides(): void {
-    KioskKeyboard.setI18nResolver((key) => OVERRIDE_TEXTS[key]);
+    KioskKeyboard.setI18nResolver((key) => (declares(OVERRIDE_TEXTS, key) ? OVERRIDE_TEXTS[key] : undefined));
   }
 
   private _applyHook(): void {
@@ -146,8 +152,7 @@ export default class KioskI18nExtensibility extends BaseController {
   // ARIA Inspector
 
   private _updateAriaInspector(): void {
-    const keyboard = this.byId("i18nKeyboard") as KioskKeyboard | undefined;
-    const dom = keyboard?.getDomRef();
+    const dom = this.byId("i18nKeyboard")?.getDomRef();
     if (!dom) return;
 
     const readKeyLabel = (dataKey: string): string => {
@@ -187,6 +192,8 @@ export default class KioskI18nExtensibility extends BaseController {
   }
 
   private _getViewModel(): JSONModel {
+    // SAFETY: `onInit` set a JSONModel under `_MODEL_NAME` on this view, and nothing
+    // replaces it, so the model this reads back is that JSONModel.
     return this.getView()!.getModel(KioskI18nExtensibility._MODEL_NAME) as JSONModel;
   }
 }

@@ -250,7 +250,6 @@ document.querySelectorAll(".i18n-lang-btn").forEach((btn) => {
   btn.addEventListener("click", async () => {
     const lang = btn.dataset.lang;
 
-    // Update active button
     document.querySelectorAll(".i18n-lang-btn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
 

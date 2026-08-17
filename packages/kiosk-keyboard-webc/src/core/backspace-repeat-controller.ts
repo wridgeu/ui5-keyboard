@@ -100,7 +100,8 @@ export class BackspaceRepeatController {
   private _start(e: PointerEvent): void {
     if (this._host.disabled) return;
     if (e.button > 0) return; // primary press only (0 for touch/pen/left mouse)
-    const keyEl = (e.target as HTMLElement).closest?.<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
+    const target = e.target;
+    const keyEl = target instanceof Element ? target.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook) : null;
     if (!keyEl || keyEl.dataset.key !== "{backspace}") return;
     this.stop();
     this._suppressNextClick = false;

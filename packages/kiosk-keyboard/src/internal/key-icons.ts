@@ -12,6 +12,8 @@ const SAP_ICON_PREFIX = "sap-icon://";
  */
 
 /** Default icons for special keys - used when the key has no explicit icon. */
+// The open `string` key is the contract: `getKeyIcon` looks this up by whatever token a custom
+// layout declares. Re-exported as the public static `KioskKeyboard.SPECIAL_KEY_ICONS`.
 export const SPECIAL_KEY_ICONS: Readonly<Record<string, string>> = {
   "{backspace}": SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.backspace,
   "{shift}": SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.shift,

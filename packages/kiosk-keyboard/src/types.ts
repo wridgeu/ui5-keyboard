@@ -367,8 +367,6 @@ export interface CustomLayoutSpec {
   readonly suppress?: readonly string[];
 }
 
-// i18n resolver type
-
 /**
  * Resolver callback for programmatic i18n overrides.
  *

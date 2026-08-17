@@ -6,11 +6,6 @@
  * continuously while Backspace is held. The callback returns whether the
  * gesture should keep repeating (e.g. `false` once the input is empty), at
  * which point the scheduler stops on its own.
- *
- * The timing constants are intentionally duplicated in the sibling
- * `kiosk-keyboard-webc` package (`src/core/auto-repeat.ts`) rather than
- * hoisted into a shared module: the two packages deliberately do not share
- * code (see the repo convention). Keep the two curves in sync by hand.
  */
 export interface AutoRepeatTiming {
   /** Delay before the first repeat fires while the key stays held (ms). */
@@ -23,7 +18,7 @@ export interface AutoRepeatTiming {
   readonly accelerationFactor: number;
 }
 
-/** Backspace auto-repeat curve - kept identical across both keyboard packages. */
+/** Backspace auto-repeat curve. */
 export const BACKSPACE_AUTO_REPEAT: AutoRepeatTiming = {
   initialDelayMs: 450,
   startIntervalMs: 140,

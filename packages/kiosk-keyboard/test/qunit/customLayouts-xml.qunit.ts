@@ -105,15 +105,13 @@ QUnit.test("a middleware factory resolves through core:require", async (assert) 
   await waitForRender();
 
   const kb = v.byId("kb") as KioskKeyboard;
-  // The assertion is on the resolved value specifically: a view that failed to parse
-  // at all would prove nothing about the function-property path. `resolveReference`
-  // binds the dotted reference to its module, so this compares behaviour rather than
-  // identity - the factory must be the real one and must actually run.
-  const resolved = kb.getCustomLayouts()[0]!.getMiddleware() as (() => unknown) | null;
-  assert.strictEqual(typeof resolved, "function", "the reference resolves to a function, not to a string");
+  // `resolveReference` binds the dotted reference to its module, so this compares
+  // behaviour rather than identity: invoking the resolved value and watching the
+  // module's own tally move proves the factory is the real one and actually runs.
+  const resolved = kb.getCustomLayouts()[0]!.getMiddleware();
   const before = Mw.created;
   resolved!();
-  assert.strictEqual(Mw.created, before + 1, "and it is the module's own factory");
+  assert.strictEqual(Mw.created, before + 1, "the reference resolves to the module's own factory, not to a string");
 
   v.destroy();
 });
@@ -196,21 +194,23 @@ QUnit.test("a typo in a closed enum attribute fails loudly rather than silently"
   // The facet type validates each token against the enum's members and
   // `validateProperty` throws on a rejected one, so a mis-spelled facet cannot
   // resolve to nothing without a word.
-  const rejected = await view(`<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:kiosk="ui5.kiosk">
+  let rejection: string | null = null;
+  try {
+    await view(`<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns:kiosk="ui5.kiosk">
     <kiosk:KioskKeyboard id="kb" layout="qwerty">
       <kiosk:customLayouts>
         <kiosk:CustomLayout name="qwerty" suppress="Varients" />
       </kiosk:customLayouts>
     </kiosk:KioskKeyboard>
-  </mvc:View>`).then(
-    () => null,
-    (error: unknown) => error,
-  );
+  </mvc:View>`);
+  } catch (error) {
+    rejection = String(error);
+  }
 
   // The rejected view never resolves, so there is nothing to destroy.
-  assert.ok(rejected, "the view rejects rather than resolving with a silently-dropped facet");
+  assert.ok(rejection, "the view rejects rather than resolving with a silently-dropped facet");
   assert.ok(
-    String(rejected).includes("ui5.kiosk.LayoutFacet[]"),
+    String(rejection).includes("ui5.kiosk.LayoutFacet[]"),
     "and it is the facet type that rejects it, not some unrelated fault in the view",
   );
 });

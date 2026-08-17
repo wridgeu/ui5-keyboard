@@ -1,4 +1,5 @@
 import { ConflictBehavior, GLOBAL_SCOPE, Platform } from "ui5/hotkeys/library";
+import type { UnhandledContext } from "ui5/hotkeys/types";
 import type Log from "sap/base/Log";
 import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 import { stubPopupOpen } from "./popup-helpers";
@@ -895,22 +896,22 @@ QUnit.test("Pure modifier key presses are ignored", (assert) => {
 
 QUnit.test("Unhandled: fires with no_match when no registration exists", (assert) => {
   const manager = createHotkeyManager();
-  let ctx: any = null;
+  let ctx: UnhandledContext | null = null;
 
   manager.setUnhandledHandler((c) => {
     ctx = c;
   });
 
   fireKey("F9");
-  assert.strictEqual(ctx.reason, "no_match", "Reason is no_match");
-  assert.strictEqual(ctx.activeScope, GLOBAL_SCOPE, "Active scope is global");
-  assert.notOk(ctx.skippedRegistration, "No skipped registration for no_match");
-  assert.ok(ctx.event instanceof KeyboardEvent, "Event is a KeyboardEvent");
+  assert.strictEqual(ctx!.reason, "no_match", "Reason is no_match");
+  assert.strictEqual(ctx!.activeScope, GLOBAL_SCOPE, "Active scope is global");
+  assert.notOk(ctx!.skippedRegistration, "No skipped registration for no_match");
+  assert.ok(ctx!.event instanceof KeyboardEvent, "Event is a KeyboardEvent");
 });
 
 QUnit.test("Unhandled: fires with disabled reason when registration is disabled", (assert) => {
   const manager = createHotkeyManager();
-  let ctx: any = null;
+  let ctx: UnhandledContext | null = null;
 
   const handle = manager.register(
     "Ctrl+S",
@@ -925,14 +926,14 @@ QUnit.test("Unhandled: fires with disabled reason when registration is disabled"
   });
 
   fireKey("s", { ctrlKey: true });
-  assert.strictEqual(ctx.reason, "disabled", "Reason is disabled");
-  assert.ok(ctx.skippedRegistration, "Skipped registration is present");
-  assert.strictEqual(ctx.skippedRegistration.id, handle.id, "Skipped registration matches");
+  assert.strictEqual(ctx!.reason, "disabled", "Reason is disabled");
+  assert.ok(ctx!.skippedRegistration, "Skipped registration is present");
+  assert.strictEqual(ctx!.skippedRegistration!.id, handle.id, "Skipped registration matches");
 });
 
 QUnit.test("Unhandled: fires with input_suppressed for single key in input", (assert) => {
   const manager = createHotkeyManager();
-  let ctx: any = null;
+  let ctx: UnhandledContext | null = null;
 
   manager.register("F5", () => {
     assert.notOk(true, "Should not fire");
@@ -947,14 +948,14 @@ QUnit.test("Unhandled: fires with input_suppressed for single key in input", (as
   });
 
   fireKeyOn(input, "F5");
-  assert.strictEqual(ctx.reason, "input_suppressed", "Reason is input_suppressed");
-  assert.ok(ctx.isInput, "isInput is true");
-  assert.ok(ctx.skippedRegistration, "Skipped registration is present");
+  assert.strictEqual(ctx!.reason, "input_suppressed", "Reason is input_suppressed");
+  assert.ok(ctx!.isInput, "isInput is true");
+  assert.ok(ctx!.skippedRegistration, "Skipped registration is present");
 });
 
 QUnit.test("Unhandled: fires with popup_suppressed when popup open", (assert) => {
   const manager = createHotkeyManager();
-  let ctx: any = null;
+  let ctx: UnhandledContext | null = null;
 
   manager.register(
     "F5",
@@ -971,15 +972,15 @@ QUnit.test("Unhandled: fires with popup_suppressed when popup open", (assert) =>
   });
 
   fireKey("F5");
-  assert.strictEqual(ctx.reason, "popup_suppressed", "Reason is popup_suppressed");
-  assert.ok(ctx.isPopupOpen, "isPopupOpen is true");
-  assert.ok(ctx.skippedRegistration, "Skipped registration is present");
+  assert.strictEqual(ctx!.reason, "popup_suppressed", "Reason is popup_suppressed");
+  assert.ok(ctx!.isPopupOpen, "isPopupOpen is true");
+  assert.ok(ctx!.skippedRegistration, "Skipped registration is present");
 });
 
 QUnit.test("Unhandled: fires with repeat_ignored when key held", (assert) => {
   const manager = createHotkeyManager();
   let handlerFired = false;
-  let ctx: any = null;
+  let ctx: UnhandledContext | null = null;
 
   manager.register("F5", () => {
     handlerFired = true;
@@ -995,8 +996,8 @@ QUnit.test("Unhandled: fires with repeat_ignored when key held", (assert) => {
 
   // Repeated press triggers unhandled callback
   fireKey("F5", { repeat: true });
-  assert.strictEqual(ctx.reason, "repeat_ignored", "Reason is repeat_ignored");
-  assert.ok(ctx.skippedRegistration, "Skipped registration is present");
+  assert.strictEqual(ctx!.reason, "repeat_ignored", "Reason is repeat_ignored");
+  assert.ok(ctx!.skippedRegistration, "Skipped registration is present");
 });
 
 QUnit.test("Unhandled: does NOT fire for IME composing events", (assert) => {
@@ -1199,7 +1200,7 @@ QUnit.test("Unhandled: nested inner no_match is suppressed after ancestor handle
 
 QUnit.test("Unhandled: passes correct activeScope in context", (assert) => {
   const manager = createHotkeyManager();
-  let ctx: any = null;
+  let ctx: UnhandledContext | null = null;
 
   manager.pushScope("detail");
 
@@ -1208,7 +1209,7 @@ QUnit.test("Unhandled: passes correct activeScope in context", (assert) => {
   });
 
   fireKey("F9");
-  assert.strictEqual(ctx.activeScope, "detail", "Active scope is detail");
+  assert.strictEqual(ctx!.activeScope, "detail", "Active scope is detail");
 });
 
 QUnit.test("Unhandled: null removes the callback", (assert) => {

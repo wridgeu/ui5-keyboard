@@ -29,6 +29,8 @@ export function getText(key: string, fallback: string): string {
 
   try {
     const override = resolver(key, getCurrentLocale(), baseText);
+    // A string overrides, anything else keeps the base text: the declared return type is
+    // unenforceable across a call into consumer code, and a number would render as a keycap label.
     if (typeof override === "string") {
       return override;
     }
@@ -50,6 +52,8 @@ export function getText(key: string, fallback: string): string {
  * Pass `null` to clear the resolver.
  */
 export function setI18nResolver(fn: I18nResolver | null): void {
+  // Rejecting at the setter names the mistake once. Storing a non-function instead surfaces it as
+  // one "i18n resolver threw" warning per key, at every label resolution.
   if (fn !== null && typeof fn !== "function") {
     Log.warning("setI18nResolver: argument must be a function or null.", undefined, LOG_COMPONENT);
     return;

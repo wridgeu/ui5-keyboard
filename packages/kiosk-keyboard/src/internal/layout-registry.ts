@@ -61,6 +61,9 @@ export type InstanceLocaleLayouts = ReadonlyMap<string, string>;
  * Returns `undefined` for non-string or empty-after-trim values, logging a warning.
  */
 function normalizeLowerString(value: unknown, argName: string): string | undefined {
+  // `unknown` because the public statics that funnel here (`KioskKeyboard.getRegisteredLayout`,
+  // `.isBuiltInLayout`) are reachable from untyped JS, where `.trim()` on a number would take the
+  // whole keyboard down instead of one lookup.
   if (typeof value !== "string") {
     Log.warning(`Invalid ${argName}: expected a string.`, undefined, "ui5.kiosk.KioskKeyboard");
     return undefined;

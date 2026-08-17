@@ -18,14 +18,14 @@ export interface SkipInfo {
  * Only reasons that flow through {@link recordSkip} are listed here.
  * `Suspended` is emitted directly via `_emitUnhandled` and bypasses this table.
  */
-const SKIP_PRIORITY: Partial<Record<UnhandledReason, number>> = {
-  [UnhandledReason.NoMatch]: 0,
-  [UnhandledReason.TargetMismatch]: 1,
-  [UnhandledReason.RepeatIgnored]: 2,
-  [UnhandledReason.InputSuppressed]: 3,
-  [UnhandledReason.PopupSuppressed]: 4,
-  [UnhandledReason.Disabled]: 5,
-};
+const SKIP_PRIORITY: ReadonlyMap<UnhandledReason, number> = new Map([
+  [UnhandledReason.NoMatch, 0],
+  [UnhandledReason.TargetMismatch, 1],
+  [UnhandledReason.RepeatIgnored, 2],
+  [UnhandledReason.InputSuppressed, 3],
+  [UnhandledReason.PopupSuppressed, 4],
+  [UnhandledReason.Disabled, 5],
+]);
 
 /**
  * Record a skip reason if it is more informative than the current one.
@@ -36,7 +36,7 @@ export function recordSkip(
   registration: HotkeyRegistration,
   toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo,
 ): void {
-  if (skipInfo && (SKIP_PRIORITY[reason] ?? -1) > (SKIP_PRIORITY[skipInfo.reason] ?? -1)) {
+  if (skipInfo && (SKIP_PRIORITY.get(reason) ?? -1) > (SKIP_PRIORITY.get(skipInfo.reason) ?? -1)) {
     skipInfo.reason = reason;
     skipInfo.registration = toRegistrationInfo(registration);
   }

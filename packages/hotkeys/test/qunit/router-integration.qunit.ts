@@ -1,3 +1,11 @@
+/*
+ * This suite proves the duck-typed half of `enableRouterIntegration`'s documented contract:
+ * "A UI5 Router or any object with `attachBeforeRouteMatched` / `detachBeforeRouteMatched`".
+ * The parameter is declared as the `Router` class, so exercising that promise means handing it
+ * something deliberately not a Router - hence `MockRouter as unknown as Router` throughout. A
+ * real Router is not a substitute: it would prove only the concrete path, and driving it needs
+ * `fireBeforeRouteMatched`, which UI5 marks `@ui5-protected`.
+ */
 import type Router from "sap/ui/core/routing/Router";
 import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
 import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";

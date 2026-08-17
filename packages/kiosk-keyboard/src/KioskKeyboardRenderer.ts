@@ -11,6 +11,13 @@ import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph }
 
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 
+/** The accessibility state written on the root `<div>`: a labelled keyboard group. */
+interface RootAccessibilityState {
+  role: string;
+  roledescription: string;
+  label?: string;
+}
+
 /**
  * Renderer for the KioskKeyboard control.
  *
@@ -64,7 +71,7 @@ const KioskKeyboardRenderer = {
   writeRootAttributes(rm: RenderManager, oControl: KioskKeyboard): void {
     // aria-labelledby (auto-emitted from the association) wins over aria-label per
     // WAI-ARIA: keep an explicit ariaLabel, but drop the default when labelledBy names the group.
-    const mAccessibility: { role: string; roledescription: string; label?: string } = {
+    const mAccessibility: RootAccessibilityState = {
       role: "group",
       roledescription: getText("KIOSK_KEYBOARD_ROLEDESCRIPTION", "keyboard"),
     };
@@ -185,7 +192,6 @@ const KioskKeyboardRenderer = {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyAction);
     }
 
-    // Active shift / caps lock indicator
     if (key.value === "{shift}" && _isShiftActive()) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyShiftActive);
       if (_isCapsLock()) {
@@ -193,7 +199,6 @@ const KioskKeyboardRenderer = {
       }
     }
 
-    // Dual icon + label class
     if (icon && label) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyDual);
     }
@@ -214,7 +219,6 @@ const KioskKeyboardRenderer = {
 
     rm.attr("role", "button");
 
-    // Toggle state for shift key (aria-pressed for screen readers)
     if (bIsShiftKey) {
       rm.attr("aria-pressed", _isShiftActive() ? "true" : "false");
     }

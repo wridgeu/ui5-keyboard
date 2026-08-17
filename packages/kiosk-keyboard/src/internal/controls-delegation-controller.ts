@@ -116,7 +116,6 @@ export default class ControlsDelegationController {
     for (const controlId of prevControlIds) {
       const prev = this._delegatedInstances.get(controlId);
       if (!prev) continue;
-      // Keep delegate if same controlId in next AND same Control instance
       if (resolvedControlIds.has(controlId) && Element.getElementById(controlId) === prev) continue;
       prev.removeEventDelegate(this._delegate);
     }
@@ -125,7 +124,6 @@ export default class ControlsDelegationController {
     for (const controlId of resolvedControlIds) {
       const control = Element.getElementById(controlId);
       if (!(control instanceof Control)) continue;
-      // Skip if same controlId in prev AND same Control instance
       if (prevControlIds.has(controlId) && this._delegatedInstances.get(controlId) === control) continue;
       control.addEventDelegate(this._delegate);
     }

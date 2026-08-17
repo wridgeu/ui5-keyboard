@@ -28,7 +28,7 @@ export default class Integration extends BaseController {
     this._hotkeys.register(
       Integration.COMBO_HOTKEY,
       () => {
-        const previous = (stateModel.getProperty("/comboText") as string) || "";
+        const previous: string = stateModel.getProperty("/comboText") || "";
         const next = `${previous}${previous ? " " : ""}[hotkey:${Integration.COMBO_HOTKEY}]`;
         stateModel.setProperty("/comboText", next);
         stateModel.setProperty("/comboStatus", `${Integration.COMBO_HOTKEY} fired via HotkeyManager.`);
@@ -47,6 +47,8 @@ export default class Integration extends BaseController {
   }
 
   onKioskKeyPress(event: KioskKeyboard$KeyPressEvent): void {
+    // SAFETY: `onInit` set a JSONModel under the "integration" name on this view, and
+    // nothing replaces it, so the model this reads back is that JSONModel.
     const viewModel = this.getView()!.getModel("integration") as JSONModel;
     viewModel.setProperty("/lastKioskKey", this.formatKeyPress(event) || "None");
     this.getStateModel().setProperty("/lastAction", "Kiosk keyPress event");

@@ -9,6 +9,7 @@ import {
   type CursorPos,
 } from "ui5/kiosk/internal/input-operations";
 import Control from "sap/ui/core/Control";
+import type UI5Event from "sap/ui/base/Event";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
 import type RenderManager from "sap/ui/core/RenderManager";
@@ -40,6 +41,11 @@ interface ValueInputControl extends Control {
   getValue(): string;
 }
 
+/** The one property the fixture controls declare. */
+interface ValueInputSettings {
+  value?: string;
+}
+
 const ValueInputBase = Control.extend("test.IoValueInput", {
   metadata: {
     properties: {
@@ -67,7 +73,7 @@ const ValueInputBase = Control.extend("test.IoValueInput", {
 });
 
 /** Minimal UI5 Control wrapping a single <input>, with a liveChange event and no `oninput` handler. */
-const ValueInput = ValueInputBase as new (settings?: object) => ValueInputControl;
+const ValueInput = ValueInputBase as new (settings?: ValueInputSettings) => ValueInputControl;
 
 /**
  * Minimal UI5 Control shaped like `sap.m.SearchField`: a `liveChange` event and
@@ -83,7 +89,7 @@ const SearchLikeInput = (ValueInputBase as typeof Control).extend("test.IoSearch
       this.fireEvent("liveChange", { value: dom.value });
     });
   },
-}) as new (settings?: object) => ValueInputControl;
+}) as new (settings?: ValueInputSettings) => ValueInputControl;
 
 const controls: { destroy(): void }[] = [];
 
@@ -562,7 +568,6 @@ QUnit.test("ArrowDown with three lines navigates correctly", (assert) => {
 });
 
 QUnit.test("ArrowDown collapses selection and moves from end position", (assert) => {
-  // handleNavigation uses `end` for ArrowDown per source (line 134)
   const ta = makeTextarea("abc\ndef", [1, 3]); // selection covers "bc" on line 1
   const result = handleNavigation(ta, "ArrowDown", [1, 3]);
 
@@ -571,7 +576,6 @@ QUnit.test("ArrowDown collapses selection and moves from end position", (assert)
 });
 
 QUnit.test("ArrowUp collapses selection and moves from start position", (assert) => {
-  // handleNavigation uses `start` for ArrowUp per source (line 131)
   const ta = makeTextarea("abc\ndef", [5, 7]); // selection covers "ef" on line 2
   const result = handleNavigation(ta, "ArrowUp", [5, 7]);
 
@@ -625,9 +629,9 @@ QUnit.test("Tier 2: calls setProperty when metadata has value property but no se
   let propValue = "";
   const element: TargetElement = {
     // No setValue method
-    setProperty(name: string, value: unknown) {
+    setProperty(name, value) {
       propName = name;
-      propValue = value as string;
+      propValue = value;
     },
     getFocusDomRef: () => null,
     getMetadata: () => ({
@@ -698,9 +702,9 @@ QUnit.test("Fires liveChange event when supported", (assert) => {
       hasProperty: () => false,
       hasEvent: (name: string) => name === "liveChange",
     }),
-    fireEvent(name: string, params?: Record<string, unknown>) {
+    fireEvent(name, params) {
       firedEvent = name;
-      firedValue = (params as { value: string })?.value ?? "";
+      firedValue = params?.value ?? "";
     },
     setProperty() {},
   };
@@ -744,9 +748,9 @@ QUnit.test("Fires change event when supported", (assert) => {
       hasProperty: () => false,
       hasEvent: (name: string) => name === "change",
     }),
-    fireEvent(name: string, params?: Record<string, unknown>) {
+    fireEvent(name, params) {
       firedEvent = name;
-      firedValue = (params as { value: string })?.value ?? "";
+      firedValue = params?.value ?? "";
     },
     setProperty() {},
   };
@@ -823,7 +827,7 @@ QUnit.test("Fires liveChange exactly once on sap.m.Input", async (assert) => {
 QUnit.test("Fires liveChange for a target without an oninput handler", async (assert) => {
   const ctrl = await renderControl(new ValueInput({ value: "ab" }));
   const values: unknown[] = [];
-  ctrl.attachEvent("liveChange", (event: { getParameter: (name: string) => unknown }) => {
+  ctrl.attachEvent("liveChange", (event: UI5Event<{ value: string }>) => {
     values.push(event.getParameter("value"));
   });
   const dom = focusInner(ctrl);
@@ -839,7 +843,7 @@ QUnit.test("Fires liveChange for a target without an oninput handler", async (as
 QUnit.test("Fires liveChange once for a control that binds the input event itself", async (assert) => {
   const ctrl = await renderControl(new SearchLikeInput({ value: "ab" }));
   const values: unknown[] = [];
-  ctrl.attachEvent("liveChange", (event: { getParameter: (name: string) => unknown }) => {
+  ctrl.attachEvent("liveChange", (event: UI5Event<{ value: string }>) => {
     values.push(event.getParameter("value"));
   });
   const dom = focusInner(ctrl);

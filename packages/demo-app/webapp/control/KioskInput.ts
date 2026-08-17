@@ -1,6 +1,9 @@
 import WebComponent from "sap/ui/core/webc/WebComponent";
-import "demo/hotkeys/webc/DemoKioskInput";
+import DemoKioskInput from "demo/hotkeys/webc/DemoKioskInput";
 
+// SAFETY: `WebComponent.extend` is declared as returning the untyped `Function`, while it
+// actually returns the generated subclass constructor, so the value carries the full
+// WebComponent class API.
 const KioskInput = WebComponent.extend("demo.hotkeys.control.KioskInput", {
   metadata: {
     tag: "demo-kiosk-input",
@@ -27,8 +30,8 @@ const KioskInput = WebComponent.extend("demo.hotkeys.control.KioskInput", {
     this.setProperty("value", value, true);
 
     const host = this.getDomRef();
-    if (host instanceof HTMLElement) {
-      (host as HTMLElement & { value?: string }).value = value;
+    if (host instanceof DemoKioskInput) {
+      host.value = value;
     }
 
     return this;
@@ -38,8 +41,8 @@ const KioskInput = WebComponent.extend("demo.hotkeys.control.KioskInput", {
     this.setProperty("placeholder", placeholder, true);
 
     const host = this.getDomRef();
-    if (host instanceof HTMLElement) {
-      (host as HTMLElement & { placeholder?: string }).placeholder = placeholder;
+    if (host instanceof DemoKioskInput) {
+      host.placeholder = placeholder;
     }
 
     return this;

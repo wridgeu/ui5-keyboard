@@ -16,6 +16,8 @@ import type Component from "../Component";
  */
 export default class BaseController extends Controller {
   getTypedComponent(): Component {
+    // SAFETY: the manifest names demo.hotkeys.Component as the app component, and every view a
+    // controller of this app belongs to is created by that component, so it owns each of them.
     return this.getOwnerComponent() as Component;
   }
 
@@ -25,6 +27,8 @@ export default class BaseController extends Controller {
   }
 
   getStateModel(): JSONModel {
+    // SAFETY: manifest.json declares the "state" model with type sap.ui.model.json.JSONModel,
+    // so the component instantiates it as a JSONModel before any controller runs.
     return this.getTypedComponent().getModel("state") as JSONModel;
   }
 
@@ -38,6 +42,8 @@ export default class BaseController extends Controller {
   /** Navigate to the route held in the pressed list item's `state` binding context. */
   onListEntryNavigate(event: ListBase$ItemPressEvent): void {
     const item = event.getParameter("listItem");
+    // SAFETY: getProperty is untyped. Every navigation entry in the state fixture carries `route`
+    // as a string, and an item bound elsewhere yields undefined, which the guard below rejects.
     const route = item?.getBindingContext("state")?.getProperty("route") as string | undefined;
     if (!route) return;
     this.getRouter().navTo(route);

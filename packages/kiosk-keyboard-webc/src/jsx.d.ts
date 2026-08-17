@@ -6,9 +6,9 @@ declare namespace preact.JSX {
     "ui5-icon": {
       name?: string;
       mode?: "Image" | "Decorative" | "Interactive";
+      part?: string;
       class?: string | Record<string, boolean>;
       style?: string | Record<string, string>;
-      [key: string]: unknown;
     };
     "ui5-button": {
       design?: "Default" | "Positive" | "Negative" | "Transparent" | "Emphasized" | "Attention";
@@ -19,7 +19,8 @@ declare namespace preact.JSX {
       part?: string;
       class?: string | Record<string, boolean>;
       style?: string | Record<string, string>;
-      [key: string]: unknown;
+      key?: string;
+      children?: preact.ComponentChildren;
     };
     "ui5-popover": {
       open?: boolean;
@@ -31,7 +32,7 @@ declare namespace preact.JSX {
       id?: string;
       class?: string | Record<string, boolean>;
       style?: string | Record<string, string>;
-      [key: string]: unknown;
+      children?: preact.ComponentChildren;
     };
   }
 }

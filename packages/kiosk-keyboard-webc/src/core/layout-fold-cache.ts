@@ -68,8 +68,9 @@ export class LayoutFoldCache {
     this._revisions = revisions;
 
     const specs: CustomLayoutSpec[] = [];
-    // The slot admits any element at runtime, so a foreign child is reachable even
-    // though the declared type is narrower.
+    // SAFETY: the slot admits any element at runtime, so a foreign child is reachable
+    // even though the declared type is narrower; every slotted child is an element, and
+    // `isCustomLayout` decides which ones carry the custom-layout contract.
     for (const child of children as readonly HTMLElement[]) {
       if (isCustomLayout(child)) specs.push(child.toSpec());
       else

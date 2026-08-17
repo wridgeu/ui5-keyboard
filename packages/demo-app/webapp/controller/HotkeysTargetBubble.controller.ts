@@ -1,5 +1,4 @@
 import type App from "sap/m/App";
-import type Input from "sap/m/Input";
 import type View from "sap/ui/core/mvc/View";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
 import JSONModel from "sap/ui/model/json/JSONModel";
@@ -35,7 +34,8 @@ export default class HotkeysTargetBubble extends BaseController {
   override onInit(): void {
     this._manager = this.getTypedComponent().getHotkeyManager();
 
-    this._logModel = new JSONModel({ entries: [] as LogEntry[] });
+    const entries: LogEntry[] = [];
+    this._logModel = new JSONModel({ entries });
     this.getView()!.setModel(this._logModel, "bubbleLog");
 
     // Re-bind whenever the target container re-renders (DOM refs change)
@@ -64,21 +64,17 @@ export default class HotkeysTargetBubble extends BaseController {
 
   private _bindTargetHotkeys(): void {
     const outerTarget = this.byId("outerTargetBox")?.getDomRef();
-    const bubbleInput = this.byId("bubbleInput") as Input | undefined;
-    const innerTarget = bubbleInput?.getDomRef();
-    if (!outerTarget || !innerTarget) {
+    const innerTarget = this.byId("bubbleInput")?.getDomRef();
+    if (!(outerTarget instanceof HTMLElement) || !(innerTarget instanceof HTMLElement)) {
       return;
     }
-
-    const outerTargetElement = outerTarget as HTMLElement;
-    const innerTargetElement = innerTarget as HTMLElement;
 
     if (
       this._docFallbackHandle &&
       this._outerHandle &&
       this._innerHandle &&
-      this._boundOuterTarget === outerTargetElement &&
-      this._boundInnerTarget === innerTargetElement
+      this._boundOuterTarget === outerTarget &&
+      this._boundInnerTarget === innerTarget
     ) {
       return;
     }
@@ -92,7 +88,7 @@ export default class HotkeysTargetBubble extends BaseController {
       },
       {
         scope: Scope.HotkeysTargetBubble,
-        target: outerTargetElement,
+        target: outerTarget,
         stopPropagation: true,
         description: "Outer target Escape",
       },
@@ -107,7 +103,7 @@ export default class HotkeysTargetBubble extends BaseController {
       },
       {
         scope: Scope.HotkeysTargetBubble,
-        target: innerTargetElement,
+        target: innerTarget,
         stopPropagation: true,
         description: "Inner target Escape",
       },
@@ -125,8 +121,8 @@ export default class HotkeysTargetBubble extends BaseController {
       },
     );
 
-    this._boundOuterTarget = outerTargetElement;
-    this._boundInnerTarget = innerTargetElement;
+    this._boundOuterTarget = outerTarget;
+    this._boundInnerTarget = innerTarget;
   }
 
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {
@@ -139,7 +135,11 @@ export default class HotkeysTargetBubble extends BaseController {
   }
 
   private _setAppAutoFocus(enabled: boolean): void {
+    // SAFETY: manifest.json declares the rootView as the XMLView demo.hotkeys.view.App, so the
+    // component's root control is that View once content creation has finished.
     const rootView = this.getTypedComponent().getRootControl() as View | undefined;
+    // SAFETY: App.view.xml declares appControl as a sap.m.App; the undefined arm covers a root
+    // view that has already been destroyed.
     const app = rootView?.byId("appControl") as App | undefined;
     if (!app) {
       return;
@@ -150,6 +150,8 @@ export default class HotkeysTargetBubble extends BaseController {
   }
 
   private _addLogEntry(event: string, detail: string, state: string): void {
+    // SAFETY: getProperty is untyped. onInit seeds /entries with an empty LogEntry array, and the
+    // only writers are onClearLog and the line below, both of which store LogEntry arrays.
     const current = this._logModel.getProperty("/entries") as LogEntry[];
     const next = [{ time: this._formatTimestamp(new Date()), event, detail, state }, ...current].slice(
       0,

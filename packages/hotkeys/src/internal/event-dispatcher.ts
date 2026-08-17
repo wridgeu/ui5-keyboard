@@ -137,10 +137,8 @@ export default class EventDispatcher {
     this._handler = handler;
     this._platform = platform;
 
-    // Create and own the KeyStateTracker
     this._keyStateTracker = new KeyStateTracker(platform, INTERNAL_TOKEN);
 
-    // Attach window listeners
     const { signal } = this._listenerAbort;
     window.addEventListener("keydown", this._onKeyDown.bind(this), { capture: true, signal });
     window.addEventListener("keyup", this._onKeyUp.bind(this), { capture: true, signal });
@@ -258,25 +256,21 @@ export default class EventDispatcher {
     // Remove all DOM listeners first
     this._listenerAbort.abort();
 
-    // Invalidate all outstanding guards
     for (const guard of this._guards) {
       guard._invalidate();
     }
     this._guards.clear();
 
-    // Notify and clear interceptor
     if (this._interceptor) {
       this._interceptor.onDetached();
       this._interceptor = null;
     }
 
-    // Mark all tracked recorders as destroyed
     for (const recorder of this._trackedRecorders) {
       recorder._onDispatcherDestroyed();
     }
     this._trackedRecorders.clear();
 
-    // Destroy owned KeyStateTracker
     this._keyStateTracker.destroy();
 
     this._lastAltLocation = 0;

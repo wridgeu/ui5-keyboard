@@ -4,12 +4,12 @@ import { NativeDispatchableKeyNames } from "../library";
 import type { ShiftState } from "./shift-state";
 
 /** Maps non-derivable KeyboardEvent.key names to special-key data-key values. */
-const KEY_TO_DATA_KEY: Record<string, string> = {
-  Shift: "{shift}",
-  Backspace: "{backspace}",
-  Enter: "{enter}",
-  Delete: "{backspace}", // virtual keyboard has no separate Delete - highlight Backspace
-};
+const KEY_TO_DATA_KEY = new Map<string, string>([
+  ["Shift", "{shift}"],
+  ["Backspace", "{backspace}"],
+  ["Enter", "{enter}"],
+  ["Delete", "{backspace}"], // virtual keyboard has no separate Delete - highlight Backspace
+]);
 
 /** Native-dispatchable keys (F1-F12, arrows, Home/End/PgUp/PgDn). */
 const NATIVE_DISPATCHABLE = new Set<string>(NativeDispatchableKeyNames);
@@ -19,11 +19,19 @@ const NATIVE_DISPATCHABLE = new Set<string>(NativeDispatchableKeyNames);
  * Native-dispatchable keys are derived dynamically from the allowlist.
  */
 function resolveDataKey(key: string): string | undefined {
-  return KEY_TO_DATA_KEY[key] ?? (NATIVE_DISPATCHABLE.has(key) ? `{fkey:${key}}` : undefined);
+  return KEY_TO_DATA_KEY.get(key) ?? (NATIVE_DISPATCHABLE.has(key) ? `{fkey:${key}}` : undefined);
 }
 
 interface PhysicalKeyHighlightHost {
   getDomRef(): globalThis.Element | null;
+}
+
+/**
+ * The keydown/keyup event a UI5 event delegate receives: the framework's own
+ * fixed event, carrying the native one it was built from in `originalEvent`.
+ */
+interface DelegatedKeyboardEvent extends KeyboardEvent {
+  readonly originalEvent?: KeyboardEvent;
 }
 
 /**
@@ -35,7 +43,10 @@ interface PhysicalKeyHighlightHost {
  * `_setActiveTarget`/`exit` only `attach`/`detach`.
  */
 export default class PhysicalKeyHighlight {
-  private readonly _delegation: { onkeydown: (event: Event) => void; onkeyup: (event: Event) => void };
+  private readonly _delegation: {
+    onkeydown: (event: DelegatedKeyboardEvent) => void;
+    onkeyup: (event: DelegatedKeyboardEvent) => void;
+  };
   private _targetId: string | null = null;
 
   constructor(
@@ -43,8 +54,8 @@ export default class PhysicalKeyHighlight {
     private readonly _shiftState: ShiftState,
   ) {
     this._delegation = {
-      onkeydown: (event: Event) => this._onPhysicalKey(event as KeyboardEvent, true),
-      onkeyup: (event: Event) => this._onPhysicalKey(event as KeyboardEvent, false),
+      onkeydown: (event: DelegatedKeyboardEvent) => this._onPhysicalKey(event, true),
+      onkeyup: (event: DelegatedKeyboardEvent) => this._onPhysicalKey(event, false),
     };
   }
 
@@ -67,12 +78,12 @@ export default class PhysicalKeyHighlight {
    * Syncs shift/capslock state from the physical keyboard and
    * delegates to visual key highlighting.
    */
-  private _onPhysicalKey(event: KeyboardEvent, down: boolean): void {
+  private _onPhysicalKey(event: DelegatedKeyboardEvent, down: boolean): void {
     this._highlightKey(event.key, down);
 
     // UI5 event delegation wraps the native event; unwrap to access
     // getModifierState which is not forwarded to the wrapper.
-    const native = (event as KeyboardEvent & { originalEvent?: KeyboardEvent }).originalEvent ?? event;
+    const native = event.originalEvent ?? event;
     const capsLock = typeof native.getModifierState === "function" && native.getModifierState("CapsLock");
     this._shiftState.syncFromPhysical(native.shiftKey, capsLock);
   }

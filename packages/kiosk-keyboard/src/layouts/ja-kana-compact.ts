@@ -1,10 +1,12 @@
 import type { KeyRow, LayoutDefinition } from "../types";
 import jaKana from "./ja-kana";
 
-// `jaKana`'s five rows: digits, upper letters, home, lower letters, bottom. Every
-// key below is sliced out of them, so the two forms carry identical key
-// definitions, shift layers and types included. Only the spacebar's span differs,
-// and it is rewritten at its own position.
+// SAFETY: `jaKana` is a sibling module's array literal of exactly five rows - digits,
+// upper letters, home, lower letters, bottom - so the arity is fixed at build time and
+// nothing at runtime can shorten it; `noUncheckedIndexedAccess` is the only reason the
+// element type needs restating. Every key below is sliced out of those rows, so the two
+// forms carry identical key definitions, shift layers and types included. Only the
+// spacebar's span differs, and it is rewritten at its own position.
 const [digitRow, upperRow, homeRow, lowerRow, bottomRow] = jaKana as [KeyRow, KeyRow, KeyRow, KeyRow, KeyRow];
 
 /**

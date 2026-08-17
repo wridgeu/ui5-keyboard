@@ -62,6 +62,9 @@ export type InstanceLocaleLayouts = ReadonlyMap<string, string>;
  * Used by public APIs to guard against plain-JS callers passing non-strings.
  */
 function normalizeLowerString(value: unknown, argName: string): string | undefined {
+  // `unknown` because the public statics that funnel here (`KioskKeyboard.getRegisteredLayout`,
+  // `.isBuiltInLayout`) are reachable from untyped JS, where `.trim()` on a number would take the
+  // whole keyboard down instead of one lookup.
   if (typeof value !== "string") {
     console.warn(`[kiosk-keyboard] Invalid ${argName}: expected a string.`);
     return undefined;

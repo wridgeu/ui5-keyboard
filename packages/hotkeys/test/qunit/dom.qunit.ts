@@ -117,12 +117,12 @@ QUnit.test("Falls back to event.target when composedPath is unavailable", (asser
   const div = document.createElement("div");
   document.getElementById("qunit-fixture")!.appendChild(div);
 
-  // Simulate missing composedPath by creating a mock event object
-  const mockEvent = {
-    target: div,
-    composedPath: undefined,
-  } as unknown as Event;
+  // The dispatch sets event.target; the own property then shadows the prototype's
+  // composedPath, reproducing a browser that predates it.
+  const event = new Event("click");
+  div.dispatchEvent(event);
+  Object.defineProperty(event, "composedPath", { value: undefined });
 
-  const target = getEventTarget(mockEvent);
+  const target = getEventTarget(event);
   assert.strictEqual(target, div, "Falls back to event.target");
 });

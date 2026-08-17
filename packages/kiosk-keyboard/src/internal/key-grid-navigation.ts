@@ -73,8 +73,8 @@ export default class KeyGridNavigation extends EventProvider {
   }
 
   onsaphome(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!this._isKey(target)) return;
+    const target = this._keyTargetOf(event);
+    if (!target) return;
     event.preventDefault();
 
     const row = target.closest(this._dom.selectors.row);
@@ -83,8 +83,8 @@ export default class KeyGridNavigation extends EventProvider {
   }
 
   onsapend(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!this._isKey(target)) return;
+    const target = this._keyTargetOf(event);
+    if (!target) return;
     event.preventDefault();
 
     const row = target.closest(this._dom.selectors.row);
@@ -94,8 +94,8 @@ export default class KeyGridNavigation extends EventProvider {
   }
 
   onsaptop(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!this._isKey(target)) return;
+    const target = this._keyTargetOf(event);
+    if (!target) return;
     event.preventDefault();
 
     const firstRow = this._rootRef?.querySelector<HTMLElement>(this._dom.selectors.row);
@@ -104,8 +104,8 @@ export default class KeyGridNavigation extends EventProvider {
   }
 
   onsapbottom(event: Event): void {
-    const target = event.target as HTMLElement;
-    if (!this._isKey(target)) return;
+    const target = this._keyTargetOf(event);
+    if (!target) return;
     event.preventDefault();
 
     const rows = this._rootRef?.querySelectorAll<HTMLElement>(this._dom.selectors.row);
@@ -119,10 +119,19 @@ export default class KeyGridNavigation extends EventProvider {
   // ── Internal navigation logic ──
 
   private _handleNav(event: Event, dRow: number, dCol: number): boolean {
-    const target = event.target as HTMLElement;
-    if (!this._isKey(target)) return false;
+    const target = this._keyTargetOf(event);
+    if (!target) return false;
     this._move(target, dRow, dCol !== 0 && this._isRtl(target) ? -dCol : dCol);
     return true;
+  }
+
+  /** The keycap a pseudo-event was dispatched on, or null when it landed elsewhere. */
+  private _keyTargetOf(event: Event): HTMLElement | null {
+    // SAFETY: UI5 forwards these pseudo-events from the browser keyboard event on the
+    // focused node, and this control renders keys as HTML elements only, so the target
+    // is one; _isKey then decides whether it is a keycap of this grid.
+    const target = event.target as HTMLElement;
+    return this._isKey(target) ? target : null;
   }
 
   private _isKey(el: HTMLElement): boolean {

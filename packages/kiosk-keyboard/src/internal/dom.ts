@@ -53,7 +53,7 @@ export function classifyRow(row: ReadonlyArray<{ value: string }>): "fkey" | "na
 }
 
 /** Type guard: returns true if the value is an HTMLInputElement or HTMLTextAreaElement. */
-export function isInputOrTextarea(el: unknown): el is HTMLInputElement | HTMLTextAreaElement {
+export function isInputOrTextarea(el: EventTarget | null | undefined): el is HTMLInputElement | HTMLTextAreaElement {
   return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
 }
 
@@ -91,7 +91,10 @@ export type TargetResolverFn = (el: HTMLElement) => HTMLInputElement | HTMLTextA
  * - nested web components (e.g. ui5-step-input → ui5-input → native input)
  *   up to `maxDepth` levels of shadow DOM nesting
  */
-export function resolveInputOrTextarea(el: unknown, maxDepth = 3): HTMLInputElement | HTMLTextAreaElement | null {
+export function resolveInputOrTextarea(
+  el: EventTarget | null | undefined,
+  maxDepth = 3,
+): HTMLInputElement | HTMLTextAreaElement | null {
   if (isInputOrTextarea(el)) {
     return el;
   }
@@ -132,7 +135,7 @@ export function resolveInputOrTextarea(el: unknown, maxDepth = 3): HTMLInputElem
  * resolver cannot crash interaction paths (typing, focus, escape, etc.).
  */
 export function resolveWithCustomResolver(
-  el: unknown,
+  el: EventTarget | null | undefined,
   customResolver: TargetResolverFn | null,
 ): HTMLInputElement | HTMLTextAreaElement | null {
   if (customResolver && el instanceof HTMLElement) {

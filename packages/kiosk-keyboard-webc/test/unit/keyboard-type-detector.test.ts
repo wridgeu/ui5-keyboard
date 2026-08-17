@@ -58,7 +58,6 @@ describe("detectKeyboardType", () => {
   });
 
   // ── data-keyboard-type override ──
-
   describe("data-keyboard-type override", () => {
     it("returns Numpad when data-keyboard-type=Numpad is on the input", () => {
       const el = document.createElement("input");

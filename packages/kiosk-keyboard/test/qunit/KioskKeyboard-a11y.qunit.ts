@@ -175,7 +175,7 @@ QUnit.test("Live region reports Caps Lock ending even when Shift takes over", as
   await placeAndWait(kb);
 
   const liveRegion = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
-  const shiftState = (kb as unknown as { _shiftState: { syncFromPhysical(s: boolean, c: boolean): void } })._shiftState;
+  const shiftState = kb["_shiftState"];
 
   shiftState.syncFromPhysical(false, true);
   assert.strictEqual(liveRegion(), "Caps Lock on", "Announces Caps Lock on");
@@ -195,7 +195,7 @@ QUnit.test("Announcements raised while the keyboard has no DOM are dropped, not 
   await placeAndWait(kb);
 
   const liveRegion = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
-  const shiftState = (kb as unknown as { _shiftState: { syncFromPhysical(s: boolean, c: boolean): void } })._shiftState;
+  const shiftState = kb["_shiftState"];
 
   // setVisible(false) renders the invisible placeholder, so getDomRef() is null while
   // the control is still alive and its physical-key delegate still reaches the
@@ -523,16 +523,12 @@ QUnit.test("aria-controls survives re-render for a non-Control target", async (a
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const internals = kb as unknown as {
-    _setActiveTarget: (target?: string) => void;
-    _getActiveTargetId: () => string;
-  };
-  internals._setActiveTarget("plain-dom-target");
+  kb._setActiveTarget("plain-dom-target");
   await nextUIUpdate();
 
   // Precondition: the target is a non-Control DOM element.
   assert.strictEqual(kb.getActiveControl(), null, "target does not resolve to a Control");
-  assert.strictEqual(internals._getActiveTargetId(), "plain-dom-target", "association holds the raw id");
+  assert.strictEqual(kb._getActiveTargetId(), "plain-dom-target", "association holds the raw id");
   assert.strictEqual(
     kb.getDomRef()!.getAttribute("aria-controls"),
     "plain-dom-target",

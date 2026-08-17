@@ -261,10 +261,10 @@ const FUNCTION_WORD_RE =
   /^(?:a|an|and|any|are|as|at|be|by|for|from|here|if|in|into|is|it|its|of|on|or|our|that|the|their|then|this|to|we|when|which|will|with)$/;
 
 /**
- * Verbs the code shape already states, so they add nothing when a comment
- * repeats them: an assignment is a "set", a member read is a "get".
+ * Verbs the statement's own syntax already states, so they add nothing when a
+ * comment repeats them: an assignment is a "set", a member read is a "get".
  */
-const CODE_SHAPE_VERB_RE =
+const SYNTAX_STATED_VERB_RE =
   /^(?:add|assign|build|calculate|call|check|compute|create|declare|decrement|define|delete|fetch|find|get|increment|init|initialize|instantiate|invoke|iterate|look|lookup|loop|make|new|read|remove|return|save|set|store|update|write)$/;
 
 /** Statements plain enough that a comment naming their words is a restatement. */
@@ -352,7 +352,7 @@ const noObviousComment = {
           const words = wordStems(text);
           if (words.length > MAX_COMMENT_WORDS) continue;
           const content = words.filter(
-            (word) => PROSE_WORD_RE.test(word) && !FUNCTION_WORD_RE.test(word) && !CODE_SHAPE_VERB_RE.test(word),
+            (word) => PROSE_WORD_RE.test(word) && !FUNCTION_WORD_RE.test(word) && !SYNTAX_STATED_VERB_RE.test(word),
           );
           if (content.length < 2) continue;
           const ownLine = sourceCode.lines[comment.loc.start.line - 1];

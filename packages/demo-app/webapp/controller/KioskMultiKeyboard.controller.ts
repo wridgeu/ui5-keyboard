@@ -1,4 +1,3 @@
-import type Input from "sap/m/Input";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
 import { Scope } from "../constants";
@@ -88,10 +87,13 @@ export default class KioskMultiKeyboard extends BaseController {
   }
 
   private _getSharedKeyboardA(): KioskKeyboard | undefined {
+    // SAFETY: KioskMultiKeyboard.view.xml declares sharedKeyboardA as a ui5.kiosk.KioskKeyboard;
+    // the undefined arm covers a lookup after the view is destroyed.
     return this.byId("sharedKeyboardA") as KioskKeyboard | undefined;
   }
 
   private _getSharedKeyboardB(): KioskKeyboard | undefined {
+    // SAFETY: the same view declares sharedKeyboardB as a ui5.kiosk.KioskKeyboard.
     return this.byId("sharedKeyboardB") as KioskKeyboard | undefined;
   }
 
@@ -101,8 +103,7 @@ export default class KioskMultiKeyboard extends BaseController {
   }
 
   private _getSharedInputDomRef(): HTMLInputElement | null {
-    const input = this.byId("sharedInput") as Input | undefined;
-    const dom = input?.getFocusDomRef();
+    const dom = this.byId("sharedInput")?.getFocusDomRef();
     return dom instanceof HTMLInputElement ? dom : null;
   }
 

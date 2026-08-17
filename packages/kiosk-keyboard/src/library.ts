@@ -245,6 +245,8 @@ function isLayoutRows(value: unknown): boolean {
 
 /** A long-press variant table, or `null` for none. Per-entry validation is the fold's. */
 function isVariantTable(value: unknown): boolean {
+  // The `object` base type this one derives from accepts a function as well, and UI5 runs the base
+  // check first, so the `typeof` here is what rejects one.
   return value === null || (typeof value === "object" && !Array.isArray(value));
 }
 

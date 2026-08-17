@@ -76,6 +76,9 @@ export default class KioskWebComponentTooling extends BaseController {
     }
 
     if ("close" in control) {
+      // SAFETY: the `in` check is the runtime guard. ui5-tooling-modules mirrors the custom
+      // element's public API onto the generated wrapper, so a `close` member on that wrapper is
+      // the element's no-argument close() method.
       (control.close as () => void)();
     }
     control.setProperty("autoShow", false);
@@ -86,6 +89,8 @@ export default class KioskWebComponentTooling extends BaseController {
   }
 
   private _getViewModel(): JSONModel {
+    // SAFETY: onInit sets a JSONModel on this view under _MODEL_NAME, and nothing else
+    // registers anything under that key.
     return this.getView()!.getModel(KioskWebComponentTooling._MODEL_NAME) as JSONModel;
   }
 }

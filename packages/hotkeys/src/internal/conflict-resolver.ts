@@ -45,7 +45,6 @@ export default class ConflictResolver {
     const ids = target === null ? bucket.untargetedIds : this._index.getTargetRegistrationIds(bucket, target.el);
     if (!ids || ids.size === 0) return;
 
-    // Find conflicts by matching normalizedHotkey within the bucket
     const isConflicting = (reg: HotkeyRegistration): boolean => reg.normalizedHotkey === normalizedHotkey;
 
     if (conflictBehavior === ConflictBehavior.Replace) {

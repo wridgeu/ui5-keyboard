@@ -5,14 +5,17 @@ import { openPage, expectKeyboardVisualMatch } from "./helpers.js";
 // URL parameter so OpenUI5 bootstraps with the right CSS from the start.
 
 const THEMES_PAGE = "/test-resources/ui5/kiosk/e2e/visual/themes.html";
-const THEME_BACKGROUNDS: Record<string, string> = {
+const THEMES = ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"] as const;
+type ThemeId = (typeof THEMES)[number];
+
+const THEME_BACKGROUNDS = {
   sap_horizon: "#f5f6f7",
   sap_horizon_dark: "#12171c",
   sap_horizon_hcb: "#000000",
   sap_horizon_hcw: "#ffffff",
-};
+} satisfies Record<ThemeId, string>;
 
-async function openWithTheme(page: Page, theme: string): Promise<void> {
+async function openWithTheme(page: Page, theme: ThemeId): Promise<void> {
   await openPage(page, `${THEMES_PAGE}?sap-ui-theme=${theme}`);
   await page.evaluate((bg) => {
     document.body.style.background = bg;
@@ -22,7 +25,7 @@ async function openWithTheme(page: Page, theme: string): Promise<void> {
   }, THEME_BACKGROUNDS[theme]);
 }
 
-for (const theme of ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"]) {
+for (const theme of THEMES) {
   test.describe(theme, () => {
     test.beforeEach(async ({ page }) => {
       await openWithTheme(page, theme);
