@@ -31,7 +31,6 @@
 - Every changed line must trace to the user's request. Don't "improve" adjacent code, comments, or formatting; match existing style even if you'd do it differently.
 - Comments and doc-blocks describe the current contract, not the edit that produced it. No refactor narration ("now a discriminated union", "collapsed from two fields", "renamed from X", "moved here for clarity"), no before/after history, no justifying the diff in prose. That belongs in the commit message or PR. A reader a year out wants what the code does, not how it got there.
 - When your changes orphan imports/vars/functions, remove them. Don't delete pre-existing dead code unless asked.
-- **A lint finding never justifies a behavior change.** If satisfying a rule would alter runtime semantics, revert and report the finding as unresolved; a silent behavior delta in a shipping library is worse than either a suppression or an open finding. This bites hardest on the runtime guards at the library's boundaries (values from XML attributes, model bindings, `setX()` in untyped JS, duck-typed foreign objects), where a rule that says "parse at the boundary instead" has nowhere to move the check to. Rewriting one such guard from `typeof x === "string" ? … : ""` to `?.trim() ?? ""` turned a documented-total function into one that throws, killing a whole custom layout instead of degrading one facet - caught by running the suite, not by reading the diff. Equally, don't narrow a documented-stable export to satisfy a rule: that is a breaking change for consumers.
 
 ## 2. Sharing has a cost
 

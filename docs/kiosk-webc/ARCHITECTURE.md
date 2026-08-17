@@ -254,6 +254,14 @@ The resolver is wrapped in try/catch for crash safety. If it returns `null`, the
 
 `setTargetElement(el)` sets the target directly, bypassing ID-based resolution. Useful when the target input is not easily addressable by ID (e.g., inside dynamically created web components).
 
+### Text Editing
+
+Insertion and backspace run as a **platform edit** when the target holds focus: the range is selected and `document.execCommand("insertText" | "delete")` performs it, so the browser applies `maxlength` and records the edit on its own undo stack, making Ctrl+Z work. The cluster to delete is still resolved in JS beforehand (`graphemeLengthBefore`), because the engines disagree on what one grapheme cluster is. When the target is not focused, or `execCommand` is unavailable or declines, the value is assigned instead and `maxlength` is applied in JS.
+
+The platform path is guarded by an active-element check that descends open shadow roots, because `execCommand` edits whatever is focused rather than the element it is handed, and a focused shadow-DOM input reports its _host_ as `document.activeElement`.
+
+Either path produces exactly one `input` event per edit: the platform's own on the first, a synthesized `InputEvent` on the second. An edit a saturated `maxlength` leaves empty dispatches none. Rationale and cross-engine measurements: `docs/specs/2026-08-11-native-text-insertion-design.md`.
+
 ### Inputmode Suppression
 
 When the keyboard opens, it sets `inputmode="none"` on the target input to prevent the native virtual keyboard from appearing. This is ref-counted and shared across instances via a static `Map`:
