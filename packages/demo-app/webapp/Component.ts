@@ -52,6 +52,8 @@ export default class Component extends UIComponent {
 
     // Keep the state model's activeScope in sync with route changes.
     // enableRouterIntegration handles scope push/pop; this listener mirrors it to the model.
+    // SAFETY: manifest.json declares the "state" model with type sap.ui.model.json.JSONModel,
+    // and UIComponent has instantiated the manifest models before init() runs.
     const stateModel = this.getModel("state") as JSONModel;
 
     this._routeMatchedHandler = () => {
@@ -67,6 +69,12 @@ export default class Component extends UIComponent {
         if (this.isDestroyed()) return;
         this._routeMatchedHandler();
       })
+      // A rejection reason has no schema to parse against. `JSONModel.dataLoaded()` swallows load
+      // failures itself, so what lands here is whatever the `then` above threw, and `unknown` is
+      // the honest type with the `instanceof Error` check below as the parse. The alternatives are
+      // worse: dropping the annotation types `err` as `any`, since `Promise.catch` declares its
+      // reason `any`, and naming a domain type would assert a shape nothing verified.
+      // oxlint-disable-next-line anti-slop/no-unknown-parameters
       .catch((err: unknown) => {
         Log.warning(
           "State model fixture failed to load",
@@ -103,10 +111,11 @@ export default class Component extends UIComponent {
     // Keep the browser tab / accessibility-tree document title in sync with the
     // active route, so history navigation announces a page change.
     this.getRouter().attachTitleChanged((event) => {
+      // SAFETY: the parameter is optional on the event, but every routing target in manifest.json
+      // declares a title and the router only fires titleChanged for a target that has one.
       document.title = event.getParameter("title") as string;
     });
 
-    // Initialize the router
     this.getRouter().initialize();
   }
 

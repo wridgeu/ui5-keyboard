@@ -20,7 +20,7 @@ function makeHost(activeTargetId: string, mobileKeyboard = MobileKeyboard.Custom
  * Places a real <input> in the fixture and returns the inputId
  * and native element.
  */
-function registerInputElement(id: string): { inputId: string; input: HTMLInputElement } {
+function registerInputElement(id: string) {
   const input = document.createElement("input");
   input.id = `${id}-inner`;
   input.type = "text";
@@ -299,7 +299,7 @@ QUnit.test("suppress is a no-op when active target is empty", (assert) => {
   // The static suppressions map is shared across all tests, so assert on the
   // before/after delta rather than an absolute size: the empty-target guard
   // must not perform any ref-count bookkeeping.
-  const suppressions = (NativeKeyboardSuppression as unknown as { _suppressions: Map<string, unknown> })._suppressions;
+  const suppressions = NativeKeyboardSuppression["_suppressions"];
   const sizeBefore = suppressions.size;
 
   const suppression = new NativeKeyboardSuppression(makeHost(""));

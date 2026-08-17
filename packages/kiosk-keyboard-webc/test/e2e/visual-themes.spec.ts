@@ -3,15 +3,24 @@ import { openPage, keyboardRoot } from "./helpers.js";
 
 // Per-theme visual regression on the dedicated theme page (qwerty + numpad).
 
-const THEME_BG: Record<string, string> = {
+const THEME_BG = {
   sap_horizon: "#f5f6f7",
   sap_horizon_dark: "#12171c",
   sap_horizon_hcb: "#000000",
   sap_horizon_hcw: "#ffffff",
-};
+} satisfies Record<string, string>;
 
-async function switchTheme(page: Page, theme: string): Promise<void> {
-  await page.evaluate((t) => (window as unknown as { __setTheme(t: string): Promise<void> }).__setTheme(t), theme);
+type ThemeName = keyof typeof THEME_BG;
+
+declare global {
+  interface Window {
+    /** Installed by test/pages/visual-themes.js; applies a UI5 theme and resolves once loaded. */
+    __setTheme(theme: string): Promise<void>;
+  }
+}
+
+async function switchTheme(page: Page, theme: ThemeName): Promise<void> {
+  await page.evaluate((t) => window.__setTheme(t), theme);
   await page.waitForFunction(
     (t) => getComputedStyle(document.documentElement).getPropertyValue("--sapThemeMetaData-Base-baseLib").includes(t),
     theme,
@@ -21,7 +30,7 @@ async function switchTheme(page: Page, theme: string): Promise<void> {
 }
 
 test.describe("Theme Visual Regression", () => {
-  for (const theme of ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"]) {
+  for (const theme of ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"] satisfies ThemeName[]) {
     test.describe(theme, () => {
       test.beforeEach(async ({ page }) => {
         await openPage(page, "/test/pages/visual-themes.html");

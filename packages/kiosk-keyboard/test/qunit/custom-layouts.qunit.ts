@@ -6,7 +6,7 @@ import Input from "sap/m/Input";
 import Log from "sap/base/Log";
 import type { LayoutDefinition, CompositionMiddleware } from "ui5/kiosk/types";
 import Localization from "sap/base/i18n/Localization";
-import type LanguageTag from "sap/base/i18n/LanguageTag";
+import LanguageTag from "sap/base/i18n/LanguageTag";
 import { placeAndWait, getRenderedLayoutKeys, getRequiredKeyElement, tapKey } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
@@ -18,7 +18,7 @@ function makeLayout(label: string): LayoutDefinition {
 }
 
 function langTag(language: string, region = ""): LanguageTag {
-  return { language, region } as unknown as LanguageTag;
+  return new LanguageTag(region === "" ? language : `${language}-${region}`);
 }
 
 function noopFactory(): CompositionMiddleware {
@@ -29,16 +29,19 @@ function noopFactory(): CompositionMiddleware {
   };
 }
 
+/** A middleware factory and the tally of the lifecycle calls made through it. */
+interface MiddlewareRecorder {
+  calls: { created: number; commits: number; resets: number };
+  factory: () => CompositionMiddleware;
+}
+
 /**
  * Middleware factory recording the lifecycle calls the keyboard makes on it.
  * `handleKey` consumes every key, so the middleware is mid-composition from the
  * first tap onwards and a `commit` / `reset` is observable as the difference
  * between flushing the buffered syllable and dropping it.
  */
-function recordingFactory(): {
-  calls: { created: number; commits: number; resets: number };
-  factory: () => CompositionMiddleware;
-} {
+function recordingFactory(): MiddlewareRecorder {
   const calls = { created: 0, commits: 0, resets: 0 };
   const factory = (): CompositionMiddleware => {
     calls.created++;
@@ -55,6 +58,26 @@ function recordingFactory(): {
   };
   return { calls, factory };
 }
+
+/**
+ * Settings as a plain-JS caller writes them. An XML view and a JS controller reach the
+ * same constructors without the generated types, so the values TypeScript refuses are
+ * exactly the ones UI5's own property validation has to answer for.
+ */
+interface PlainLayoutSettings {
+  name?: string;
+  rows?: string | LayoutDefinition;
+  locales?: string | string[];
+  layoutRole?: string;
+}
+
+/** `CustomLayout` reached through that surface. */
+const PlainCustomLayout = CustomLayout as new (settings: PlainLayoutSettings) => CustomLayout;
+
+/** `KioskKeyboard` reached through it, with the literals the aggregation's `defaultClass` instantiates. */
+const PlainKioskKeyboard = KioskKeyboard as new (settings: {
+  customLayouts: PlainLayoutSettings[] | CustomLayout[];
+}) => KioskKeyboard;
 
 const sandbox = sinon.createSandbox();
 
@@ -175,7 +198,7 @@ QUnit.test("Rows that are not a layout definition are reported and dropped", asy
 
 QUnit.test("Rows that are not even an array are rejected loudly by the property type", (assert) => {
   assert.throws(
-    () => new CustomLayout({ name: "broken", rows: "not-an-array" as unknown as LayoutDefinition }),
+    () => new PlainCustomLayout({ name: "broken", rows: "not-an-array" }),
     "a shape the rows type cannot accept fails at assignment rather than resolving to nothing",
   );
 });
@@ -403,8 +426,8 @@ QUnit.test("A single locale string widens to a one-entry list, whichever form th
 
   // A plain-JS caller passing an object literal goes through the aggregation's
   // `defaultClass`, so it must coerce exactly as an explicit construction does.
-  const fromLiteral = new KioskKeyboard({
-    customLayouts: [{ name: "pl-warehouse", rows: makeLayout("p"), locales: "pl" }] as unknown as CustomLayout[],
+  const fromLiteral = new PlainKioskKeyboard({
+    customLayouts: [{ name: "pl-warehouse", rows: makeLayout("p"), locales: "pl" }],
   });
   const fromInstance = new KioskKeyboard({
     customLayouts: [new CustomLayout({ name: "pl-warehouse", rows: makeLayout("p"), locales: ["pl"] })],
@@ -458,7 +481,7 @@ QUnit.test("layoutRole=Secondary marks a layout with no built-in as an auxiliary
 
 QUnit.test("A layoutRole outside the closed set is rejected at assignment", (assert) => {
   assert.throws(
-    () => new CustomLayout({ name: "x", layoutRole: "base" as unknown as LayoutRole }),
+    () => new PlainCustomLayout({ name: "x", layoutRole: "base" }),
     "a typo in a closed enum fails loudly rather than resolving to the default",
   );
 });
@@ -665,7 +688,7 @@ QUnit.test("An invalid variant table is reported and skipped", async (assert) =>
 QUnit.test("Table-shaped impostors are rejected rather than read as an empty table", async (assert) => {
   // Each of these has no own enumerable values, so a validator that only inspects
   // Object.values would accept it, shadow the built-in table and arm nothing.
-  const impostors: Record<string, unknown> = {
+  const impostors = {
     map: new Map([["a", ["ä"]]]),
     date: new Date(),
     empty: {},

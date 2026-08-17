@@ -1,4 +1,3 @@
-import Input from "sap/m/Input";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type {
@@ -17,6 +16,12 @@ interface LogEntry {
   state: string;
 }
 
+/** The part of a focus event UI5 hands to an `onfocusin` / `onfocusout` event delegate. */
+interface FocusDelegateEvent {
+  target: EventTarget | null;
+  relatedTarget: EventTarget | null;
+}
+
 /**
  * Focus scenarios demo - interactive testbed for verifying docked KioskKeyboard
  * focus transitions, auto-show/close behavior, and deferred focus handling.
@@ -27,11 +32,14 @@ export default class KioskFocusScenarios extends BaseController {
   private static readonly _MAX_LOG = 80;
 
   private _logModel!: JSONModel;
-  private _focusDelegate!: { onfocusin: (event: Event) => void; onfocusout: (event: Event) => void };
+  private _focusDelegate!: {
+    onfocusin: (event: FocusDelegateEvent) => void;
+    onfocusout: (event: FocusDelegateEvent) => void;
+  };
   private _deferredTimer: ReturnType<typeof setTimeout> | null = null;
 
   override onInit(): void {
-    this._logModel = new JSONModel({ entries: [] as LogEntry[] });
+    this._logModel = new JSONModel({ entries: [] });
     this.getView()!.setModel(this._logModel, "log");
 
     this._focusDelegate = {
@@ -90,13 +98,13 @@ export default class KioskFocusScenarios extends BaseController {
       clearTimeout(this._deferredTimer);
     }
 
-    const input1 = this.byId("focusInput1") as Input;
+    const input1 = this.byId("focusInput1")!;
     input1.focus();
     this._addLogEntry("timer", "Focus \u2192 focusInput1; moving to outsideInput in 2 s", "Warning");
 
     this._deferredTimer = setTimeout(() => {
       this._deferredTimer = null;
-      const outside = this.byId("outsideInput") as Input;
+      const outside = this.byId("outsideInput")!;
       outside.focus();
       this._addLogEntry("timer", "Deferred focus \u2192 outsideInput (relatedTarget was null)", "Warning");
     }, 2000);
@@ -122,17 +130,15 @@ export default class KioskFocusScenarios extends BaseController {
 
   // DOM focus delegate
 
-  private _onDomFocusIn(event: Event): void {
-    const fe = event as FocusEvent;
-    const target = this._describeElement(fe.target as HTMLElement | null);
-    const related = this._describeElement(fe.relatedTarget as HTMLElement | null);
+  private _onDomFocusIn(event: FocusDelegateEvent): void {
+    const target = this._describeElement(event.target);
+    const related = this._describeElement(event.relatedTarget);
     this._addLogEntry("focusin", `${target} \u2190 from ${related}`, "Success");
   }
 
-  private _onDomFocusOut(event: Event): void {
-    const fe = event as FocusEvent;
-    const target = this._describeElement(fe.target as HTMLElement | null);
-    const related = this._describeElement(fe.relatedTarget as HTMLElement | null);
+  private _onDomFocusOut(event: FocusDelegateEvent): void {
+    const target = this._describeElement(event.target);
+    const related = this._describeElement(event.relatedTarget);
     this._addLogEntry("focusout", `${target} \u2192 to ${related}`, "Warning");
   }
 
@@ -143,6 +149,8 @@ export default class KioskFocusScenarios extends BaseController {
   }
 
   private _setKeyboardRouteActive(active: boolean): void {
+    // SAFETY: the view declares `<kiosk:KioskKeyboard id="focusKeyboard">`; the route handler
+    // can also run once the view is being destroyed, which the `undefined` covers.
     const keyboard = this.byId("focusKeyboard") as KioskKeyboard | undefined;
     if (!keyboard) return;
 
@@ -155,8 +163,8 @@ export default class KioskFocusScenarios extends BaseController {
     keyboard.setAutoShow(false);
   }
 
-  private _describeElement(el: HTMLElement | null): string {
-    if (!el) return "(null)";
+  private _describeElement(el: EventTarget | null): string {
+    if (!(el instanceof HTMLElement)) return "(null)";
     const id = el.id;
     if (!id) return el.tagName.toLowerCase();
     const prefix = this.getView()!.getId() + "--";
@@ -164,7 +172,7 @@ export default class KioskFocusScenarios extends BaseController {
   }
 
   private _addLogEntry(event: string, detail: string, state: string): void {
-    const current = this._logModel.getProperty("/entries") as LogEntry[];
+    const current: LogEntry[] = this._logModel.getProperty("/entries");
     const next = [{ time: new Date(), event, detail, state }, ...current].slice(0, KioskFocusScenarios._MAX_LOG);
     this._logModel.setProperty("/entries", next);
   }

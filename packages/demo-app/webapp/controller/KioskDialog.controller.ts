@@ -40,6 +40,8 @@ export default class KioskDialog extends BaseController {
   }
 
   onOpenDialogA(): void {
+    // SAFETY: loadFragment resolves to the fragment's single root control, and
+    // DialogNoKeyboard.fragment.xml declares exactly one, a sap.m.Dialog.
     this._dialogA ??= this.loadFragment({
       name: "demo.hotkeys.view.fragments.DialogNoKeyboard",
     }) as Promise<Dialog>;
@@ -47,6 +49,8 @@ export default class KioskDialog extends BaseController {
   }
 
   onOpenDialogB(): void {
+    // SAFETY: loadFragment resolves to the fragment's single root control, and
+    // DialogEmbeddedKeyboard.fragment.xml declares exactly one, a sap.m.Dialog.
     this._dialogB ??= this.loadFragment({
       name: "demo.hotkeys.view.fragments.DialogEmbeddedKeyboard",
     }) as Promise<Dialog>;
@@ -54,17 +58,23 @@ export default class KioskDialog extends BaseController {
   }
 
   onCloseDialog(event: Button$PressEvent): void {
+    // SAFETY: both fragments wire this handler to a Button sitting in the Dialog's beginButton
+    // aggregation, so the pressed button's parent is that Dialog.
     (event.getSource().getParent() as Dialog).close();
   }
 
   onDialogBBeforeOpen(): void {
     // The dialog is reused across opens, so clear any latch state (armed
     // Shift, etc.) the embedded keyboard carried from the previous session.
+    // SAFETY: DialogEmbeddedKeyboard.fragment.xml declares dialogBKeyboard as a
+    // ui5.kiosk.KioskKeyboard, and beforeOpen only fires once that fragment is loaded.
     (this.byId("dialogBKeyboard") as KioskKeyboard).reset();
   }
 
   onDialogAfterClose(): void {
     // Re-focus page input so the docked keyboard resumes.
+    // SAFETY: KioskDialog.view.xml declares pageInput as a sap.m.Input; the undefined arm covers
+    // an afterClose that arrives once the view is gone.
     (this.byId("pageInput") as Input | undefined)?.focus();
   }
 

@@ -1,7 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
 import type { Router$RouteMatchedEvent } from "sap/ui/core/routing/Router";
-import type Input from "sap/m/Input";
 import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
@@ -50,7 +49,7 @@ export default class KioskComponent extends BaseController {
   onShowKeyboard(): void {
     const kb = this._keyboard;
     if (kb) {
-      const input = this.byId("compInput") as Input;
+      const input = this.byId("compInput")!;
       kb.setControls([input.getId()]);
       kb.show();
       this.getStateModel().setProperty("/kioskIsOpen", kb.isOpen());
@@ -83,7 +82,6 @@ export default class KioskComponent extends BaseController {
       this._returnNavTimer = null;
     }
 
-    // Close keyboard when leaving this demo
     this._keyboard?.close();
     this.getRouter().navTo(Scope.KioskHub);
   }
@@ -94,7 +92,7 @@ export default class KioskComponent extends BaseController {
     // Re-wire the keyboard to this view's input whenever we navigate back
     const kb = this._keyboard;
     if (kb) {
-      const input = this.byId("compInput") as Input;
+      const input = this.byId("compInput");
       if (input) {
         kb.setControls([input.getId()]);
       }

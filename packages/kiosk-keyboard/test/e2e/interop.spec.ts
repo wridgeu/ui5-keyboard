@@ -19,19 +19,9 @@ type InteropWindow = Window & { interopHarnessReady?: boolean; interopHarness?: 
 
 async function openInteropPage(page: Page): Promise<void> {
   await openPage(page, PAGE);
-  await page.waitForFunction(
-    () => {
-      const w = window as InteropWindow;
-      return Boolean(
-        w.interopHarnessReady &&
-        typeof w.interopHarness?.focusControlById === "function" &&
-        typeof w.interopHarness?.getKeyboardTargetId === "function" &&
-        typeof w.interopHarness?.focusCustomElement === "function" &&
-        typeof w.interopHarness?.focusShadowCustomElement === "function",
-      );
-    },
-    { timeout: 10_000 },
-  );
+  // interop/init.js assigns the whole harness object, then flips the flag on the
+  // next statement, so the flag alone means every entry point below is installed.
+  await page.waitForFunction(() => (window as InteropWindow).interopHarnessReady === true, { timeout: 10_000 });
 }
 
 const targetId = (page: Page) => page.evaluate(() => (window as InteropWindow).interopHarness!.getKeyboardTargetId());

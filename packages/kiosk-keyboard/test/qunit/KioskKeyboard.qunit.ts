@@ -283,7 +283,7 @@ QUnit.test("keyPress event fires on character key tap", async (assert) => {
   await placeAndWait(kb);
 
   const done = assert.async();
-  kb.attachEvent("keyPress", (event: { getParameter(name: string): unknown }) => {
+  kb.attachKeyPress((event) => {
     assert.strictEqual(event.getParameter("key"), "q", "Key is 'q'");
     assert.strictEqual(event.getParameter("shiftKey"), false, "shiftKey is false");
     done();
@@ -300,7 +300,7 @@ QUnit.test("keyPress event fires shifted value", async (assert) => {
   tapKey(kb, "{shift}");
 
   const done = assert.async();
-  kb.attachEvent("keyPress", (event: { getParameter(name: string): unknown }) => {
+  kb.attachKeyPress((event) => {
     assert.strictEqual(event.getParameter("key"), "Q", "Shifted key is 'Q'");
     assert.strictEqual(event.getParameter("shiftKey"), true, "shiftKey is true");
     done();
@@ -317,7 +317,7 @@ QUnit.test("keyPress event fires shift value for number keys", async (assert) =>
   tapKey(kb, "{shift}");
 
   const done = assert.async();
-  kb.attachEvent("keyPress", (event: { getParameter(name: string): unknown }) => {
+  kb.attachKeyPress((event) => {
     assert.strictEqual(event.getParameter("key"), "!", "Shift+1 produces !");
     done();
   });
@@ -331,7 +331,7 @@ QUnit.test("keyPress event fires for Backspace", async (assert) => {
   await placeAndWait(kb);
 
   const done = assert.async();
-  kb.attachEvent("keyPress", (event: { getParameter(name: string): unknown }) => {
+  kb.attachKeyPress((event) => {
     assert.strictEqual(event.getParameter("key"), "Backspace", "Key is Backspace");
     done();
   });
@@ -345,7 +345,7 @@ QUnit.test("keyPress event fires for Enter", async (assert) => {
   await placeAndWait(kb);
 
   const done = assert.async();
-  kb.attachEvent("keyPress", (event: { getParameter(name: string): unknown }) => {
+  kb.attachKeyPress((event) => {
     assert.strictEqual(event.getParameter("key"), "Enter", "Key is Enter");
     done();
   });
@@ -564,8 +564,8 @@ QUnit.test("controls auto-target does not trigger re-render", async (assert) => 
  * never aborts is a leaked listener.
  */
 function signalOf(call: sinon.SinonSpyCall | undefined): AbortSignal | undefined {
-  const options = call?.args[2];
-  return typeof options === "object" && options !== null ? (options as AddEventListenerOptions).signal : undefined;
+  const signal: unknown = call?.args[2]?.signal;
+  return signal instanceof AbortSignal ? signal : undefined;
 }
 
 QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
@@ -624,7 +624,7 @@ QUnit.test("fireLiveChange receives value parameter", async (assert) => {
   input.placeAt("qunit-fixture");
 
   const done = assert.async();
-  input.attachLiveChange((event: { getParameter(name: string): unknown }) => {
+  input.attachLiveChange((event) => {
     assert.strictEqual(event.getParameter("value"), "a", "value parameter is correct");
     done();
   });
@@ -647,7 +647,7 @@ QUnit.test("Enter key fires change event on target sap.m.Input", async (assert) 
   input.placeAt("qunit-fixture");
 
   const done = assert.async();
-  input.attachChange((event: { getParameter(name: string): unknown }) => {
+  input.attachChange((event) => {
     assert.strictEqual(event.getParameter("value"), "hello", "change fired with correct value");
     done();
   });
@@ -686,8 +686,8 @@ QUnit.test("change fires on close after typing", async (assert) => {
   input.placeAt("qunit-fixture");
 
   let changeValue: string | undefined;
-  input.attachChange((event: { getParameter(name: string): unknown }) => {
-    changeValue = event.getParameter("value") as string;
+  input.attachChange((event) => {
+    changeValue = event.getParameter("value");
   });
 
   const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
@@ -731,8 +731,8 @@ QUnit.test("change fires on active target switch after typing", async (assert) =
   input2.placeAt("qunit-fixture");
 
   let changeValue: string | undefined;
-  input1.attachChange((event: { getParameter(name: string): unknown }) => {
-    changeValue = event.getParameter("value") as string;
+  input1.attachChange((event) => {
+    changeValue = event.getParameter("value");
   });
 
   const kb = new KioskKeyboard({ controls: [input1.getId(), input2.getId()] });
@@ -1118,7 +1118,6 @@ QUnit.test("Caps Lock ring is visible over the modifier key (light-DOM specifici
 });
 
 QUnit.test("Glyph font-override is scoped to key labels and does not leak in the light DOM", async (assert) => {
-  const DOM = KioskKeyboard.DOM;
   // Rendering the control loads the compiled theme stylesheet into the page.
   const kb = new KioskKeyboard();
   await placeAndWait(kb);

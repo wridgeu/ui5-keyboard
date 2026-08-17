@@ -4,6 +4,7 @@ import { KeyboardType, LayoutRole } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Input from "sap/m/Input";
 import Localization from "sap/base/i18n/Localization";
+import LanguageTag from "sap/base/i18n/LanguageTag";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
   createFakeKeyElement,
@@ -48,11 +49,10 @@ QUnit.test("Default layout renders QWERTY", async (assert) => {
 });
 
 QUnit.test("KeyboardType 'Numpad' renders numpad keys", async (assert) => {
-  // The first-key check is the real distinguisher (numpad row 0 is "7" while
-  // QWERTY row 0 is "1"). The previous `rows.length <= 5` assertion was a
-  // no-op because both layouts happen to render exactly 5 rows. The
-  // strict-equal on row count still catches a future regression that adds or
-  // drops a row from the numpad layout definition.
+  // The first-key check is the real distinguisher: both layouts render exactly
+  // 5 rows, so a row count alone cannot tell them apart. The strict-equal on
+  // row count still catches a future regression that adds or drops a row from
+  // the numpad layout definition.
   const kb = new KioskKeyboard();
   kb.setKeyboardType(KeyboardType.Numpad);
   await placeAndWait(kb);
@@ -345,7 +345,7 @@ QUnit.test("Layout switch fires layoutChange event", async (assert) => {
   await placeAndWait(kb);
 
   const done = assert.async();
-  kb.attachEvent("layoutChange", (event: { getParameter(name: string): unknown }) => {
+  kb.attachLayoutChange((event) => {
     assert.strictEqual(event.getParameter("layout"), "numeric", "Layout changed to numeric");
     done();
   });
@@ -662,7 +662,7 @@ QUnit.test("QWERTZ-DE German number row shift symbols", async (assert) => {
   tapKey(kb, "{shift}");
 
   const done = assert.async();
-  kb.attachEvent("keyPress", (event: { getParameter(name: string): unknown }) => {
+  kb.attachKeyPress((event) => {
     assert.strictEqual(event.getParameter("key"), '"', 'Shift+2 produces " in German layout');
     done();
   });
@@ -926,15 +926,24 @@ QUnit.test("a custom layout's locales extend the locale map for the controlling 
   }
 });
 
+/**
+ * A tag carrying a language no BCP-47 string can spell, so the parsing constructor
+ * cannot produce it and its frozen instances cannot be edited into it. Locale
+ * resolution reads `language` and `region`.
+ */
+function forbiddenLanguageTag(language: string): LanguageTag {
+  const tag: LanguageTag = Object.create(LanguageTag.prototype);
+  tag.language = language;
+  tag.region = "";
+  return tag;
+}
+
 QUnit.test("a custom layout's locales accept formerly forbidden prefixes (Map-safe)", async (assert) => {
-  const localization = Localization as unknown as {
-    getLanguageTag: () => { language: string; region?: string | null };
-  };
-  const originalGetLanguageTag = localization.getLanguageTag;
+  const originalGetLanguageTag = Localization.getLanguageTag;
 
   try {
     for (const locale of ["__proto__", "prototype", "constructor"]) {
-      localization.getLanguageTag = () => ({ language: locale, region: undefined });
+      Localization.getLanguageTag = () => forbiddenLanguageTag(locale);
 
       const kb = new KioskKeyboard({
         customLayouts: [new CustomLayout({ name: "qwertz-de", locales: [locale] })],
@@ -945,7 +954,7 @@ QUnit.test("a custom layout's locales accept formerly forbidden prefixes (Map-sa
       kb.destroy();
     }
   } finally {
-    localization.getLanguageTag = originalGetLanguageTag;
+    Localization.getLanguageTag = originalGetLanguageTag;
   }
 });
 
@@ -1049,7 +1058,7 @@ QUnit.test("ja-kana: small kana shift variants on correct keys", async (assert) 
 
   // Verify shift variants via data-shift-value attribute (renderer stores them on the DOM)
   const allKeys = Array.from(getKeyElements(kb));
-  const expectedShifts: Record<string, string> = {
+  const expectedShifts = {
     "\u3042": "\u3041", // あ → ぁ
     "\u3046": "\u3045", // う → ぅ
     "\u3048": "\u3047", // え → ぇ
@@ -1061,7 +1070,7 @@ QUnit.test("ja-kana: small kana shift variants on correct keys", async (assert) 
     "\u3044": "\u3043", // い → ぃ
     "\u3064": "\u3063", // つ → っ
     "\u307B": "\u3078", // ほ → へ
-  };
+  } satisfies Record<string, string>;
 
   for (const [base, expectedSmall] of Object.entries(expectedShifts)) {
     const keyEl = allKeys.find((el) => el.dataset.key === base);
@@ -1261,10 +1270,6 @@ QUnit.test("a nameless custom layout is dropped whole, leaving the built-in loca
 });
 
 // ──────────────────────────────────────────────
-// Cross-Layout Special Char Consistency
-// ──────────────────────────────────────────────
-
-// ──────────────────────────────────────────────
 // ko-hangul layout
 // ──────────────────────────────────────────────
 
@@ -1420,8 +1425,8 @@ QUnit.test("setLayout with a non-normalized name keeps composition middleware ac
   kb.setLayout("Ko-Hangul ");
   await waitForRender();
 
-  tapKey(kb, "ㅎ"); // ㅎ
-  tapKey(kb, "ㅏ"); // ㅏ
+  tapKey(kb, "ㅎ");
+  tapKey(kb, "ㅏ");
   assert.strictEqual(dom.value, "하", "Jamo taps compose a syllable despite the non-normalized layout name");
 
   input.destroy();

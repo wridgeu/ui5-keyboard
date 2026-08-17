@@ -873,12 +873,14 @@ QUnit.test("stopPropagation does not block sibling window-capture listeners", (a
 
 QUnit.test("Target-scoped: target = document degrades to untargeted registration", (assert) => {
   let fired = false;
+  // `document` is a Node but not an Element; an untyped JS consumer can still pass it.
+  const documentNode: Node = document;
   manager.register(
     "F5",
     () => {
       fired = true;
     },
-    { target: document as unknown as HTMLElement },
+    { target: documentNode as Element },
   );
 
   fireKey("F5");
@@ -1093,7 +1095,6 @@ QUnit.test("Interceptor replacement logs warning via sap/base/Log", (assert) => 
   const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
   assert.ok(LogModule, "sap/base/Log loaded synchronously");
 
-  // Spy on Log.warning
   const spy = sinon.spy(LogModule, "warning");
 
   try {
@@ -1136,12 +1137,13 @@ QUnit.test("Target-scoped iframe document does not match main window events", (a
       // Document is not an Element, but a JS consumer could pass it.
       // It gets stored as a targeted registration keyed to the Document node,
       // which is never in the main window's composedPath().
+      const iframeDocNode: Node = iframeDoc;
       const handle = manager.register(
         "Escape",
         () => {
           fired = true;
         },
-        { target: iframeDoc as unknown as Element },
+        { target: iframeDocNode as Element },
       );
 
       // The iframe's Document is not in the main window's composedPath,

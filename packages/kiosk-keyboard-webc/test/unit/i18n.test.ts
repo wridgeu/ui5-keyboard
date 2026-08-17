@@ -1,29 +1,37 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import { registerI18nLoader } from "@ui5/webcomponents-base/dist/i18nBundle.js";
+import { setLanguage } from "@ui5/webcomponents-base/dist/config/Language.js";
+import { KEY_SHIFT } from "../../src/generated/i18n/i18n-defaults.js";
+import { getText, setI18nResolver, initI18n } from "../../src/core/i18n.js";
 
-// Mock only the UI5 WC i18n bundle - i18n-defaults.js is a generated file
-// with plain object exports that works fine without mocking.
-const mockGetText = vi.fn();
-vi.mock("@ui5/webcomponents-base/dist/i18nBundle.js", () => ({
-  getI18nBundle: vi.fn(() => Promise.resolve({ getText: mockGetText })),
-}));
+// The framework's own loader registry is the seam. French ships no translation,
+// so the loader registered here is the only one for that locale and its payload
+// is what `initI18n` fetches and `getText` then reads through. The loader hands
+// back the same object on every fetch, so a test declares the translation it
+// needs by writing into it.
+const BUNDLE_TEXTS: Record<string, string> = {};
+const BUNDLE_LOCALE = "fr";
 
-// Import after mock is set up
-const { getText, setI18nResolver, initI18n } = await import("../../src/core/i18n.js");
+registerI18nLoader("kiosk-keyboard-webc", BUNDLE_LOCALE, () => Promise.resolve(BUNDLE_TEXTS));
 
 describe("i18n", () => {
+  beforeAll(async () => {
+    await setLanguage(BUNDLE_LOCALE);
+  });
+
   beforeEach(async () => {
     setI18nResolver(null);
-    mockGetText.mockReset();
+    for (const key of Object.keys(BUNDLE_TEXTS)) delete BUNDLE_TEXTS[key];
     await initI18n();
   });
 
   it("returns default text from i18n-defaults for known key", () => {
-    mockGetText.mockReturnValue("KEY_SHIFT"); // returns the key itself = no translation
+    BUNDLE_TEXTS[KEY_SHIFT.key] = KEY_SHIFT.key; // the key itself = no translation
     expect(getText("KEY_SHIFT", "fallback")).toBe("Shift");
   });
 
   it("returns bundle translation when available", () => {
-    mockGetText.mockReturnValue("Umschalt");
+    BUNDLE_TEXTS[KEY_SHIFT.key] = "Umschalt";
     expect(getText("KEY_SHIFT", "fallback")).toBe("Umschalt");
   });
 
@@ -32,28 +40,28 @@ describe("i18n", () => {
   });
 
   it("resolver overrides resolved text", () => {
-    mockGetText.mockReturnValue("Shift");
+    BUNDLE_TEXTS[KEY_SHIFT.key] = "Shift";
     setI18nResolver((_key, _locale, _defaultText) => "Custom Shift");
     expect(getText("KEY_SHIFT", "fallback")).toBe("Custom Shift");
   });
 
   it("resolver receives key, locale, and resolved text", () => {
-    mockGetText.mockReturnValue("BundleShift");
+    BUNDLE_TEXTS[KEY_SHIFT.key] = "BundleShift";
     const resolver = vi.fn(() => undefined);
     setI18nResolver(resolver);
     getText("KEY_SHIFT", "fallback");
 
-    expect(resolver).toHaveBeenCalledWith("KEY_SHIFT", expect.any(String), "BundleShift");
+    expect(resolver).toHaveBeenCalledWith("KEY_SHIFT", BUNDLE_LOCALE, "BundleShift");
   });
 
   it("falls through when resolver returns undefined", () => {
-    mockGetText.mockReturnValue("BundleText");
+    BUNDLE_TEXTS[KEY_SHIFT.key] = "BundleText";
     setI18nResolver(() => undefined);
     expect(getText("KEY_SHIFT", "fallback")).toBe("BundleText");
   });
 
   it("falls through and logs warning when resolver throws", () => {
-    mockGetText.mockReturnValue("BundleText");
+    BUNDLE_TEXTS[KEY_SHIFT.key] = "BundleText";
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     setI18nResolver(() => {
       throw new Error("resolver broke");
@@ -68,7 +76,7 @@ describe("i18n", () => {
     expect(getText("KEY_SHIFT", "fallback")).toBe("override");
 
     setI18nResolver(null);
-    mockGetText.mockReturnValue("KEY_SHIFT");
+    BUNDLE_TEXTS[KEY_SHIFT.key] = KEY_SHIFT.key;
     expect(getText("KEY_SHIFT", "fallback")).toBe("Shift");
   });
 });

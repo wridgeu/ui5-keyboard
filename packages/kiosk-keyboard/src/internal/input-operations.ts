@@ -63,6 +63,12 @@ function nativeEdit(
   end: number,
   command: () => boolean,
 ): boolean {
+  // A capability probe on an ambient global, not unparsed input, so there is no I/O boundary to
+  // move it to: `lib.dom` types `execCommand` as always present, but it is deprecated and absent
+  // in non-browser DOM shims. The `catch` below would also answer `false` for a missing method,
+  // since `command()` only ever runs inside it; probing first is what keeps the failure from
+  // landing after `setSelectionRange` has already moved the caret.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (typeof document.execCommand !== "function") return false;
   // The command edits whatever is focused, never the element it is handed
   if (activeElement() !== dom) return false;
@@ -342,8 +348,13 @@ export function setTargetValue(
  * a `value` metadata property.
  */
 function writeTargetValue(element: TargetElement, newValue: string, customResolver?: TargetResolverFn | null): void {
+  // `TargetElement` declares no `setValue`, so `in` narrows the member to `unknown` and this
+  // check is what makes it callable at all; `element` is whatever consumer control the target
+  // resolver landed on, where `setValue` may be a data member rather than `InputBase.setValue`.
+  // The alternative is asserting the call signature, which drops the guard and calls a non-function.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if ("setValue" in element && typeof element.setValue === "function") {
-    (element.setValue as (v: string) => unknown).call(element, newValue);
+    element.setValue(newValue);
   } else if (element.getMetadata().hasProperty("value")) {
     element.setProperty("value", newValue);
   } else {

@@ -1,17 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-
-// Drive locale resolution through the framework's getLocale(). The same mock
-// pattern (controlling the UI5 WC dependency) is used in i18n.test.ts. getLocale
-// itself (configured-language vs browser fallback) is the framework's concern;
-// here we only assert that getLocaleLayout maps its language/region to a layout.
-const localeState = vi.hoisted(() => ({ language: "en", region: "", throws: false }));
-vi.mock("@ui5/webcomponents-base/dist/locale/getLocale.js", () => ({
-  default: () => {
-    if (localeState.throws) throw new Error("malformed locale");
-    return { getLanguage: () => localeState.language, getRegion: () => localeState.region };
-  },
-}));
-
+import { getLanguage, setLanguage } from "@ui5/webcomponents-base/dist/config/Language.js";
+import getLocale from "@ui5/webcomponents-base/dist/locale/getLocale.js";
 import {
   getRegisteredLayout,
   getLayoutOrDefault,
@@ -22,6 +11,15 @@ import {
 import type { LayoutDefinition } from "../../src/types.js";
 
 const CUSTOM_LAYOUT: LayoutDefinition = [[{ value: "a" }, { value: "b" }, { value: "c" }]];
+
+/**
+ * Configures the framework language. `setLanguage` is typed for a language tag,
+ * but `undefined` is what restores the unconfigured state `getLanguage()` reports
+ * before any test has run.
+ */
+function applyLanguage(language: string | undefined): Promise<void> {
+  return setLanguage(language as string);
+}
 
 const BUILTIN_NAMES = [
   "qwerty",
@@ -111,7 +109,8 @@ describe("layout-registry", () => {
 
     it("returns default for non-string argument", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
-      const layout = getLayoutOrDefault(undefined as unknown as string);
+      // @ts-expect-error a name only plain JS can supply, which is what the guard covers
+      const layout = getLayoutOrDefault(undefined);
       expect(layout).toBeDefined();
       expect(layout.length).toBeGreaterThan(0);
     });
@@ -125,68 +124,71 @@ describe("layout-registry", () => {
   });
 
   describe("getLocaleLayout", () => {
-    function withLocale<T>(language: string, region: string, fn: () => T): T {
-      const prevLang = localeState.language;
-      const prevRegion = localeState.region;
-      localeState.language = language;
-      localeState.region = region;
+    /**
+     * Configures the framework language `getLocaleLayout` resolves through, then
+     * restores the one that was configured before. `setLanguage` is the runtime's
+     * own entry point, so `getLocale()` reports the tag exactly as production does.
+     */
+    async function withLanguage<T>(tag: string, fn: () => T): Promise<T> {
+      const previous = getLanguage();
+      await applyLanguage(tag);
       try {
         return fn();
       } finally {
-        localeState.language = prevLang;
-        localeState.region = prevRegion;
+        await applyLanguage(previous);
       }
     }
 
-    it("returns default layout when getLocale throws", () => {
-      localeState.throws = true;
-      try {
+    it("returns default layout when getLocale throws", async () => {
+      await withLanguage("!!", () => {
+        // getLocale() builds a Locale from the configured tag without guarding it,
+        // so a tag that is not BCP-47 throws out of it. Pinned here, or the case
+        // below would pass on a tag that merely maps to no layout.
+        expect(() => getLocale()).toThrow();
         expect(getLocaleLayout()).toBe("qwerty");
-      } finally {
-        localeState.throws = false;
-      }
+      });
     });
 
     it.each([
-      ["en", "", "qwerty"],
-      ["de", "", "qwertz-de"],
-      ["ja", "JP", "ja-romaji"],
-      ["ar", "", "arabic"],
-      ["ar", "SA", "arabic"],
-      ["ko", "", "ko-hangul"],
-      ["ko", "KR", "ko-hangul"],
-      ["es", "", "qwerty-es"],
-      ["es", "ES", "qwerty-es"],
-    ])("resolves %s-%s to %s via built-in locale mapping", (language, region, expected) => {
-      withLocale(language, region, () => {
+      ["en", "qwerty"],
+      ["de", "qwertz-de"],
+      ["ja-JP", "ja-romaji"],
+      ["ar", "arabic"],
+      ["ar-SA", "arabic"],
+      ["ko", "ko-hangul"],
+      ["ko-KR", "ko-hangul"],
+      ["es", "qwerty-es"],
+      ["es-ES", "qwerty-es"],
+    ])("resolves %s to %s via built-in locale mapping", async (tag, expected) => {
+      await withLanguage(tag, () => {
         expect(getLocaleLayout()).toBe(expected);
       });
     });
 
-    it("instance locale map shadows built-in locale map", () => {
-      withLocale("de", "", () => {
+    it("instance locale map shadows built-in locale map", async () => {
+      await withLanguage("de", () => {
         const instanceLocale = new Map([["de", "qwerty"]]);
         expect(getLocaleLayout(instanceLocale)).toBe("qwerty");
       });
     });
 
-    it("instance locale map can resolve to instance-only layout", () => {
-      withLocale("xx", "", () => {
+    it("instance locale map can resolve to instance-only layout", async () => {
+      await withLanguage("xx", () => {
         const instanceLocale = new Map([["xx", "warehouse"]]);
         const instanceLayouts = new Map([["warehouse", CUSTOM_LAYOUT]]);
         expect(getLocaleLayout(instanceLocale, instanceLayouts)).toBe("warehouse");
       });
     });
 
-    it("does not resolve mapping when target layout is not registered", () => {
-      withLocale("xx", "", () => {
+    it("does not resolve mapping when target layout is not registered", async () => {
+      await withLanguage("xx", () => {
         const instanceLocale = new Map([["xx", "missing-layout"]]);
         expect(getLocaleLayout(instanceLocale)).toBe("qwerty");
       });
     });
 
-    it("exact BCP-47 match takes precedence over language prefix", () => {
-      withLocale("de", "CH", () => {
+    it("exact BCP-47 match takes precedence over language prefix", async () => {
+      await withLanguage("de-CH", () => {
         const instanceLocale = new Map([
           ["de", "qwertz-de"],
           ["de-ch", "qwerty"],
@@ -199,7 +201,8 @@ describe("layout-registry", () => {
   describe("getRegisteredLayout - normalization", () => {
     it("rejects non-string name and warns", () => {
       const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      expect(getRegisteredLayout(42 as unknown as string)).toBeUndefined();
+      // @ts-expect-error a name only plain JS can supply, which is what the guard covers
+      expect(getRegisteredLayout(42)).toBeUndefined();
       expect(spy).toHaveBeenCalledWith(expect.stringContaining("expected a string"));
     });
 
@@ -217,7 +220,8 @@ describe("layout-registry", () => {
   describe("isBuiltInLayout - negative paths", () => {
     it("returns false for non-string argument", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
-      expect(isBuiltInLayout(123 as unknown as string)).toBe(false);
+      // @ts-expect-error a name only plain JS can supply, which is what the guard covers
+      expect(isBuiltInLayout(123)).toBe(false);
     });
 
     it("returns false for empty string", () => {

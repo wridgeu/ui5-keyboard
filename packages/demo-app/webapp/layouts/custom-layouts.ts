@@ -106,16 +106,16 @@ export const ARABIC_DIGITS_LAYOUT: LayoutDefinition = [
  * A house accent set, applied under every layout through the keyboard's
  * `defaultVariants`. Letters the built-in Latin table does not cover.
  */
-export const HOUSE_ACCENTS: Record<string, string[]> = {
+export const HOUSE_ACCENTS = {
   q: ["ǫ", "ɋ"],
   w: ["ŵ"],
-};
+} satisfies Record<string, string[]>;
 
 /**
  * One layout's own accents, merged over the tiers below per base letter, so `a` takes
  * this list instead of the built-in one while every letter it omits keeps theirs.
  */
-export const POLISH_ACCENTS: Record<string, string[]> = {
+export const POLISH_ACCENTS = {
   a: ["ą"],
   s: ["ś", "š"],
-};
+} satisfies Record<string, string[]>;

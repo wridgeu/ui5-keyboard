@@ -61,6 +61,12 @@ function nativeEdit(
   end: number,
   command: () => boolean,
 ): boolean {
+  // A capability probe on an ambient global, not unparsed input, so there is no I/O boundary to
+  // move it to: `lib.dom` types `execCommand` as always present, but it is deprecated and absent
+  // in non-browser DOM shims. The `catch` below would also answer `false` for a missing method,
+  // since `command()` only ever runs inside it; probing first is what keeps the failure from
+  // landing after `setSelectionRange` has already moved the caret.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (typeof document.execCommand !== "function") return false;
   // The command edits whatever is focused, never the element it is handed
   if (activeElement() !== dom) return false;

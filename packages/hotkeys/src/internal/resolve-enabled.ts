@@ -12,7 +12,7 @@ import Log from "sap/base/Log";
  * the caller's UI5 log component.
  */
 export function resolveEnabled(enabled: boolean | (() => boolean), label: string, logComponent: string): boolean {
-  if (typeof enabled !== "function") return enabled;
+  if (enabled === true || enabled === false) return enabled;
   try {
     return enabled();
   } catch (error) {

@@ -24,13 +24,13 @@ describe("qwerty-es layout structure", () => {
 
   it("accented vowels are on the shift layer", () => {
     const allKeys = qwertyEs.flat();
-    const expectedShifts: Record<string, string> = {
+    const expectedShifts = {
       a: "\u00E1", // á
       e: "\u00E9", // é
       i: "\u00ED", // í
       o: "\u00F3", // ó
       u: "\u00FA", // ú
-    };
+    } satisfies Record<string, string>;
 
     for (const [base, expectedAccent] of Object.entries(expectedShifts)) {
       const key = allKeys.find((k) => k.value === base);

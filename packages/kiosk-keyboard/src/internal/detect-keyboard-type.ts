@@ -19,8 +19,8 @@ export function detectKeyboardType(control: Control, customResolver?: TargetReso
   // 1. UI5 getType() - e.g. sap.m.Input type="Number"
   //    Only sap.m.Input defines the `type` property; other InputBase
   //    subclasses (TextArea, ComboBox, DatePicker) do not have getType().
-  if (control.isA("sap.m.Input")) {
-    const type = (control as Input).getType();
+  if (control.isA<Input>("sap.m.Input")) {
+    const type = control.getType();
     if (NUMPAD_CONTROL_TYPES.has(type)) return KeyboardType.Numpad;
   }
 

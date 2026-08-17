@@ -11,16 +11,24 @@ function commonAfterEach(): void {
 }
 
 /**
- * Spy middleware factory wired through a `customLayouts` entry.
- * `created` proves whether the keyboard instantiated the middleware at all;
- * `handled` records the keys routed through it; `commits` counts forced
- * commits of an in-progress composition. Twin of the webc
- * `keyboard-type-middleware.test.ts` spy.
+ * What the spy recorded. `created` proves whether the keyboard instantiated the
+ * middleware at all; `handled` records the keys routed through it; `commits`
+ * counts forced commits of an in-progress composition.
  */
-function spyMiddleware(): {
-  calls: { created: number; handled: string[]; commits: number };
+interface MiddlewareCalls {
+  created: number;
+  handled: string[];
+  commits: number;
+}
+
+/** A spy middleware factory and the record it writes, wired through a `customLayouts` entry. */
+interface MiddlewareSpy {
+  calls: MiddlewareCalls;
   factory: () => CompositionMiddleware;
-} {
+}
+
+/** Twin of the webc `keyboard-type-middleware.test.ts` spy. */
+function spyMiddleware(): MiddlewareSpy {
   const calls = { created: 0, handled: [] as string[], commits: 0 };
   const factory = (): CompositionMiddleware => {
     calls.created++;

@@ -60,24 +60,20 @@ QUnit.test("Observer recomputes on a width-only change but skips a repeat of the
   // The controller records the box it last measured; an observation reporting
   // that same box is redundant, but a width change is not (container queries
   // wrap rows, so the natural height depends on width).
-  const controller = (
-    kb as unknown as {
-      _responsiveSizing: {
-        _appliedBox: { blockSize: number; inlineSize: number };
-        _reportsAppliedBox(e: ResizeObserverEntry[]): boolean;
-      };
-    }
-  )._responsiveSizing;
-  const applied = controller._appliedBox;
-  const entry = (blockSize: number, inlineSize: number) =>
-    [{ borderBoxSize: [{ blockSize, inlineSize }] }] as unknown as ResizeObserverEntry[];
+  const controller = kb["_responsiveSizing"];
+  const applied = controller["_appliedBox"]!;
+  // The observation is read for its border box alone, so that is all a stand-in carries.
+  const entry = (blockSize: number, inlineSize: number): ResizeObserverEntry[] => {
+    const observation: Pick<ResizeObserverEntry, "borderBoxSize"> = { borderBoxSize: [{ blockSize, inlineSize }] };
+    return [observation as ResizeObserverEntry];
+  };
 
   assert.ok(
-    controller._reportsAppliedBox(entry(applied.blockSize, applied.inlineSize)),
+    controller["_reportsAppliedBox"](entry(applied.blockSize, applied.inlineSize)),
     "the applied box is treated as redundant",
   );
   assert.notOk(
-    controller._reportsAppliedBox(entry(applied.blockSize, applied.inlineSize + 40)),
+    controller["_reportsAppliedBox"](entry(applied.blockSize, applied.inlineSize + 40)),
     "a width-only change is not treated as redundant",
   );
 
@@ -85,11 +81,11 @@ QUnit.test("Observer recomputes on a width-only change but skips a repeat of the
   // getComputedStyle box and the entry's internal double, but no more: a delta
   // past it must still recompute.
   assert.ok(
-    controller._reportsAppliedBox(entry(applied.blockSize + 0.05, applied.inlineSize)),
+    controller["_reportsAppliedBox"](entry(applied.blockSize + 0.05, applied.inlineSize)),
     "a sub-0.1px delta is absorbed as redundant",
   );
   assert.notOk(
-    controller._reportsAppliedBox(entry(applied.blockSize + 0.2, applied.inlineSize)),
+    controller["_reportsAppliedBox"](entry(applied.blockSize + 0.2, applied.inlineSize)),
     "a delta past the 0.1px tolerance is not treated as redundant",
   );
 

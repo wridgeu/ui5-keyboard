@@ -51,7 +51,6 @@ describe("hangul-compose middleware", () => {
     m.handleKey("\u314f", input); // ㅏ -> commits 가, preedit 나
 
     // 가 is committed, 나 is in preedit
-    // 가 = U+AC00, 나 = ㄴ(L=2) + ㅏ(V=0) = U+AC00 + 2*588 = U+AC00 + 1176 = U+AC98 ... wait
     // 나 = 0xAC00 + 2*588 + 0*28 + 0 = 0xAC00 + 1176 = 0xB098
     expect(input.value).toBe("\uAC00\uB098");
   });
@@ -175,11 +174,8 @@ describe("hangul-compose middleware", () => {
     m.handleKey("\u3161", input); // ㅡ
     m.handleKey("\u3139", input); // ㄹ -> 글
 
-    // 한 = U+D55C, 글 = U+AE00 + ... let's compute:
     // ㅎ(L=18) + ㅏ(V=0) + ㄴ(T=4) = 0xAC00 + 18*588 + 0*28 + 4 = 0xAC00 + 10584 + 4 = 0xD55C
-    // ㄱ(L=0) + ㅡ(V=18) + ㄹ(T=8) = 0xAC00 + 0*588 + 18*28 + 8 = 0xAC00 + 504 + 8 = 0xADFC? No...
-    // 0xAC00 + 504 + 8 = 0xAC00 + 512 = 0xAE00
-    // 글 = U+AE00
+    // ㄱ(L=0) + ㅡ(V=18) + ㄹ(T=8) = 0xAC00 + 0*588 + 18*28 + 8 = 0xAC00 + 504 + 8 = 0xAE00
     expect(input.value).toBe("\uD55C\uAE00");
   });
 

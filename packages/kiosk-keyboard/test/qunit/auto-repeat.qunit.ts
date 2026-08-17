@@ -52,8 +52,7 @@ QUnit.test("accelerates: successive intervals shrink toward the floor", (assert)
 
   // Every gap stays within [minIntervalMs, startIntervalMs], so over the hold
   // window the repeat count is bounded on both sides. The tight lower bound
-  // catches an acceleration regression (e.g. firing 6 times) that the prior
-  // `> 5` waved through.
+  // catches an acceleration regression (e.g. firing 6 times).
   assert.ok(
     fireTimes.length >= Math.floor(holdMs / T.startIntervalMs),
     `at least ${Math.floor(holdMs / T.startIntervalMs)} repeats over the hold window (got ${fireTimes.length})`,

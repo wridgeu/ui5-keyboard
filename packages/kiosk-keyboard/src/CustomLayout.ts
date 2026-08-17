@@ -109,6 +109,9 @@ export default class CustomLayout extends Element {
     const compact = this.getCompact();
     const role = this.getLayoutRole();
     const locales = this.getLocales();
+    // SAFETY: `middleware` is declared `type: "function"`, so UI5 has already rejected a
+    // non-callable value; the zero-argument factory signature is the property's documented
+    // contract with the fold, which is its only caller.
     const middleware = this.getMiddleware() as (() => CompositionMiddleware) | null;
     const variants = this.getVariants();
     const suppress = this.getSuppress();

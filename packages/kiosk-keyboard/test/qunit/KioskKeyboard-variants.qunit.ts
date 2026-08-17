@@ -4,6 +4,7 @@ import { LayoutFacet, MobileKeyboard, LATIN_DIACRITIC_VARIANTS } from "ui5/kiosk
 import Input from "sap/m/Input";
 import Popover from "sap/m/Popover";
 import { placeAndWait, getRequiredKeyElement, simulateTap, tapKey, waitForRender } from "./test-helpers";
+import type VariantPopupBehavior from "ui5/kiosk/internal/variant-popup-behavior";
 import { VARIANT_HOLD_MS } from "ui5/kiosk/internal/variant-popup-behavior";
 import { insertText } from "ui5/kiosk/internal/input-operations";
 import { getText } from "ui5/kiosk/internal/i18n-registry";
@@ -866,7 +867,7 @@ QUnit.module("KioskKeyboard accent-variant commit during composition", {
 
 /** Reach the private variant-commit entry point every commit path funnels through. */
 function commitVariant(kb: KioskKeyboard, glyph: string): void {
-  (kb as unknown as { _commitVariant(glyph: string): void })._commitVariant(glyph);
+  kb["_commitVariant"](glyph);
 }
 
 QUnit.test("committing a variant mid-composition finalizes the active composition first", async (assert) => {
@@ -879,20 +880,20 @@ QUnit.test("committing a variant mid-composition finalizes the active compositio
   dom.setSelectionRange(0, 0);
 
   // Compose 가 through the real key path: ㄱ (leading) then ㅏ (vowel).
-  tapKey(kb, "ㄱ"); // ㄱ
-  tapKey(kb, "ㅏ"); // ㅏ
+  tapKey(kb, "ㄱ");
+  tapKey(kb, "ㅏ");
   assert.strictEqual(input.getValue(), "가", "preedit shows 가 before the variant commit");
 
   // Commit accent variant ä through the real commit path while 가 is still an
   // in-progress preedit. This must finalize (keep) 가, drop the middleware, then
   // insert ä after it.
-  commitVariant(kb, "ä"); // ä
+  commitVariant(kb, "ä");
   assert.strictEqual(input.getValue(), "가ä", "variant commit finalizes 가, then appends ä");
 
   // The next jamo must start a fresh syllable AFTER the accent, not reach back
   // over it: ㄴ then ㅏ compose 나 following the accent.
-  tapKey(kb, "ㄴ"); // ㄴ
-  tapKey(kb, "ㅏ"); // ㅏ
+  tapKey(kb, "ㄴ");
+  tapKey(kb, "ㅏ");
 
   assert.strictEqual(input.getValue(), "가ä나", "next jamo composes 나 after ä (가ä나)");
   assert.strictEqual(dom.selectionStart, 3, "caret sits after 나");
@@ -977,20 +978,14 @@ QUnit.test("a committed variant seeds the consumer's composition (Layer 2)", asy
   kb.destroy();
 });
 
-/** Typed view of the control internals the popup tests reach into. */
-interface VariantInternals {
-  _variantPopup: { isOpen(): boolean };
-  getAggregation(name: string): Popover | null;
-}
-
 /** The control-owned popup behavior (private field), for its `isOpen()` state. */
-function variantPopup(kb: KioskKeyboard): { isOpen(): boolean } {
-  return (kb as unknown as VariantInternals)._variantPopup;
+function variantPopup(kb: KioskKeyboard): VariantPopupBehavior {
+  return kb["_variantPopup"];
 }
 
 /** The control-owned Popover, held in the hidden `_variantPopover` aggregation. */
 function getPopover(kb: KioskKeyboard): Popover | undefined {
-  return (kb as unknown as VariantInternals).getAggregation("_variantPopover") ?? undefined;
+  return (kb.getAggregation("_variantPopover") as Popover | null) ?? undefined;
 }
 
 QUnit.test("the popover is owned in the hidden _variantPopover aggregation and reused", async (assert) => {
@@ -1013,11 +1008,7 @@ QUnit.test("the popover is owned in the hidden _variantPopover aggregation and r
 
   // The aggregation is hidden, so UI5 generates no public named accessor for it;
   // it stays reachable only through the generic getAggregation.
-  assert.strictEqual(
-    typeof (kb as unknown as { getVariantPopover?: unknown }).getVariantPopover,
-    "undefined",
-    "the control exposes no public getVariantPopover getter",
-  );
+  assert.notOk("getVariantPopover" in kb, "the control exposes no public getVariantPopover getter");
   cleanup(kb, input);
 });
 
@@ -1440,7 +1431,7 @@ QUnit.test("a cancelled press mid-re-anchor does not open the parked popup", asy
   // a gesture that no longer exists, so it must not surface when the close lands.
   press(kb, oKey);
   await new Promise((resolve) => setTimeout(resolve, VARIANT_HOLD_MS + 40));
-  (kb as unknown as { ontouchcancel(): void }).ontouchcancel();
+  kb.ontouchcancel();
   await settled(kb);
 
   assert.notOk(variantPopup(kb).isOpen(), "the cancelled gesture opened nothing");

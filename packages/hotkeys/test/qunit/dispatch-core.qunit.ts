@@ -41,16 +41,9 @@ function makeRegistration(id: string, hotkey: string, overrides?: RegistrationOv
   };
 }
 
-function mockKeyEvent(overrides: { key: string } & Partial<KeyboardEvent>): KeyboardEvent {
-  return {
-    key: overrides.key,
-    code: overrides.code ?? "",
-    ctrlKey: overrides.ctrlKey ?? false,
-    shiftKey: overrides.shiftKey ?? false,
-    altKey: overrides.altKey ?? false,
-    metaKey: overrides.metaKey ?? false,
-    repeat: overrides.repeat ?? false,
-  } as unknown as KeyboardEvent;
+/** Undispatched KeyboardEvent; unset fields keep the constructor's defaults. */
+function mockKeyEvent(init: { key: string } & KeyboardEventInit): KeyboardEvent {
+  return new KeyboardEvent("keydown", init);
 }
 
 /** Minimal toRegistrationInfo stub - only the id is inspected in assertions. */

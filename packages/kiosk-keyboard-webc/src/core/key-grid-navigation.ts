@@ -53,6 +53,9 @@ export class KeyGridNavigation {
   }
 
   onKeyDown(e: KeyboardEvent): void {
+    // SAFETY: the template binds this to `keydown` on the keyboard root inside the
+    // shadow root, so the target is one of the HTML elements rendered there; `closest`
+    // then yields a keycap or null, and null returns early.
     const keyEl = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
     if (!keyEl) return;
 
@@ -160,6 +163,9 @@ export class KeyGridNavigation {
     const pressed = this._spaceKeyDownTarget;
     this._spaceKeyDownTarget = null;
     if (!pressed) return;
+    // SAFETY: the template binds this to `keyup` on the keyboard root inside the shadow
+    // root, so the target is one of the HTML elements rendered there; `closest` then
+    // yields a keycap or null, and only an exact match with the pressed key activates.
     const keyEl = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
     if (keyEl !== pressed) return;
     e.preventDefault();

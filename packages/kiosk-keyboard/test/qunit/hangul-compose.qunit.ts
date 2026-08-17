@@ -11,8 +11,6 @@ function commonAfterEach() {
   sandbox.restore();
 }
 
-// hangul-compose middleware
-
 QUnit.module("hangul-compose middleware", {
   beforeEach() {
     input = document.createElement("input");

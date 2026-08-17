@@ -60,7 +60,18 @@ export type InstanceLocaleLayouts = ReadonlyMap<string, string>;
  * Normalizes an input to a trimmed lowercase string.
  * Returns `undefined` for non-string or empty-after-trim values, logging a warning.
  */
+// This function is the I/O boundary parser the rule asks for, not a caller of one: it turns an
+// unvalidated layout name into `string | undefined` for the public statics
+// (`KioskKeyboard.getRegisteredLayout` / `.isBuiltInLayout`), whose `string` signature is a
+// compile-time promise only and buys nothing against an untyped plain-JS caller. Narrowing the
+// parameter to `string` would just move the unchecked value one frame out, where nothing checks it.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 function normalizeLowerString(value: unknown, argName: string): string | undefined {
+  // The inspection that earns the `unknown` above, and the only place the two failure modes
+  // (non-string, empty-after-trim) get their own warning text. Callers document a total function
+  // that answers `undefined` for junk; without the check `.trim()` throws on the number a
+  // plain-JS caller passed, taking down the whole keyboard instead of one lookup.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (typeof value !== "string") {
     Log.warning(`Invalid ${argName}: expected a string.`, undefined, "ui5.kiosk.KioskKeyboard");
     return undefined;

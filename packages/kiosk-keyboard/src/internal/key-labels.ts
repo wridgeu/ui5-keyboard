@@ -5,6 +5,13 @@ import { shiftedGlyph } from "./latin-variants";
 import type { KeyDefinition } from "../types";
 
 /** Map from special key value to [i18nKey, fallback]. */
+// `getKeyLabel` and `getKeyAriaLabel` look this up by `key.value`, any token a custom
+// layout declares, so the open `string` key is the contract; under `satisfies` the key
+// union collapses to the four built-in tokens and both lookups stop compiling. A `Map`
+// would lint clean, but this table is hand-mirrored by the webc element's
+// `SPECIAL_KEY_LABELS` and moves with `SPECIAL_KEY_ICONS`, whose shape the public static
+// `KioskKeyboard.SPECIAL_KEY_ICONS` pins, so all four special-key tables stay `Record`.
+// oxlint-disable-next-line anti-slop/no-known-value-widening
 const SPECIAL_KEY_I18N: Record<string, [string, string]> = {
   "{backspace}": [SPECIAL_KEY_I18N_KEYS.backspace, "Backspace"],
   "{enter}": [SPECIAL_KEY_I18N_KEYS.enter, "Enter"],

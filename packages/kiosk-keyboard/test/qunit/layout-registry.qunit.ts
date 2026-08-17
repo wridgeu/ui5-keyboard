@@ -10,7 +10,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Localization from "sap/base/i18n/Localization";
-import type LanguageTag from "sap/base/i18n/LanguageTag";
+import LanguageTag from "sap/base/i18n/LanguageTag";
 import Log from "sap/base/Log";
 import { placeAndWait, getRenderedLayoutKeys } from "./test-helpers";
 
@@ -21,10 +21,20 @@ function makeLayout(label = "a"): LayoutDefinition {
   return [[{ value: label }]];
 }
 
-/** Minimal LanguageTag stub for Localization.getLanguageTag() tests. */
+/** The LanguageTag Localization.getLanguageTag() would return for the given locale. */
 function langTag(language: string, region = ""): LanguageTag {
-  return { language, region } as unknown as LanguageTag;
+  return new LanguageTag(region ? `${language}-${region}` : language);
 }
+
+/**
+ * A layout name as an untyped caller supplies it. The name reaches the registry from an
+ * XML attribute or from plain JS, where nothing has checked it is a string, which is what
+ * the guards these tests cover exist for.
+ */
+type DeclaredName = string | number | null | undefined;
+
+const registeredLayoutFor = (sName: DeclaredName): LayoutDefinition | undefined => getRegisteredLayout(sName as string);
+const isBuiltInDeclaredName = (sName: DeclaredName): boolean => isBuiltInLayout(sName as string);
 
 const BUILTIN_NAMES = [
   "qwerty",
@@ -60,7 +70,7 @@ QUnit.test("Rejects non-string input (number, null, undefined)", (assert) => {
 
   for (const bad of [42, null, undefined]) {
     const label = String(bad);
-    assert.strictEqual(getRegisteredLayout(bad as unknown as string), undefined, `${label} input rejected`);
+    assert.strictEqual(registeredLayoutFor(bad), undefined, `${label} input rejected`);
     assert.ok(spy.called, `Warning logged for ${label} input`);
     assert.ok(spy.lastCall.args[0].includes("expected a string"), `Warning message for ${label} is about string type`);
   }
@@ -235,7 +245,7 @@ QUnit.test("Returns false for non-existent layouts", (assert) => {
 
 QUnit.test("Returns false for invalid input", (assert) => {
   assert.notOk(isBuiltInLayout(""), "Empty string is not built-in");
-  assert.notOk(isBuiltInLayout(null as unknown as string), "null is not built-in");
+  assert.notOk(isBuiltInDeclaredName(null), "null is not built-in");
 });
 
 // ──────────────────────────────────────────────────
@@ -261,7 +271,6 @@ QUnit.test("All built-in layouts have valid row/key structure", (assert) => {
       assert.ok(Array.isArray(row) && row.length > 0, `"${name}" row ${r} is a non-empty array`);
       for (let k = 0; k < row.length; k++) {
         const key = row[k];
-        assert.strictEqual(typeof key.value, "string", `"${name}" row ${r} key ${k} has string value`);
         assert.ok(key.value.length > 0, `"${name}" row ${r} key ${k} value is non-empty`);
       }
     }
@@ -336,7 +345,7 @@ QUnit.test("Unknown layout name falls back to qwerty", async (assert) => {
 
   const qwertyLayout = KioskKeyboard.getRegisteredLayout("qwerty")!;
   const renderedKeys = getRenderedLayoutKeys(kb);
-  const expectedKeys = qwertyLayout.map((row: any) => row.map((k: any) => k.value));
+  const expectedKeys = qwertyLayout.map((row) => row.map((k) => k.value));
   assert.deepEqual(renderedKeys, expectedKeys, "Unknown layout falls back to qwerty");
 
   input.destroy();

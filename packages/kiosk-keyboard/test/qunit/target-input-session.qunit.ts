@@ -1,5 +1,5 @@
 import TargetInputSession from "ui5/kiosk/internal/target-input-session";
-import type { TargetElement } from "ui5/kiosk/internal/types";
+import type { TargetElement, TargetValueEventParameters } from "ui5/kiosk/internal/types";
 
 const fixture = document.getElementById("qunit-fixture")!;
 
@@ -7,7 +7,7 @@ const fixture = document.getElementById("qunit-fixture")!;
 
 interface FiredEvent {
   name: string;
-  params: Record<string, unknown>;
+  params: TargetValueEventParameters;
 }
 
 /**
@@ -22,7 +22,7 @@ function makeMockElement(dom: HTMLInputElement | HTMLTextAreaElement | null): Ta
       hasProperty: (name: string) => name === "value",
       hasEvent: (name: string) => name === "change" || name === "liveChange",
     }),
-    fireEvent(name: string, params: Record<string, unknown>) {
+    fireEvent(name: string, params: TargetValueEventParameters) {
       fired.push({ name, params });
     },
     setProperty() {},

@@ -60,7 +60,7 @@ const noHardWait = {
           return;
         }
         const delay = node.arguments?.[0];
-        if (delay?.type === "Literal" && typeof delay.value === "number" && delay.value > 0) {
+        if (delay?.type === "Literal" && Number.isFinite(delay.value) && Number(delay.value) > 0) {
           context.report({ node, messageId: "noHardWait", data: { source: "page.waitForTimeout" } });
         }
       },
@@ -83,7 +83,7 @@ const noHardWait = {
         if (callExpr.arguments?.length < 2) return;
 
         const delay = callExpr.arguments[1];
-        if (delay.type === "Literal" && typeof delay.value === "number" && delay.value > 0) {
+        if (delay.type === "Literal" && Number.isFinite(delay.value) && Number(delay.value) > 0) {
           context.report({ node, messageId: "noHardWait", data: { source: "setTimeout" } });
         }
       },

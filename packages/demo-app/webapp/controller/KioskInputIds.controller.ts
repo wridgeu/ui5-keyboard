@@ -34,6 +34,8 @@ export default class KioskInputIds extends BaseController {
     );
 
     // Track target changes
+    // SAFETY: the view declares `<kiosk:KioskKeyboard id="inputIdsKeyboard">`, and `onInit`
+    // runs after the view is created, so the view-local id resolves to that control.
     const kb = this.byId("inputIdsKeyboard") as KioskKeyboard;
     kb.attachAfterOpen(() => {
       this._updateTargetStatus();
@@ -74,6 +76,8 @@ export default class KioskInputIds extends BaseController {
   }
 
   private _setRouteActive(active: boolean): void {
+    // SAFETY: the view declares `<kiosk:KioskKeyboard id="inputIdsKeyboard">`; the route
+    // handler can also run once the view is being destroyed, which the `undefined` covers.
     const kb = this.byId("inputIdsKeyboard") as KioskKeyboard | undefined;
     if (!kb) return;
 
@@ -92,12 +96,16 @@ export default class KioskInputIds extends BaseController {
   }
 
   private _updateTargetStatus(): void {
+    // SAFETY: reached from the keyboard's own afterOpen / activeControlChange events, so
+    // the `<kiosk:KioskKeyboard id="inputIdsKeyboard">` the view declares is still alive.
     const kb = this.byId("inputIdsKeyboard") as KioskKeyboard;
     const targetId = kb.getActiveControl()?.getId();
     this._getViewModel().setProperty("/kioskCurrentTarget", targetId || "None");
   }
 
   private _getViewModel(): JSONModel {
+    // SAFETY: `onInit` set a JSONModel under `_MODEL_NAME` on this view, and nothing
+    // replaces it, so the model this reads back is that JSONModel.
     return this.getView()!.getModel(KioskInputIds._MODEL_NAME) as JSONModel;
   }
 }

@@ -7,24 +7,28 @@ function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 }
 
-type MutableHost = AutoShowHost & {
+/** The host state the controller reads, writable so a test can flip it mid-run. */
+interface HostState {
   disabled: boolean;
   docked: boolean;
   autoShow: boolean;
   autoType: boolean;
   open: boolean;
   keyboardType: AutoShowHost["keyboardType"];
-};
+}
+
+type MutableHost = HTMLDivElement & HostState;
 
 function makeHost(): MutableHost {
-  const el = document.createElement("div") as unknown as MutableHost;
-  el.disabled = false;
-  el.docked = true;
-  el.autoShow = true;
-  el.autoType = false;
-  el.open = true; // keyboard open, so a deferred close would actually call close()
-  el.keyboardType = "Full";
-  document.body.appendChild(el as unknown as HTMLElement);
+  const el = Object.assign(document.createElement("div"), {
+    disabled: false,
+    docked: true,
+    autoShow: true,
+    autoType: false,
+    open: true, // keyboard open, so a deferred close would actually call close()
+    keyboardType: "Full",
+  } satisfies HostState);
+  document.body.appendChild(el);
   return el;
 }
 
@@ -62,7 +66,7 @@ describe("AutoShowController teardown vs. pending deferred close", () => {
 
   afterEach(() => {
     controller.unregister();
-    (host as unknown as HTMLElement).remove();
+    host.remove();
   });
 
   it("does not close the keyboard after autoShow is turned off in the same frame as a focusout", async () => {

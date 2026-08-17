@@ -28,18 +28,24 @@ export const NATIVE_DISPATCHABLE_KEYS = new Set([
 ]);
 
 /** Built-in native actions executed in fKeyMode="Native" when not prevented. */
-const NATIVE_FKEY_ACTIONS: Partial<Record<string, () => void>> = {
-  F5: () => {
-    location.reload();
-  },
-  F11: () => {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen?.().catch(() => undefined);
-    } else {
-      void document.documentElement.requestFullscreen?.().catch(() => undefined);
-    }
-  },
-};
+const NATIVE_FKEY_ACTIONS = new Map<string, () => void>([
+  [
+    "F5",
+    () => {
+      location.reload();
+    },
+  ],
+  [
+    "F11",
+    () => {
+      if (document.fullscreenElement) {
+        void document.exitFullscreen?.().catch(() => undefined);
+      } else {
+        void document.documentElement.requestFullscreen?.().catch(() => undefined);
+      }
+    },
+  ],
+]);
 
 /**
  * Tracks unsupported fkey names that have already been warned about. The set
@@ -85,7 +91,7 @@ export class FKeyController {
       if (NATIVE_DISPATCHABLE_KEYS.has(fkeyName)) {
         nativeAllowed = this._dispatchNativeFKeydown(fkeyName, shiftKey);
         if (nativeAllowed) {
-          NATIVE_FKEY_ACTIONS[fkeyName]?.();
+          NATIVE_FKEY_ACTIONS.get(fkeyName)?.();
         }
       } else {
         nativeAllowed = false;
@@ -99,7 +105,6 @@ export class FKeyController {
       }
     }
 
-    // Move cursor in target input for navigation keys (when not suppressed)
     if (nativeAllowed) {
       const target = this._host.resolveTarget();
       if (target) {

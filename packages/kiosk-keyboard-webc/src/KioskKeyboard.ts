@@ -14,6 +14,7 @@ import event from "@ui5/webcomponents-base/dist/decorators/event-strict.js";
 import jsxRenderer from "@ui5/webcomponents-base/dist/renderer/JsxRenderer.js";
 import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
 import type { ChangeInfo } from "@ui5/webcomponents-base/dist/UI5Element.js";
+import type { PropertyValue } from "@ui5/webcomponents-base/dist/UI5ElementMetadata.js";
 
 import { ShiftState } from "./core/shift-state.js";
 import { resolveWithCustomResolver, keyPositionOf, type KeyPosition } from "./core/dom-utils.js";
@@ -85,6 +86,13 @@ import "@ui5/webcomponents-icons/dist/locked.js";
 import "@ui5/webcomponents-icons/dist/nav-back.js";
 
 // ── Icon name map (used by the template to render <ui5-icon>) ──
+// `_resolveKeyIcon` reads `ICON_MAP[key.value]` for whatever token a custom layout
+// declares, so the open `string` key is the contract; under `satisfies` the key union
+// collapses to the four built-in tokens and that lookup stops compiling. A `Map` is the
+// clean alternative, but this table is hand-mirrored by kiosk's `SPECIAL_KEY_ICONS`,
+// which ships as the documented-stable public static `KioskKeyboard.SPECIAL_KEY_ICONS`
+// and cannot change shape, so both stay `Record`.
+// oxlint-disable-next-line anti-slop/no-known-value-widening
 const ICON_MAP: Readonly<Record<string, string>> = {
   "{shift}": SPECIAL_KEY_ICON_NAMES.shift,
   "{shift:capsLock}": SPECIAL_KEY_ICON_NAMES.capsLock,
@@ -112,6 +120,16 @@ function isInvalidEnumValue(propName: string, value: string, validValues: Readon
   return true;
 }
 
+/**
+ * The keyboard type an invalidation record carried before the change, falling
+ * back to the property's own default when it carried none (the first change
+ * after registration) or one outside the enum.
+ */
+function previousKeyboardTypeOf(oldValue: PropertyValue): `${KeyboardType}` {
+  const match = Object.values(KeyboardType).find((name) => name === oldValue);
+  return match ?? "Full";
+}
+
 // ── Internal provenance types ──
 
 /** Who last set keyboardType. "auto:VALUE" = set by _setKeyboardTypeInternal for VALUE. */
@@ -121,6 +139,13 @@ type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
 type TargetSource = "autoShow" | "explicit";
 
 /** Display and ARIA labels for built-in special keys. */
+// `_getKeyLabel` and `_getKeyAriaLabel` look this up by `key.value`, any token a custom
+// layout declares, so the open `string` key is the contract; under `satisfies` the key
+// union collapses to the four built-in tokens and both lookups stop compiling. A `Map`
+// would lint clean, but this table is hand-mirrored by kiosk's `SPECIAL_KEY_I18N` and
+// moves with `SPECIAL_KEY_ICONS`, whose shape the public static
+// `KioskKeyboard.SPECIAL_KEY_ICONS` pins, so all four special-key tables stay `Record`.
+// oxlint-disable-next-line anti-slop/no-known-value-widening
 const SPECIAL_KEY_LABELS: Record<string, string> = {
   "{shift}": SPECIAL_KEY_I18N_KEYS.shift,
   "{enter}": SPECIAL_KEY_I18N_KEYS.enter,
@@ -291,7 +316,7 @@ class KioskKeyboard extends UI5Element {
   static composeLayout(...sources: (string | LayoutDefinition)[]): LayoutDefinition {
     const rows: LayoutDefinition = [];
     for (const source of sources) {
-      if (typeof source !== "string") {
+      if (Array.isArray(source)) {
         rows.push(...source);
         continue;
       }
@@ -754,14 +779,17 @@ class KioskKeyboard extends UI5Element {
     if (e instanceof KeyboardEvent) this._onDocumentEscape(e);
   };
   private readonly _boundTouchStart = (e: Event) => {
-    const target = (e.target as HTMLElement).closest?.(KIOSK_KEYBOARD_DOM.selectors.key);
-    if (!target) return;
+    const target = e.target;
+    if (!(target instanceof Element) || !target.closest(KIOSK_KEYBOARD_DOM.selectors.key)) return;
     // Prevent the input from losing focus when the user taps a virtual key.
     // This also suppresses the browser's synthesized mouse events (mousedown,
     // mouseup, click), so we handle the key press directly on touchend.
     e.preventDefault();
   };
   private readonly _boundTouchEnd = (e: Event) => {
+    // SAFETY: this listener is registered for "touchend" only (in `onEnterDOM`), and the
+    // Touch Events spec dispatches that type as a TouchEvent. `instanceof TouchEvent` is
+    // not an option: the interface is absent in browsers that never fire the event.
     const te = e as TouchEvent;
     const touch = te.changedTouches[0];
     if (!touch) return;
@@ -775,7 +803,7 @@ class KioskKeyboard extends UI5Element {
     // Resolve the key under the finger at lift-off, not e.target (which is
     // the touchstart target per spec and may differ if the finger drifted).
     const el = this.shadowRoot!.elementFromPoint(touch.clientX, touch.clientY);
-    const keyEl = (el as HTMLElement | null)?.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
+    const keyEl = el?.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
     if (keyEl) keyEl.click();
   };
   /** Set for one touchend after a touch variant drag-release commits, to swallow the trailing synthesized tap. */
@@ -1041,13 +1069,9 @@ class KioskKeyboard extends UI5Element {
         this._middleware.commit();
         this._middleware = null;
       }
-      const previousKeyboardType =
-        typeof changeInfo.oldValue === "string" && VALID_KEYBOARD_TYPES.has(changeInfo.oldValue)
-          ? (changeInfo.oldValue as `${KeyboardType}`)
-          : "Full";
       this.fireDecoratorEvent("keyboard-type-change", {
         keyboardType: this.keyboardType,
-        previousKeyboardType,
+        previousKeyboardType: previousKeyboardTypeOf(changeInfo.oldValue),
         autoDetected,
       });
       // A constraint pins the rendered surface and suppresses the tier, so lifting one
@@ -1456,7 +1480,7 @@ class KioskKeyboard extends UI5Element {
    * whether it also holds DOM focus. A key holding focus wins over the remembered
    * one, since arrow navigation is not the only way onto a key.
    */
-  private _focusAnchor(): { value: string | null; focused: boolean } {
+  private _focusAnchor(): FocusAnchor {
     const shadow = this.shadowRoot;
     if (!shadow) return { value: null, focused: false };
 
@@ -1506,7 +1530,9 @@ class KioskKeyboard extends UI5Element {
   private _onKeyClick(e: Event): void {
     if (this.disabled) return;
 
-    const keyEl = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
+    const clicked = e.target;
+    const keyEl =
+      clicked instanceof Element ? clicked.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook) : null;
     if (!keyEl) return;
 
     const value = keyEl.dataset.key!;

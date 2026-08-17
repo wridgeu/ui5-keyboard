@@ -5,6 +5,7 @@ import type PropertyBinding from "sap/ui/model/PropertyBinding";
 import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
 import syncStyleClass from "sap/ui/core/syncStyleClass";
+import type { AccessibilityInfo } from "sap/ui/core/library";
 import Popover from "sap/m/Popover";
 import { PlacementType } from "sap/m/library";
 import { getLayoutMeta } from "./internal/layout-meta";
@@ -70,6 +71,11 @@ import { constrainedLayoutName, reconcileBaseSwitch } from "./internal/layout-co
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
+/** A press event reaching the touch handlers, carrying a mouse `button` when one made it. */
+interface PressEvent extends Event {
+  readonly button?: number;
+}
+
 /**
  * Whether a simulated touch event stands for a non-primary mouse button.
  *
@@ -78,9 +84,17 @@ export type { KioskKeyboardDomContract } from "./internal/dom-contract";
  * popup also reaches the touch handlers. The fixed event carries the original
  * `button`; a genuine touch has none, so it reads as primary.
  */
-function isSecondaryPress(event: Event): boolean {
-  const { button } = event as MouseEvent;
-  return typeof button === "number" && button > 0;
+function isSecondaryPress(event: PressEvent): boolean {
+  return event.button !== undefined && event.button > 0;
+}
+
+/**
+ * The focus state the framework stores before a re-render and hands back to
+ * `applyFocusInfo`: the control id, and the grid position the roving tab stop sat on.
+ */
+interface KioskKeyboardFocusInfo {
+  id: string;
+  lastFocusedKey: KeyPosition | null;
 }
 
 /**
@@ -693,7 +707,7 @@ export default class KioskKeyboard extends Control {
   static composeLayout(...aSources: (string | LayoutDefinition)[]): LayoutDefinition {
     const rows: LayoutDefinition = [];
     for (const source of aSources) {
-      if (typeof source !== "string") {
+      if (Array.isArray(source)) {
         rows.push(...source);
         continue;
       }
@@ -808,19 +822,25 @@ export default class KioskKeyboard extends Control {
    * A `customLayouts` bound to a model populates asynchronously and therefore does not
    * contribute to the layout chosen here.
    */
-  override applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
+  // `oScope` is UI5's scope object for resolving string-based type and formatter references in
+  // binding infos, passed by whoever constructs the control and only forwarded to
+  // `super.applySettings`, whose base declaration types it `oScope?: object`. Nothing here reads a
+  // member of it, and narrowing an override's parameter below its base declaration is not open to
+  // us anyway, so a named owner type would only state a shape UI5 does not guarantee.
+  // oxlint-disable-next-line anti-slop/no-object-parameters
+  override applySettings(mSettings: $KioskKeyboardSettings, oScope?: object): this {
     // Destructure rather than `delete`: the caller's settings object is never mutated.
     const { customLayouts, ...rest } = mSettings ?? {};
     if (customLayouts !== undefined) {
-      // Typed as a record rather than passed as a literal: `applySettings` takes
+      // Held in a typed binding rather than passed as a literal: `applySettings` takes
       // `$ManagedObjectSettings`, against which a literal is excess-property checked.
-      const first: Record<string, unknown> = { customLayouts };
+      const first: $KioskKeyboardSettings = { customLayouts };
       super.applySettings(first, oScope);
     }
     const fold = this._foldCache.get();
     // `layout` first so the locale default is the first setting applied; the spread
     // overwrites its value, not its position, when the caller named a layout.
-    const second: Record<string, unknown> = {
+    const second: $KioskKeyboardSettings = {
       layout: registryGetLocaleLayout(fold.localeLayouts, fold.layouts),
       ...rest,
     };
@@ -944,7 +964,7 @@ export default class KioskKeyboard extends Control {
   override onAfterRendering(): void {
     // apiVersion 4 may skip this hook on a parent-only re-render; safe because
     // each external sync below is idempotent and independently event/observer-driven.
-    this._keyGridNav.setRootRef(this.getDomRef() as HTMLElement | null);
+    this._keyGridNav.setRootRef(this._rootDomRef());
     this._syncDockedDomState();
 
     const pendingAnnouncement = this._layoutState.takePendingAnnouncement();
@@ -959,7 +979,7 @@ export default class KioskKeyboard extends Control {
     // classes, but deferring avoids forced reflow (getComputedStyle +
     // scrollHeight) in the render frame. The 1-frame delay for responsive
     // sizing is imperceptible.
-    const dom = this.getDomRef() as HTMLElement | null;
+    const dom = this._rootDomRef();
     if (dom) {
       this._responsiveSizing.syncObserver(dom);
       this._responsiveSizing.scheduleClassUpdate();
@@ -967,6 +987,18 @@ export default class KioskKeyboard extends Control {
     this._autoCompact.syncObserver(dom);
 
     this._controlsDelegation.sync();
+  }
+
+  /**
+   * The rendered root element, or `null` before the first render and after exit.
+   *
+   * `getDomRef` is declared for every control and so reports the generic `Element`;
+   * this keyboard's root is always an HTML element.
+   */
+  private _rootDomRef(): HTMLElement | null {
+    // SAFETY: KioskKeyboardRenderer.render opens the root with `rm.openStart("div", ...)`,
+    // so a DOM ref for this control is an HTMLElement whenever there is one.
+    return this.getDomRef() as HTMLElement | null;
   }
 
   /** Keeps docked/closed root classes in sync without forcing a re-render. */
@@ -1033,7 +1065,7 @@ export default class KioskKeyboard extends Control {
     // The renderer handles the disabled CSS class (ui5KioskKeyboard--disabled)
     // and per-key aria-disabled attributes at render time. Uses setProperty
     // directly because Control has no base setEnabled implementation to delegate to.
-    return this.setProperty("enabled", isEnabled) as this;
+    return this.setProperty("enabled", isEnabled);
   }
 
   /**
@@ -1326,7 +1358,7 @@ export default class KioskKeyboard extends Control {
     // `_activeTarget` is single-cardinality, so getAssociation returns string | null.
     // The UI5 type stub widens this to string | string[]; narrow defensively.
     const value = this.getAssociation("_activeTarget", null);
-    return typeof value === "string" ? value : "";
+    return Array.isArray(value) ? "" : (value ?? "");
   }
 
   _getKeyboardTypeSource(): KeyboardTypeSource {
@@ -1452,7 +1484,7 @@ export default class KioskKeyboard extends Control {
    * @since 0.1.0
    */
   refreshResponsiveState(): this {
-    const dom = this.getDomRef() as HTMLElement | null;
+    const dom = this._rootDomRef();
     if (!dom) return this;
 
     this._responsiveSizing.syncObserver(dom);
@@ -1522,7 +1554,7 @@ export default class KioskKeyboard extends Control {
     }
 
     this.setProperty("docked", isDocked, true);
-    const dom = this.getDomRef() as HTMLElement | null;
+    const dom = this._rootDomRef();
     this._syncDockedDomState();
     if (dom) {
       this._responsiveSizing.syncObserver(dom);
@@ -1631,7 +1663,7 @@ export default class KioskKeyboard extends Control {
     return this._keyGridNav.getFocusableDomRef();
   }
 
-  override getFocusInfo(): { id: string; lastFocusedKey: KeyPosition | null } {
+  override getFocusInfo(): KioskKeyboardFocusInfo {
     return { id: this.getId(), lastFocusedKey: this._keyGridNav.getLastFocusedKey() };
   }
 
@@ -1658,8 +1690,8 @@ export default class KioskKeyboard extends Control {
     // Fallback: focus the first key (e.g. after layout switch where the
     // previously focused key no longer exists). This prevents Popover
     // auto-close when the keyboard re-renders inside one.
-    const first = this.getDomRef()?.querySelector(KIOSK_KEYBOARD_DOM.selectors.key) as HTMLElement | null;
-    if (first) {
+    const first = this.getDomRef()?.querySelector(KIOSK_KEYBOARD_DOM.selectors.key);
+    if (first instanceof HTMLElement) {
       first.setAttribute("tabindex", "0");
       this._focusWithOptions(first, oFocusInfo.preventScroll);
     }
@@ -1726,13 +1758,7 @@ export default class KioskKeyboard extends Control {
 
   // ── Accessibility ──
 
-  override getAccessibilityInfo(): {
-    role: string;
-    type: string;
-    description: string;
-    focusable: boolean;
-    enabled: boolean;
-  } {
+  override getAccessibilityInfo(): AccessibilityInfo {
     return {
       role: "group",
       type: getText("KIOSK_KEYBOARD_LABEL", "Virtual Keyboard"),
@@ -1902,6 +1928,10 @@ export default class KioskKeyboard extends Control {
    */
   private _warnTierWriteBack(): void {
     if (this._warnedWriteBack) return;
+    // SAFETY: `layout` is a property, and `ManagedObject.bindProperty` is what creates a
+    // binding for one, so a binding registered under that name is a PropertyBinding -
+    // narrower than the `Binding` base `getBinding` reports for properties and
+    // aggregations alike.
     const binding = this.getBinding("layout") as PropertyBinding | undefined;
     if (binding?.getBindingMode() !== BindingMode.TwoWay) return;
     this._warnedWriteBack = true;
@@ -1968,8 +1998,11 @@ export default class KioskKeyboard extends Control {
    * inherit density by DOM ancestry.
    */
   private _getVariantPopover(): Popover {
-    let popover = this.getAggregation("_variantPopover") as Popover | null;
-    if (!popover) {
+    const held = this.getAggregation("_variantPopover");
+    let popover: Popover;
+    if (held instanceof Popover) {
+      popover = held;
+    } else {
       // Derive a stable id from the control (as UI5 core controls id their own
       // internal sub-controls, e.g. sap.m.Select's `<id>-list`), rather than an
       // auto-generated `__popoverN`.
@@ -2001,6 +2034,9 @@ export default class KioskKeyboard extends Control {
    */
   getActiveControl<T extends Control = Control>(): T | null {
     const target = this._getTargetElement();
+    // SAFETY: the check establishes that the active target is a Control; which Control
+    // class it is, is the caller's own claim, made by naming `T` at the call site - the
+    // convenience this generic exists for, and all a target id can promise.
     return target instanceof Control ? (target as T) : null;
   }
 
@@ -2171,7 +2207,8 @@ export default class KioskKeyboard extends Control {
   onsapselect(event: Event): void {
     if (!this.getEnabled()) return;
 
-    const target = event.target as HTMLElement;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
     if (!target.classList.contains(KIOSK_KEYBOARD_DOM.classes.key)) return;
 
     const keyValue = target.dataset.key;
@@ -2219,8 +2256,9 @@ export default class KioskKeyboard extends Control {
 
   /** Whether `node` is inside the control-owned accent-variant Popover (rendered into the static area). */
   _isNodeInVariantPopover(node: Node | null): boolean {
-    const popover = this.getAggregation("_variantPopover") as Popover | null;
-    return popover?.getDomRef()?.contains(node) ?? false;
+    const popover = this.getAggregation("_variantPopover");
+    if (!(popover instanceof Popover)) return false;
+    return popover.getDomRef()?.contains(node) ?? false;
   }
 
   // ── Private: pointer and key actions ──

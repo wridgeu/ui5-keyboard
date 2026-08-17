@@ -280,7 +280,9 @@ export class VariantPopupController {
 
   /** Option click: commits the clicked glyph. */
   onOptionClick(e: Event): void {
-    const option = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.variantOption);
+    const target = e.target;
+    const option =
+      target instanceof Element ? target.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.variantOption) : null;
     if (!option) return;
     const state = this._host.getPopupState();
     const glyph = state?.glyphs[Number(option.dataset.index)];
@@ -373,7 +375,7 @@ export class VariantPopupController {
     const popup = this._popupEl();
     const state = this._host.getPopupState();
     if (!popup || !state) return false;
-    const el = this._host.getShadowRoot()?.elementFromPoint(clientX, clientY) as HTMLElement | null;
+    const el = this._host.getShadowRoot()?.elementFromPoint(clientX, clientY);
     const option = el?.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.variantOption) ?? null;
     if (!option || !popup.contains(option)) return false;
     const glyph = state.glyphs[Number(option.dataset.index)];
@@ -421,7 +423,7 @@ export class VariantPopupController {
   // ── Gesture detection ──
 
   private _variantKey(target: EventTarget | null): HTMLElement | null {
-    const keyEl = (target as HTMLElement | null)?.closest?.<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook) ?? null;
+    const keyEl = target instanceof Element ? target.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook) : null;
     if (!keyEl || !keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return null;
     return keyEl;
   }

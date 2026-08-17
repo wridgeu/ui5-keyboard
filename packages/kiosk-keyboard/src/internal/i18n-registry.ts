@@ -29,6 +29,12 @@ export function getText(key: string, fallback: string): string {
 
   try {
     const override = resolver(key, getCurrentLocale(), baseText);
+    // `override` comes back from consumer code, so `I18nResolver`'s declared `string | undefined`
+    // return is unenforceable across the call - the same reason the call sits in a try/catch. The
+    // documented contract is "a string overrides, anything else keeps the base text", and this is
+    // what implements it; without it a number or object would render as a keycap label and be read
+    // out by the ARIA announcer.
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof
     if (typeof override === "string") {
       return override;
     }
@@ -50,6 +56,11 @@ export function getText(key: string, fallback: string): string {
  * Pass `null` to clear the resolver.
  */
 export function setI18nResolver(fn: I18nResolver | null): void {
+  // The boundary check for `KioskKeyboard.setI18nResolver`, a public static any app can call from
+  // untyped JS. Storing a non-function does not fail here, it fails at every label resolution in
+  // `getText`, inside the try/catch that turns it into one "i18n resolver threw" warning per key;
+  // rejecting at the setter names the mistake once, where the caller can act on it.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (fn !== null && typeof fn !== "function") {
     Log.warning("setI18nResolver: argument must be a function or null.", undefined, LOG_COMPONENT);
     return;

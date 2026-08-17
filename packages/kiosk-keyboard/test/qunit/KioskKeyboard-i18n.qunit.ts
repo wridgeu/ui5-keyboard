@@ -65,12 +65,12 @@ QUnit.test("Resolver can override special key labels", async (assert) => {
   await placeAndWait(kb);
 
   KioskKeyboard.setI18nResolver((key) => {
-    const map: Record<string, string> = {
-      KEY_SHIFT: "Umschalt",
-      KEY_ENTER: "Eingabe",
-      KEY_BACKSPACE: "L\u00F6schen",
-    };
-    return map[key];
+    const overrides = new Map([
+      ["KEY_SHIFT", "Umschalt"],
+      ["KEY_ENTER", "Eingabe"],
+      ["KEY_BACKSPACE", "L\u00F6schen"],
+    ]);
+    return overrides.get(key);
   });
   await waitForRender();
 

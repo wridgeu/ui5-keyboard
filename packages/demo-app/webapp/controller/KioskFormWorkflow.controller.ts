@@ -60,7 +60,10 @@ export default class KioskFormWorkflow extends BaseController {
   }
 
   onSubmit(): void {
+    // SAFETY: KioskFormWorkflow.view.xml declares nameInput as a sap.m.Input, and this handler
+    // runs from a press on the submit button of that rendered view.
     const nameInput = this.byId("nameInput") as Input;
+    // SAFETY: the same view declares emailInput as a sap.m.Input.
     const emailInput = this.byId("emailInput") as Input;
 
     if (!nameInput.getValue().trim() || !emailInput.getValue().trim()) {
@@ -83,6 +86,8 @@ export default class KioskFormWorkflow extends BaseController {
   }
 
   private _setKeyboardRouteActive(active: boolean): void {
+    // SAFETY: KioskFormWorkflow.view.xml declares formKeyboard as a ui5.kiosk.KioskKeyboard; the
+    // undefined arm covers the routeMatched that arrives after the view is destroyed.
     const keyboard = this.byId("formKeyboard") as KioskKeyboard | undefined;
     if (!keyboard) return;
 
@@ -97,10 +102,14 @@ export default class KioskFormWorkflow extends BaseController {
   }
 
   private _advanceToNextField(): void {
+    // SAFETY: this runs from the keyboard's own keyPress event, so formKeyboard is the
+    // ui5.kiosk.KioskKeyboard the view declares and it is still alive.
     const kb = this.byId("formKeyboard") as KioskKeyboard;
     const currentTargetId = kb.getActiveControl<Input | TextArea>()?.getId();
 
     const currentIndex = KioskFormWorkflow._FIELD_IDS.findIndex(
+      // SAFETY: _FIELD_IDS lists the four sap.m.Input ids and the one sap.m.TextArea id the view
+      // declares; the undefined arm covers a field the view no longer holds.
       (id) => (this.byId(id) as Input | TextArea | undefined)?.getId() === currentTargetId,
     );
 
@@ -108,6 +117,8 @@ export default class KioskFormWorkflow extends BaseController {
 
     const nextIndex = currentIndex + 1;
     if (nextIndex < KioskFormWorkflow._FIELD_IDS.length) {
+      // SAFETY: nextIndex is in range of _FIELD_IDS, whose entries the view declares as sap.m.Input
+      // except notesInput, a sap.m.TextArea.
       const nextControl = this.byId(KioskFormWorkflow._FIELD_IDS[nextIndex]!) as Input | TextArea;
       nextControl.focus();
     } else {
@@ -119,6 +130,8 @@ export default class KioskFormWorkflow extends BaseController {
     const total = KioskFormWorkflow._FIELD_IDS.length;
     let filled = 0;
     for (const id of KioskFormWorkflow._FIELD_IDS) {
+      // SAFETY: the view declares every _FIELD_IDS entry as a sap.m.Input except notesInput, a
+      // sap.m.TextArea, and this runs from a liveChange of one of those fields.
       const control = this.byId(id) as Input | TextArea;
       if (control.getValue().trim()) {
         filled++;
@@ -131,6 +144,8 @@ export default class KioskFormWorkflow extends BaseController {
   }
 
   private _updateActiveField(): void {
+    // SAFETY: this runs from the keyboard's keyPress and afterOpen events, so formKeyboard is the
+    // ui5.kiosk.KioskKeyboard the view declares and it is still alive.
     const kb = this.byId("formKeyboard") as KioskKeyboard;
     const targetId = kb.getActiveControl()?.getId();
     if (targetId) {
@@ -143,6 +158,8 @@ export default class KioskFormWorkflow extends BaseController {
 
   private _resetForm(): void {
     for (const id of KioskFormWorkflow._FIELD_IDS) {
+      // SAFETY: the view declares every _FIELD_IDS entry as a sap.m.Input except notesInput, a
+      // sap.m.TextArea, and a reset only follows a submit from that rendered view.
       const control = this.byId(id) as Input | TextArea;
       control.setValue("");
     }

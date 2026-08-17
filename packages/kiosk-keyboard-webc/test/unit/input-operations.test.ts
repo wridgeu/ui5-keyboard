@@ -78,7 +78,6 @@ describe("insertText", () => {
   it("input event bubbles", () => {
     const el = mockInput("a", 1);
     let bubbled = false;
-    // Attach to a parent to verify bubbling
     const wrapper = document.createElement("div");
     wrapper.appendChild(el);
     wrapper.addEventListener(

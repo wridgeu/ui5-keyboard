@@ -1,4 +1,5 @@
 import Popover from "sap/m/Popover";
+import type { $PopoverSettings } from "sap/m/Popover";
 import type { Button$PressEvent } from "sap/m/Button";
 import type Input from "sap/m/Input";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
@@ -13,7 +14,15 @@ interface PopoverVariant {
   contentHeight?: string;
 }
 
-const VARIANTS: Record<string, PopoverVariant> = {
+interface PopoverVariants {
+  A: PopoverVariant;
+  B: PopoverVariant;
+  C: PopoverVariant;
+  D: PopoverVariant;
+  E: PopoverVariant;
+}
+
+const VARIANTS: PopoverVariants = {
   A: { styleClass: "demoPopoverKb--generous", ariaLabel: "Virtual Keyboard (generous)", title: "Generous (19 rem)" },
   B: { styleClass: "demoPopoverKb--compact", ariaLabel: "Virtual Keyboard (compact)", title: "Compact (15 rem)" },
   C: { styleClass: "demoPopoverKb--customVars", ariaLabel: "Virtual Keyboard (custom vars)", title: "Custom CSS Vars" },
@@ -56,10 +65,11 @@ export default class KioskPopover extends BaseController {
     this._openVariant("E", event);
   }
 
-  private _openVariant(key: string, event: Button$PressEvent): void {
+  private _openVariant(key: keyof PopoverVariants, event: Button$PressEvent): void {
     const variant = VARIANTS[key];
-    if (!variant) return;
     const button = event.getSource();
+    // SAFETY: each open button in KioskPopover.view.xml carries a core:CustomData "inputId" whose
+    // value is the id of the sap.m.Input declared beside it in the same panel.
     const input = this.byId(button.data("inputId") as string) as Input;
 
     let keyboard = this._keyboards.get(key);
@@ -72,13 +82,16 @@ export default class KioskPopover extends BaseController {
 
     let popover = this._popovers.get(key);
     if (!popover) {
-      popover = new Popover({
+      const settings: $PopoverSettings = {
         title: variant.title,
         placement: "Auto",
         content: [keyboard],
         contentWidth: "24rem",
-        ...(variant.contentHeight ? { contentHeight: variant.contentHeight } : {}),
-      });
+      };
+      if (variant.contentHeight) {
+        settings.contentHeight = variant.contentHeight;
+      }
+      popover = new Popover(settings);
       this.getView()!.addDependent(popover);
       this._popovers.set(key, popover);
     }

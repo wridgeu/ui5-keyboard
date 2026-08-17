@@ -164,13 +164,9 @@ QUnit.test("Keyboard stays functional after target control is destroyed", async 
 
   // Keyboard should not throw when tapping keys after target is destroyed
   assert.ok(kb.getDomRef(), "Keyboard is still rendered");
-  try {
-    tapKey(kb, "e");
-    tapKey(kb, "{backspace}");
-    tapKey(kb, "{shift}");
-  } catch (e) {
-    assert.ok(false, `Key taps after target destruction threw: ${e}`);
-  }
+  tapKey(kb, "e");
+  tapKey(kb, "{backspace}");
+  tapKey(kb, "{shift}");
   assert.ok(kb.getDomRef(), "Keyboard still rendered after key taps on destroyed target");
 
   kb.destroy();

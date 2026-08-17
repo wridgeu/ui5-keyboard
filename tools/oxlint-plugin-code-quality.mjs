@@ -140,7 +140,7 @@ function unwrapSingleReturn(node) {
 }
 
 function isBooleanLiteral(node) {
-  return node?.type === "Literal" && typeof node.value === "boolean";
+  return node?.type === "Literal" && (node.value === true || node.value === false);
 }
 
 // Em-dash (U+2014) and en-dash (U+2013) built at runtime so the rule source
@@ -149,6 +149,16 @@ const EM_DASH = String.fromCodePoint(0x2014);
 const EN_DASH = String.fromCodePoint(0x2013);
 const FANCY_DASH_RE = new RegExp(`[${EM_DASH}${EN_DASH}]`, "g");
 const hasFancyDash = (text) => text.includes(EM_DASH) || text.includes(EN_DASH);
+
+/**
+ * The text a literal carries, or `undefined` when it carries none: a quoted
+ * string is the only literal spelling out prose, and the quote its raw token
+ * opens with is what says so.
+ */
+function literalText(node) {
+  const quote = node.raw?.[0];
+  return quote === '"' || quote === "'" ? node.value : undefined;
+}
 
 /**
  * Detects em-dashes (U+2014) and en-dashes (U+2013) in strings and comments.
@@ -175,7 +185,8 @@ const noEmDash = {
   create(context) {
     return {
       Literal(node) {
-        if (typeof node.value === "string" && hasFancyDash(node.value)) {
+        const text = literalText(node);
+        if (text !== undefined && hasFancyDash(text)) {
           context.report({
             node,
             messageId: "emDashInString",

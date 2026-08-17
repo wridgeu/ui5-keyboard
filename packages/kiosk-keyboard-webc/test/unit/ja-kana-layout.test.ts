@@ -32,7 +32,7 @@ describe("ja-kana layout structure", () => {
   });
 
   it("shift-layer kana variants are on the correct keys", () => {
-    const expectedShifts: Record<string, string> = {
+    const expectedShifts = {
       "\u3042": "\u3041", // あ → ぁ
       "\u3046": "\u3045", // う → ぅ
       "\u3048": "\u3047", // え → ぇ
@@ -44,7 +44,7 @@ describe("ja-kana layout structure", () => {
       "\u3044": "\u3043", // い → ぃ
       "\u3064": "\u3063", // つ → っ
       "\u307B": "\u3078", // ほ → へ
-    };
+    } satisfies Record<string, string>;
 
     const allKeys = jaKana.flat();
     for (const [base, expectedSmall] of Object.entries(expectedShifts)) {

@@ -21,6 +21,13 @@ export type VariantTable = Readonly<Record<string, readonly string[]>>;
  * Ordered Latin-diacritic variants keyed by lowercase base letter. The base
  * letter itself is the tap default and is not included in its list.
  */
+// Both this table and `VariantTable` are documented-stable exports of `library.ts`, and
+// `VariantTable` is what `_resolvedDefaultVariants` and `resolveVariantTable` hand around
+// internally. (The XML-facing `defaultVariants` / `variants` properties deliberately use the
+// separate `VariantOverrideTable` data type instead.) Inferring the eleven literal base letters
+// would narrow the export: the values would lose `readonly`, and the index signature a consumer
+// needs to read it by a runtime letter would go with it.
+// oxlint-disable-next-line anti-slop/no-known-value-widening
 export const LATIN_DIACRITIC_VARIANTS: VariantTable = {
   a: ["à", "á", "â", "ä", "æ", "ã", "å", "ā"],
   c: ["ç", "ć", "č"],

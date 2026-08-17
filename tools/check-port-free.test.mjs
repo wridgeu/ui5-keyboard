@@ -31,8 +31,10 @@ function listenOn(host) {
  * @returns {number} the ephemeral port the server bound
  */
 function portOf(server) {
+  // `address()` answers with a pipe path for a UDS server and with null before
+  // the socket is listening; only a TCP binding answers with a port record.
   const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("Server is not bound to a TCP port.");
+  if (!(address instanceof Object)) throw new Error("Server is not bound to a TCP port.");
   return address.port;
 }
 
@@ -98,7 +100,7 @@ function portIn(script, pattern, what) {
 function qunitScript(workspace) {
   const manifest = JSON.parse(readFileSync(path.join(repoRoot, "packages", workspace, "package.json"), "utf8"));
   const script = manifest.scripts?.["test:qunit"];
-  if (typeof script !== "string") throw new Error(`packages/${workspace} has no test:qunit script.`);
+  if (script === undefined) throw new Error(`packages/${workspace} has no test:qunit script.`);
   return script;
 }
 

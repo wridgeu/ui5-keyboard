@@ -60,6 +60,16 @@ for (const id of ["kb-ja-kana", "kb-ko-hangul", "kb-qwerty-es"]) {
   });
 }
 
+interface ShowableKeyboard {
+  show?(): void;
+}
+interface UI5ElementModule {
+  getElementById?(id: string): ShowableKeyboard | undefined;
+}
+type UI5Window = Window & {
+  sap?: { ui?: { require(module: "sap/ui/core/Element"): UI5ElementModule | undefined } };
+};
+
 test.describe("Interactive States", () => {
   test("kb-key-hovered", async ({ page }) => {
     test.skip(!(await page.evaluate(() => matchMedia("(hover: hover)").matches)), "no hover on this device profile");
@@ -82,10 +92,7 @@ test.describe("Interactive States", () => {
     await page.evaluate(() => {
       const dom = document.querySelector("#kb-docked .ui5KioskKeyboard");
       if (!dom) return;
-      const sapGlobal = (window as unknown as { sap?: { ui?: { require(dep: string): unknown } } }).sap;
-      const Elem = sapGlobal?.ui?.require("sap/ui/core/Element") as
-        | { getElementById?(id: string): { show?(): void } | undefined }
-        | undefined;
+      const Elem = (window as UI5Window).sap?.ui?.require("sap/ui/core/Element");
       Elem?.getElementById?.(dom.id)?.show?.();
     });
     await expect(keyboardRoot(page, "kb-docked")).not.toHaveClass(CLOSED);

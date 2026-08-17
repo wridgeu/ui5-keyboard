@@ -7,11 +7,14 @@ import type ResourceBundle from "sap/base/i18n/ResourceBundle";
 const sandbox = sinon.createSandbox();
 
 function stubBaseBundle(texts: Record<string, string>): void {
-  sandbox.stub(Lib, "getResourceBundleFor").returns({
+  // `getText` is the only member the registry reads, and with `bIgnoreKeyFallback`
+  // a real bundle returns undefined for a key it does not carry.
+  const bundle: Pick<ResourceBundle, "getText"> = {
     getText(key: string) {
-      return texts[key] ?? null;
+      return texts[key];
     },
-  } as unknown as ResourceBundle);
+  };
+  sandbox.stub(Lib, "getResourceBundleFor").returns(bundle as ResourceBundle);
 }
 
 QUnit.module("i18n-registry", {

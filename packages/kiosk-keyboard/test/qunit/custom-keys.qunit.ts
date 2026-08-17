@@ -13,9 +13,14 @@ function commonAfterEach(): void {
   if (fixture) fixture.innerHTML = "";
 }
 
-/** Build a one-row layout from the given keys (strings become {value,label}). */
-function layoutOf(...keys: (string | KeyDefinition)[]): LayoutDefinition {
-  return [keys.map((k) => (typeof k === "string" ? { value: k, label: k } : k))];
+/** A key whose label is its own value. */
+function keycap(value: string): KeyDefinition {
+  return { value, label: value };
+}
+
+/** Build a one-row layout from the given keys. */
+function layoutOf(...keys: KeyDefinition[]): LayoutDefinition {
+  return [keys];
 }
 
 /**
@@ -42,7 +47,7 @@ async function setup(layout: LayoutDefinition): Promise<{ kb: KioskKeyboard; inp
 QUnit.module("custom-keys - keyPress contract", { afterEach: commonAfterEach });
 
 QUnit.test("A custom {paste} key fires keyPress with the full token (no literal insertion)", async (assert) => {
-  const { kb, input } = await setup(layoutOf("{paste}"));
+  const { kb, input } = await setup(layoutOf(keycap("{paste}")));
   let pressedKey = "";
   kb.attachKeyPress((e) => {
     pressedKey = e.getParameter("key") ?? "";
@@ -58,7 +63,7 @@ QUnit.test("A custom {paste} key fires keyPress with the full token (no literal 
 
 QUnit.test("preventDefault on the custom keyPress suppresses the default no-op warning", async (assert) => {
   const warnSpy = sandbox.spy(Log, "warning");
-  const { kb, input } = await setup(layoutOf("{paste}"));
+  const { kb, input } = await setup(layoutOf(keycap("{paste}")));
   kb.attachKeyPress((e) => e.preventDefault());
 
   tapKey(kb, "{paste}");
@@ -76,10 +81,10 @@ QUnit.test("preventDefault on the custom keyPress suppresses the default no-op w
 QUnit.module("custom-keys - input API", { afterEach: commonAfterEach });
 
 QUnit.test("insertText inserts at the caret of the active target and fires liveChange", async (assert) => {
-  const { kb, input } = await setup(layoutOf("{paste}"));
+  const { kb, input } = await setup(layoutOf(keycap("{paste}")));
   let liveValue: string | undefined;
-  input.attachLiveChange((e: { getParameter(name: string): unknown }) => {
-    liveValue = e.getParameter("value") as string;
+  input.attachLiveChange((e) => {
+    liveValue = e.getParameter("value");
   });
 
   kb.attachKeyPress((e) => {
@@ -98,7 +103,7 @@ QUnit.test("insertText inserts at the caret of the active target and fires liveC
 });
 
 QUnit.test("deleteBackward deletes one grapheme before the caret", async (assert) => {
-  const { kb, input } = await setup(layoutOf("a", "{del}"));
+  const { kb, input } = await setup(layoutOf(keycap("a"), keycap("{del}")));
   kb.attachKeyPress((e) => {
     if (e.getParameter("key") === "{del}") {
       e.preventDefault();
@@ -122,7 +127,7 @@ QUnit.test("insertText and deleteBackward are safe no-ops with no active target"
   const input = new Input({ value: "seed" });
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({
-    customLayouts: [new CustomLayout({ name: "spike", rows: layoutOf("x") })],
+    customLayouts: [new CustomLayout({ name: "spike", rows: layoutOf(keycap("x")) })],
     layout: "spike",
   });
   await placeAndWait(kb);

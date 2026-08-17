@@ -11,8 +11,6 @@ function commonAfterEach() {
   sandbox.restore();
 }
 
-// kana-dakuten middleware
-
 QUnit.module("kana-dakuten middleware", {
   beforeEach() {
     input = document.createElement("input");
@@ -27,42 +25,42 @@ QUnit.test("Built-in factory registered for ja-kana layout", (assert) => {
 });
 
 QUnit.test("Passes through regular kana (not dakuten/handakuten)", (assert) => {
-  const consumed = mw().handleKey("か", input); // か
+  const consumed = mw().handleKey("か", input);
   assert.strictEqual(consumed, false, "Regular kana is not consumed");
 });
 
 QUnit.test("Composes ka + dakuten into ga", (assert) => {
-  input.value = "か"; // か
+  input.value = "か";
   input.setSelectionRange(1, 1);
-  const consumed = mw().handleKey("゛", input); // ゛
+  const consumed = mw().handleKey("゛", input);
   assert.strictEqual(consumed, true, "Dakuten consumed");
   assert.strictEqual(input.value, "が", "か + ゛ = が");
 });
 
 QUnit.test("Composes ha + handakuten into pa", (assert) => {
-  input.value = "は"; // は
+  input.value = "は";
   input.setSelectionRange(1, 1);
-  const consumed = mw().handleKey("゜", input); // ゜
+  const consumed = mw().handleKey("゜", input);
   assert.strictEqual(consumed, true, "Handakuten consumed");
   assert.strictEqual(input.value, "ぱ", "は + ゜ = ぱ");
 });
 
 QUnit.test("Composes ha + dakuten into ba", (assert) => {
-  input.value = "は"; // は
+  input.value = "は";
   input.setSelectionRange(1, 1);
-  mw().handleKey("゛", input); // ゛
+  mw().handleKey("゛", input);
   assert.strictEqual(input.value, "ば", "は + ゛ = ば");
 });
 
 QUnit.test("Does not compose when preceding char has no dakuten form", (assert) => {
-  input.value = "あ"; // あ
+  input.value = "あ";
   input.setSelectionRange(1, 1);
-  const consumed = mw().handleKey("゛", input); // ゛
+  const consumed = mw().handleKey("゛", input);
   assert.strictEqual(consumed, false, "Dakuten not consumed for あ");
 });
 
 QUnit.test("Does not compose when input is empty", (assert) => {
-  const consumed = mw().handleKey("゛", input); // ゛
+  const consumed = mw().handleKey("゛", input);
   assert.strictEqual(consumed, false, "Dakuten not consumed on empty input");
 });
 

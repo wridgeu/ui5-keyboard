@@ -28,7 +28,16 @@ const otherMw = (): never => {
 /** Only these two names resolve without rows, so everything else is an `unknown-target`. */
 const isBuiltIn = (name: string): boolean => name === "qwerty" || name === "ja-kana";
 
-const fold = (...specs: CustomLayoutSpec[]): CustomLayoutFold => foldCustomLayouts(specs, isBuiltIn);
+/**
+ * A spec as the aggregation delivers it. `middleware` reaches the fold from an XML
+ * attribute or from plain JS, where nothing has checked it is callable, which is what
+ * the `invalid-middleware` diagnostic exists for.
+ */
+type DeclaredSpec = Omit<CustomLayoutSpec, "middleware"> & {
+  readonly middleware?: CustomLayoutSpec["middleware"] | string | number;
+};
+
+const fold = (...specs: DeclaredSpec[]): CustomLayoutFold => foldCustomLayouts(specs as CustomLayoutSpec[], isBuiltIn);
 const codes = (f: CustomLayoutFold): DiagnosticCode[] => f.diagnostics.map((d) => d.code);
 
 const VOCAB: DiagnosticVocabulary = {
@@ -172,7 +181,7 @@ QUnit.test("empty-name: a custom layout with no name resolves nothing", (assert)
 });
 
 QUnit.test("invalid-rows: a rejected rows drops only that facet, and reports alone", (assert) => {
-  const f = fold({ name: "notalayout", rows: [] as unknown as LayoutDefinition, keycapLang: "pl" });
+  const f = fold({ name: "notalayout", rows: [], keycapLang: "pl" });
   assert.deepEqual(codes(f), ["invalid-rows"], "never also unknown-target: one mistake, one warning");
   assert.strictEqual(f.layouts, undefined, "the rows are not folded in");
   assert.strictEqual(f.layoutMeta!.get("notalayout")!.lang, "pl", "the custom layout's other facets still apply");
@@ -185,7 +194,7 @@ QUnit.test("invalid-variants: a table that is not a variant table is dropped", (
 });
 
 QUnit.test("invalid-middleware: a non-function factory is dropped", (assert) => {
-  const f = fold({ name: "qwerty", middleware: "nope" as unknown as () => never });
+  const f = fold({ name: "qwerty", middleware: "nope" });
   assert.deepEqual(codes(f), ["invalid-middleware"], "reported once");
   assert.strictEqual(f.middleware, undefined, "and never stored");
 });
@@ -231,8 +240,8 @@ QUnit.module("custom-layout-fold - describeDiagnostic");
 QUnit.test("every code renders a sentence naming the twin's own surface", (assert) => {
   const f = fold(
     { name: "" },
-    { name: "typo", locales: ["pl", " "], suppress: ["Varients"], middleware: 1 as unknown as () => never },
-    { name: "x", rows: [] as unknown as LayoutDefinition },
+    { name: "typo", locales: ["pl", " "], suppress: ["Varients"], middleware: 1 },
+    { name: "x", rows: [] },
     { name: "x", rows: ROWS, variants: { A: [] } },
     { name: "x", rows: ROWS, middleware: mw },
     { name: "x", middleware: otherMw, locales: ["pl"] },

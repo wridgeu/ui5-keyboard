@@ -3,8 +3,6 @@ import { withCapturedWarnings } from "../helpers/console.js";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import { setLanguage } from "@ui5/webcomponents-base/dist/config/Language.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-// VariantTable through the element module, the re-export consumers get.
-import type { VariantTable } from "../../src/KioskKeyboard.js";
 import type CustomLayout from "../../src/CustomLayout.js";
 import type { CompositionMiddleware, LayoutDefinition } from "../../src/types.js";
 import { customLayout, readDataKeys, requireKey } from "../helpers/fixtures.js";
@@ -48,6 +46,18 @@ async function mountWithTarget(
   return { el, input };
 }
 
+/**
+ * Configures the framework language. `setLanguage` is typed for a language tag,
+ * but `null` is the value that clears the configured one, so the next test starts
+ * from the browser default again.
+ */
+function configureLanguage(language: string | null): Promise<void> {
+  return setLanguage(language as string);
+}
+
+/** Objects that survive an `instanceof Object` screen but carry no variant entries. */
+type NotAVariantTable = unknown[] | Map<string, readonly string[]> | Date | Record<string, never>;
+
 const layoutA: LayoutDefinition = [[{ value: "ax" }, { value: "bx" }]];
 const layoutB: LayoutDefinition = [[{ value: "two" }]];
 
@@ -58,7 +68,6 @@ const otherFactory = (): CompositionMiddleware => ({
   reset: () => {},
 });
 
-/** Runs `body` with `console.warn` captured into the array it receives, restoring it afterwards. */
 describe("kiosk-keyboard - custom layouts", () => {
   it("renders a custom layout that is not in the built-in registry", async () => {
     const el = await mount({ layout: "warehouse-pos" }, customLayout({ name: "warehouse-pos", rows: layoutA }));
@@ -292,7 +301,7 @@ describe("kiosk-keyboard - custom layouts", () => {
 
   it("suppress=Middleware disables the built-in composer for the layout", async () => {
     // `ko-hangul` arms the built-in Hangul composer. Suppressing the facet is the
-    // only way to type its rows directly; at HEAD this was unrepresentable.
+    // only way to type its rows directly.
     const { el, input } = await mountWithTarget(
       { layout: "ko-hangul" },
       customLayout({ name: "ko-hangul", suppress: "Middleware" }),
@@ -333,7 +342,7 @@ describe("kiosk-keyboard - custom layouts", () => {
     await nextRender();
 
     expect(readDataKeys(el).flat(), "the edit survives the suppressed invalidation").to.deep.equal(["new"]);
-    await setLanguage(null as unknown as string);
+    await configureLanguage(null);
   });
 
   it("accepts a layout appended and selected in the same task", async () => {
@@ -433,17 +442,18 @@ describe("kiosk-keyboard - custom layouts", () => {
   it("table-shaped impostors are rejected rather than read as an empty table", async () => {
     // Each has no own enumerable values, so a validator that only inspects
     // Object.values would accept it, shadow the built-in table and arm nothing.
-    const impostors: Record<string, unknown> = {
+    const impostors = {
       array: [],
       map: new Map([["a", ["ä"]]]),
       date: new Date(),
       empty: {},
-    };
+    } satisfies Record<string, NotAVariantTable>;
     for (const [label, table] of Object.entries(impostors)) {
       await withCapturedWarnings(async (messages) => {
         const el = await mount(
           { layout: "qwerty", "accent-variants": "" },
-          customLayout({ name: "qwerty", variants: table as VariantTable }),
+          // @ts-expect-error a table only plain JS can assign, which is what the validator screens
+          customLayout({ name: "qwerty", variants: table }),
         );
         expect(messages.length, `${label} is logged as invalid`).to.be.greaterThan(0);
         expect(
@@ -619,7 +629,8 @@ describe("layout attributes declared on a custom layout", () => {
         customLayout({
           name: "bogus",
           rows: layoutB,
-          keycapLang: 42 as unknown as string,
+          // @ts-expect-error a value only plain JS can assign; a mistyped one degrades to the default
+          keycapLang: 42,
         }),
       );
       el.layout = "bogus";

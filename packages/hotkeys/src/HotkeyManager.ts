@@ -49,11 +49,15 @@ const idGen = createIdGenerator("hk_");
 /**
  * Resolve the public target option into the internal discriminated union.
  * Functions become `callback` targets for lazy dispatch-time resolution.
+ *
+ * A node is recognized by `nodeType`, the marker every DOM node carries, so a
+ * node from another realm (an iframe document) resolves as an `element` target
+ * the way a same-realm one does.
  */
 function resolveTarget(target: Element | (() => Element | null) | null | undefined): ResolvedTarget {
   if (target == null) return null; // oxlint-disable-line eqeqeq -- intentional nullish check
-  if (typeof target === "function") return { kind: "callback", fn: target };
-  return { kind: "element", el: target };
+  if ("nodeType" in target) return { kind: "element", el: target };
+  return { kind: "callback", fn: target };
 }
 
 /**
@@ -101,6 +105,12 @@ const UPDATABLE_OPTION_DEFAULTS: Omit<ResolvedHotkeyOptions, "scope" | "conflict
 
 type UpdatableOptionKey = keyof typeof UPDATABLE_OPTION_DEFAULTS;
 
+/** Every value an updatable option can hold, as declared on the resolved options. */
+type UpdatableOptionValue = ResolvedHotkeyOptions[UpdatableOptionKey];
+
+// SAFETY: `UPDATABLE_OPTION_DEFAULTS` is a const object literal that nothing writes to, so
+// the strings `Object.keys` returns are exactly the `UpdatableOptionKey` union that
+// `keyof typeof` derives from that same literal.
 const UPDATABLE_OPTION_KEYS = Object.keys(UPDATABLE_OPTION_DEFAULTS) as UpdatableOptionKey[];
 
 /**
@@ -112,7 +122,11 @@ function applyUpdatableOptions(target: ResolvedHotkeyOptions, source: Partial<Up
   for (const key of UPDATABLE_OPTION_KEYS) {
     const value = source[key];
     if (value !== undefined) {
-      (target as Record<UpdatableOptionKey, unknown>)[key] = value;
+      // SAFETY: `key` ranges over `UPDATABLE_OPTION_KEYS`, so it names a field `target`
+      // declares. The assertion restates those fields under their common value type, which
+      // is what TypeScript needs to accept a write whose key is a union rather than a single
+      // literal; `source` and `target` declare the same type per key.
+      (target as Record<UpdatableOptionKey, UpdatableOptionValue>)[key] = value;
     }
   }
 }

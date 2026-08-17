@@ -80,16 +80,39 @@ export const EMPTY_FOLD: CustomLayoutFold = Object.freeze({ diagnostics: Object.
  * non-empty string `value`. Anything else is rejected outright rather than rendered as a
  * partial layout.
  */
+// This function is the I/O boundary the rule wants callers to have: it is what the fold runs
+// on a `spec.rows` that reached it from XML, a model binding or a foreign element, none of
+// which the compiler saw. A named parameter type would make `def is LayoutDefinition` vacuous
+// and turn a rejected layout into a partially rendered one.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 export function isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
   return (
     Array.isArray(def) &&
     def.length > 0 &&
     def.every(
+      // `Array.isArray(def)` narrows `def` to `any[]`, so without this annotation `row` infers
+      // as `any` and the two checks below stop being type evidence at all. Naming the element
+      // type here would assert the very thing the next three lines establish.
+      // oxlint-disable-next-line anti-slop/no-unknown-parameters
       (row: unknown) =>
         Array.isArray(row) &&
         row.length > 0 &&
+        // A row that passed `Array.isArray` says nothing about its entries, so `key` is
+        // genuinely unchecked and the annotation only stops the inference from falling to
+        // `any`. Declaring it `KeyDefinition` would hoist the assertion two lines below into
+        // the signature, where nothing rechecks it.
+        // oxlint-disable-next-line anti-slop/no-unknown-parameters
         row.every((key: unknown) => {
+          // SAFETY: the assertion buys an optional property read and nothing else. A key
+          // that is not an object yields `undefined` through the optional chain, and the
+          // next line rejects every `value` that is not a non-empty string, so no
+          // property is trusted on the strength of the assertion.
           const value = (key as KeyDefinition | null | undefined)?.value;
+          // The predicate exists to decide this question, so the check cannot be deferred to a
+          // boundary further out; a key's `value` has none. The SAFETY note above is only
+          // honoured while this line rechecks what the assertion read, so removing it would
+          // leave `def is LayoutDefinition` resting on the assertion alone.
+          // oxlint-disable-next-line anti-slop/no-runtime-typeof
           return typeof value === "string" && value.length > 0;
         }),
     )
@@ -103,7 +126,18 @@ export function isValidLayoutDefinition(def: unknown): def is LayoutDefinition {
  * normalized: the letters are matched against `key.value.toLowerCase()`, so a mis-keyed
  * table would arm nothing while shadowing the tier below.
  */
+// `unknown` is this signature's contract rather than a hole in it: both callers hand it a
+// value nothing has checked, the fold passing a custom layout's declared `variants` and each
+// host passing its own `defaultVariants`. Naming a parameter type would let the predicate
+// assert its own premise and report every impostor table as valid.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters
 export function isValidVariantTable(table: unknown): table is VariantTable {
+  // This line is the parse the rule asks callers to run first, so it has nowhere earlier to
+  // move to. `typeof` is the only test that separates an object from the string or number a
+  // consumer can assign to `variants` or `defaultVariants`, and `null` and arrays are excluded
+  // beside it because both also answer `"object"`; `Object.entries` on a string would otherwise
+  // read its indices as base letters.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof
   if (typeof table !== "object" || table === null || Array.isArray(table)) return false;
   const entries = Object.entries(table);
   return (
@@ -112,6 +146,10 @@ export function isValidVariantTable(table: unknown): table is VariantTable {
       ([base, glyphs]) =>
         base === base.trim().toLowerCase() &&
         Array.isArray(glyphs) &&
+        // `Array.isArray(glyphs)` proves the list, never its entries, and a variant table is
+        // a plain consumer-supplied object whose values carry no element type. `Boolean(glyph)`
+        // alone would let a truthy non-string through to the accent popup as a keycap label.
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof
         glyphs.every((glyph) => typeof glyph === "string" && glyph),
     )
   );
@@ -219,12 +257,31 @@ export function foldCustomLayouts(
       rowsDeclared.add(name);
     }
 
+    // `CustomLayout.keycapLang` is `type: "string"`, and `ManagedObject.validateProperty` coerces
+    // a non-string to one (`oValue = "" + oValue`) rather than rejecting it, so nothing but a
+    // string arrives through the aggregation. The guard covers a spec object built by hand, and it
+    // is load-bearing in the webc twin, whose `@property()` neither coerces nor validates. The
+    // suggested remedy has no boundary to move to: this module is the boundary.
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof
     const lang = typeof spec.keycapLang === "string" ? spec.keycapLang.trim() : "";
     // Names a layout, so it is normalized the way every layout name is.
+    // `CustomLayout.compact` is `type: "string"` and is coerced the same way, so the aggregation
+    // cannot deliver a non-string here either; the guard covers a spec assembled by hand and the
+    // webc twin, whose `@property()` neither coerces nor validates. `spec.compact?.trim()` would
+    // throw instead of dropping one facet, killing the whole custom layout with it.
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof
     const compact = typeof spec.compact === "string" ? spec.compact.trim().toLowerCase() : "";
     const patch: LayoutMeta = {
       ...(lang && { lang }),
       ...(compact && { compact }),
+      // Declared as a boolean, not merely truthy: `false` is a role the author chose, while
+      // anything the type does not admit has to leave the tier below it standing.
+      // The `boolean` test is the contract stated just above, so it cannot become a truthiness
+      // test, nor `!== undefined`: `false` has to survive as a chosen role while `null` must leave
+      // the tier below standing. Through `CustomLayout.toSpec()` the value is always a computed
+      // boolean, so here the guard is inert; it is load-bearing in the drift-pinned webc twin,
+      // which admits any duck-typed foreign `toSpec()`.
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof
       ...(typeof spec.secondary === "boolean" && { secondary: spec.secondary }),
     };
     if (Object.keys(patch).length > 0) meta.set(name, { ...meta.get(name), ...patch });
@@ -245,6 +302,12 @@ export function foldCustomLayouts(
 
     if (facets.has("Middleware")) middleware.set(name, null);
     if (spec.middleware !== undefined) {
+      // A non-callable cannot reach here through the aggregation: `CustomLayout` declares
+      // `middleware` as `type: "function"`, so `ManagedObject.validateProperty` rejects it at
+      // the setter. The check is what makes the fold total for a hand-built spec, and it is
+      // load-bearing in the webc twin, whose `@property()` coerces nothing; dropping it would
+      // trade this diagnostic for a `TypeError` at composition time.
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof
       if (typeof spec.middleware !== "function") diagnostics.push({ code: "invalid-middleware", layout: name });
       else {
         if (middlewareDeclared.has(name)) diagnostics.push({ code: "duplicate-middleware", layout: name });
@@ -302,12 +365,12 @@ export function describeDiagnostic(d: LayoutDiagnostic, vocab: DiagnosticVocabul
         `where every key has a non-empty string "value". The custom layout's other facets still apply.`
       );
     case "invalid-variants": {
-      const shape =
+      const expectation =
         `is not a variant table. Expected a non-empty object mapping lowercase base letters ` +
         `to arrays of non-empty glyph strings; an empty array suppresses that letter.`;
       // The host raises this code for its own `defaultVariants`, which names no layout.
-      if (!d.layout) return `"defaultVariants" ${shape}`;
-      return `"variants" ${on} ${shape} To opt "${d.layout}" out entirely use suppress="Variants".`;
+      if (!d.layout) return `"defaultVariants" ${expectation}`;
+      return `"variants" ${on} ${expectation} To opt "${d.layout}" out entirely use suppress="Variants".`;
     }
     case "invalid-middleware":
       return (
