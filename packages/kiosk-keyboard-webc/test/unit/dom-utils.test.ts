@@ -298,7 +298,9 @@ describe("keyPart", () => {
 describe("declared CSS parts", () => {
   it("carries one key-layout part per built-in layout, plus the base sentinel", () => {
     const declared = DOM.parts.filter((p) => p.startsWith("key-layout-")).map((p) => p.slice("key-layout-".length));
-    expect(declared.toSorted()).toEqual([...getRegisteredLayoutNames(), "base"].toSorted());
+    const expected = [...getRegisteredLayoutNames(), "base"];
+    expect(declared).toHaveLength(expected.length);
+    expect(new Set(declared)).toEqual(new Set(expected));
   });
 
   it("names every part with a selectable CSS identifier", () => {
