@@ -20,8 +20,8 @@ Several source files are duplicated between `kiosk-keyboard` and `kiosk-keyboard
 
 > [#65](https://github.com/wridgeu/ui5-keyboard/issues/65)
 
-The kiosk keyboard currently operates imperatively by reaching into a target input via `setValue()` + `fireEvent("liveChange")`. A `value` property on the keyboard itself could enable standalone/headless usage (PIN entry, search terminals) or a read-only mirror for observing typing activity.
+The kiosk keyboard currently operates imperatively by editing a target input: a platform edit through `execCommand` while the target is focused, otherwise `setValue()` + `fireEvent("liveChange")`. A `value` property on the keyboard itself could enable standalone/headless usage (PIN entry, search terminals) or a read-only mirror for observing typing activity.
 
-**Why not now:** The current imperative approach is correct for character-level input with cursor management. A `value` property is most compelling for headless/standalone mode (Scenario 1 in the issue), which is a distinct usage pattern that needs proper design work.
+**Why not now:** The current imperative approach is correct for character-level input with cursor management, and it is what keeps `maxlength` and the browser undo stack working. A `value` property is most compelling for headless/standalone mode (Scenario 1 in the issue), which is a distinct usage pattern that needs proper design work.
 
 **When to revisit:** When there is concrete demand for a headless keyboard mode without a visible input control.

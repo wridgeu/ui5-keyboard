@@ -1,6 +1,7 @@
-import { parseKeyAction } from "./key-token.js";
+import { assertNever, parseKeyAction, type KeyAction } from "./key-token.js";
 import { NAV_KEY_NAMES } from "./key-action-meta.js";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
+import type { KeyType } from "../types.js";
 
 /** A key's place in the resolved layout: zero-based row and column. */
 export interface KeyPosition {
@@ -98,6 +99,49 @@ export function classifyRow(row: ReadonlyArray<{ value: string }>): "fkey" | "na
   if (actions.every((a) => a.kind === "fkey" && FKEY_FNUM_RE.test(a.name))) return "fkey";
   if (actions.every((a) => a.kind === "fkey" && NAV_KEY_NAMES.has(a.name))) return "nav";
   return undefined;
+}
+
+const DECLARED_PARTS: ReadonlySet<string> = new Set(KIOSK_KEYBOARD_DOM.parts);
+
+/**
+ * The `part` attribute for one rendered key: its category, then the per-key
+ * names the DOM contract declares.
+ *
+ * A key is named individually only where the contract already lists the name,
+ * so a character key stays anonymous and a switch to a slotted custom layout
+ * gets `key-layout` without a `key-layout-<target>` twin. See the `_keyParts`
+ * block in `dom-contract.ts` for why the set is closed.
+ */
+export function keyPart(action: KeyAction, type: KeyType | undefined): string {
+  const names = ["key"];
+  if (type === "modifier") names.push("modifier");
+  else if (type === "action") names.push("action");
+
+  switch (action.kind) {
+    case "fkey":
+      names.push("fkey");
+      break;
+    case "shift":
+    case "backspace":
+    case "enter":
+      names.push(`key-${action.kind}`);
+      break;
+    case "layout": {
+      names.push("key-layout");
+      const target = `key-layout-${action.target}`;
+      if (DECLARED_PARTS.has(target)) names.push(target);
+      break;
+    }
+    case "char":
+      if (action.text === " ") names.push("key-space");
+      break;
+    case "unknown":
+      break;
+    default:
+      assertNever(action);
+  }
+
+  return names.join(" ");
 }
 
 /** Callback type for custom target resolution. */

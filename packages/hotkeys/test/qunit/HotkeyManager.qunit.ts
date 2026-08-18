@@ -24,7 +24,7 @@ QUnit.module("HotkeyManager", {
 QUnit.test("Register and fire simple hotkey", (assert) => {
   const manager = createHotkeyManager();
   let fired = false;
-  let receivedEvent: KeyboardEvent | null = null;
+  let receivedEvent: KeyboardEvent | undefined;
 
   manager.register("Escape", (event) => {
     fired = true;
@@ -33,7 +33,7 @@ QUnit.test("Register and fire simple hotkey", (assert) => {
 
   fireKey("Escape");
   assert.ok(fired, "Escape callback fired");
-  assert.ok(receivedEvent! instanceof KeyboardEvent, "Received KeyboardEvent");
+  assert.ok(receivedEvent instanceof KeyboardEvent, "Received KeyboardEvent");
 });
 
 QUnit.test("Register and fire Ctrl+S", (assert) => {

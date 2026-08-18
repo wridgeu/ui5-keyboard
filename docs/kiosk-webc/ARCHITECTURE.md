@@ -23,7 +23,7 @@ types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutS
                           event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
 core/
-  dom-utils.ts            Key grid coordinates + element IDs, input/textarea resolver (shadow DOM aware)
+  dom-utils.ts            Key grid coordinates + element IDs, per-key ::part() names, input/textarea resolver (shadow DOM aware)
   dom-contract.ts         Zero-dependency single source of truth for CSS classes, data attributes, selectors, part names
   shift-state.ts          Shift/Caps Lock state machine
   grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
@@ -556,6 +556,14 @@ All default values are declared on `:host` with standard specificity. Consumer s
 
 The caps-lock ring is the one variant whose rule is not written on its own class: it ships as the compound `.kiosk-key.kiosk-key--shift-active.kiosk-key--caps-lock` (0,3,0) so it outranks the `box-shadow` that `:hover` and `:focus-visible` declare at (0,2,0), and the latch signal does not blink out under transient press feedback. `--caps-lock` never appears without `--shift-active` (`isCapsLock` implies `isShifted`), so the compound matches every latched key. An override targeting `.kiosk-key--caps-lock` alone loses to the default; match the compound's specificity.
 
+### Per-Key Parts
+
+The category parts (`key`, `modifier`, `action`, `fkey`) reach a group of keys; a per-key part reaches one. `data-key` cannot serve that need here — it is shadow-trapped, and `::part()` takes pseudo-classes but neither attribute nor class selectors, so `::part(key)[data-key="{enter}"]` is invalid rather than unsupported. `keyPart()` (`core/dom-utils.ts`) builds the whole `part` attribute from the parsed `KeyAction`, appending `key-shift` / `key-backspace` / `key-enter` / `key-space`, and `key-layout` plus `key-layout-<target>` on a switch key.
+
+The emitted set is closed, which is the property `exportparts` needs (it has no wildcard form, so `DOM.exportParts` must be able to enumerate everything). Two rules keep it closed: a character key gets no per-key part, so no glyph becomes API; and `key-layout-<target>` is emitted only where `dom-contract.ts` already declares that name, which covers the built-in layouts and the `base` sentinel but never a consumer-named slotted layout. Declaring the layout names in `dom-contract.ts` rather than importing the registry keeps that module dependency-free for `tools/check-dom-contract-drift.mjs`; a unit test holds the two in step.
+
+The light-DOM kiosk twin needs none of this: `[data-key]` is directly targetable there, which is why the per-key styling hook is asymmetric between the twins by design rather than by drift.
+
 ### Accessibility CSS
 
 - `@media (prefers-reduced-motion: reduce)`: disables transitions and transforms
@@ -619,9 +627,10 @@ All built-in layouts and middleware are bundled with the component (direct impor
 | Shadow DOM        | No (UI5 light DOM)                                                   | Yes (native shadow DOM)                                          |
 | Styling           | LESS with `@sapUi*` parameters                                       | CSS with `--sap*` custom properties                              |
 | Target resolution | UI5 association + `Element.closestTo()`                              | DOM ID + `resolveInputOrTextarea()` (shadow DOM aware)           |
-| Data binding      | UI5 `setValue()` / `fireLiveChange()`                                | Native `InputEvent` dispatch                                     |
+| Value write       | Platform edit, else `setValue()` / `fireLiveChange()`                | Platform edit, else assignment + synthesized `InputEvent`        |
 | i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook           | UI5 WC `i18nBundle` + custom resolver                            |
 | Grid navigation   | Extracted to `internal/key-grid-navigation.ts` (`KeyGridNavigation`) | Extracted to `core/key-grid-navigation.ts` (`KeyGridNavigation`) |
+| Per-key styling   | `[data-key]` attribute selector in light DOM                         | Bounded per-key `::part()` names (`data-key` is shadow-trapped)  |
 | Tag               | `<kiosk:KioskKeyboard />` (XML)                                      | `<kiosk-keyboard>` (HTML)                                        |
 | Distribution      | UI5 library (preload)                                                | ESM with subpath imports                                         |
 

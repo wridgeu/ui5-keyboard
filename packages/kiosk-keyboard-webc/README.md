@@ -362,6 +362,20 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 | `keyboard-type-change`  | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                                                                                                 |
 | `active-control-change` | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the active control changes (auto-show focus switch or programmatic `setTargetElement`).                                                                                |
 
+## Text Insertion
+
+Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack — Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends. An input inside an open shadow root qualifies; the focus check descends shadow roots to find it.
+
+When the target does not hold focus — after `setTargetElement()` without a focus move, for instance — or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; what dispatches the `input` event is not.
+
+|                    | Target focused (platform edit)  | Target not focused (assignment)                                                                          |
+| ------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `maxlength`        | Applied by the browser          | Applied in JS                                                                                            |
+| Browser undo stack | Edit recorded                   | Not recorded                                                                                             |
+| `input` event      | One, dispatched by the platform | One synthesized `InputEvent` (`inputType` of `insertText`, `insertLineBreak` or `deleteContentBackward`) |
+
+Either path produces exactly one `input` event per edit, so a listener on the target sees every edit regardless. An edit that a saturated `maxlength` leaves empty writes nothing and dispatches nothing. Read-only and disabled targets are never written to.
+
 ## Methods
 
 | Method                     | Description                                                                                                                                                                                           |
@@ -1148,8 +1162,8 @@ The component exposes CSS shadow parts for structural styling from outside the s
 | `keyboard`       | Root container (`.kiosk-keyboard`) | The outermost keyboard wrapper                                                                                                                                   |
 | `row`            | Row container (`.kiosk-row`)       | Each row of keys                                                                                                                                                 |
 | `key`            | Every key element                  | All keys (regular, modifier, and action)                                                                                                                         |
-| `modifier`       | Modifier keys (Shift, 123, Fn)     | Combined with `key`: `part="key modifier"`                                                                                                                       |
-| `action`         | Action keys (Enter, Backspace)     | Combined with `key`: `part="key action"`                                                                                                                         |
+| `modifier`       | Modifier keys (Shift, 123, Fn)     | Combined with `key`, ahead of any per-key name: `part="key modifier key-shift"`                                                                                  |
+| `action`         | Action keys (Enter, Backspace)     | Combined with `key`, ahead of any per-key name: `part="key action key-enter"`                                                                                    |
 | `fkey`           | Function/navigation keys           | Combined with `key`: `part="key modifier fkey"`. Targets keys with `{fkey:*}` values (Home, End, PgUp, PgDn, Arrow keys) independently from other modifier keys. |
 | `key-label`      | Text label inside a key            | The `<span>` rendering the key's text                                                                                                                            |
 | `key-icon`       | Icon inside a key                  | The `<ui5-icon>` rendering built-in icons                                                                                                                        |
@@ -1173,20 +1187,45 @@ kiosk-keyboard::part(key) {
 
 Multi-name parts allow targeting specific key types. `::part(key)` matches all keys, while `::part(modifier)` or `::part(action)` match only those subtypes.
 
-### Forwarding Parts (`exportparts`)
+### Styling a single key
 
-CSS `::part()` selectors do not cross multiple shadow DOM boundaries. If you wrap `<kiosk-keyboard>` inside another web component, you must forward the parts using the `exportparts` attribute on the inner `<kiosk-keyboard>` element.
+The category parts above reach a _group_ of keys. To reach one key, use its per-key part name. The keys carry a `data-key` attribute too, but that one is shadow-trapped and unreachable from outside — and `::part()` accepts pseudo-classes but neither attribute nor class selectors, so `::part(key)[data-key="{enter}"]` is invalid rather than merely unsupported.
 
-The `KioskKeyboard.DOM.exportParts` constant provides a ready-to-use attribute value:
+| Per-key part        | Key                                                                                                        |
+| ------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `key-shift`         | The `{shift}` key                                                                                          |
+| `key-backspace`     | The `{backspace}` key                                                                                      |
+| `key-enter`         | The `{enter}` key                                                                                          |
+| `key-space`         | The space key                                                                                              |
+| `key-layout`        | Every `{layout:*}` switch key                                                                              |
+| `key-layout-<name>` | The switch key for one built-in layout — `key-layout-numeric`, `key-layout-special`, `key-layout-fkeys`, … |
+| `key-layout-base`   | The switch back to the tracked base layout (`{layout:base}`)                                               |
 
-```html
-<!-- Inside my-wrapper's shadow DOM template -->
-<kiosk-keyboard
-  exportparts="keyboard, row, key, modifier, action, fkey, key-label, key-icon, variant-popup, variant-option"
-></kiosk-keyboard>
+```css
+/* Example: make Enter the accent key and tint the numeric switcher */
+kiosk-keyboard::part(key-enter) {
+  background: var(--sapButton_Emphasized_Background);
+}
+kiosk-keyboard::part(key-layout-numeric) {
+  font-weight: bold;
+}
 ```
 
-Or programmatically:
+Per-key parts combine with the category ones, so `{enter}` renders as `part="key action key-enter"` and the numeric switcher as `part="key modifier key-layout key-layout-numeric"`.
+
+Two boundaries are deliberate:
+
+- **Character keys get no per-key part.** `a`, `1` and `ä` render as `part="key"` alone. Naming every glyph would make each one public API that can never change; style character keys as a group, or reach one by position from your own layout.
+- **Custom layouts get `key-layout` only.** A `{layout:*}` key pointing at a slotted `<kiosk-keyboard-custom-layout>` carries no `key-layout-<name>` twin, because the name is yours rather than the component's. The set of part names stays closed, which is what lets `exportparts` — which has no wildcard form — forward all of them.
+
+> [!NOTE]
+> The UI5 control twin needs none of this: it renders into light DOM, so its `[data-key]` attribute is directly targetable with an ordinary attribute selector. See [Styling a single key in the `kiosk-keyboard` README](../kiosk-keyboard/README.md#styling-a-single-key).
+
+### Forwarding Parts (`exportparts`)
+
+CSS `::part()` selectors do not cross multiple shadow DOM boundaries, and `exportparts` has no wildcard form. If you wrap `<kiosk-keyboard>` inside another web component, you must forward the parts using the `exportparts` attribute on the inner `<kiosk-keyboard>` element.
+
+The `KioskKeyboard.DOM.exportParts` constant provides a ready-to-use attribute value listing every part, so a hand-written list cannot fall behind:
 
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";

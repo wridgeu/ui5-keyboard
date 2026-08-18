@@ -20,6 +20,47 @@
  * glyph script carry no layered state, so they stay attributes on both twins.
  */
 
+/**
+ * Per-key part names, for reaching ONE key from outside the shadow root.
+ *
+ * `data-key` cannot serve here: it is shadow-trapped, and `::part()` accepts
+ * pseudo-classes but neither attribute nor class selectors, so
+ * `::part(key)[data-key="{enter}"]` is invalid rather than merely unsupported.
+ * The light-DOM kiosk twin needs none of this - its `[data-key]` is directly
+ * targetable.
+ *
+ * The set is closed on purpose. A character key gets no per-key part, so no
+ * glyph becomes public API that can never change. Every layout-switch key gets
+ * `key-layout`, and additionally `key-layout-<target>` when that name is listed
+ * below - true for the built-in layouts and the `base` sentinel, false for a
+ * slotted custom layout, whose name is consumer-chosen. That is what keeps the
+ * whole surface enumerable and so forwardable through {@link exportParts},
+ * which has no wildcard form. The list is held against the layout registry by a
+ * unit test rather than imported from it: this module stays dependency-free so
+ * any tsconfig context (and `tools/check-dom-contract-drift.mjs`) can load it.
+ */
+const _keyParts = Object.freeze([
+  "key-shift",
+  "key-backspace",
+  "key-enter",
+  "key-space",
+  "key-layout",
+  "key-layout-base",
+  "key-layout-arabic",
+  "key-layout-fkeys",
+  "key-layout-ja-kana",
+  "key-layout-ja-kana-compact",
+  "key-layout-ja-romaji",
+  "key-layout-ko-hangul",
+  "key-layout-nav",
+  "key-layout-numeric",
+  "key-layout-numpad",
+  "key-layout-qwerty",
+  "key-layout-qwerty-es",
+  "key-layout-qwertz-de",
+  "key-layout-special",
+]);
+
 const _parts = Object.freeze([
   "keyboard",
   "row",
@@ -31,6 +72,7 @@ const _parts = Object.freeze([
   "key-icon",
   "variant-popup",
   "variant-option",
+  ..._keyParts,
 ]);
 
 export const KIOSK_KEYBOARD_DOM = Object.freeze({
@@ -110,17 +152,10 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
    * Ready-to-use `exportparts` attribute value for wrapper components.
    *
    * When `<kiosk-keyboard>` is placed inside another shadow DOM host,
-   * CSS `::part()` selectors cannot cross multiple shadow boundaries.
-   * Set `exportparts` on the inner `<kiosk-keyboard>` to forward all
-   * parts to the outer host:
+   * CSS `::part()` selectors cannot cross multiple shadow boundaries, and
+   * `exportparts` has no wildcard form. Set this value on the inner
+   * `<kiosk-keyboard>` to forward every part to the outer host:
    *
-   * ```html
-   * <!-- Inside my-wrapper's shadow DOM template -->
-   * <kiosk-keyboard exportparts="keyboard, row, key, modifier, action, fkey, key-label, key-icon, variant-popup, variant-option">
-   * </kiosk-keyboard>
-   * ```
-   *
-   * Or programmatically:
    * ```js
    * import KioskKeyboard from "kiosk-keyboard-webc/dist/KioskKeyboard.js";
    * this.shadowRoot.querySelector('kiosk-keyboard')
