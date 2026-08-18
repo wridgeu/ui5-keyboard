@@ -2801,38 +2801,37 @@ describe("kiosk-keyboard", () => {
       return rendered;
     }
 
+    /**
+     * The declared parts, grouped by what makes each one render: a layout, an open
+     * accent popup, or one key. `DOM.parts` is pinned against the three joined, so
+     * a new part has to pick a group, and the structural group is render-checked.
+     */
+    const STRUCTURAL_PARTS = ["keyboard", "row", "key", "modifier", "action", "fkey", "key-label", "key-icon"];
+    const VARIANT_PARTS = ["variant-popup", "variant-option"];
+    const PER_KEY_PARTS = [
+      "key-shift",
+      "key-backspace",
+      "key-enter",
+      "key-space",
+      "key-layout",
+      "key-layout-base",
+      "key-layout-arabic",
+      "key-layout-fkeys",
+      "key-layout-ja-kana",
+      "key-layout-ja-kana-compact",
+      "key-layout-ja-romaji",
+      "key-layout-ko-hangul",
+      "key-layout-nav",
+      "key-layout-numeric",
+      "key-layout-numpad",
+      "key-layout-qwerty",
+      "key-layout-qwerty-es",
+      "key-layout-qwertz-de",
+      "key-layout-special",
+    ];
+
     it("exposes a frozen parts list and exportParts string on DOM contract", () => {
-      expect(DOM.parts).to.deep.equal([
-        "keyboard",
-        "row",
-        "key",
-        "modifier",
-        "action",
-        "fkey",
-        "key-label",
-        "key-icon",
-        "variant-popup",
-        "variant-option",
-        "key-shift",
-        "key-backspace",
-        "key-enter",
-        "key-space",
-        "key-layout",
-        "key-layout-base",
-        "key-layout-arabic",
-        "key-layout-fkeys",
-        "key-layout-ja-kana",
-        "key-layout-ja-kana-compact",
-        "key-layout-ja-romaji",
-        "key-layout-ko-hangul",
-        "key-layout-nav",
-        "key-layout-numeric",
-        "key-layout-numpad",
-        "key-layout-qwerty",
-        "key-layout-qwerty-es",
-        "key-layout-qwertz-de",
-        "key-layout-special",
-      ]);
+      expect(DOM.parts).to.deep.equal([...STRUCTURAL_PARTS, ...VARIANT_PARTS, ...PER_KEY_PARTS]);
       expect(Object.isFrozen(DOM.parts)).to.be.true;
       expect(DOM.exportParts).to.equal(DOM.parts.join(", "));
     });
@@ -2843,7 +2842,7 @@ describe("kiosk-keyboard", () => {
       // The variant-popup / variant-option parts only render while the accent
       // popup is open; they are covered in variant-popup.test.ts. The per-key
       // parts are conditional on the key, and covered by the tests below.
-      for (const declared of ["keyboard", "row", "key", "modifier", "action", "fkey", "key-label", "key-icon"]) {
+      for (const declared of STRUCTURAL_PARTS) {
         expect(rendered.has(declared), `part "${declared}" found in rendered DOM`).to.be.true;
       }
     });
@@ -2922,8 +2921,9 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       for (const value of ["a", "q", "1"]) {
-        const key = queryKey(el, value);
-        if (key) expect(key.getAttribute("part"), `part of "${value}"`).to.equal("key");
+        const key = queryKey(el, value)!;
+        expect(key, `key "${value}" rendered`).to.not.be.null;
+        expect(key.getAttribute("part"), `part of "${value}"`).to.equal("key");
       }
     });
 
