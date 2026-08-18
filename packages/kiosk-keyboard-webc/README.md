@@ -1162,8 +1162,8 @@ The component exposes CSS shadow parts for structural styling from outside the s
 | `keyboard`       | Root container (`.kiosk-keyboard`) | The outermost keyboard wrapper                                                                                                                                   |
 | `row`            | Row container (`.kiosk-row`)       | Each row of keys                                                                                                                                                 |
 | `key`            | Every key element                  | All keys (regular, modifier, and action)                                                                                                                         |
-| `modifier`       | Modifier keys (Shift, 123, Fn)     | Combined with `key`: `part="key modifier"`                                                                                                                       |
-| `action`         | Action keys (Enter, Backspace)     | Combined with `key`: `part="key action"`                                                                                                                         |
+| `modifier`       | Modifier keys (Shift, 123, Fn)     | Combined with `key`, ahead of any per-key name: `part="key modifier key-shift"`                                                                                  |
+| `action`         | Action keys (Enter, Backspace)     | Combined with `key`, ahead of any per-key name: `part="key action key-enter"`                                                                                    |
 | `fkey`           | Function/navigation keys           | Combined with `key`: `part="key modifier fkey"`. Targets keys with `{fkey:*}` values (Home, End, PgUp, PgDn, Arrow keys) independently from other modifier keys. |
 | `key-label`      | Text label inside a key            | The `<span>` rendering the key's text                                                                                                                            |
 | `key-icon`       | Icon inside a key                  | The `<ui5-icon>` rendering built-in icons                                                                                                                        |
@@ -1219,7 +1219,7 @@ Two boundaries are deliberate:
 - **Custom layouts get `key-layout` only.** A `{layout:*}` key pointing at a slotted `<kiosk-keyboard-custom-layout>` carries no `key-layout-<name>` twin, because the name is yours rather than the component's. The set of part names stays closed, which is what lets `exportparts` — which has no wildcard form — forward all of them.
 
 > [!NOTE]
-> The UI5 control twin needs none of this: it renders into light DOM, so its `[data-key]` attribute is directly targetable with an ordinary attribute selector. See [per-key styling in the `kiosk-keyboard` README](../kiosk-keyboard/README.md#custom-key-icons).
+> The UI5 control twin needs none of this: it renders into light DOM, so its `[data-key]` attribute is directly targetable with an ordinary attribute selector. See [Styling a single key in the `kiosk-keyboard` README](../kiosk-keyboard/README.md#styling-a-single-key).
 
 ### Forwarding Parts (`exportparts`)
 
