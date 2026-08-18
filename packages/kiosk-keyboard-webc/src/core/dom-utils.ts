@@ -1,4 +1,4 @@
-import { parseKeyAction, type KeyAction } from "./key-token.js";
+import { assertNever, parseKeyAction, type KeyAction } from "./key-token.js";
 import { NAV_KEY_NAMES } from "./key-action-meta.js";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
 import type { KeyType } from "../types.js";
@@ -135,6 +135,10 @@ export function keyPart(action: KeyAction, type: KeyType | undefined): string {
     case "char":
       if (action.text === " ") names.push("key-space");
       break;
+    case "unknown":
+      break;
+    default:
+      assertNever(action);
   }
 
   return names.join(" ");
