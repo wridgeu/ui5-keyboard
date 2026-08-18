@@ -79,6 +79,33 @@ older `exposes 'key' part on regular keys` red:
      AssertionError: part of "a": expected 'key zzz-undeclared' to equal 'key'
 ```
 
+## H5 — a declared part that nothing renders ships unnoticed
+
+Added 2026-08-18 (#237). `DOM.exportParts` forwards every name in `_parts`
+whether or not the template writes it, so a name declared and then forgotten
+reaches consumers as a selector that matches nothing. Only the structural render
+check points that way, and it read a hardcoded list, which left it blind to any
+name added after it was written.
+
+**Confirmed against the suite as shipped**: `key-badge` declared in `_parts` and
+acknowledged in that list rendered nowhere and no test objected. Closed by
+grouping the declared names by what makes each one render — a layout, an open
+accent popup, or one key — and pinning `DOM.parts` against the three joined, so
+a new name has to pick a group and the structural group stays render-checked.
+Both directions were then seen red:
+
+```
+❌ CSS parts > exposes a frozen parts list and exportParts string on DOM contract
+     (key-badge in _parts alone)
+
+❌ CSS parts > all structural parts appear in rendered shadow DOM
+     AssertionError: part "key-badge" found in rendered DOM: expected false to be true
+     (key-badge in _parts and in the structural group)
+```
+
+A per-key name stays exempt: it renders only alongside its key, so the group it
+joins is what decides whether the render check applies to it.
+
 ## Not covered, and why
 
 - **`exportparts` forwarding through a real wrapper element.** The suite asserts
