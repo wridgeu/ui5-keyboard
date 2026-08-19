@@ -377,7 +377,7 @@ handle.isActive; // false
 
 **Updatable options via `setOptions()`:**
 
-All [Registration Options](#registration-options) except `scope` and `conflictBehavior` can be updated at any time:
+All [Registration Options](#registration-options) except `scope` and `conflictBehavior` can be updated at any time. On a sequence handle the set is narrower still - see [Sequences](#sequences):
 
 ```ts
 handle.setOptions({
@@ -739,7 +739,9 @@ manager.register(
 );
 ```
 
-**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `suppressInPopups` (suppress when a UI5 dialog/popover is open), `onPending` (per-registration progress callback).
+**Options**: `description`, `timeout` (default 1000ms), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `preventDefault` and `stopPropagation` (both default `true`, applied to the event that completes the sequence), `suppressInPopups` (suppress when a UI5 dialog/popover is open), `onPending` (per-registration progress callback).
+
+The remaining registration options do not apply to sequences. `target` is rejected with a warning at registration time and silently ignored by `setOptions()`. `conflictBehavior` is not evaluated at all, so a duplicate sequence registers without a warning and only one of the two ever fires - a completed sequence dispatches a single winner, preferring the active scope over the global one. `ignoreRepeat` is fixed at `true`, since a held key never starts or advances a sequence. In `getRegistrations()` a sequence therefore always reports `hasTarget: false`, `ignoreRepeat: true`, and `conflictBehavior: "warn"` regardless of what was passed.
 
 > [!NOTE]
 > `scope` must be a non-empty string when provided.

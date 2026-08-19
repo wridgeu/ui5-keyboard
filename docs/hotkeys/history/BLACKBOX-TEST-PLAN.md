@@ -18,6 +18,10 @@ and DOM-target behavior), without relying on internals.
 
 ### 1) New suite: `packages/hotkeys/test/qunit/HotkeyManager-blackbox.qunit.ts`
 
+> This suite was never created. All six cases below landed in the existing
+> `HotkeyManager.qunit.ts` instead, which had already grown a counterpart for
+> most of them; only `SequenceManager-blackbox.qunit.ts` exists as its own file.
+
 1. **Active scope precedence over global**
    - Register `Escape` globally and in `editor` scope.
    - Push `editor` scope and assert only scoped callback fires.
@@ -58,7 +62,7 @@ and DOM-target behavior), without relying on internals.
 ### 3) Suite registration update
 
 - Add entries in `packages/hotkeys/test/qunit/testsuite.qunit.ts`:
-  - `HotkeyManager-blackbox`
+  - `HotkeyManager-blackbox` (not added; see the note under 1)
   - `SequenceManager-blackbox`
 
 ## Notes

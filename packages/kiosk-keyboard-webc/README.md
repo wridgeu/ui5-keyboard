@@ -100,18 +100,23 @@ npm install
 
 The keyboard requires modern browser features for full functionality:
 
-| Feature               | Used for                 | Baseline                                |
-| --------------------- | ------------------------ | --------------------------------------- |
-| CSS Container Queries | Width-responsive sizing  | Chrome 105+, Firefox 110+, Safari 16+   |
-| ResizeObserver        | Height-responsive sizing | Chrome 64+, Firefox 69+, Safari 13.1+   |
-| CSS `min()` / `max()` | Font-size capping        | Chrome 79+, Firefox 75+, Safari 13.1+   |
-| CSS Custom Properties | Consumer overrides       | Chrome 49+, Firefox 31+, Safari 9.1+    |
-| CSS `color-mix()`     | Theme-adaptive shadows   | Chrome 111+, Firefox 113+, Safari 16.2+ |
-| Shadow DOM v1         | Component encapsulation  | Chrome 53+, Firefox 63+, Safari 10+     |
+| Feature               | Used for                           | Baseline                                |
+| --------------------- | ---------------------------------- | --------------------------------------- |
+| `Intl.Segmenter`      | Grapheme-aware Backspace and caret | Chrome 87+, Firefox 125+, Safari 15.4+  |
+| CSS Container Queries | Width-responsive sizing            | Chrome 105+, Firefox 110+, Safari 16+   |
+| ResizeObserver        | Height-responsive sizing           | Chrome 64+, Firefox 69+, Safari 13.1+   |
+| CSS `min()` / `max()` | Font-size capping                  | Chrome 79+, Firefox 75+, Safari 13.1+   |
+| CSS Custom Properties | Consumer overrides                 | Chrome 49+, Firefox 31+, Safari 9.1+    |
+| CSS `color-mix()`     | Theme-adaptive shadows             | Chrome 111+, Firefox 113+, Safari 16.2+ |
+| Shadow DOM v1         | Component encapsulation            | Chrome 53+, Firefox 63+, Safari 10+     |
 
-All features are supported in browsers released since mid-2023. In older
-browsers, the keyboard renders at full size without width-responsive font
-scaling.
+`Intl.Segmenter` is the effective floor, and Firefox shipped it in 125 (April
+2024), so that release is the oldest Firefox the element supports. It is also
+the one entry with no graceful degradation: the segmenter is constructed at
+module scope, so an engine without it throws on import rather than losing a
+feature. Everything else degrades - without container queries or `min()` the
+keyboard renders at full size with no width-responsive font scaling, and without
+`color-mix()` the shadows stop adapting to the theme.
 
 ## Consumption Modes
 
@@ -447,21 +452,21 @@ The contract is intentionally read-only. It is not the styling API; continue to 
 
 ## Built-in Layouts
 
-| Name              | Description                                                        |
-| ----------------- | ------------------------------------------------------------------ |
-| `qwerty`          | Standard US QWERTY                                                 |
-| `qwertz-de`       | German QWERTZ with umlauts and ss                                  |
-| `ja-romaji`       | Japanese Romaji (QWERTY base with JIS punctuation)                 |
-| `ja-kana`         | Japanese Kana direct-input (JIS X 6002)                            |
-| `ja-kana-compact` | Japanese Kana for narrow keyboards, every row at twelve key widths |
-| `arabic`          | Arabic (standard Arabic 101 layout)                                |
-| `numeric`         | Numbers + common symbols                                           |
-| `special`         | Extended symbols (`#+=`, currencies)                               |
-| `numpad`          | Calculator-style number pad                                        |
-| `fkeys`           | F1-F12 function keys                                               |
-| `nav`             | Navigation keys (arrows, Home, End, etc.)                          |
-| `ko-hangul`       | Korean Hangul Dubeolsik (KS X 5002)                                |
-| `qwerty-es`       | Spanish QWERTY with accented vowels and ñ                          |
+| Name              | Description                                                             |
+| ----------------- | ----------------------------------------------------------------------- |
+| `qwerty`          | Standard US QWERTY                                                      |
+| `qwertz-de`       | German QWERTZ with umlauts and ss                                       |
+| `ja-romaji`       | Japanese Romaji (QWERTY base with JIS punctuation)                      |
+| `ja-kana`         | Japanese Kana direct-input (JIS X 6002)                                 |
+| `ja-kana-compact` | Japanese Kana for narrow keyboards, no row wider than twelve key widths |
+| `arabic`          | Arabic (standard Arabic 101 layout)                                     |
+| `numeric`         | Numbers + common symbols                                                |
+| `special`         | Extended symbols (`#+=`, currencies)                                    |
+| `numpad`          | Calculator-style number pad                                             |
+| `fkeys`           | F1-F12 function keys                                                    |
+| `nav`             | Navigation keys (arrows, Home, End, etc.)                               |
+| `ko-hangul`       | Korean Hangul Dubeolsik (KS X 5002)                                     |
+| `qwerty-es`       | Spanish QWERTY with accented vowels and ñ                               |
 
 Combined variants (e.g., QWERTY + F-key row) are not built-in. They are
 trivial compositions - see [Layout Composition](#layout-composition) below.
@@ -1323,6 +1328,8 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-variant-popup-gap`       | `0.25rem`                                                                                                                           | Gap between options in the accent-variant popup                                                                  |
 | `--kiosk-keyboard-variant-popup-padding`   | `0.25rem`                                                                                                                           | Padding around the accent-variant option row                                                                     |
 | `--kiosk-keyboard-variant-popup-max-width` | `92vw`                                                                                                                              | Max width before the accent-variant option row wraps                                                             |
+
+One name in this namespace is not a knob: `--kiosk-keyboard-variant-option-width` carries the anchor key's measured width onto the accent-variant options, and the element writes it as an inline style on the `variant-popup` part every time the popup opens. It is public-prefixed only because it has to cross into the slotted `ui5-button`s; an inline style outranks anything you declare, so size the options through `--kiosk-keyboard-key-height` instead, which is the fallback it resolves to.
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 

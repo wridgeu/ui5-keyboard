@@ -134,16 +134,24 @@ In this monorepo, dependencies are managed via npm workspaces (`npm install` at 
 
 The keyboard requires modern browser features for full functionality:
 
-| Feature               | Used for                 | Baseline                              |
-| --------------------- | ------------------------ | ------------------------------------- |
-| CSS Container Queries | Width-responsive sizing  | Chrome 105+, Firefox 110+, Safari 16+ |
-| ResizeObserver        | Height-responsive sizing | Chrome 64+, Firefox 69+, Safari 13.1+ |
-| CSS `min()` / `max()` | Font-size capping        | Chrome 79+, Firefox 75+, Safari 13.1+ |
-| CSS Custom Properties | Consumer overrides       | Chrome 49+, Firefox 31+, Safari 9.1+  |
+| Feature               | Used for                           | Baseline                                |
+| --------------------- | ---------------------------------- | --------------------------------------- |
+| `Intl.Segmenter`      | Grapheme-aware Backspace and caret | Chrome 87+, Firefox 125+, Safari 15.4+  |
+| CSS Container Queries | Width-responsive sizing            | Chrome 105+, Firefox 110+, Safari 16+   |
+| CSS Cascade Layers    | Keeping app CSS above library CSS  | Chrome 99+, Firefox 97+, Safari 15.4+   |
+| ResizeObserver        | Height-responsive sizing           | Chrome 64+, Firefox 69+, Safari 13.1+   |
+| CSS `min()` / `max()` | Font-size capping                  | Chrome 79+, Firefox 75+, Safari 13.1+   |
+| CSS `color-mix()`     | Accent-variant hint tint           | Chrome 111+, Firefox 113+, Safari 16.2+ |
+| CSS Custom Properties | Consumer overrides                 | Chrome 49+, Firefox 31+, Safari 9.1+    |
 
-All features are supported in browsers released since 2023. In older
-browsers, the keyboard renders at full size without width-responsive font
-scaling.
+`Intl.Segmenter` is the effective floor, and Firefox shipped it in 125 (April
+2024), so that release is the oldest Firefox the library supports. It is also
+the one entry with no graceful degradation: the segmenter is constructed at
+module scope, so an engine without it throws on import rather than losing a
+feature. Everything else degrades - without container queries or `min()` the
+keyboard renders at full size with no width-responsive font scaling, without
+`color-mix()` the accent-variant hint loses its tint, and without cascade layers
+the library's own rules compete with the app's on ordinary specificity.
 
 ## Getting Started
 
@@ -564,21 +572,21 @@ This contract is read-only and stable for DOM hooks. It is not the styling API; 
 
 The library ships with thirteen built-in layouts:
 
-| Layout            | Description                                                        | Rows |
-| ----------------- | ------------------------------------------------------------------ | ---- |
-| `qwerty`          | Standard QWERTY with number row                                    | 5    |
-| `qwertz-de`       | German QWERTZ with Umlaute (ä, ö, ü, ß)                            | 5    |
-| `numeric`         | Numbers with basic operators                                       | 4    |
-| `special`         | Special characters and symbols                                     | 4    |
-| `numpad`          | Compact numeric keypad (calculator)                                | 5    |
-| `fkeys`           | Function keys F1-F12 (standalone)                                  | 3    |
-| `nav`             | Navigation keys (arrows, Home/End, Pg)                             | 4    |
-| `ja-romaji`       | Japanese Romaji (QWERTY base with JIS punctuation)                 | 5    |
-| `ja-kana`         | Japanese Kana direct-input (JIS X 6002)                            | 5    |
-| `ja-kana-compact` | Japanese Kana for narrow keyboards, every row at twelve key widths | 5    |
-| `arabic`          | Arabic (standard Arabic 101 layout)                                | 5    |
-| `ko-hangul`       | Korean Hangul Dubeolsik (KS X 5002)                                | 5    |
-| `qwerty-es`       | Spanish QWERTY with accented vowels and ñ                          | 5    |
+| Layout            | Description                                                             | Rows |
+| ----------------- | ----------------------------------------------------------------------- | ---- |
+| `qwerty`          | Standard QWERTY with number row                                         | 5    |
+| `qwertz-de`       | German QWERTZ with Umlaute (ä, ö, ü, ß)                                 | 5    |
+| `numeric`         | Numbers with basic operators                                            | 4    |
+| `special`         | Special characters and symbols                                          | 4    |
+| `numpad`          | Compact numeric keypad (calculator)                                     | 5    |
+| `fkeys`           | Function keys F1-F12 (standalone)                                       | 3    |
+| `nav`             | Navigation keys (arrows, Home/End, Pg)                                  | 4    |
+| `ja-romaji`       | Japanese Romaji (QWERTY base with JIS punctuation)                      | 5    |
+| `ja-kana`         | Japanese Kana direct-input (JIS X 6002)                                 | 5    |
+| `ja-kana-compact` | Japanese Kana for narrow keyboards, no row wider than twelve key widths | 5    |
+| `arabic`          | Arabic (standard Arabic 101 layout)                                     | 5    |
+| `ko-hangul`       | Korean Hangul Dubeolsik (KS X 5002)                                     | 5    |
+| `qwerty-es`       | Spanish QWERTY with accented vowels and ñ                               | 5    |
 
 Layout switching is driven by special key values in the layout definition:
 
@@ -678,8 +686,8 @@ const myLayout: LayoutDefinition = [
 | `shiftValue`    | `string`   | Value when Shift is active (defaults to uppercase of `value`).                                                                                                                          |
 | `capsLockLabel` | `string`   | Label for `{shift}` key when Caps Lock is active. Omit for i18n "Caps Lock". Set to `""` to suppress. Only meaningful on `{shift}` keys.                                                |
 | `capsLockIcon`  | `string`   | Icon for `{shift}` key when Caps Lock is active. Independent of `icon`. Defaults to `sap-icon://locked`. Only meaningful on `{shift}` keys.                                             |
-| `width`         | `string`   | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                                                                                                              |
-| `type`          | `string`   | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.                                                                                                        |
+| `width`         | `KeyWidth` | Proportional key width, from the closed set `"1.25"` \| `"1.5"` \| `"1.75"` \| `"2"` \| `"2.25"` \| `"2.75"` \| `"space"`. Omit for a standard 1x key; any other string renders at 1x.  |
+| `type`          | `KeyType`  | `"default"` \| `"modifier"` (subdued) \| `"action"` (prominent) \| `"space"`. Styling, except that `modifier`, `action` and `space` keys never take an accent-variant table.            |
 | `icon`          | `string`   | SAP icon URI or Unicode character. Renders inline with label when both are present (customizable via `--ui5KioskKeyboard-dualDirection`). Set `label=""` for icon-only.                 |
 | `variants`      | `string[]` | Long-press / right-click accent-variant popup glyphs for this key. Overrides the built-in `accentVariants` table; `[]` suppresses the popup. E.g. `["ä", "à", "á", "â"]`.               |
 | `ariaLabel`     | `string`   | Explicit accessible name for the key; highest priority in the name-resolution chain (else label, else i18n, else value).                                                                |
@@ -1622,7 +1630,7 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 - The keyboard root has `role="group"` with a configurable `aria-label` and `aria-roledescription="keyboard"`
 - Each key has `role="button"` with an accessible name from visible text (when icon+label are both present) or `aria-label` (for icon-only keys where `label=""`)
 - The Shift key has `aria-pressed` reflecting its toggle state
-- Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row
+- Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row, Ctrl+Home/Ctrl+End to the first/last key of the whole grid
 - The keyboard is an F6 navigation group (`data-sap-ui-fastnavgroup="true"`)
 - Disabled state applies `aria-disabled="true"` to both the root and individual keys
 - ARIA live region announces keyboard open/close and shift state changes to screen readers
@@ -1927,7 +1935,7 @@ import type { I18nResolver } from "ui5/kiosk/types";
 
 ## Library Enums & Constants
 
-The library exports TypeScript string enums and frozen `const` objects for type-safe comparisons. The UI5 property enums (`KeyboardLayout`, `KeyboardType`, `MobileKeyboard`, `FKeyMode`) are string enums registered via `DataType.registerEnum()` for XML view binding; `KeyName` and `NativeDispatchableKeyNames` are frozen `const` objects.
+The library exports TypeScript string enums and frozen `const` objects for type-safe comparisons. The UI5 property enums (`KeyboardLayout`, `KeyboardType`, `MobileKeyboard`, `FKeyMode`, and `LayoutRole` from [Custom Layouts](#custom-layouts)) are string enums registered via `DataType.registerEnum()` for XML view binding. `LayoutFacet` is a string enum too, but registers as a `DataType` over `string` because it is the component type of the `suppress` array property; `KeyName` and `NativeDispatchableKeyNames` are frozen `const` objects.
 
 ```ts
 import { KeyboardLayout, KeyboardType, KeyName, MobileKeyboard, FKeyMode } from "ui5/kiosk/library";

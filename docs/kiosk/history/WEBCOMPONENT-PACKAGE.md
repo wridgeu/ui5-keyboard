@@ -286,10 +286,16 @@ DOM. Browser support: uniform across Chrome, Firefox, Safari.
 The demo app needs to consume `<kiosk-keyboard>` inside a UI5 XML view.
 Research confirms two proven paths, both available in this monorepo today.
 
-> **Outcome:** The demo app uses Path B (manual bridge at
+> **Outcome (as written):** The demo app uses Path B (manual bridge at
 > `packages/demo-app/webapp/control/KioskKeyboardWebc.ts`) for the
 > `<kiosk-keyboard>` web component. Path A (auto-generated wrappers)
 > is used for `@ui5/webcomponents/dist/Input` in `KioskInputIds.view.xml`.
+>
+> **Outcome today:** the manual bridge is gone. `KioskWebComponentTooling.view.xml`
+> declares `xmlns:kiosk="kiosk-keyboard-webc"` and lets `ui5-tooling-modules`
+> generate the wrapper from the CEM (Path A), with `pluginOptions.webcomponents.scoping`
+> off so the generated `metadata.tag` matches the registered one. Path B remains
+> documented below as the escape hatch, and in the web component's own README.
 > Both paths coexist without conflict.
 > See the [SAP-samples/uxc-integration](https://github.com/SAP-samples/uxc-integration)
 > project for the official SAP reference setup.
@@ -357,9 +363,10 @@ This is the same pattern the demo app uses for
 
 ### Path B: Manual WebComponent.extend() bridge (explicit control)
 
-Already proven in `webapp/control/KioskKeyboardWebc.ts`. A manual bridge
-gives full control over property mapping, event transformation, and method
-delegation. Use this when you want typed UI5 events, imperative methods,
+Was proven in `webapp/control/KioskKeyboardWebc.ts`, since removed from the demo
+in favour of Path A; the bridge shape is kept in the web component's README. A
+manual bridge gives full control over property mapping, event transformation,
+and method delegation. Use this when you want typed UI5 events, imperative methods,
 or when the auto-generated wrapper needs customization.
 
 Since UI5 >= 1.138, the WebComponent bridge auto-converts camelCase event

@@ -71,7 +71,7 @@ public events, and input behavior from a consumer perspective.
 
 - Added entries in `packages/kiosk-keyboard/test/qunit/testsuite.qunit.ts`:
   - `KioskKeyboard-renderer-blackbox`
-  - `KioskKeyboard-input-blackbox`
+  - `KioskKeyboard-input-blackbox` (since removed; see the note under 2)
   - `KioskKeyboard-autoshow-blackbox`
 
 ## Notes
