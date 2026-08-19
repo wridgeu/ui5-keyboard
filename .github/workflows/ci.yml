@@ -10,8 +10,8 @@ on:
 permissions: {}
 
 # The pipeline is split into parallel jobs (static / unit-qunit / unit-webc /
-# e2e) that each start from the shared setup action, so the slowest job (not
-# their sum) sets the wall-clock. They are independent: no job consumes
+# e2e / smoke) that each start from the shared setup action, so the slowest job
+# (not their sum) sets the wall-clock. They are independent: no job consumes
 # another's build output. The two unit jobs are split by browser stack, not just
 # for parallelism: each then provisions one of puppeteer / playwright rather
 # than both.
@@ -235,3 +235,29 @@ jobs:
       # playwright.config.ts.
       - name: End-to-end (behavioral; visual snapshots ignored)
         run: npm run test:e2e:ci -w packages/${{ matrix.package }}
+
+  # `npm run build:all` plus a dry-run pack of each published package. This is
+  # the only job that builds anything: the suites above run against src, so a
+  # break in the UI5 / vite / theme build, or a file dropping out of a package's
+  # published surface, is invisible to them. Kept a separate job because it is
+  # the one leg that needs no browser at all.
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    # This job launches no browser at all, so skip puppeteer's postinstall Chrome
+    # download on a node_modules cache miss; see the unit-webc job for the full
+    # reasoning. Playwright needs no counterpart: `npm ci` fetches no browser for
+    # it, only an explicit `playwright install` does, which this job never runs.
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: Package smoke tests
+        run: npm run test:packages:smoke

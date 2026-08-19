@@ -255,3 +255,19 @@ npm run test:kiosk-webc:e2e       # Kiosk webc e2e (Playwright)
 npm run test:qunit                # All QUnit (hotkeys + kiosk)
 npm run test:coverage -w packages/kiosk-keyboard-webc # Coverage (webc only)
 ```
+
+## What CI runs
+
+`.github/workflows/ci.yml` runs five jobs in parallel, so the slowest one (not their sum) sets the wall-clock:
+
+| Job          | Covers                                                                                                                                                                                                    |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `static`     | commitlint, `fmt:check`, `lint:ci`, `lint:ui5`, `typecheck`, generated-interface drift, and every Node-only check (`test:patches`, the three twin-drift checks, `test:i18n-bundles`, `test:lint-plugins`) |
+| `unit-qunit` | `test:qunit` for both UI5 libraries, on puppeteer                                                                                                                                                         |
+| `unit-webc`  | the web component's vitest and web-test-runner suites, on playwright chromium                                                                                                                             |
+| `e2e`        | `test:e2e:ci` per package, as two matrix legs; behavioral only (`--ignore-snapshots`)                                                                                                                     |
+| `smoke`      | `test:packages:smoke`: `build:all` plus an `npm pack` dry run per published package                                                                                                                       |
+
+CI deliberately does not call `npm run check:base`; it re-implements the same chain as jobs so the legs run in parallel and report separately, and it uses the stricter `lint:ci` (`--deny-warnings`) in place of `lint`. What it does not cover is the pixel comparison: visual baselines carry no platform suffix, so `e2e` runs the visual specs as render smoke tests only. Compare baselines locally with `npm run check`.
+
+`release.yml` gates the release on this same workflow through `workflow_call`, so nothing is release-only.
