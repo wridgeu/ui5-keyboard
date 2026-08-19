@@ -395,7 +395,7 @@ Auto-show uses document-level `focusin`/`focusout` listeners in capture phase.
 
 ### Multi-Instance Isolation
 
-A static `_participants` set on `AutoShowController` (`core/auto-show-controller.ts`) tracks the controllers of all live keyboards; each joins via `register()` and leaves via `unregister()`. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any other participant already claims that input, gated by `_isAutoShowParticipationActive()` so an instance with auto-show off never blocks one that has it on. If so, auto-show bails out.
+A static `_participants` set on `AutoShowController` (`core/auto-show-controller.ts`) tracks the controllers of all live keyboards; each joins via `register()` and leaves via `unregister()`. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any other participant already claims that input, gated by `_isAutoShowParticipationActive()` so an instance with auto-show off never blocks one that has it on. If so, auto-show bails out. A claim is either the peer's live active target or any id on its comma-separated `controls` list - every id on the list, since the active target is only set once one of them takes focus.
 
 `KioskKeyboard._instances` is a separate static set, and serves only as the guard for queued i18n re-renders.
 

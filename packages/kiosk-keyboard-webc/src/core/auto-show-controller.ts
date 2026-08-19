@@ -193,12 +193,13 @@ export class AutoShowController {
       if (peer === this) continue;
       if (!peer._isAutoShowParticipationActive()) continue;
       if (peer._bridge.getTargetElement() === inputEl) return true;
-      const ids = peer._bridge.getControlsList();
-      if (ids.length === 1) {
-        const el = document.getElementById(ids[0]!);
+      // `controls` is a comma-separated list, and every id on it is a claim: the
+      // peer's active target is only set once one of them takes focus, so before
+      // that the list is the only statement of ownership there is.
+      for (const id of peer._bridge.getControlsList()) {
+        const el = document.getElementById(id);
         if (!el) continue;
-        if (el === inputEl) return true;
-        if (el instanceof HTMLElement && peer._bridge.resolveInputFrom(el) === inputEl) return true;
+        if (el === inputEl || peer._bridge.resolveInputFrom(el) === inputEl) return true;
       }
     }
     return false;
