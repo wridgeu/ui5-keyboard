@@ -77,6 +77,15 @@ interface PressEvent extends Event {
 }
 
 /**
+ * A `sapselect` event, which UI5 delivers as a jQuery wrapper whose `addProp` list
+ * does not copy `repeat`; the native keydown hangs off `originalEvent`.
+ */
+interface SelectEvent extends Event {
+  readonly originalEvent?: KeyboardEvent;
+  readonly repeat?: boolean;
+}
+
+/**
  * Whether a simulated touch event stands for a non-primary mouse button.
  *
  * UI5's EventSimulation binds the simulated touchstart/touchend to
@@ -2202,6 +2211,13 @@ export default class KioskKeyboard extends Control {
    * Uses UI5's `sapselect` pseudo-event, which the framework filters to
    * Enter/Space with no Ctrl/Alt/Shift/Meta held, so Ctrl+Space and
    * similar combinations cannot accidentally trigger key activation.
+   *
+   * One activation per press: `sapselect` maps onto keydown, so a held key
+   * repeats at the OS rate. `{backspace}` is the only key this component
+   * repeats, on the tuned curve `BackspaceRepeatBehavior` drives from pointer
+   * input; every other key would misbehave on a repeat (`{shift}` cycles
+   * through its three states, `{layout:*}` switches and then types into the
+   * new layout). The scroll suppression still has to run on the repeats.
    */
   onsapselect(event: Event): void {
     if (!this.getEnabled()) return;
@@ -2214,6 +2230,10 @@ export default class KioskKeyboard extends Control {
     if (!keyValue) return;
 
     event.preventDefault();
+
+    const native = (event as SelectEvent).originalEvent ?? (event as SelectEvent);
+    if (native.repeat) return;
+
     this._handleKeyAction(keyValue, target);
   }
 

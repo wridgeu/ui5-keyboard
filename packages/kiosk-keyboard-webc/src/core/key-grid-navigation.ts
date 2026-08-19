@@ -121,8 +121,12 @@ export class KeyGridNavigation {
           // Activate only without modifiers: Ctrl+Enter and similar
           // combinations are browser/OS shortcuts, not key activations.
           if (e.ctrlKey || e.altKey || e.metaKey) return;
-          keyEl.click();
           e.preventDefault();
+          // One activation per press. A held Enter repeats at the OS rate, and
+          // `{backspace}` is the only key this component repeats, on the tuned
+          // curve `BackspaceRepeatController` drives from pointer input.
+          if (e.repeat) return;
+          keyEl.click();
           return;
         case " ":
           // Native `<button>` semantics: Space activates on release, not on
