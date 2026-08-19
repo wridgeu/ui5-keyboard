@@ -108,7 +108,11 @@ See [Project Structure](./README.md#project-structure) in the root README for th
 
 ### Dependency Layout
 
-Only `typescript`, `puppeteer` and the patched `less-openui5` live exclusively at the repository root. Everything else a package invokes from its own scripts is re-declared in that workspace at the same pinned version (`rimraf`, `@playwright/test`, `ui5-test-runner`, `start-server-and-test`, `@ui5/webcomponents-tools`), so a package's dependencies list everything its own scripts invoke; the root pins the same versions to keep them aligned, and npm hoisting still resolves a single installed copy. Tooling unique to one package (e.g. `vite` / `vitest` and `@web/test-runner` for the web component) is declared only there.
+The rule is that a workspace declares everything its own scripts invoke. Anything a package runs is therefore re-declared in that workspace at the same pinned version as the root (`rimraf`, `@playwright/test`, `ui5-test-runner`, `start-server-and-test`, `@ui5/linter`, `@ui5/webcomponents-tools`); npm hoisting still resolves a single installed copy. Keep the two pins in step when bumping either: a `~` range hides the drift because both sides still resolve to the same hoisted version, right up until they do not.
+
+What lives only at the root is what only root scripts and hooks invoke: the formatter and linter (`oxfmt`, `oxlint`), the commit-hook chain (`@commitlint/*`, `lint-staged`), the install-time patchers (`patch-package`, the patched `less-openui5`), the shared compiler and type packages (`typescript`, `@types/*`), and `puppeteer`, whose browser only the QUnit runner launches. Tooling unique to one package (`vite` / `vitest` and `@web/test-runner` for the web component) is declared only there.
+
+`@openui5/types` is the one deliberate version split: the root and both libraries pin the 1.136 LTS they are built against, while `demo-app` pins the 1.149 its own `ui5.yaml` and `manifest.json` declare, so it installs a second copy under its own `node_modules`.
 
 The e2e/visual suites use `@playwright/test` directly; the UI5 QUnit suites are harvested by `ui5-test-runner` using its puppeteer backend (chromium only: its bundled chromium is fetched on `npm install`, and unlike the playwright backend it does not try to install firefox/webkit, which hangs on CI). Always run `npm install` at the root after switching to a branch that changes dependencies; a workspace's own `node_modules` is not self-contained.
 
