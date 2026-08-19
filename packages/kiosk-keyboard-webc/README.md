@@ -102,7 +102,7 @@ The keyboard requires modern browser features for full functionality:
 
 | Feature               | Used for                           | Baseline                                |
 | --------------------- | ---------------------------------- | --------------------------------------- |
-| `Intl.Segmenter`      | Grapheme-aware Backspace and caret | Chrome 87+, Firefox 125+, Safari 15.4+  |
+| `Intl.Segmenter`      | Grapheme-aware Backspace and caret | Chrome 87+, Firefox 125+, Safari 14.1+  |
 | CSS Container Queries | Width-responsive sizing            | Chrome 105+, Firefox 110+, Safari 16+   |
 | ResizeObserver        | Height-responsive sizing           | Chrome 64+, Firefox 69+, Safari 13.1+   |
 | CSS `min()` / `max()` | Font-size capping                  | Chrome 79+, Firefox 75+, Safari 13.1+   |
@@ -110,13 +110,14 @@ The keyboard requires modern browser features for full functionality:
 | CSS `color-mix()`     | Theme-adaptive shadows             | Chrome 111+, Firefox 113+, Safari 16.2+ |
 | Shadow DOM v1         | Component encapsulation            | Chrome 53+, Firefox 63+, Safari 10+     |
 
-`Intl.Segmenter` is the effective floor, and Firefox shipped it in 125 (April
-2024), so that release is the oldest Firefox the element supports. It is also
-the one entry with no graceful degradation: the segmenter is constructed at
-module scope, so an engine without it throws on import rather than losing a
-feature. Everything else degrades - without container queries or `min()` the
-keyboard renders at full size with no width-responsive font scaling, and without
-`color-mix()` the shadows stop adapting to the theme.
+`Intl.Segmenter` is the effective floor. It reached Baseline in April 2024, when
+Firefox 125 became the last engine to ship it, so that release is the oldest
+Firefox the element supports. It is also the one entry with no graceful
+degradation: the segmenter is constructed at module scope, so an engine without
+it throws on import rather than losing a feature. Everything else degrades -
+without container queries or `min()` the keyboard renders at full size with no
+width-responsive font scaling, and without `color-mix()` the shadows stop
+adapting to the theme.
 
 ## Consumption Modes
 

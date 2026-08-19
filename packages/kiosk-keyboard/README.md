@@ -136,7 +136,7 @@ The keyboard requires modern browser features for full functionality:
 
 | Feature               | Used for                           | Baseline                                |
 | --------------------- | ---------------------------------- | --------------------------------------- |
-| `Intl.Segmenter`      | Grapheme-aware Backspace and caret | Chrome 87+, Firefox 125+, Safari 15.4+  |
+| `Intl.Segmenter`      | Grapheme-aware Backspace and caret | Chrome 87+, Firefox 125+, Safari 14.1+  |
 | CSS Container Queries | Width-responsive sizing            | Chrome 105+, Firefox 110+, Safari 16+   |
 | CSS Cascade Layers    | Keeping app CSS above library CSS  | Chrome 99+, Firefox 97+, Safari 15.4+   |
 | ResizeObserver        | Height-responsive sizing           | Chrome 64+, Firefox 69+, Safari 13.1+   |
@@ -144,14 +144,15 @@ The keyboard requires modern browser features for full functionality:
 | CSS `color-mix()`     | Accent-variant hint tint           | Chrome 111+, Firefox 113+, Safari 16.2+ |
 | CSS Custom Properties | Consumer overrides                 | Chrome 49+, Firefox 31+, Safari 9.1+    |
 
-`Intl.Segmenter` is the effective floor, and Firefox shipped it in 125 (April
-2024), so that release is the oldest Firefox the library supports. It is also
-the one entry with no graceful degradation: the segmenter is constructed at
-module scope, so an engine without it throws on import rather than losing a
-feature. Everything else degrades - without container queries or `min()` the
-keyboard renders at full size with no width-responsive font scaling, without
-`color-mix()` the accent-variant hint loses its tint, and without cascade layers
-the library's own rules compete with the app's on ordinary specificity.
+`Intl.Segmenter` is the effective floor. It reached Baseline in April 2024, when
+Firefox 125 became the last engine to ship it, so that release is the oldest
+Firefox the library supports. It is also the one entry with no graceful
+degradation: the segmenter is constructed at module scope, so an engine without
+it throws on import rather than losing a feature. Everything else degrades -
+without container queries or `min()` the keyboard renders at full size with no
+width-responsive font scaling, without `color-mix()` the accent-variant hint
+loses its tint, and without cascade layers the library's own rules compete with
+the app's on ordinary specificity.
 
 ## Getting Started
 

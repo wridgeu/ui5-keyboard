@@ -1,8 +1,10 @@
 /**
  * Grapheme-aware cursor utilities using {@link Intl.Segmenter}.
  *
- * Baseline: `Intl.Segmenter` is available in all modern browsers
- * (Chrome 87+, Safari 15.4+, Firefox 125+). No fallback is provided.
+ * Baseline 2024: `Intl.Segmenter` is available in every current engine
+ * (Chrome 87+, Safari 14.1+, Firefox 125+), Firefox 125 being the release that
+ * completed it in April 2024. No fallback is provided, and the segmenter below is
+ * constructed at module scope, so an engine without it throws on import.
  */
 
 const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
