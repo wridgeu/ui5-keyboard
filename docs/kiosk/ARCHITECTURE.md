@@ -48,6 +48,8 @@ This avoids per-key control overhead for the 30-50 keys, keeps the control on on
 
 UI5's built-in event delegation dispatches browser events to the nearest UI5 control in the DOM hierarchy. The `ontouchstart`/`ontouchend` (pointer) and `onsapselect` (keyboard Enter/Space on a focused key) methods on `KioskKeyboard` receive all events from child elements.
 
+`sapselect` is a keydown pseudo-event (`aTypes: ["keydown"]`), so a keycap held down from the physical keyboard activates repeatedly at the OS key-repeat rate. The web component twin instead follows native `<button>` semantics there - Space on keyup, no repeat - which is the one activation difference between the two.
+
 The handler flow uses a press/release pattern (`ontouchstart` + `ontouchend`) instead of `ontap`, because `preventDefault()` on the underlying touch/mouse event is needed to prevent focus steal (see below).
 
 ```
@@ -188,7 +190,9 @@ Caps Lock    Mode.CapsLock true      true
 
 **Double-click detection**: A second Shift press within 400ms (`ShiftState.DOUBLE_CLICK_MS`) of the first activates Caps Lock. A single press outside that window toggles one-shot Shift. Pressing Shift while Caps Lock is active turns everything off.
 
-**Auto-release**: After typing a character with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and fires the `onChange` callback (which the owner wires to `_syncShiftState()`, announcing the transition before repainting) to update the display. Caps Lock is sticky and does not auto-release.
+**Auto-release**: After a character key, an unrecognized `{...}` token or a committed accent variant with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and fires the `onChange` callback (which the owner wires to `_syncShiftState()`, announcing the transition before repainting) to update the display. `{backspace}`, `{enter}` and `{fkey:*}` leave the latch armed; a vetoed `keyPress` still spends it. Caps Lock is sticky and does not auto-release.
+
+> The web component spends the latch on `{backspace}`, `{enter}` and `{fkey:*}` too, and keeps it armed on a vetoed `key-press`. See the event table in the web component's README.
 
 **Announcements**: `_syncShiftState()` writes one live-region text per transition: `ARIA_CAPS_LOCK_ON`, `ARIA_CAPS_LOCK_OFF`, `ARIA_SHIFT_ON`, `ARIA_SHIFT_OFF`. Caps Lock is settled before Shift because `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift release.
 
@@ -249,7 +253,7 @@ To edit the target from a handler, the control exposes public methods that route
 
 All three are no-ops / return `null` when there is no active target, and none of them fire `keyPress` (they are called _by_ a handler). Layout switching uses the existing `setLayout`.
 
-Visible label and icon come from the key's `KeyDefinition` (`label` / `icon`). The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> a dev warning for an icon-only key (`label: ""`) with no source, so a custom key never announces the raw `{...}` token. Built-in keys (`{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`) stay on the hardcoded switch.
+Visible label and icon come from the key's `KeyDefinition` (`label` / `icon`). The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> a dev warning for an icon-only key (`label: ""`) with no source, so a custom key never announces the raw `{...}` token. The one thing ahead of `ariaLabel` is the shift key's Caps Lock state, written by the renderer, which names the key for what it is doing. Built-in keys (`{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`) stay on the hardcoded switch.
 
 ## Locale-Based Default Layout
 

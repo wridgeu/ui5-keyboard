@@ -5,5 +5,5 @@ They are kept as historical context and are not the primary source of truth for 
 
 - [Backward Compatibility](./BACKWARD-COMPATIBILITY.md) (rejected)
 - [Black-Box Test Plan](./BLACKBOX-TEST-PLAN.md)
-- [Centralized EventDispatcher & Suspend Guard](./implemented-proposals/HOTKEY-MANAGER-SUSPEND-GUARD.md)
+- [Centralized EventDispatcher & Suspend Guard](./HOTKEY-MANAGER-SUSPEND-GUARD.md)
 - [HotkeyManager Instance Lifecycle](./HOTKEYS-INSTANCE-LIFECYCLE.md)

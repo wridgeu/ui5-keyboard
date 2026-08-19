@@ -210,7 +210,7 @@ click / touchend
 
 ### Custom Keys
 
-There is no action registry. A custom token (e.g. `{paste}`) is dispatched on the unrecognized-`{...}`-token path: the element fires the cancelable `key-press` (token as `key`, no literal insertion) and the consumer owns the behavior from a `key-press` listener (`preventDefault()` claims the token; a non-prevented unrecognized token warns and no-ops). To edit the target, the element exposes `insertText(text)`, `deleteBackward()`, and `getActiveTargetElement()` (all no-ops with no active target, none fire `key-press`), routed through the same input handling the built-in keys use. The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> a dev warning for an icon-only key with no source. Built-in keys stay on the hardcoded switch. This mirrors the UI5 control's custom-key API 1:1.
+There is no action registry. A custom token (e.g. `{paste}`) is dispatched on the unrecognized-`{...}`-token path: the element fires the cancelable `key-press` (token as `key`, no literal insertion) and the consumer owns the behavior from a `key-press` listener (`preventDefault()` claims the token; a non-prevented unrecognized token warns and no-ops). To edit the target, the element exposes `insertText(text)`, `deleteBackward()`, and `getActiveTargetElement()` (all no-ops with no active target, none fire `key-press`), routed through the same input handling the built-in keys use. The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> a dev warning for an icon-only key with no source; the one thing ahead of `ariaLabel` is the shift key's Caps Lock state, which names the key for what it is doing. Built-in keys stay on the hardcoded switch. This mirrors the UI5 control's custom-key API 1:1.
 
 ### Backspace Press-and-Hold Auto-Repeat
 
@@ -291,7 +291,9 @@ Caps Lock    false    true       true
 - Shift → Off: slow second press (resets one-shot)
 - Caps Lock → Off: any press
 
-**Auto-release**: After typing a character with one-shot Shift active, `autoRelease()` clears the shift state. Caps Lock is sticky and does not auto-release.
+**Auto-release**: `autoRelease()` clears one-shot Shift after any key that acts on the target - a character, `{backspace}`, `{enter}`, an `{fkey:*}`, a committed accent variant, or a key the composition middleware consumed. `{shift}` and `{layout:*}` do not spend it, and Caps Lock is sticky and never auto-releases. A vetoed `key-press` leaves the latch armed, since nothing was typed.
+
+> This is one of the twin differences: the UI5 control spends the latch on character keys, unknown tokens and accent variants only - `{backspace}`, `{enter}` and `{fkey:*}` leave it armed there - and it spends it even when the consumer vetoes `keyPress`. See the event table in the web component's README.
 
 **Announcements**: `_syncShiftState()` queues one live-region text per transition: `ARIA_CAPS_LOCK_ON`, `ARIA_CAPS_LOCK_OFF`, `ARIA_SHIFT_ON`, `ARIA_SHIFT_OFF`. Caps Lock is settled before Shift because `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift release.
 

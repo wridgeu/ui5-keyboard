@@ -255,6 +255,19 @@ Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 con
 | Active-control event        | `activeControlChange` with `controlId`                               | `active-control-change` with `activeElement`                          |
 | Open / close events         | `afterOpen` / `afterClose`, no parameters                            | `after-open` / `after-close` with `activeElement`                     |
 
+One-shot Shift is spent on a different set of keys, which changes what the key after it types:
+
+| Key                                              | `ui5-lib-kiosk-keyboard` | `kiosk-keyboard-webc` |
+| ------------------------------------------------ | ------------------------ | --------------------- |
+| Character, unknown `{...}` token, accent variant | released                 | released              |
+| Key consumed by the composition middleware       | released                 | released              |
+| `{backspace}`, `{enter}`, `{fkey:*}`             | stays armed              | released              |
+| The first row's keys, key event vetoed           | released                 | stays armed           |
+
+Caps Lock is sticky on both and never auto-releases. `{layout:*}` is not an auto-release on either: selecting a layout resets the whole typing context, Caps Lock included.
+
+Activating a focused keycap from the physical keyboard also differs. The web component follows native `<button>` semantics: Enter activates on press, Space on release, and neither repeats while held. The UI5 control routes both through UI5's `sapselect`, a keydown pseudo-event, so a held Enter or Space repeats at the OS key-repeat rate. Both reject the key when a modifier is held.
+
 See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for general guidance on web component consumption patterns inside UI5 apps.
 
 ## API Stability

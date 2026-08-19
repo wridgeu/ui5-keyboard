@@ -1375,16 +1375,17 @@ class KioskKeyboard extends UI5Element {
   /**
    * Accessible label for a key - always non-empty.
    *
-   * Resolution order: per-key `ariaLabel` -> visible label (`_getKeyLabel`,
-   * which also covers the Caps Lock override for the shift key) -> built-in
-   * i18n entry. For an icon-only key (`label: ""`) with none of these, a
-   * dev-time warning is logged and the raw `value` is used as a last resort,
-   * so a custom icon-only token never silently announces with no accessible
-   * name.
+   * Resolution order: the Caps Lock state of the shift key -> per-key
+   * `ariaLabel` -> visible label (`_getKeyLabel`) -> built-in i18n entry. For an
+   * icon-only key (`label: ""`) with none of these, a dev-time warning is logged
+   * and the raw `value` is used as a last resort, so a custom icon-only token
+   * never silently announces with no accessible name.
    */
   _getKeyAriaLabel(key: KeyDefinition): string {
-    // CapsLock always overrides the shift key's aria-label so screen
-    // readers announce "Caps Lock" rather than "Shift" (matches UI5 renderer).
+    // Caps Lock outranks even a declared `ariaLabel` / `capsLockLabel` on the
+    // shift key, so a screen reader gets the state the key is in rather than
+    // "Shift". The kiosk twin applies the same override from its renderer, since
+    // this method is only reached there for a key with no visible label.
     if (key.value === "{shift}" && this._capsLock) {
       return getText("KEY_CAPS_LOCK", "Caps Lock");
     }
