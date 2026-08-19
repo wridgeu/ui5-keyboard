@@ -2783,6 +2783,29 @@ describe("kiosk-keyboard", () => {
 
       expect(kbActive.open).to.be.true;
     });
+
+    it("a keyboard listing several controls claims every one of them", async () => {
+      // `controls` is a comma-separated list, so ownership covers each id, not
+      // only the single-id case.
+      const container = await fixture(html`
+        <div>
+          <input id="multi-owned-a" type="text" />
+          <input id="multi-owned-b" type="text" />
+          <kiosk-keyboard id="kb-owner" layout="qwerty" controls="multi-owned-a,multi-owned-b"></kiosk-keyboard>
+          <kiosk-keyboard id="kb-peer" layout="qwerty" docked auto-show></kiosk-keyboard>
+        </div>
+      `);
+      const inputB = container.querySelector<HTMLInputElement>("#multi-owned-b")!;
+      const kbPeer = container.querySelector<KioskKeyboard>("#kb-peer")!;
+      await nextRender();
+
+      inputB.focus();
+      inputB.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+
+      expect(kbPeer.open, "the peer does not claim an input another keyboard lists").to.be.false;
+      expect(kbPeer.getActiveTargetElement()).to.equal(null);
+    });
   });
 
   // ── CSS Parts ──

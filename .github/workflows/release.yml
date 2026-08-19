@@ -17,29 +17,15 @@ concurrency:
 permissions: {}
 
 jobs:
+  # Includes the package smoke tests (`smoke` job), so a packaging break blocks
+  # the release the same way it blocks a pull request.
   ci:
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
 
-  # Independent of `ci`; `release-please` below gates on both.
-  smoke:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-
-      - uses: ./.github/actions/setup
-
-      - name: Package smoke tests
-        run: npm run test:packages:smoke
-
   release-please:
-    needs: [ci, smoke]
+    needs: [ci]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

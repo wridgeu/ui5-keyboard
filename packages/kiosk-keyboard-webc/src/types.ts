@@ -16,12 +16,19 @@ import type { VariantTable } from "./core/latin-variants.js";
 export type KeyWidth = "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space";
 
 /**
- * Key type determines the visual styling of the key.
+ * Key type: the visual styling of the key, and whether it can take an
+ * accent-variant table.
  *
  * - `"default"` - Standard key (letter, number, symbol).
  * - `"modifier"` - Subdued style for Shift, layout switches (ABC, Fn), etc.
  * - `"action"` - Prominent style for Enter, Backspace, etc.
- * - `"space"` - Spacebar. Visually same as default but semantically distinct.
+ * - `"space"` - Spacebar. Renders like `"default"`.
+ *
+ * `"modifier"`, `"action"` and `"space"` keys never take table variants, so
+ * `accentVariants` and a `defaultVariants` entry both skip them even when the
+ * key's `value` is a base letter the table covers. Only a per-key `variants`
+ * array reaches such a key. That is the sole non-visual effect of this field,
+ * and the reason `"space"` exists as a distinct value at all.
  *
  * @public
  * @since 0.1.0
@@ -106,7 +113,7 @@ export interface KeyDefinition {
   /** Proportional width of the key. */
   width?: KeyWidth;
 
-  /** Visual style category. */
+  /** Visual style category; also gates accent-variant merging (see {@link KeyType}). */
   type?: KeyType;
 
   /**
@@ -322,7 +329,11 @@ export enum LayoutFacet {
  * @since 0.1.0
  */
 export interface KeyPressEventDetail {
-  /** The key value that was pressed (character, or a key constant for non-character keys). */
+  /**
+   * The layout's raw value for the key: the unshifted character, or the token
+   * for a special key (`{shift}`, `{backspace}`, `{layout:numeric}`). F-keys
+   * are the one exception and arrive as the bare name (`"F5"`, `"ArrowLeft"`).
+   */
   key: string;
   /** Whether the Shift modifier was active when the key was pressed. */
   shiftKey: boolean;

@@ -4,11 +4,11 @@ import {
   insertText,
   handleBackspace,
   handleNavigation,
-  setTargetValue,
   fireTargetChange,
   type CursorPos,
 } from "ui5/kiosk/internal/input-operations";
 import Control from "sap/ui/core/Control";
+import UI5Element from "sap/ui/core/Element";
 import type UI5Event from "sap/ui/base/Event";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
@@ -596,140 +596,135 @@ QUnit.test("ArrowUp with caret at 0 and leading newline stays at 0", (assert) =>
 });
 
 // ──────────────────────────────────────────────
-// setTargetValue
+// Target value write (through insertText)
 // ──────────────────────────────────────────────
 
-QUnit.module("input-operations - setTargetValue", {
+// `insertText` is the module's entry into the three-tier value write; the tier
+// selection itself is not separately exported. Standing in for the control
+// lookup is what lets a duck-typed target reach it, since each tier is defined
+// by what the owning control does and does not declare.
+const valueWriteSandbox = sinon.createSandbox();
+
+QUnit.module("input-operations - target value write", {
   afterEach() {
+    valueWriteSandbox.restore();
     fixture.innerHTML = "";
   },
 });
 
-QUnit.test("Tier 1: calls setValue() when method exists", (assert) => {
-  let received = "";
-  const element: TargetElement & { setValue(v: string): void } = {
-    setValue(v: string) {
-      received = v;
-    },
+/** Makes the module's control lookup land on `element` for the rest of the test. */
+function ownedBy(element: TargetElement): void {
+  valueWriteSandbox.stub(UI5Element, "closestTo").returns(element as unknown as UI5Element);
+}
+
+/** A target mock carrying only the members `insertText` calls on the owning control. */
+function targetMock(overrides: Partial<TargetElement> & Record<string, unknown>): TargetElement {
+  return {
     getFocusDomRef: () => null,
-    getMetadata: () => ({
-      hasProperty: () => true,
-      hasEvent: () => false,
-    }),
+    getMetadata: () => ({ hasProperty: () => false, hasEvent: () => false }),
     fireEvent() {},
     setProperty() {},
-  };
+    attachEvent() {},
+    detachEvent() {},
+    ...overrides,
+  } as TargetElement;
+}
 
-  setTargetValue(element, "hello");
+QUnit.test("Tier 1: calls setValue() when the method exists", (assert) => {
+  let received = "";
+  ownedBy(
+    targetMock({
+      setValue(v: string) {
+        received = v;
+      },
+      getMetadata: () => ({ hasProperty: () => true, hasEvent: () => false }),
+    }),
+  );
+
+  insertText(makeInput("", [0, 0]), "hello");
   assert.strictEqual(received, "hello", "setValue called with new value");
 });
 
-QUnit.test("Tier 2: calls setProperty when metadata has value property but no setValue", (assert) => {
+QUnit.test("Tier 2: calls setProperty when the metadata declares value but no setter exists", (assert) => {
   let propName = "";
   let propValue = "";
-  const element: TargetElement = {
-    // No setValue method
-    setProperty(name, value) {
-      propName = name;
-      propValue = value;
-    },
-    getFocusDomRef: () => null,
-    getMetadata: () => ({
-      hasProperty: (name: string) => name === "value",
-      hasEvent: () => false,
+  ownedBy(
+    targetMock({
+      setProperty(name: string, value: string) {
+        propName = name;
+        propValue = value;
+      },
+      getMetadata: () => ({ hasProperty: (name: string) => name === "value", hasEvent: () => false }),
     }),
-    fireEvent() {},
-  };
+  );
 
-  setTargetValue(element, "test");
+  insertText(makeInput("", [0, 0]), "test");
   assert.strictEqual(propName, "value", "setProperty called with 'value'");
   assert.strictEqual(propValue, "test", "setProperty called with new value");
 });
 
-QUnit.test("Tier 3: falls back to DOM value when no metadata property", (assert) => {
-  const innerInput = document.createElement("input");
-  innerInput.type = "text";
-  innerInput.value = "old";
-
-  const wrapper = document.createElement("div");
-  wrapper.appendChild(innerInput);
-  fixture.appendChild(wrapper);
-
-  const element: TargetElement = {
-    // No setValue method
-    setProperty() {
-      assert.notOk(true, "setProperty should not be called");
-    },
-    getMetadata: () => ({
-      hasProperty: () => false,
-      hasEvent: () => false,
+QUnit.test("Tier 3: writes the edited input directly when the control declares no value", (assert) => {
+  ownedBy(
+    targetMock({
+      setProperty() {
+        assert.notOk(true, "setProperty should not be called");
+      },
     }),
-    getFocusDomRef: () => wrapper,
-    fireEvent() {},
-  };
+  );
 
-  setTargetValue(element, "new");
-  assert.strictEqual(innerInput.value, "new", "DOM input value set directly");
+  const input = makeInput("old", [0, 3]);
+  insertText(input, "new", [0, 3]);
+  assert.strictEqual(input.value, "new", "the edited input carries the new value");
 });
 
-QUnit.test("Tier 3: getFocusDomRef returns input directly", (assert) => {
-  const input = document.createElement("input");
-  input.type = "text";
-  input.value = "old";
-  fixture.appendChild(input);
+QUnit.test("Tier 3 writes the input the edit resolved to, not the control's own focus ref", (assert) => {
+  // The custom-resolver case: the control's focus ref is a host element the
+  // built-in resolution would descend into, and the caller already resolved
+  // past it. Only the resolved input may be written.
+  const decoy = document.createElement("input");
+  const host = document.createElement("div");
+  host.appendChild(decoy);
+  fixture.appendChild(host);
 
-  const element: TargetElement = {
-    getMetadata: () => ({
-      hasProperty: () => false,
-      hasEvent: () => false,
-    }),
-    getFocusDomRef: () => input,
-    fireEvent() {},
-    setProperty() {},
-  };
+  ownedBy(targetMock({ getFocusDomRef: () => host }));
 
-  setTargetValue(element, "direct");
-  assert.strictEqual(input.value, "direct", "Input value set via direct getFocusDomRef");
+  const input = makeInput("", [0, 0]);
+  insertText(input, "resolved");
+  assert.strictEqual(input.value, "resolved", "the resolved input carries the new value");
+  assert.strictEqual(decoy.value, "", "the control's own focus ref is left alone");
 });
 
-QUnit.test("Fires liveChange event when supported", (assert) => {
+QUnit.test("Fires liveChange when the target supports it", (assert) => {
   let firedEvent = "";
   let firedValue = "";
-  const element: TargetElement & { setValue(): void } = {
-    setValue() {},
-    getFocusDomRef: () => null,
-    getMetadata: () => ({
-      hasProperty: () => false,
-      hasEvent: (name: string) => name === "liveChange",
+  ownedBy(
+    targetMock({
+      setValue() {},
+      getMetadata: () => ({ hasProperty: () => false, hasEvent: (name: string) => name === "liveChange" }),
+      fireEvent(name: string, params?: { value: string }) {
+        firedEvent = name;
+        firedValue = params?.value ?? "";
+      },
     }),
-    fireEvent(name, params) {
-      firedEvent = name;
-      firedValue = params?.value ?? "";
-    },
-    setProperty() {},
-  };
+  );
 
-  setTargetValue(element, "typed");
+  insertText(makeInput("", [0, 0]), "typed");
   assert.strictEqual(firedEvent, "liveChange", "liveChange event fired");
   assert.strictEqual(firedValue, "typed", "liveChange passes new value");
 });
 
-QUnit.test("Does not fire liveChange when not supported", (assert) => {
+QUnit.test("Does not fire liveChange when the target does not declare it", (assert) => {
   let eventFired = false;
-  const element: TargetElement & { setValue(): void } = {
-    setValue() {},
-    getFocusDomRef: () => null,
-    getMetadata: () => ({
-      hasProperty: () => false,
-      hasEvent: () => false,
+  ownedBy(
+    targetMock({
+      setValue() {},
+      fireEvent() {
+        eventFired = true;
+      },
     }),
-    fireEvent() {
-      eventFired = true;
-    },
-    setProperty() {},
-  };
+  );
 
-  setTargetValue(element, "test");
+  insertText(makeInput("", [0, 0]), "test");
   assert.notOk(eventFired, "No event fired when liveChange not in metadata");
 });
 

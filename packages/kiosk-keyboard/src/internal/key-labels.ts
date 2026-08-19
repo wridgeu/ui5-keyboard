@@ -56,6 +56,12 @@ export function getKeyLabel(key: KeyDefinition, shift: boolean, caps: boolean): 
  * a dev-time warning is logged and the raw `value` is used as a last resort,
  * so a custom icon-only token never silently announces itself with no
  * accessible name.
+ *
+ * One case does not reach here: an icon-only `{shift}` key while Caps Lock is
+ * active announces "Caps Lock" from the renderer, ahead of any `ariaLabel` or
+ * `capsLockLabel` the key declares, so the state the key is in is what a screen
+ * reader gets. The web component twin applies the same override, from inside its
+ * own `_getKeyAriaLabel`.
  */
 export function getKeyAriaLabel(key: KeyDefinition, shift: boolean, caps: boolean): string {
   if (key.ariaLabel) return key.ariaLabel;

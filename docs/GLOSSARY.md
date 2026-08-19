@@ -83,6 +83,8 @@ When a key event arrives, the dispatcher uses a **two-pass matching** strategy:
 
 This means a scoped registration always shadows a global registration for the same key. For example, if both `GLOBAL_SCOPE` and `"editor"` have a handler for `Escape`, and `"editor"` is the active scope, only the editor handler fires.
 
+> The dispatcher's own code uses "two-pass" for a different axis: `HotkeyManager._processHotkeys` runs pass 1 over target-bound registrations and pass 2 over untargeted ones, and each of those passes walks the scope stack as described above. Both passes can fire for one event when the target-bound match sets `stopPropagation: false`. The scope shadowing here holds within each pass.
+
 ### Router integration
 
 When `enableRouterIntegration(router)` is active, route changes automatically reset to global scope and push the new route name as the active scope. Dialog scopes still require manual `pushScope`/`popScope`.
@@ -140,15 +142,16 @@ The `kiosk-keyboard-webc` package exposes subpath imports for different consumpt
 
 ### Entry points
 
-| Entry                              | What it includes                                                    |
-| ---------------------------------- | ------------------------------------------------------------------- |
-| `kiosk-keyboard-webc`              | Component with all built-in layouts and middleware                  |
-| `kiosk-keyboard-webc/bundle`       | Everything: component, Assets, all built-in layouts, all middleware |
-| `kiosk-keyboard-webc/CustomLayout` | The `<kiosk-keyboard-custom-layout>` configuration element          |
-| `kiosk-keyboard-webc/layouts/*`    | Individual layout-definition modules (data for custom composition)  |
-| `kiosk-keyboard-webc/middleware/*` | Individual middleware-factory modules (data for custom composition) |
-| `kiosk-keyboard-webc/variants`     | Built-in LATIN_DIACRITIC_VARIANTS table and the VariantTable type   |
-| `kiosk-keyboard-webc/Assets`       | Theme and i18n registration                                         |
+| Entry                                | What it includes                                                    |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `kiosk-keyboard-webc`                | Component with all built-in layouts and middleware                  |
+| `kiosk-keyboard-webc/bundle`         | Everything: component, Assets, all built-in layouts, all middleware |
+| `kiosk-keyboard-webc/CustomLayout`   | The `<kiosk-keyboard-custom-layout>` configuration element          |
+| `kiosk-keyboard-webc/layouts/*`      | Individual layout-definition modules (data for custom composition)  |
+| `kiosk-keyboard-webc/middleware/*`   | Individual middleware-factory modules (data for custom composition) |
+| `kiosk-keyboard-webc/variants`       | Built-in LATIN_DIACRITIC_VARIANTS table and the VariantTable type   |
+| `kiosk-keyboard-webc/Assets`         | Theme and i18n registration                                         |
+| `kiosk-keyboard-webc/customElements` | The Custom Elements Manifest, for IDE and tooling integration       |
 
 ### Usage
 

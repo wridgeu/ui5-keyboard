@@ -34,7 +34,7 @@ import navRowCompact from "ui5/kiosk/layouts/nav-row-compact"; // 2 rows of 4
 
 Up therefore sits directly above Down with Left and Right flanking it.
 
-**In RTL.** Rows are flex containers and lay out along the document direction, so the compact form mirrors: each row runs right to left, Up keeps Down's column, and the horizontal arrows keep flanking Down with ArrowLeft rendering to the right of it. Arrow-key navigation mirrors the same way — a horizontal move resolves against the direction — so focus still moves between the keys a user sees adjacent. Both packages are guarded by a measured invariant (`test/e2e/invariants.spec.ts`).
+**In RTL.** Rows are flex containers and lay out along the document direction, so the compact form mirrors: each row runs right to left, Up keeps Down's column, and the horizontal arrows keep flanking Down with ArrowLeft rendering to the right of it. Arrow-key navigation mirrors the same way - a horizontal move resolves against the direction - so focus still moves between the keys a user sees adjacent. Both packages are guarded by a measured invariant (`test/e2e/invariants.spec.ts`).
 
 **Why this is data and not a `@container` rule.** Arrow-key grid navigation moves on the resolved layout's row/column coordinates, not on rendered geometry. Wrapping one 8-key row into two visual rows with `flex-wrap` leaves it a single logical row of eight, so ArrowDown from Up skips the whole nav row instead of reaching Down; adding a CSS `order` regroup to place the arrows makes visual and logical order disagree outright, which is also a [WCAG 2.4.3 Focus Order](https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html) problem. Expressing the arrangement as rows keeps DOM order, visual order and navigation order the same thing. `reading-flow: flex-visual` is the CSS-side answer to this class of mismatch, but it is not yet Baseline.
 
@@ -57,7 +57,7 @@ applyNavRow(kb);
 narrow.addEventListener("change", () => applyNavRow(kb));
 ```
 
-`matchMedia` measures the viewport, while the 20rem it borrows is the keyboard's own container width, and `rem` in a media query resolves against the browser's default font size rather than the root font size the `@container` rules use — the two figures agree only when the keyboard fills the viewport at the default root size. Where the keyboard can be narrower than the viewport, such as a panel on a wide screen, observe the keyboard element with a `ResizeObserver` instead; the same holds for the breakpoint switch under [Switching Layouts Per Device Size](#switching-layouts-per-device-size).
+`matchMedia` measures the viewport, while the 20rem it borrows is the keyboard's own container width, and `rem` in a media query resolves against the browser's default font size rather than the root font size the `@container` rules use - the two figures agree only when the keyboard fills the viewport at the default root size. Where the keyboard can be narrower than the viewport, such as a panel on a wide screen, observe the keyboard element with a `ResizeObserver` instead; the same holds for the breakpoint switch under [Switching Layouts Per Device Size](#switching-layouts-per-device-size).
 
 See [Worked Example: Custom Row Wrapping](#worked-example-custom-row-wrapping) below for the CSS-side pattern, which remains appropriate for rows whose source order already matches the wrapped arrangement.
 

@@ -134,16 +134,25 @@ In this monorepo, dependencies are managed via npm workspaces (`npm install` at 
 
 The keyboard requires modern browser features for full functionality:
 
-| Feature               | Used for                 | Baseline                              |
-| --------------------- | ------------------------ | ------------------------------------- |
-| CSS Container Queries | Width-responsive sizing  | Chrome 105+, Firefox 110+, Safari 16+ |
-| ResizeObserver        | Height-responsive sizing | Chrome 64+, Firefox 69+, Safari 13.1+ |
-| CSS `min()` / `max()` | Font-size capping        | Chrome 79+, Firefox 75+, Safari 13.1+ |
-| CSS Custom Properties | Consumer overrides       | Chrome 49+, Firefox 31+, Safari 9.1+  |
+| Feature               | Used for                           | Baseline                                |
+| --------------------- | ---------------------------------- | --------------------------------------- |
+| `Intl.Segmenter`      | Grapheme-aware Backspace and caret | Chrome 87+, Firefox 125+, Safari 14.1+  |
+| CSS Container Queries | Width-responsive sizing            | Chrome 105+, Firefox 110+, Safari 16+   |
+| CSS Cascade Layers    | Keeping app CSS above library CSS  | Chrome 99+, Firefox 97+, Safari 15.4+   |
+| ResizeObserver        | Height-responsive sizing           | Chrome 64+, Firefox 69+, Safari 13.1+   |
+| CSS `min()` / `max()` | Font-size capping                  | Chrome 79+, Firefox 75+, Safari 13.1+   |
+| CSS `color-mix()`     | Accent-variant hint tint           | Chrome 111+, Firefox 113+, Safari 16.2+ |
+| CSS Custom Properties | Consumer overrides                 | Chrome 49+, Firefox 31+, Safari 9.1+    |
 
-All features are supported in browsers released since 2023. In older
-browsers, the keyboard renders at full size without width-responsive font
-scaling.
+`Intl.Segmenter` is the effective floor. It reached Baseline in April 2024, when
+Firefox 125 became the last engine to ship it, so that release is the oldest
+Firefox the library supports. It is also the one entry with no graceful
+degradation: the segmenter is constructed at module scope, so an engine without
+it throws on import rather than losing a feature. Everything else degrades -
+without container queries or `min()` the keyboard renders at full size with no
+width-responsive font scaling, without `color-mix()` the accent-variant hint
+loses its tint, and without cascade layers the library's own rules compete with
+the app's on ordinary specificity.
 
 ## Getting Started
 
@@ -459,11 +468,11 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 | `defaultVariants` | `VariantTable \| null`     | `null`      | Long-press variants applied under **every** layout, merged per base letter beneath anything a `customLayouts` entry declares. Effective only with `accentVariants`. See [Accent variants](#accent-variants-german-umlauts).                                     |
 
 > [!IMPORTANT]
-> `layout` holds the **effective** layout, not the one you last set. A `{layout:X}` tap, `setLayout()`, and an `autoCompact` width swap all write it, so `getLayout()` always answers "what is on screen" — the same contract `keyboardType` has under `autoType`.
+> `layout` holds the **effective** layout, not the one you last set. A `{layout:X}` tap, `setLayout()`, and an `autoCompact` width swap all write it, so `getLayout()` always answers "what is on screen" - the same contract `keyboardType` has under `autoType`.
 >
 > Two consequences worth knowing before you bind it:
 >
-> - **A two-way binding is written back.** `layout="{/prefs/layout}"` receives `"ja-kana-compact"` when the keyboard narrows, so persisting that model field persists an arrangement the user never chose — and two-way is every model's _default_ mode, so this needs no opting in. Bind one-way (`layout="{path: '/prefs/layout', mode: 'OneWay'}"`) when the value is a stored preference, and take user-driven changes from the `layoutChange` event, whose `autoDetected` flag separates a width swap from a request. The control logs a warning once per instance when a width swap is about to write through a two-way `layout`, so the case is never silent; a `{layout:X}` tap writes back without a warning, since persisting the user's own choice is the point.
+> - **A two-way binding is written back.** `layout="{/prefs/layout}"` receives `"ja-kana-compact"` when the keyboard narrows, so persisting that model field persists an arrangement the user never chose - and two-way is every model's _default_ mode, so this needs no opting in. Bind one-way (`layout="{path: '/prefs/layout', mode: 'OneWay'}"`) when the value is a stored preference, and take user-driven changes from the `layoutChange` event, whose `autoDetected` flag separates a width swap from a request. The control logs a warning once per instance when a width swap is about to write through a two-way `layout`, so the case is never silent; a `{layout:X}` tap writes back without a warning, since persisting the user's own choice is the point.
 >
 >   `keyboardType` needs no such care despite sharing the contract: `autoType` only detects while the type has not been set explicitly, and a binding delivers its value through `setKeyboardType`, which marks it exactly that. Binding the property is what switches the detection off, so it has no path on which to write back.
 >
@@ -484,14 +493,14 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 
 ### Events
 
-| Event                 | Parameters                                                                      | Description                                                                                                                                |
-| --------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `keyPress`            | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. Use `KeyName` constants for non-character keys. |
-| `layoutChange`        | `layout: string`, `autoDetected: boolean`                                       | Fired when the active layout changes. `autoDetected` marks an `autoCompact` width swap rather than a request.                              |
-| `keyboardTypeChange`  | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                                                                      |
-| `afterOpen`           | -                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
-| `afterClose`          | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
-| `activeControlChange` | `controlId: string`                                                             | Fired when the active control changes (auto-show focus switch or programmatic target change).                                              |
+| Event                 | Parameters                                                                      | Description                                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keyPress`            | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed, except for `{shift}` and `{layout:*}`, which switch without asking. Call `preventDefault()` to skip default input action. Use `KeyName` constants for non-character keys. |
+| `layoutChange`        | `layout: string`, `autoDetected: boolean`                                       | Fired when the active layout changes. `autoDetected` marks an `autoCompact` width swap rather than a request.                                                                                                  |
+| `keyboardTypeChange`  | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                                                                                                                                          |
+| `afterOpen`           | -                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                                                                                      |
+| `afterClose`          | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                                                                                    |
+| `activeControlChange` | `controlId: string`                                                             | Fired when the active control changes (auto-show focus switch or programmatic target change).                                                                                                                  |
 
 ### Public Methods
 
@@ -564,21 +573,21 @@ This contract is read-only and stable for DOM hooks. It is not the styling API; 
 
 The library ships with thirteen built-in layouts:
 
-| Layout            | Description                                                        | Rows |
-| ----------------- | ------------------------------------------------------------------ | ---- |
-| `qwerty`          | Standard QWERTY with number row                                    | 5    |
-| `qwertz-de`       | German QWERTZ with Umlaute (ä, ö, ü, ß)                            | 5    |
-| `numeric`         | Numbers with basic operators                                       | 4    |
-| `special`         | Special characters and symbols                                     | 4    |
-| `numpad`          | Compact numeric keypad (calculator)                                | 5    |
-| `fkeys`           | Function keys F1-F12 (standalone)                                  | 3    |
-| `nav`             | Navigation keys (arrows, Home/End, Pg)                             | 4    |
-| `ja-romaji`       | Japanese Romaji (QWERTY base with JIS punctuation)                 | 5    |
-| `ja-kana`         | Japanese Kana direct-input (JIS X 6002)                            | 5    |
-| `ja-kana-compact` | Japanese Kana for narrow keyboards, every row at twelve key widths | 5    |
-| `arabic`          | Arabic (standard Arabic 101 layout)                                | 5    |
-| `ko-hangul`       | Korean Hangul Dubeolsik (KS X 5002)                                | 5    |
-| `qwerty-es`       | Spanish QWERTY with accented vowels and ñ                          | 5    |
+| Layout            | Description                                                             | Rows |
+| ----------------- | ----------------------------------------------------------------------- | ---- |
+| `qwerty`          | Standard QWERTY with number row                                         | 5    |
+| `qwertz-de`       | German QWERTZ with Umlaute (ä, ö, ü, ß)                                 | 5    |
+| `numeric`         | Numbers with basic operators                                            | 4    |
+| `special`         | Special characters and symbols                                          | 4    |
+| `numpad`          | Compact numeric keypad (calculator)                                     | 5    |
+| `fkeys`           | Function keys F1-F12 (standalone)                                       | 3    |
+| `nav`             | Navigation keys (arrows, Home/End, Pg)                                  | 4    |
+| `ja-romaji`       | Japanese Romaji (QWERTY base with JIS punctuation)                      | 5    |
+| `ja-kana`         | Japanese Kana direct-input (JIS X 6002)                                 | 5    |
+| `ja-kana-compact` | Japanese Kana for narrow keyboards, no row wider than twelve key widths | 5    |
+| `arabic`          | Arabic (standard Arabic 101 layout)                                     | 5    |
+| `ko-hangul`       | Korean Hangul Dubeolsik (KS X 5002)                                     | 5    |
+| `qwerty-es`       | Spanish QWERTY with accented vowels and ñ                               | 5    |
 
 Layout switching is driven by special key values in the layout definition:
 
@@ -678,8 +687,8 @@ const myLayout: LayoutDefinition = [
 | `shiftValue`    | `string`   | Value when Shift is active (defaults to uppercase of `value`).                                                                                                                          |
 | `capsLockLabel` | `string`   | Label for `{shift}` key when Caps Lock is active. Omit for i18n "Caps Lock". Set to `""` to suppress. Only meaningful on `{shift}` keys.                                                |
 | `capsLockIcon`  | `string`   | Icon for `{shift}` key when Caps Lock is active. Independent of `icon`. Defaults to `sap-icon://locked`. Only meaningful on `{shift}` keys.                                             |
-| `width`         | `string`   | CSS width class: `"1.5"`, `"2"`, `"2.25"`, `"space"`, etc.                                                                                                                              |
-| `type`          | `string`   | Styling: `"default"`, `"modifier"` (subdued), `"action"` (prominent), `"space"`.                                                                                                        |
+| `width`         | `KeyWidth` | Proportional key width, from the closed set `"1.25"` \| `"1.5"` \| `"1.75"` \| `"2"` \| `"2.25"` \| `"2.75"` \| `"space"`. Omit for a standard 1x key; any other string renders at 1x.  |
+| `type`          | `KeyType`  | `"default"` \| `"modifier"` (subdued) \| `"action"` (prominent) \| `"space"`. Styling, except that `modifier`, `action` and `space` keys never take an accent-variant table.            |
 | `icon`          | `string`   | SAP icon URI or Unicode character. Renders inline with label when both are present (customizable via `--ui5KioskKeyboard-dualDirection`). Set `label=""` for icon-only.                 |
 | `variants`      | `string[]` | Long-press / right-click accent-variant popup glyphs for this key. Overrides the built-in `accentVariants` table; `[]` suppresses the popup. E.g. `["ä", "à", "á", "â"]`.               |
 | `ariaLabel`     | `string`   | Explicit accessible name for the key; highest priority in the name-resolution chain (else label, else i18n, else value).                                                                |
@@ -1152,16 +1161,16 @@ myCustomInput.attachBrowserEvent("focusout", () => {
 
 ## Text Insertion
 
-Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack — Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends.
+Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack - Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends.
 
-When the target does not hold focus — a programmatic `setControls()` + `show()` that never moved focus, for instance — or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; the eventing is not.
+When the target does not hold focus - a programmatic `setControls()` + `show()` that never moved focus, for instance - or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; the eventing is not.
 
 |                                    | Target focused (platform edit)                                                             | Target not focused (assignment) |
 | ---------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------- |
 | `maxlength`                        | Applied by the browser                                                                     | Applied in JS                   |
 | Browser undo stack                 | Edit recorded                                                                              | Not recorded                    |
 | DOM `input` event on the target    | One, dispatched by the platform                                                            | None                            |
-| `liveChange` on the target control | One — the control's own where it raises one from `input`, otherwise raised by the keyboard | One, raised by the keyboard     |
+| `liveChange` on the target control | One - the control's own where it raises one from `input`, otherwise raised by the keyboard | One, raised by the keyboard     |
 
 So `liveChange` fires once per edit either way and data binding stays in step on both paths. Bind to it rather than to the DOM `input` event: **a raw `input` listener on the target's DOM element observes the keyboard's edits only while that target holds focus.** An edit that a saturated `maxlength` leaves empty writes nothing and raises nothing.
 
@@ -1169,13 +1178,13 @@ Read-only and disabled targets are never written to.
 
 ## Interop Cookbook
 
-### 1. Integration Style
+### Integration Style
 
 - Declarative (XML properties like `controls`, `autoShow`, `autoType`) is recommended for standard UI5 forms.
 - Imperative (`setControls()`, `show()`, `close()`) is recommended for dynamic targets, custom controls, and web component bridges.
 - Mixing both is valid: use declarative defaults, then override imperatively for edge flows.
 
-### 2. Standard UI5 Controls
+### Standard UI5 Controls
 
 Use `sap.m.Input`, `sap.m.TextArea`, or `sap.m.StepInput` with the `controls` property (single or multiple field IDs):
 
@@ -1185,7 +1194,7 @@ Use `sap.m.Input`, `sap.m.TextArea`, or `sap.m.StepInput` with the `controls` pr
 <kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" controls="firstName,lastName" />
 ```
 
-### 3. Custom UI5 Controls
+### Custom UI5 Controls
 
 For auto-show + typing to work, the control should:
 
@@ -1200,7 +1209,7 @@ keyboard.setControls([myCustomControl.getId()]);
 keyboard.show();
 ```
 
-### 4. Web Components and Shadow DOM
+### Web Components and Shadow DOM
 
 There are two paths:
 
@@ -1238,18 +1247,6 @@ myHost.attachBrowserEvent("focusout", () => {
   keyboard.close();
 });
 ```
-
-### 5. Do and Don't
-
-- Do use `controls` for single or multi-field forms
-- Do call `setControls()` explicitly for custom/non-standard integrations
-- Don't rely on implicit auto-detection for arbitrary shadow-hosted inputs
-
-### 6. Troubleshooting
-
-- Keyboard does not open: ensure `docked="true"` and `autoShow="true"`, and target resolves to a UI5 control
-- Typing does not update bindings: ensure control supports `setValue` and `liveChange`
-- Change timing differs from expected: `change` is commit-oriented (Enter/close/target switch) for single-line inputs
 
 ## Auto-Type
 
@@ -1622,7 +1619,7 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 - The keyboard root has `role="group"` with a configurable `aria-label` and `aria-roledescription="keyboard"`
 - Each key has `role="button"` with an accessible name from visible text (when icon+label are both present) or `aria-label` (for icon-only keys where `label=""`)
 - The Shift key has `aria-pressed` reflecting its toggle state
-- Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row
+- Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row, Ctrl+Home/Ctrl+End to the first/last key of the whole grid
 - The keyboard is an F6 navigation group (`data-sap-ui-fastnavgroup="true"`)
 - Disabled state applies `aria-disabled="true"` to both the root and individual keys
 - ARIA live region announces keyboard open/close and shift state changes to screen readers
@@ -1649,7 +1646,7 @@ Supported themes: `sap_horizon`, `sap_horizon_dark`, `sap_horizon_hcb`, `sap_hor
 
 ### Styling a single key
 
-The control renders into the light DOM, so page CSS reaches any one key through the `data-key` attribute the renderer writes — no shadow boundary, no part names, no `!important`:
+The control renders into the light DOM, so page CSS reaches any one key through the `data-key` attribute the renderer writes - no shadow boundary, no part names, no `!important`:
 
 ```css
 /* Tint just the Enter key, and just the switch to the numeric layout */
@@ -1664,7 +1661,7 @@ The control renders into the light DOM, so page CSS reaches any one key through 
 The value is the key's authored `value`, so `{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`, a space, or a single character all work, as does `[data-shift-value]` for the shifted face. Both attributes are part of the [DOM Contract](#dom-contract). Swapping a key's _glyph_ rather than its box is covered under [Custom key icons](#custom-key-icons).
 
 > [!NOTE]
-> The web component twin cannot offer this: its `data-key` is inside a shadow root, and `::part()` takes no attribute selectors. It exposes a bounded set of per-key `::part()` names instead — see [Styling a single key in the `kiosk-keyboard-webc` README](../kiosk-keyboard-webc/README.md#styling-a-single-key).
+> The web component twin cannot offer this: its `data-key` is inside a shadow root, and `::part()` takes no attribute selectors. It exposes a bounded set of per-key `::part()` names instead - see [Styling a single key in the `kiosk-keyboard-webc` README](../kiosk-keyboard-webc/README.md#styling-a-single-key).
 
 ### Public CSS Custom Properties
 
@@ -1927,7 +1924,7 @@ import type { I18nResolver } from "ui5/kiosk/types";
 
 ## Library Enums & Constants
 
-The library exports TypeScript string enums and frozen `const` objects for type-safe comparisons. The UI5 property enums (`KeyboardLayout`, `KeyboardType`, `MobileKeyboard`, `FKeyMode`) are string enums registered via `DataType.registerEnum()` for XML view binding; `KeyName` and `NativeDispatchableKeyNames` are frozen `const` objects.
+The library exports TypeScript string enums and frozen `const` objects for type-safe comparisons. The UI5 property enums (`KeyboardLayout`, `KeyboardType`, `MobileKeyboard`, `FKeyMode`, and `LayoutRole` from [Custom Layouts](#custom-layouts)) are string enums registered via `DataType.registerEnum()` for XML view binding. `LayoutFacet` is a string enum too, but registers as a `DataType` over `string` because it is the component type of the `suppress` array property; `KeyName` and `NativeDispatchableKeyNames` are frozen `const` objects.
 
 ```ts
 import { KeyboardLayout, KeyboardType, KeyName, MobileKeyboard, FKeyMode } from "ui5/kiosk/library";
@@ -2040,6 +2037,10 @@ npm run typecheck
 ## Further Reading
 
 - [Architecture & Internals](../../docs/kiosk/ARCHITECTURE.md): control design, rendering, theming approach
+- [Responsive Layout Patterns](../../docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md): breakpoints, per-tier customization, swapping layouts by size
+- [CSS Sizing Reference](../../docs/shared/CSS-SIZING-REFERENCE.md): every custom property, its default, and the rationale behind it
+- [Popover Layout-Switch Behavior](../../docs/kiosk/POPOVER-LAYOUT-SWITCH-BEHAVIOR.md): a known `sap.m.Popover` limitation and its workaround
+- [Testing](../../docs/shared/TESTING.md): suites, visual baselines, and what CI runs
 
 ---
 
@@ -2070,18 +2071,22 @@ npm run typecheck
 
 - Ensure custom key `value` strings don't conflict with built-in action keys (`{backspace}`, `{enter}`, `{shift}`, etc.)
 
+**`change` fires later than expected:**
+
+- On a single-line input `change` is commit-oriented: it fires on Enter, on close, and on a target switch, not per keystroke. Bind `liveChange` for per-keystroke updates
+
 ---
 
 ## When NOT to Use This Library
 
-| Scenario                            | Use Instead                                                           |
-| ----------------------------------- | --------------------------------------------------------------------- |
-| Desktop-only application            | Physical keyboard (no virtual keyboard needed)                        |
-| Mobile browser with native keyboard | Set `mobileKeyboard="Auto"` to defer to the native keyboard on mobile |
-| Complex IME input (CJK)             | Native OS input methods                                               |
-| Rich text editing                   | Dedicated rich text editor controls                                   |
+| Scenario                             | Use Instead                                                                   |
+| ------------------------------------ | ----------------------------------------------------------------------------- |
+| Desktop-only application             | Physical keyboard (no virtual keyboard needed)                                |
+| Mobile browser with native keyboard  | The default `mobileKeyboard="Auto"`, which defers to it on phones and tablets |
+| Kanji conversion / candidate windows | Native OS input methods                                                       |
+| Rich text editing                    | Dedicated rich text editor controls                                           |
 
-This library is designed for **kiosk terminals**, **industrial touchscreens**, and **point-of-sale** applications where the OS does not provide a virtual keyboard or where a controlled input experience is required. For mixed desktop/mobile use, set `mobileKeyboard="Auto"` to let mobile devices use their native keyboard.
+This library is designed for **kiosk terminals**, **industrial touchscreens**, and **point-of-sale** applications where the OS does not provide a virtual keyboard or where a controlled input experience is required. Mixed desktop/mobile use needs no configuration: `mobileKeyboard` already defaults to `"Auto"`. The Japanese and Korean layouts ship composition middleware for kana voicing marks and Hangul syllable assembly, so those scripts are typable, but there is no candidate window and no kanji conversion.
 
 ---
 

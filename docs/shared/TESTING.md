@@ -82,6 +82,8 @@ Within `playwright.config.ts`, projects share a single `webServer` and differ on
 - The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores `flp-lifecycle` and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
 - The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs; the behavioral specs (kiosk: autotype, focus, i18n, inputmode, interop; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
 
+On CI the device projects narrow further, to `invariants.spec.ts` alone (`CI_DEVICE_SPECS` in both configs): CI passes `--ignore-snapshots`, under which the rest of their matrix captures nothing, and the non-pixel assertions those specs carry still run through the desktop project. Both configs throw when that spec no longer exists, since a project whose `testMatch` selects nothing still exits 0. Locally every project runs every spec and compares pixels.
+
 Both capture paths take the element in full regardless of viewport, so the fixed-width container fixtures run on every profile without per-viewport gating.
 
 Baselines are committed, one directory per Playwright project (via `snapshotPathTemplate: "{testDir}/__baselines__/{projectName}/{arg}{ext}"`):
@@ -253,3 +255,19 @@ npm run test:kiosk-webc:e2e       # Kiosk webc e2e (Playwright)
 npm run test:qunit                # All QUnit (hotkeys + kiosk)
 npm run test:coverage -w packages/kiosk-keyboard-webc # Coverage (webc only)
 ```
+
+## What CI runs
+
+`.github/workflows/ci.yml` runs five jobs in parallel, so the slowest one (not their sum) sets the wall-clock:
+
+| Job          | Covers                                                                                                                                                                                                    |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `static`     | commitlint, `fmt:check`, `lint:ci`, `lint:ui5`, `typecheck`, generated-interface drift, and every Node-only check (`test:patches`, the three twin-drift checks, `test:i18n-bundles`, `test:lint-plugins`) |
+| `unit-qunit` | `test:qunit` for both UI5 libraries, on puppeteer                                                                                                                                                         |
+| `unit-webc`  | the web component's vitest and web-test-runner suites, on playwright chromium                                                                                                                             |
+| `e2e`        | `test:e2e:ci` per package, as two matrix legs; behavioral only (`--ignore-snapshots`)                                                                                                                     |
+| `smoke`      | `test:packages:smoke`: `build:all` plus an `npm pack` dry run per published package                                                                                                                       |
+
+CI deliberately does not call `npm run check:base`; it re-implements the same chain as jobs so the legs run in parallel and report separately, and it uses the stricter `lint:ci` (`--deny-warnings`) in place of `lint`. What it does not cover is the pixel comparison: visual baselines carry no platform suffix, so `e2e` runs the visual specs as render smoke tests only. Compare baselines locally with `npm run check`.
+
+`release.yml` gates the release on this same workflow through `workflow_call`, so nothing is release-only.

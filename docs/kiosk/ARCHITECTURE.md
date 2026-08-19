@@ -48,6 +48,8 @@ This avoids per-key control overhead for the 30-50 keys, keeps the control on on
 
 UI5's built-in event delegation dispatches browser events to the nearest UI5 control in the DOM hierarchy. The `ontouchstart`/`ontouchend` (pointer) and `onsapselect` (keyboard Enter/Space on a focused key) methods on `KioskKeyboard` receive all events from child elements.
 
+`sapselect` is a keydown pseudo-event (`aTypes: ["keydown"]`), so a keycap held down from the physical keyboard activates repeatedly at the OS key-repeat rate, and nothing guards `repeat` (#242). The web component repeats on a held Enter too; where it differs is Space, which it activates on keyup and therefore does not repeat. Both twins leave Enter unguarded.
+
 The handler flow uses a press/release pattern (`ontouchstart` + `ontouchend`) instead of `ontap`, because `preventDefault()` on the underlying touch/mouse event is needed to prevent focus steal (see below).
 
 ```
@@ -156,7 +158,7 @@ Insertion and backspace run as a **platform edit** when the target is focused: t
 
 `setTargetValue()` (`internal/input-operations.ts`) writes the value back through the UI5 element for data binding integration. It prefers a typed `setValue()` method (`InputBase.setValue`), falls back to `setProperty("value")` when the control declares a `value` property, and finally to the inner DOM value for custom controls that declare neither. A `liveChange` event is raised afterwards, gated on `metadata.hasEvent("liveChange")`.
 
-After a platform edit the same write runs from the resulting DOM value, which costs no second DOM write because `InputBase.updateDomValue` returns early when the DOM already matches — leaving the undo stack intact. `liveChange` is then raised only if the control did not already raise its own in response to the real `input` event, which is observed rather than inferred: controls reach that event by different routes (`sap.m.Input` via `oninput`, `sap.m.SearchField` via a listener it binds itself). The element is typed as `TargetElement` (`internal/types.ts`), not a specific control class, so no control type is a hard dependency.
+After a platform edit the same write runs from the resulting DOM value, which costs no second DOM write because `InputBase.updateDomValue` returns early when the DOM already matches - leaving the undo stack intact. `liveChange` is then raised only if the control did not already raise its own in response to the real `input` event, which is observed rather than inferred: controls reach that event by different routes (`sap.m.Input` via `oninput`, `sap.m.SearchField` via a listener it binds itself). The element is typed as `TargetElement` (`internal/types.ts`), not a specific control class, so no control type is a hard dependency.
 
 ### Backspace Press-and-Hold Auto-Repeat
 
@@ -188,7 +190,9 @@ Caps Lock    Mode.CapsLock true      true
 
 **Double-click detection**: A second Shift press within 400ms (`ShiftState.DOUBLE_CLICK_MS`) of the first activates Caps Lock. A single press outside that window toggles one-shot Shift. Pressing Shift while Caps Lock is active turns everything off.
 
-**Auto-release**: After typing a character with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and fires the `onChange` callback (which the owner wires to `_syncShiftState()`, announcing the transition before repainting) to update the display. Caps Lock is sticky and does not auto-release.
+**Auto-release**: After a character key, an unrecognized `{...}` token or a committed accent variant with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and fires the `onChange` callback (which the owner wires to `_syncShiftState()`, announcing the transition before repainting) to update the display. `{backspace}`, `{enter}` and `{fkey:*}` leave the latch armed; a vetoed `keyPress` still spends it. Caps Lock is sticky and does not auto-release.
+
+> The web component spends the latch on `{backspace}`, `{enter}` and `{fkey:*}` too, and keeps it armed on a vetoed `key-press`. See the event table in the web component's README.
 
 **Announcements**: `_syncShiftState()` writes one live-region text per transition: `ARIA_CAPS_LOCK_ON`, `ARIA_CAPS_LOCK_OFF`, `ARIA_SHIFT_ON`, `ARIA_SHIFT_OFF`. Caps Lock is settled before Shift because `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift release.
 
@@ -249,7 +253,7 @@ To edit the target from a handler, the control exposes public methods that route
 
 All three are no-ops / return `null` when there is no active target, and none of them fire `keyPress` (they are called _by_ a handler). Layout switching uses the existing `setLayout`.
 
-Visible label and icon come from the key's `KeyDefinition` (`label` / `icon`). The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> a dev warning for an icon-only key (`label: ""`) with no source, so a custom key never announces the raw `{...}` token. Built-in keys (`{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`) stay on the hardcoded switch.
+Visible label and icon come from the key's `KeyDefinition` (`label` / `icon`). The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> a dev warning for an icon-only key (`label: ""`) with no source, so a custom key never announces the raw `{...}` token. The one thing ahead of `ariaLabel` is the shift key's Caps Lock state, written by the renderer, which names the key for what it is doing. Built-in keys (`{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`) stay on the hardcoded switch.
 
 ## Locale-Based Default Layout
 
@@ -657,6 +661,11 @@ packages/kiosk-keyboard/
       qwerty-es.ts            Spanish QWERTY layout
       symbol-common.ts        Shared punctuation/symbol row data (used by numeric, special)
       default-layout.ts       Default layout name constant: "qwerty"
+    i18n/
+      messagebundle.properties     Default (English) key/ARIA labels
+      messagebundle_de.properties  German translations
+      messagebundle_ja.properties  Japanese translations
+      messagebundle_ar.properties  Arabic translations
     themes/
       base/
         KioskKeyboard.less    Base styles (SAP LESS parameters)
@@ -683,6 +692,7 @@ packages/kiosk-keyboard/
     interop.spec.ts            StepInput + UI5 Web Components interop
     i18n.spec.ts               i18n extensibility e2e tests
     flp-lifecycle.spec.ts      FLP lifecycle i18n auto-reset tests
+    invariants.spec.ts         Structural assertions the device matrix runs on CI
     visual.spec.ts             Core visual regression (toHaveScreenshot)
     visual-container.spec.ts   Container-query layout snapshots
     visual-container-responsive.spec.ts  Responsive container-query snapshots

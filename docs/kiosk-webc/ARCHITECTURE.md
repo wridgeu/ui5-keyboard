@@ -210,7 +210,7 @@ click / touchend
 
 ### Custom Keys
 
-There is no action registry. A custom token (e.g. `{paste}`) is dispatched on the unrecognized-`{...}`-token path: the element fires the cancelable `key-press` (token as `key`, no literal insertion) and the consumer owns the behavior from a `key-press` listener (`preventDefault()` claims the token; a non-prevented unrecognized token warns and no-ops). To edit the target, the element exposes `insertText(text)`, `deleteBackward()`, and `getActiveTargetElement()` (all no-ops with no active target, none fire `key-press`), routed through the same input handling the built-in keys use. The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> a dev warning for an icon-only key with no source. Built-in keys stay on the hardcoded switch. This mirrors the UI5 control's custom-key API 1:1.
+There is no action registry. A custom token (e.g. `{paste}`) is dispatched on the unrecognized-`{...}`-token path: the element fires the cancelable `key-press` (token as `key`, no literal insertion) and the consumer owns the behavior from a `key-press` listener (`preventDefault()` claims the token; a non-prevented unrecognized token warns and no-ops). To edit the target, the element exposes `insertText(text)`, `deleteBackward()`, and `getActiveTargetElement()` (all no-ops with no active target, none fire `key-press`), routed through the same input handling the built-in keys use. The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> a dev warning for an icon-only key with no source; the one thing ahead of `ariaLabel` is the shift key's Caps Lock state, which names the key for what it is doing. Built-in keys stay on the hardcoded switch. This mirrors the UI5 control's custom-key API 1:1.
 
 ### Backspace Press-and-Hold Auto-Repeat
 
@@ -291,7 +291,9 @@ Caps Lock    false    true       true
 - Shift → Off: slow second press (resets one-shot)
 - Caps Lock → Off: any press
 
-**Auto-release**: After typing a character with one-shot Shift active, `autoRelease()` clears the shift state. Caps Lock is sticky and does not auto-release.
+**Auto-release**: `autoRelease()` clears one-shot Shift after any key that acts on the target - a character, `{backspace}`, `{enter}`, an `{fkey:*}`, a committed accent variant, or a key the composition middleware consumed. `{shift}` and `{layout:*}` do not spend it, and Caps Lock is sticky and never auto-releases. A vetoed `key-press` leaves the latch armed, since nothing was typed.
+
+> This is one of the twin differences: the UI5 control spends the latch on character keys, unknown tokens and accent variants only - `{backspace}`, `{enter}` and `{fkey:*}` leave it armed there - and it spends it even when the consumer vetoes `keyPress`. See the event table in the web component's README.
 
 **Announcements**: `_syncShiftState()` queues one live-region text per transition: `ARIA_CAPS_LOCK_ON`, `ARIA_CAPS_LOCK_OFF`, `ARIA_SHIFT_ON`, `ARIA_SHIFT_OFF`. Caps Lock is settled before Shift because `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift release.
 
@@ -395,7 +397,7 @@ Auto-show uses document-level `focusin`/`focusout` listeners in capture phase.
 
 ### Multi-Instance Isolation
 
-A static `_participants` set on `AutoShowController` (`core/auto-show-controller.ts`) tracks the controllers of all live keyboards; each joins via `register()` and leaves via `unregister()`. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any other participant already claims that input, gated by `_isAutoShowParticipationActive()` so an instance with auto-show off never blocks one that has it on. If so, auto-show bails out.
+A static `_participants` set on `AutoShowController` (`core/auto-show-controller.ts`) tracks the controllers of all live keyboards; each joins via `register()` and leaves via `unregister()`. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any other participant already claims that input, gated by `_isAutoShowParticipationActive()` so an instance with auto-show off never blocks one that has it on. If so, auto-show bails out. A claim is either the peer's live active target or any id on its comma-separated `controls` list - every id on the list, since the active target is only set once one of them takes focus.
 
 `KioskKeyboard._instances` is a separate static set, and serves only as the guard for queued i18n re-renders.
 
@@ -558,7 +560,7 @@ The caps-lock ring is the one variant whose rule is not written on its own class
 
 ### Per-Key Parts
 
-The category parts (`key`, `modifier`, `action`, `fkey`) reach a group of keys; a per-key part reaches one. `data-key` cannot serve that need here — it is shadow-trapped, and `::part()` takes pseudo-classes but neither attribute nor class selectors, so `::part(key)[data-key="{enter}"]` is invalid rather than unsupported. `keyPart()` (`core/dom-utils.ts`) builds the whole `part` attribute from the parsed `KeyAction`, appending `key-shift` / `key-backspace` / `key-enter` / `key-space`, and `key-layout` plus `key-layout-<target>` on a switch key.
+The category parts (`key`, `modifier`, `action`, `fkey`) reach a group of keys; a per-key part reaches one. `data-key` cannot serve that need here - it is shadow-trapped, and `::part()` takes pseudo-classes but neither attribute nor class selectors, so `::part(key)[data-key="{enter}"]` is invalid rather than unsupported. `keyPart()` (`core/dom-utils.ts`) builds the whole `part` attribute from the parsed `KeyAction`, appending `key-shift` / `key-backspace` / `key-enter` / `key-space`, and `key-layout` plus `key-layout-<target>` on a switch key.
 
 The emitted set is closed, which is the property `exportparts` needs (it has no wildcard form, so `DOM.exportParts` must be able to enumerate everything). Two rules keep it closed: a character key gets no per-key part, so no glyph becomes API; and `key-layout-<target>` is emitted only where `dom-contract.ts` already declares that name, which covers the built-in layouts and the `base` sentinel but never a consumer-named slotted layout. Declaring the layout names in `dom-contract.ts` rather than importing the registry keeps that module dependency-free for `tools/check-dom-contract-drift.mjs`; a unit test holds the two in step.
 

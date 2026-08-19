@@ -100,18 +100,24 @@ npm install
 
 The keyboard requires modern browser features for full functionality:
 
-| Feature               | Used for                 | Baseline                                |
-| --------------------- | ------------------------ | --------------------------------------- |
-| CSS Container Queries | Width-responsive sizing  | Chrome 105+, Firefox 110+, Safari 16+   |
-| ResizeObserver        | Height-responsive sizing | Chrome 64+, Firefox 69+, Safari 13.1+   |
-| CSS `min()` / `max()` | Font-size capping        | Chrome 79+, Firefox 75+, Safari 13.1+   |
-| CSS Custom Properties | Consumer overrides       | Chrome 49+, Firefox 31+, Safari 9.1+    |
-| CSS `color-mix()`     | Theme-adaptive shadows   | Chrome 111+, Firefox 113+, Safari 16.2+ |
-| Shadow DOM v1         | Component encapsulation  | Chrome 53+, Firefox 63+, Safari 10+     |
+| Feature               | Used for                           | Baseline                                |
+| --------------------- | ---------------------------------- | --------------------------------------- |
+| `Intl.Segmenter`      | Grapheme-aware Backspace and caret | Chrome 87+, Firefox 125+, Safari 14.1+  |
+| CSS Container Queries | Width-responsive sizing            | Chrome 105+, Firefox 110+, Safari 16+   |
+| ResizeObserver        | Height-responsive sizing           | Chrome 64+, Firefox 69+, Safari 13.1+   |
+| CSS `min()` / `max()` | Font-size capping                  | Chrome 79+, Firefox 75+, Safari 13.1+   |
+| CSS Custom Properties | Consumer overrides                 | Chrome 49+, Firefox 31+, Safari 9.1+    |
+| CSS `color-mix()`     | Theme-adaptive shadows             | Chrome 111+, Firefox 113+, Safari 16.2+ |
+| Shadow DOM v1         | Component encapsulation            | Chrome 53+, Firefox 63+, Safari 10+     |
 
-All features are supported in browsers released since mid-2023. In older
-browsers, the keyboard renders at full size without width-responsive font
-scaling.
+`Intl.Segmenter` is the effective floor. It reached Baseline in April 2024, when
+Firefox 125 became the last engine to ship it, so that release is the oldest
+Firefox the element supports. It is also the one entry with no graceful
+degradation: the segmenter is constructed at module scope, so an engine without
+it throws on import rather than losing a feature. Everything else degrades -
+without container queries or `min()` the keyboard renders at full size with no
+width-responsive font scaling, and without `color-mix()` the shadows stop
+adapting to the theme.
 
 ## Consumption Modes
 
@@ -242,7 +248,31 @@ Use the bridge when you want predictable XML view metadata, typed UI5 events, or
 
 Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinition`), the same custom-layout model (one element per layout carrying its rows, locales, keycap language, role, middleware and variants, plus a `defaultVariants` table on the host), and the same special-key syntax (`{shift}`, `{backspace}`, `{layout:name}`). The UI5 control collects those elements in a `customLayouts` aggregation, the web component in a `customLayouts` slot; the fields, their merge rules and the diagnostics are identical.
 
-Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 control vs `key-press` (kebab-case) in the web component. Event payloads are structurally identical.
+Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 control vs `key-press` (kebab-case) in the web component. `layout-change` and `keyboard-type-change` carry the same payload on both sides. The others do not, so a handler written against one twin needs adapting for the other:
+
+| Event                       | `ui5-lib-kiosk-keyboard`                                             | `kiosk-keyboard-webc`                                                 |
+| --------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Key event payload           | `key`, `shiftKey`                                                    | `key`, `shiftKey`, `char`                                             |
+| `key` for a character       | the resolved character (`"A"` while shifted)                         | the layout's raw value (`"a"`), with `char` carrying the resolved one |
+| `key` for Backspace / Enter | `"Backspace"` / `"Enter"` (`KeyName` constants)                      | `"{backspace}"` / `"{enter}"` (the raw token)                         |
+| Key event for `{shift}`     | not fired                                                            | fired; cancelling it vetoes the toggle                                |
+| Key event for `{layout:*}`  | not fired                                                            | fired with the wrapped form; cancelling it vetoes the switch          |
+| Composition middleware      | runs before the key event, so a consumed key never reaches a handler | runs after it, so the handler sees every key                          |
+| Active-control event        | `activeControlChange` with `controlId`                               | `active-control-change` with `activeElement`                          |
+| Open / close events         | `afterOpen` / `afterClose`, no parameters                            | `after-open` / `after-close` with `activeElement`                     |
+
+One-shot Shift is spent on a different set of keys, which changes what the key after it types:
+
+| Key                                              | `ui5-lib-kiosk-keyboard` | `kiosk-keyboard-webc` |
+| ------------------------------------------------ | ------------------------ | --------------------- |
+| Character, unknown `{...}` token, accent variant | released                 | released              |
+| Key consumed by the composition middleware       | released                 | released              |
+| `{backspace}`, `{enter}`, `{fkey:*}`             | stays armed              | released              |
+| The first row's keys, key event vetoed           | released                 | stays armed           |
+
+Caps Lock is sticky on both and never auto-releases. `{layout:*}` is not an auto-release on either: selecting a layout resets the whole typing context, Caps Lock included.
+
+Activating a focused keycap from the physical keyboard differs in one respect. The web component activates Space on release, following native `<button>` semantics, so a held Space does not repeat; the UI5 control routes Space through UI5's `sapselect`, a keydown pseudo-event, so a held Space does repeat. **Enter repeats on both** - neither twin guards key repeat today (#242). The UI5 control also rejects Shift+Enter, where the web component accepts it.
 
 See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for general guidance on web component consumption patterns inside UI5 apps.
 
@@ -316,7 +346,7 @@ Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operati
 
 `layout` is a declaration and `effectiveLayout` is a resolved value, the same split the platform draws between `src` and [`currentSrc`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/currentSrc), and that `@ui5/webcomponents-base` draws between `dir` and `UI5Element.effectiveDir`.
 
-Four things change what renders without writing to `layout`: the locale default when `layout` is empty, a `{layout:*}` key the user taps, a `keyboard-type` of `Numpad` or `Numeric` pinning its own surface, and an `auto-compact` width swap. Leaving the declaration alone is what lets each of them be undone — `auto-compact` needs the layout you asked for in order to restore it when the room comes back.
+Four things change what renders without writing to `layout`: the locale default when `layout` is empty, a `{layout:*}` key the user taps, a `keyboard-type` of `Numpad` or `Numeric` pinning its own surface, and an `auto-compact` width swap. Leaving the declaration alone is what lets each of them be undone - `auto-compact` needs the layout you asked for in order to restore it when the room comes back.
 
 ```ts
 const kb = document.querySelector("kiosk-keyboard");
@@ -364,9 +394,9 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Text Insertion
 
-Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack — Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends. An input inside an open shadow root qualifies; the focus check descends shadow roots to find it.
+Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack - Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends. An input inside an open shadow root qualifies; the focus check descends shadow roots to find it.
 
-When the target does not hold focus — after `setTargetElement()` without a focus move, for instance — or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; what dispatches the `input` event is not.
+When the target does not hold focus - after `setTargetElement()` without a focus move, for instance - or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; what dispatches the `input` event is not.
 
 |                    | Target focused (platform edit)  | Target not focused (assignment)                                                                          |
 | ------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -423,21 +453,21 @@ The contract is intentionally read-only. It is not the styling API; continue to 
 
 ## Built-in Layouts
 
-| Name              | Description                                                        |
-| ----------------- | ------------------------------------------------------------------ |
-| `qwerty`          | Standard US QWERTY                                                 |
-| `qwertz-de`       | German QWERTZ with umlauts and ss                                  |
-| `ja-romaji`       | Japanese Romaji (QWERTY base with JIS punctuation)                 |
-| `ja-kana`         | Japanese Kana direct-input (JIS X 6002)                            |
-| `ja-kana-compact` | Japanese Kana for narrow keyboards, every row at twelve key widths |
-| `arabic`          | Arabic (standard Arabic 101 layout)                                |
-| `numeric`         | Numbers + common symbols                                           |
-| `special`         | Extended symbols (`#+=`, currencies)                               |
-| `numpad`          | Calculator-style number pad                                        |
-| `fkeys`           | F1-F12 function keys                                               |
-| `nav`             | Navigation keys (arrows, Home, End, etc.)                          |
-| `ko-hangul`       | Korean Hangul Dubeolsik (KS X 5002)                                |
-| `qwerty-es`       | Spanish QWERTY with accented vowels and ñ                          |
+| Name              | Description                                                             |
+| ----------------- | ----------------------------------------------------------------------- |
+| `qwerty`          | Standard US QWERTY                                                      |
+| `qwertz-de`       | German QWERTZ with umlauts and ss                                       |
+| `ja-romaji`       | Japanese Romaji (QWERTY base with JIS punctuation)                      |
+| `ja-kana`         | Japanese Kana direct-input (JIS X 6002)                                 |
+| `ja-kana-compact` | Japanese Kana for narrow keyboards, no row wider than twelve key widths |
+| `arabic`          | Arabic (standard Arabic 101 layout)                                     |
+| `numeric`         | Numbers + common symbols                                                |
+| `special`         | Extended symbols (`#+=`, currencies)                                    |
+| `numpad`          | Calculator-style number pad                                             |
+| `fkeys`           | F1-F12 function keys                                                    |
+| `nav`             | Navigation keys (arrows, Home, End, etc.)                               |
+| `ko-hangul`       | Korean Hangul Dubeolsik (KS X 5002)                                     |
+| `qwerty-es`       | Spanish QWERTY with accented vowels and ñ                               |
 
 Combined variants (e.g., QWERTY + F-key row) are not built-in. They are
 trivial compositions - see [Layout Composition](#layout-composition) below.
@@ -1189,7 +1219,7 @@ Multi-name parts allow targeting specific key types. `::part(key)` matches all k
 
 ### Styling a single key
 
-The category parts above reach a _group_ of keys. To reach one key, use its per-key part name. The keys carry a `data-key` attribute too, but that one is shadow-trapped and unreachable from outside — and `::part()` accepts pseudo-classes but neither attribute nor class selectors, so `::part(key)[data-key="{enter}"]` is invalid rather than merely unsupported.
+The category parts above reach a _group_ of keys. To reach one key, use its per-key part name. The keys carry a `data-key` attribute too, but that one is shadow-trapped and unreachable from outside - and `::part()` accepts pseudo-classes but neither attribute nor class selectors, so `::part(key)[data-key="{enter}"]` is invalid rather than merely unsupported.
 
 | Per-key part        | Key                                                                                                        |
 | ------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -1198,7 +1228,7 @@ The category parts above reach a _group_ of keys. To reach one key, use its per-
 | `key-enter`         | The `{enter}` key                                                                                          |
 | `key-space`         | The space key                                                                                              |
 | `key-layout`        | Every `{layout:*}` switch key                                                                              |
-| `key-layout-<name>` | The switch key for one built-in layout — `key-layout-numeric`, `key-layout-special`, `key-layout-fkeys`, … |
+| `key-layout-<name>` | The switch key for one built-in layout - `key-layout-numeric`, `key-layout-special`, `key-layout-fkeys`, … |
 | `key-layout-base`   | The switch back to the tracked base layout (`{layout:base}`)                                               |
 
 ```css
@@ -1216,7 +1246,7 @@ Per-key parts combine with the category ones, so `{enter}` renders as `part="key
 Two boundaries are deliberate:
 
 - **Character keys get no per-key part.** `a`, `1` and `ä` render as `part="key"` alone. Naming every glyph would make each one public API that can never change; style character keys as a group, or reach one by position from your own layout.
-- **Custom layouts get `key-layout` only.** A `{layout:*}` key pointing at a slotted `<kiosk-keyboard-custom-layout>` carries no `key-layout-<name>` twin, because the name is yours rather than the component's. The set of part names stays closed, which is what lets `exportparts` — which has no wildcard form — forward all of them.
+- **Custom layouts get `key-layout` only.** A `{layout:*}` key pointing at a slotted `<kiosk-keyboard-custom-layout>` carries no `key-layout-<name>` twin, because the name is yours rather than the component's. The set of part names stays closed, which is what lets `exportparts` - which has no wildcard form - forward all of them.
 
 > [!NOTE]
 > The UI5 control twin needs none of this: it renders into light DOM, so its `[data-key]` attribute is directly targetable with an ordinary attribute selector. See [Styling a single key in the `kiosk-keyboard` README](../kiosk-keyboard/README.md#styling-a-single-key).
@@ -1299,6 +1329,8 @@ Override these on the `:host` or a parent element to customize appearance:
 | `--kiosk-keyboard-variant-popup-gap`       | `0.25rem`                                                                                                                           | Gap between options in the accent-variant popup                                                                  |
 | `--kiosk-keyboard-variant-popup-padding`   | `0.25rem`                                                                                                                           | Padding around the accent-variant option row                                                                     |
 | `--kiosk-keyboard-variant-popup-max-width` | `92vw`                                                                                                                              | Max width before the accent-variant option row wraps                                                             |
+
+One name in this namespace is not a knob: `--kiosk-keyboard-variant-option-width` carries the anchor key's measured width onto the accent-variant options, and the element writes it as an inline style on the `variant-popup` part every time the popup opens. It is public-prefixed only because it has to cross into the slotted `ui5-button`s; an inline style outranks anything you declare, so size the options through `--kiosk-keyboard-key-height` instead, which is the fallback it resolves to.
 
 In Numpad and Numeric modes, `--kiosk-keyboard-key-font-size` is overridden to a larger value and applies uniformly to all key types (including modifier and action keys).
 

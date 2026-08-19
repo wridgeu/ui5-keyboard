@@ -1,5 +1,7 @@
 # Centralized EventDispatcher & Suspend Guard
 
+> Status: Implemented. `internal/event-dispatcher.ts` owns the single listener set and `HotkeyManager.suspendDispatch()` the guard.
+
 > Supersedes the original "HotkeyManager Suspend Guard" scope. The suspend guard is now one feature of a broader centralized event-dispatching architecture.
 
 ## Problem
@@ -271,7 +273,7 @@ These limitations are acceptable for the intended use cases (panel-scoped hotkey
 
 ## Proposed API
 
-> Note: the `getInstance()`/singleton examples below (and in the diagrams above) predate the instance-lifecycle change. `getInstance()` was later removed in favor of `new HotkeyManager()`; see [../HOTKEYS-INSTANCE-LIFECYCLE.md](../HOTKEYS-INSTANCE-LIFECYCLE.md). The EventDispatcher and suspend-guard architecture itself shipped as described here; only the singleton accessor changed.
+> Note: the `getInstance()`/singleton examples below (and in the diagrams above) predate the instance-lifecycle change. `getInstance()` was later removed in favor of `new HotkeyManager()`; see [HOTKEYS-INSTANCE-LIFECYCLE.md](./HOTKEYS-INSTANCE-LIFECYCLE.md). The EventDispatcher and suspend-guard architecture itself shipped as described here; only the singleton accessor changed.
 
 ### Suspend guard (public, on HotkeyManager)
 
