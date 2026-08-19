@@ -48,7 +48,7 @@ This avoids per-key control overhead for the 30-50 keys, keeps the control on on
 
 UI5's built-in event delegation dispatches browser events to the nearest UI5 control in the DOM hierarchy. The `ontouchstart`/`ontouchend` (pointer) and `onsapselect` (keyboard Enter/Space on a focused key) methods on `KioskKeyboard` receive all events from child elements.
 
-`sapselect` is a keydown pseudo-event (`aTypes: ["keydown"]`), so a keycap held down from the physical keyboard activates repeatedly at the OS key-repeat rate. The web component twin instead follows native `<button>` semantics there - Space on keyup, no repeat - which is the one activation difference between the two.
+`sapselect` is a keydown pseudo-event (`aTypes: ["keydown"]`), so a keycap held down from the physical keyboard activates repeatedly at the OS key-repeat rate, and nothing guards `repeat` (#242). The web component repeats on a held Enter too; where it differs is Space, which it activates on keyup and therefore does not repeat. Both twins leave Enter unguarded.
 
 The handler flow uses a press/release pattern (`ontouchstart` + `ontouchend`) instead of `ontap`, because `preventDefault()` on the underlying touch/mouse event is needed to prevent focus steal (see below).
 
