@@ -1558,6 +1558,114 @@ QUnit.test("Shift+Enter on focused key does NOT activate (modifier filtering)", 
   kb.destroy();
 });
 
+/**
+ * Hold `key` on `el`: the initial keydown, then the auto-repeat keydowns the OS
+ * sends while the key stays down.
+ */
+function holdKey(el: HTMLElement, key: string, repeats = 3): void {
+  el.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+  for (let i = 0; i < repeats; i++) {
+    el.dispatchEvent(new KeyboardEvent("keydown", { key, repeat: true, bubbles: true, cancelable: true }));
+  }
+}
+
+QUnit.test("Held Enter on a character key activates it once", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.setAttribute("tabindex", "0");
+  aKey.focus();
+
+  holdKey(aKey, "Enter");
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "a", "The auto-repeat keydowns insert nothing further");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Held Space on a character key activates it once", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const bKey = getRequiredKeyElement(kb, "b");
+  bKey.setAttribute("tabindex", "0");
+  bKey.focus();
+
+  holdKey(bKey, " ");
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "b", "The auto-repeat keydowns insert nothing further");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Held Enter on the Shift key toggles it once", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const shiftKey = getRequiredKeyElement(kb, "{shift}");
+  shiftKey.setAttribute("tabindex", "0");
+  shiftKey.focus();
+
+  // Without a repeat guard the three-state cycle runs off, shift, caps, off at
+  // the OS repeat rate, leaving the state wherever the release happens to land.
+  holdKey(shiftKey, "Enter");
+  await waitForRender();
+
+  assert.ok(isShiftActive(kb), "Shift is active after the hold");
+  assert.notOk(isCapsLock(kb), "The cycle did not advance to Caps Lock");
+
+  kb.destroy();
+});
+
+QUnit.test("Held Enter on a layout key types nothing into the new layout", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const layoutKey = getRequiredKeyElement(kb, "{layout:numeric}");
+  layoutKey.setAttribute("tabindex", "0");
+  layoutKey.focus();
+
+  layoutKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  // The switch re-renders, and with no key carrying `{layout:numeric}` in the
+  // new layout the roving tab stop falls back to its first key. That is where
+  // the OS sends the auto-repeat keydowns while Enter is still held.
+  const focused = document.activeElement as HTMLElement;
+  assert.ok(focused.classList.contains(DOM.classes.key), "The tab stop re-seated onto a key of the new layout");
+  for (let i = 0; i < 3; i++) {
+    focused.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", repeat: true, bubbles: true, cancelable: true }),
+    );
+  }
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "", "The auto-repeat keydowns after the switch insert nothing");
+
+  input.destroy();
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // Pressed-state safety net (window blur)
 // ──────────────────────────────────────────────

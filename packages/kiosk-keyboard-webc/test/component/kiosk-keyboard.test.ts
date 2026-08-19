@@ -2059,6 +2059,46 @@ describe("kiosk-keyboard", () => {
       expect(fired, "plain Enter activates the key").to.equal(1);
     });
 
+    it("activates the focused key once while Enter is held", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const firstKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.focusableKey)!;
+      firstKey.focus();
+
+      let fired = 0;
+      el.addEventListener("key-press", () => {
+        fired++;
+      });
+
+      firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      for (let i = 0; i < 3; i++) {
+        firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", repeat: true, bubbles: true }));
+      }
+
+      expect(fired, "the OS auto-repeat keydowns do not re-activate the key").to.equal(1);
+    });
+
+    it("activates the focused key on Space release, once per hold", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const firstKey = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.focusableKey)!;
+      firstKey.focus();
+
+      let fired = 0;
+      el.addEventListener("key-press", () => {
+        fired++;
+      });
+
+      firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+      for (let i = 0; i < 3; i++) {
+        firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", repeat: true, bubbles: true }));
+      }
+      expect(fired, "Space does not activate while it is held down").to.equal(0);
+
+      firstKey.dispatchEvent(new KeyboardEvent("keyup", { key: " ", bubbles: true }));
+      expect(fired, "the release activates the key exactly once").to.equal(1);
+    });
+
     it("Ctrl+End jumps focus to the last key of the last row, Ctrl+Home back to the first", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
