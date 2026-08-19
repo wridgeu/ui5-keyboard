@@ -5,8 +5,6 @@ demo-dist/
 .ui5-tooling-modules/
 *.tsbuildinfo
 coverage/
-__screenshots__/
-.generated-specs/
 **/src/generated/
 
 # Playwright runtime output (baselines live in __baselines__ and are committed)
@@ -19,7 +17,6 @@ playwright-report/
 # name glob cannot reach a reports/ or reporter/ directory elsewhere.
 packages/*/report/
 packages/*/report-*/
-.nyc_output/
 
 # @ui5/linter coverage report (written to cwd by `ui5lint --coverage`)
 ui5lint-report.html
