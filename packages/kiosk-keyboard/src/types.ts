@@ -21,7 +21,13 @@ export type KeyWidth = "1.25" | "1.5" | "1.75" | "2" | "2.25" | "2.75" | "space"
  * - `"default"` - Standard key (letter, number, symbol). Uses `@sapUiButton*` tokens.
  * - `"modifier"` - Subdued style for Shift, layout switches (ABC, Fn), etc. Uses `@sapUiButtonLite*` tokens.
  * - `"action"` - Prominent style for Enter, Backspace, etc. Uses `@sapUiButtonEmphasized*` tokens.
- * - `"space"` - Spacebar. Visually same as default but semantically distinct.
+ * - `"space"` - Spacebar. Renders like `"default"`.
+ *
+ * `"modifier"`, `"action"` and `"space"` keys never take table variants, so
+ * `accentVariants` and a `defaultVariants` entry both skip them even when the key's
+ * `value` is a base letter the table covers. Only a per-key `variants` array reaches
+ * such a key. That is the sole non-visual effect of this field, and the reason
+ * `"space"` exists as a distinct value at all.
  *
  * @public
  * @since 0.1.0
@@ -202,8 +208,10 @@ export interface KeyDefinition {
    *
    * - `"modifier"` - Subdued (Shift, layout switches). Uses SAP Lite Button tokens.
    * - `"action"` - Prominent (Enter, Backspace). Uses SAP Emphasized Button tokens.
-   * - `"space"` - Spacebar. Visually like default.
+   * - `"space"` - Spacebar. Renders like `"default"`.
    * - `"default"` or omitted - Standard key. Uses SAP Button tokens.
+   *
+   * Also gates accent-variant merging: see {@link KeyType}.
    *
    * @see {@link KeyType}
    */
