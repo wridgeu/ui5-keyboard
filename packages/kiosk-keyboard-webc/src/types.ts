@@ -322,7 +322,11 @@ export enum LayoutFacet {
  * @since 0.1.0
  */
 export interface KeyPressEventDetail {
-  /** The key value that was pressed (character, or a key constant for non-character keys). */
+  /**
+   * The layout's raw value for the key: the unshifted character, or the token
+   * for a special key (`{shift}`, `{backspace}`, `{layout:numeric}`). F-keys
+   * are the one exception and arrive as the bare name (`"F5"`, `"ArrowLeft"`).
+   */
   key: string;
   /** Whether the Shift modifier was active when the key was pressed. */
   shiftKey: boolean;

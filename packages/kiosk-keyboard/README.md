@@ -459,11 +459,11 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 | `defaultVariants` | `VariantTable \| null`     | `null`      | Long-press variants applied under **every** layout, merged per base letter beneath anything a `customLayouts` entry declares. Effective only with `accentVariants`. See [Accent variants](#accent-variants-german-umlauts).                                     |
 
 > [!IMPORTANT]
-> `layout` holds the **effective** layout, not the one you last set. A `{layout:X}` tap, `setLayout()`, and an `autoCompact` width swap all write it, so `getLayout()` always answers "what is on screen" — the same contract `keyboardType` has under `autoType`.
+> `layout` holds the **effective** layout, not the one you last set. A `{layout:X}` tap, `setLayout()`, and an `autoCompact` width swap all write it, so `getLayout()` always answers "what is on screen" - the same contract `keyboardType` has under `autoType`.
 >
 > Two consequences worth knowing before you bind it:
 >
-> - **A two-way binding is written back.** `layout="{/prefs/layout}"` receives `"ja-kana-compact"` when the keyboard narrows, so persisting that model field persists an arrangement the user never chose — and two-way is every model's _default_ mode, so this needs no opting in. Bind one-way (`layout="{path: '/prefs/layout', mode: 'OneWay'}"`) when the value is a stored preference, and take user-driven changes from the `layoutChange` event, whose `autoDetected` flag separates a width swap from a request. The control logs a warning once per instance when a width swap is about to write through a two-way `layout`, so the case is never silent; a `{layout:X}` tap writes back without a warning, since persisting the user's own choice is the point.
+> - **A two-way binding is written back.** `layout="{/prefs/layout}"` receives `"ja-kana-compact"` when the keyboard narrows, so persisting that model field persists an arrangement the user never chose - and two-way is every model's _default_ mode, so this needs no opting in. Bind one-way (`layout="{path: '/prefs/layout', mode: 'OneWay'}"`) when the value is a stored preference, and take user-driven changes from the `layoutChange` event, whose `autoDetected` flag separates a width swap from a request. The control logs a warning once per instance when a width swap is about to write through a two-way `layout`, so the case is never silent; a `{layout:X}` tap writes back without a warning, since persisting the user's own choice is the point.
 >
 >   `keyboardType` needs no such care despite sharing the contract: `autoType` only detects while the type has not been set explicitly, and a binding delivers its value through `setKeyboardType`, which marks it exactly that. Binding the property is what switches the detection off, so it has no path on which to write back.
 >
@@ -484,14 +484,14 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 
 ### Events
 
-| Event                 | Parameters                                                                      | Description                                                                                                                                |
-| --------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `keyPress`            | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed. Call `preventDefault()` to skip default input action. Use `KeyName` constants for non-character keys. |
-| `layoutChange`        | `layout: string`, `autoDetected: boolean`                                       | Fired when the active layout changes. `autoDetected` marks an `autoCompact` width swap rather than a request.                              |
-| `keyboardTypeChange`  | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                                                                      |
-| `afterOpen`           | -                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                  |
-| `afterClose`          | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                |
-| `activeControlChange` | `controlId: string`                                                             | Fired when the active control changes (auto-show focus switch or programmatic target change).                                              |
+| Event                 | Parameters                                                                      | Description                                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keyPress`            | `key: string`, `shiftKey: boolean`                                              | Fired when a virtual key is pressed, except for `{shift}` and `{layout:*}`, which switch without asking. Call `preventDefault()` to skip default input action. Use `KeyName` constants for non-character keys. |
+| `layoutChange`        | `layout: string`, `autoDetected: boolean`                                       | Fired when the active layout changes. `autoDetected` marks an `autoCompact` width swap rather than a request.                                                                                                  |
+| `keyboardTypeChange`  | `keyboardType: string`, `previousKeyboardType: string`, `autoDetected: boolean` | Fired when the keyboard type changes.                                                                                                                                                                          |
+| `afterOpen`           | -                                                                               | Fired when `show()` opens the docked keyboard (state/event hook, not CSS transition end).                                                                                                                      |
+| `afterClose`          | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                                                                                    |
+| `activeControlChange` | `controlId: string`                                                             | Fired when the active control changes (auto-show focus switch or programmatic target change).                                                                                                                  |
 
 ### Public Methods
 
@@ -1152,16 +1152,16 @@ myCustomInput.attachBrowserEvent("focusout", () => {
 
 ## Text Insertion
 
-Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack — Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends.
+Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack - Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends.
 
-When the target does not hold focus — a programmatic `setControls()` + `show()` that never moved focus, for instance — or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; the eventing is not.
+When the target does not hold focus - a programmatic `setControls()` + `show()` that never moved focus, for instance - or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; the eventing is not.
 
 |                                    | Target focused (platform edit)                                                             | Target not focused (assignment) |
 | ---------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------- |
 | `maxlength`                        | Applied by the browser                                                                     | Applied in JS                   |
 | Browser undo stack                 | Edit recorded                                                                              | Not recorded                    |
 | DOM `input` event on the target    | One, dispatched by the platform                                                            | None                            |
-| `liveChange` on the target control | One — the control's own where it raises one from `input`, otherwise raised by the keyboard | One, raised by the keyboard     |
+| `liveChange` on the target control | One - the control's own where it raises one from `input`, otherwise raised by the keyboard | One, raised by the keyboard     |
 
 So `liveChange` fires once per edit either way and data binding stays in step on both paths. Bind to it rather than to the DOM `input` event: **a raw `input` listener on the target's DOM element observes the keyboard's edits only while that target holds focus.** An edit that a saturated `maxlength` leaves empty writes nothing and raises nothing.
 
@@ -1649,7 +1649,7 @@ Supported themes: `sap_horizon`, `sap_horizon_dark`, `sap_horizon_hcb`, `sap_hor
 
 ### Styling a single key
 
-The control renders into the light DOM, so page CSS reaches any one key through the `data-key` attribute the renderer writes — no shadow boundary, no part names, no `!important`:
+The control renders into the light DOM, so page CSS reaches any one key through the `data-key` attribute the renderer writes - no shadow boundary, no part names, no `!important`:
 
 ```css
 /* Tint just the Enter key, and just the switch to the numeric layout */
@@ -1664,7 +1664,7 @@ The control renders into the light DOM, so page CSS reaches any one key through 
 The value is the key's authored `value`, so `{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`, a space, or a single character all work, as does `[data-shift-value]` for the shifted face. Both attributes are part of the [DOM Contract](#dom-contract). Swapping a key's _glyph_ rather than its box is covered under [Custom key icons](#custom-key-icons).
 
 > [!NOTE]
-> The web component twin cannot offer this: its `data-key` is inside a shadow root, and `::part()` takes no attribute selectors. It exposes a bounded set of per-key `::part()` names instead — see [Styling a single key in the `kiosk-keyboard-webc` README](../kiosk-keyboard-webc/README.md#styling-a-single-key).
+> The web component twin cannot offer this: its `data-key` is inside a shadow root, and `::part()` takes no attribute selectors. It exposes a bounded set of per-key `::part()` names instead - see [Styling a single key in the `kiosk-keyboard-webc` README](../kiosk-keyboard-webc/README.md#styling-a-single-key).
 
 ### Public CSS Custom Properties
 

@@ -82,6 +82,8 @@ Within `playwright.config.ts`, projects share a single `webServer` and differ on
 - The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores `flp-lifecycle` and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
 - The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs; the behavioral specs (kiosk: autotype, focus, i18n, inputmode, interop; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
 
+On CI the device projects narrow further, to `invariants.spec.ts` alone (`CI_DEVICE_SPECS` in both configs): CI passes `--ignore-snapshots`, under which the rest of their matrix captures nothing, and the non-pixel assertions those specs carry still run through the desktop project. Both configs throw when that spec no longer exists, since a project whose `testMatch` selects nothing still exits 0. Locally every project runs every spec and compares pixels.
+
 Both capture paths take the element in full regardless of viewport, so the fixed-width container fixtures run on every profile without per-viewport gating.
 
 Baselines are committed, one directory per Playwright project (via `snapshotPathTemplate: "{testDir}/__baselines__/{projectName}/{arg}{ext}"`):

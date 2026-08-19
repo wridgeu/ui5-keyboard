@@ -218,6 +218,11 @@ declare module "./KioskKeyboard" {
         /**
          * Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
+        
+        The `{shift}` and `{layout:*}` keys switch state without firing it;
+        observe those through `layoutChange` and the rendered shift classes.
+        A key a composition middleware consumes (CJK/dead-key) does not fire
+        it either, since the middleware runs first.
          *
          * @since 0.1.0
          */
@@ -1015,6 +1020,11 @@ declare module "./KioskKeyboard" {
          *
          * Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
+        
+        The `{shift}` and `{layout:*}` keys switch state without firing it;
+        observe those through `layoutChange` and the rendered shift classes.
+        A key a composition middleware consumes (CJK/dead-key) does not fire
+        it either, since the middleware runs first.
          *
          * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
@@ -1032,6 +1042,11 @@ declare module "./KioskKeyboard" {
          *
          * Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
+        
+        The `{shift}` and `{layout:*}` keys switch state without firing it;
+        observe those through `layoutChange` and the rendered shift classes.
+        A key a composition middleware consumes (CJK/dead-key) does not fire
+        it either, since the middleware runs first.
          *
          * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
@@ -1050,6 +1065,11 @@ declare module "./KioskKeyboard" {
          *
          * Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
+        
+        The `{shift}` and `{layout:*}` keys switch state without firing it;
+        observe those through `layoutChange` and the rendered shift classes.
+        A key a composition middleware consumes (CJK/dead-key) does not fire
+        it either, since the middleware runs first.
          *
          * @since 0.1.0
          * The passed function and listener object must match the ones used for event registration.
@@ -1066,6 +1086,11 @@ declare module "./KioskKeyboard" {
          *
          * Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
+        
+        The `{shift}` and `{layout:*}` keys switch state without firing it;
+        observe those through `layoutChange` and the rendered shift classes.
+        A key a composition middleware consumes (CJK/dead-key) does not fire
+        it either, since the middleware runs first.
          *
          * @since 0.1.0
          *
@@ -1075,8 +1100,18 @@ declare module "./KioskKeyboard" {
          * @param parameters Parameters to pass along with the event
          * @param [mParameters.key] Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
+        
+        The `{shift}` and `{layout:*}` keys switch state without firing it;
+        observe those through `layoutChange` and the rendered shift classes.
+        A key a composition middleware consumes (CJK/dead-key) does not fire
+        it either, since the middleware runs first.
          * @param [mParameters.shiftKey] Fired when a virtual key is pressed. Call `preventDefault()` to
         skip the default input action (text insertion, backspace, etc.).
+        
+        The `{shift}` and `{layout:*}` keys switch state without firing it;
+        observe those through `layoutChange` and the rendered shift classes.
+        A key a composition middleware consumes (CJK/dead-key) does not fire
+        it either, since the middleware runs first.
          *
          * @returns Whether or not to prevent the default action
          */
@@ -1424,6 +1459,11 @@ declare module "./KioskKeyboard" {
      * Interface describing the parameters of KioskKeyboard's 'keyPress' event.
      * Fired when a virtual key is pressed. Call `preventDefault()` to
     skip the default input action (text insertion, backspace, etc.).
+    
+    The `{shift}` and `{layout:*}` keys switch state without firing it;
+    observe those through `layoutChange` and the rendered shift classes.
+    A key a composition middleware consumes (CJK/dead-key) does not fire
+    it either, since the middleware runs first.
      *
      * @since 0.1.0
      */
@@ -1492,6 +1532,11 @@ declare module "./KioskKeyboard" {
      * Type describing the KioskKeyboard's 'keyPress' event.
      * Fired when a virtual key is pressed. Call `preventDefault()` to
     skip the default input action (text insertion, backspace, etc.).
+    
+    The `{shift}` and `{layout:*}` keys switch state without firing it;
+    observe those through `layoutChange` and the rendered shift classes.
+    A key a composition middleware consumes (CJK/dead-key) does not fire
+    it either, since the middleware runs first.
      *
      * @since 0.1.0
      */

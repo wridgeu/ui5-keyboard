@@ -156,7 +156,7 @@ Insertion and backspace run as a **platform edit** when the target is focused: t
 
 `setTargetValue()` (`internal/input-operations.ts`) writes the value back through the UI5 element for data binding integration. It prefers a typed `setValue()` method (`InputBase.setValue`), falls back to `setProperty("value")` when the control declares a `value` property, and finally to the inner DOM value for custom controls that declare neither. A `liveChange` event is raised afterwards, gated on `metadata.hasEvent("liveChange")`.
 
-After a platform edit the same write runs from the resulting DOM value, which costs no second DOM write because `InputBase.updateDomValue` returns early when the DOM already matches — leaving the undo stack intact. `liveChange` is then raised only if the control did not already raise its own in response to the real `input` event, which is observed rather than inferred: controls reach that event by different routes (`sap.m.Input` via `oninput`, `sap.m.SearchField` via a listener it binds itself). The element is typed as `TargetElement` (`internal/types.ts`), not a specific control class, so no control type is a hard dependency.
+After a platform edit the same write runs from the resulting DOM value, which costs no second DOM write because `InputBase.updateDomValue` returns early when the DOM already matches - leaving the undo stack intact. `liveChange` is then raised only if the control did not already raise its own in response to the real `input` event, which is observed rather than inferred: controls reach that event by different routes (`sap.m.Input` via `oninput`, `sap.m.SearchField` via a listener it binds itself). The element is typed as `TargetElement` (`internal/types.ts`), not a specific control class, so no control type is a hard dependency.
 
 ### Backspace Press-and-Hold Auto-Repeat
 
@@ -657,6 +657,11 @@ packages/kiosk-keyboard/
       qwerty-es.ts            Spanish QWERTY layout
       symbol-common.ts        Shared punctuation/symbol row data (used by numeric, special)
       default-layout.ts       Default layout name constant: "qwerty"
+    i18n/
+      messagebundle.properties     Default (English) key/ARIA labels
+      messagebundle_de.properties  German translations
+      messagebundle_ja.properties  Japanese translations
+      messagebundle_ar.properties  Arabic translations
     themes/
       base/
         KioskKeyboard.less    Base styles (SAP LESS parameters)
@@ -683,6 +688,7 @@ packages/kiosk-keyboard/
     interop.spec.ts            StepInput + UI5 Web Components interop
     i18n.spec.ts               i18n extensibility e2e tests
     flp-lifecycle.spec.ts      FLP lifecycle i18n auto-reset tests
+    invariants.spec.ts         Structural assertions the device matrix runs on CI
     visual.spec.ts             Core visual regression (toHaveScreenshot)
     visual-container.spec.ts   Container-query layout snapshots
     visual-container-responsive.spec.ts  Responsive container-query snapshots

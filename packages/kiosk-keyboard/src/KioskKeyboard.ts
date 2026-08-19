@@ -511,6 +511,11 @@ export default class KioskKeyboard extends Control {
        * Fired when a virtual key is pressed. Call `preventDefault()` to
        * skip the default input action (text insertion, backspace, etc.).
        *
+       * The `{shift}` and `{layout:*}` keys switch state without firing it;
+       * observe those through `layoutChange` and the rendered shift classes.
+       * A key a composition middleware consumes (CJK/dead-key) does not fire
+       * it either, since the middleware runs first.
+       *
        * @example <caption>TypeScript - intercept key presses</caption>
        * import { KeyName } from "ui5/kiosk/library";
        *

@@ -242,7 +242,18 @@ Use the bridge when you want predictable XML view metadata, typed UI5 events, or
 
 Both packages share the same layout definitions (`KeyDefinition`, `LayoutDefinition`), the same custom-layout model (one element per layout carrying its rows, locales, keycap language, role, middleware and variants, plus a `defaultVariants` table on the host), and the same special-key syntax (`{shift}`, `{backspace}`, `{layout:name}`). The UI5 control collects those elements in a `customLayouts` aggregation, the web component in a `customLayouts` slot; the fields, their merge rules and the diagnostics are identical.
 
-Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 control vs `key-press` (kebab-case) in the web component. Event payloads are structurally identical.
+Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 control vs `key-press` (kebab-case) in the web component. `layout-change` and `keyboard-type-change` carry the same payload on both sides. The others do not, so a handler written against one twin needs adapting for the other:
+
+| Event                       | `ui5-lib-kiosk-keyboard`                                             | `kiosk-keyboard-webc`                                                 |
+| --------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Key event payload           | `key`, `shiftKey`                                                    | `key`, `shiftKey`, `char`                                             |
+| `key` for a character       | the resolved character (`"A"` while shifted)                         | the layout's raw value (`"a"`), with `char` carrying the resolved one |
+| `key` for Backspace / Enter | `"Backspace"` / `"Enter"` (`KeyName` constants)                      | `"{backspace}"` / `"{enter}"` (the raw token)                         |
+| Key event for `{shift}`     | not fired                                                            | fired; cancelling it vetoes the toggle                                |
+| Key event for `{layout:*}`  | not fired                                                            | fired with the wrapped form; cancelling it vetoes the switch          |
+| Composition middleware      | runs before the key event, so a consumed key never reaches a handler | runs after it, so the handler sees every key                          |
+| Active-control event        | `activeControlChange` with `controlId`                               | `active-control-change` with `activeElement`                          |
+| Open / close events         | `afterOpen` / `afterClose`, no parameters                            | `after-open` / `after-close` with `activeElement`                     |
 
 See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for general guidance on web component consumption patterns inside UI5 apps.
 
@@ -316,7 +327,7 @@ Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operati
 
 `layout` is a declaration and `effectiveLayout` is a resolved value, the same split the platform draws between `src` and [`currentSrc`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/currentSrc), and that `@ui5/webcomponents-base` draws between `dir` and `UI5Element.effectiveDir`.
 
-Four things change what renders without writing to `layout`: the locale default when `layout` is empty, a `{layout:*}` key the user taps, a `keyboard-type` of `Numpad` or `Numeric` pinning its own surface, and an `auto-compact` width swap. Leaving the declaration alone is what lets each of them be undone — `auto-compact` needs the layout you asked for in order to restore it when the room comes back.
+Four things change what renders without writing to `layout`: the locale default when `layout` is empty, a `{layout:*}` key the user taps, a `keyboard-type` of `Numpad` or `Numeric` pinning its own surface, and an `auto-compact` width swap. Leaving the declaration alone is what lets each of them be undone - `auto-compact` needs the layout you asked for in order to restore it when the room comes back.
 
 ```ts
 const kb = document.querySelector("kiosk-keyboard");
@@ -364,9 +375,9 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Text Insertion
 
-Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack — Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends. An input inside an open shadow root qualifies; the focus check descends shadow roots to find it.
+Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack - Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends. An input inside an open shadow root qualifies; the focus check descends shadow roots to find it.
 
-When the target does not hold focus — after `setTargetElement()` without a focus move, for instance — or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; what dispatches the `input` event is not.
+When the target does not hold focus - after `setTargetElement()` without a focus move, for instance - or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; what dispatches the `input` event is not.
 
 |                    | Target focused (platform edit)  | Target not focused (assignment)                                                                          |
 | ------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -1189,7 +1200,7 @@ Multi-name parts allow targeting specific key types. `::part(key)` matches all k
 
 ### Styling a single key
 
-The category parts above reach a _group_ of keys. To reach one key, use its per-key part name. The keys carry a `data-key` attribute too, but that one is shadow-trapped and unreachable from outside — and `::part()` accepts pseudo-classes but neither attribute nor class selectors, so `::part(key)[data-key="{enter}"]` is invalid rather than merely unsupported.
+The category parts above reach a _group_ of keys. To reach one key, use its per-key part name. The keys carry a `data-key` attribute too, but that one is shadow-trapped and unreachable from outside - and `::part()` accepts pseudo-classes but neither attribute nor class selectors, so `::part(key)[data-key="{enter}"]` is invalid rather than merely unsupported.
 
 | Per-key part        | Key                                                                                                        |
 | ------------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -1198,7 +1209,7 @@ The category parts above reach a _group_ of keys. To reach one key, use its per-
 | `key-enter`         | The `{enter}` key                                                                                          |
 | `key-space`         | The space key                                                                                              |
 | `key-layout`        | Every `{layout:*}` switch key                                                                              |
-| `key-layout-<name>` | The switch key for one built-in layout — `key-layout-numeric`, `key-layout-special`, `key-layout-fkeys`, … |
+| `key-layout-<name>` | The switch key for one built-in layout - `key-layout-numeric`, `key-layout-special`, `key-layout-fkeys`, … |
 | `key-layout-base`   | The switch back to the tracked base layout (`{layout:base}`)                                               |
 
 ```css
@@ -1216,7 +1227,7 @@ Per-key parts combine with the category ones, so `{enter}` renders as `part="key
 Two boundaries are deliberate:
 
 - **Character keys get no per-key part.** `a`, `1` and `ä` render as `part="key"` alone. Naming every glyph would make each one public API that can never change; style character keys as a group, or reach one by position from your own layout.
-- **Custom layouts get `key-layout` only.** A `{layout:*}` key pointing at a slotted `<kiosk-keyboard-custom-layout>` carries no `key-layout-<name>` twin, because the name is yours rather than the component's. The set of part names stays closed, which is what lets `exportparts` — which has no wildcard form — forward all of them.
+- **Custom layouts get `key-layout` only.** A `{layout:*}` key pointing at a slotted `<kiosk-keyboard-custom-layout>` carries no `key-layout-<name>` twin, because the name is yours rather than the component's. The set of part names stays closed, which is what lets `exportparts` - which has no wildcard form - forward all of them.
 
 > [!NOTE]
 > The UI5 control twin needs none of this: it renders into light DOM, so its `[data-key]` attribute is directly targetable with an ordinary attribute selector. See [Styling a single key in the `kiosk-keyboard` README](../kiosk-keyboard/README.md#styling-a-single-key).
