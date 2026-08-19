@@ -1,6 +1,5 @@
 import Element from "sap/ui/core/Element";
 import type { TargetElement } from "./types";
-import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
 import { graphemeLengthAfter, graphemeLengthBefore } from "./grapheme";
 import { endComposition, type CompositionState } from "./composition-utils";
 
@@ -124,7 +123,6 @@ function nativeEditWithSync(
   start: number,
   end: number,
   command: () => boolean,
-  customResolver?: TargetResolverFn | null,
 ): boolean {
   if (!element) return nativeEdit(dom, start, end, command);
 
@@ -138,7 +136,7 @@ function nativeEditWithSync(
   try {
     ran = nativeEdit(dom, start, end, command);
     if (ran) {
-      writeTargetValue(element, dom.value, customResolver);
+      writeTargetValue(element, dom.value, dom);
     }
   } finally {
     element.detachEvent("liveChange", observer);
@@ -166,14 +164,13 @@ export function insertText(
   dom: HTMLInputElement | HTMLTextAreaElement,
   text: string,
   cursor?: CursorPos,
-  customResolver?: TargetResolverFn | null,
 ): CursorPos | null {
   if (dom.readOnly || dom.disabled) return null;
   const [start, end] = resolveCursor(dom, cursor);
   const element = Element.closestTo(dom);
   const command = () => document.execCommand("insertText", false, text);
 
-  if (nativeEditWithSync(dom, element, start, end, command, customResolver)) {
+  if (nativeEditWithSync(dom, element, start, end, command)) {
     // maxlength may have truncated the insertion
     const pos = dom.selectionStart ?? start;
     return [pos, pos];
@@ -186,7 +183,7 @@ export function insertText(
   const newPos = start + clamped.length;
 
   if (element) {
-    setTargetValue(element, newValue, customResolver);
+    setTargetValue(element, newValue, dom);
   } else {
     // Target control destroyed - fall back to raw DOM value
     dom.value = newValue;
@@ -231,11 +228,7 @@ export function commitComposition(state: CompositionState, dom: HTMLInputElement
  * Returns the new cursor position, or `null` when nothing was deleted
  * (cursor already at position 0 with no selection).
  */
-export function handleBackspace(
-  dom: HTMLInputElement | HTMLTextAreaElement,
-  cursor?: CursorPos,
-  customResolver?: TargetResolverFn | null,
-): CursorPos | null {
+export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cursor?: CursorPos): CursorPos | null {
   if (dom.readOnly || dom.disabled) return null;
   const [start, end] = resolveCursor(dom, cursor);
 
@@ -254,7 +247,7 @@ export function handleBackspace(
 
   const element = Element.closestTo(dom);
 
-  if (nativeEditWithSync(dom, element, from, to, () => document.execCommand("delete"), customResolver)) {
+  if (nativeEditWithSync(dom, element, from, to, () => document.execCommand("delete"))) {
     const pos = dom.selectionStart ?? from;
     return [pos, pos];
   }
@@ -262,7 +255,7 @@ export function handleBackspace(
   const newValue = dom.value.slice(0, from) + dom.value.slice(to);
 
   if (element) {
-    setTargetValue(element, newValue, customResolver);
+    setTargetValue(element, newValue, dom);
   } else {
     dom.value = newValue;
   }
@@ -322,29 +315,27 @@ export function handleNavigation(
 }
 
 /**
- * Sets the value on the UI5 element associated with the given DOM element and
- * announces it as a live edit.
+ * Sets the value on the UI5 element owning `dom` and announces it as a live
+ * edit.
  */
-export function setTargetValue(
-  element: TargetElement,
-  newValue: string,
-  customResolver?: TargetResolverFn | null,
-): void {
-  writeTargetValue(element, newValue, customResolver);
+function setTargetValue(element: TargetElement, newValue: string, dom: HTMLInputElement | HTMLTextAreaElement): void {
+  writeTargetValue(element, newValue, dom);
   fireTargetLiveChange(element, newValue);
 }
 
 /**
- * Writes the value onto the UI5 element associated with the given DOM element.
+ * Writes the value onto the UI5 element owning `dom`.
  *
  * Prefers the typed `setValue()` method (e.g. `InputBase.setValue`) over
  * `setProperty("value")` because direct setProperty only updates the property
  * bag - InputBase.getValue() reads from the DOM when rendered, causing desync.
  *
- * Falls back to setting the DOM value directly for custom controls without
- * a `value` metadata property.
+ * Falls back to `dom` itself for custom controls without a `value` metadata
+ * property. That is the element the caller resolved the edit against - through
+ * whatever target resolver is in effect - so the fallback lands on the input the
+ * new value was computed from rather than re-resolving from the control.
  */
-function writeTargetValue(element: TargetElement, newValue: string, customResolver?: TargetResolverFn | null): void {
+function writeTargetValue(element: TargetElement, newValue: string, dom: HTMLInputElement | HTMLTextAreaElement): void {
   // `in` narrows the member to `unknown`, so the `typeof` is what makes it callable. `element` is
   // whatever control the target resolver landed on, where `setValue` may be a data member.
   if ("setValue" in element && typeof element.setValue === "function") {
@@ -352,12 +343,7 @@ function writeTargetValue(element: TargetElement, newValue: string, customResolv
   } else if (element.getMetadata().hasProperty("value")) {
     element.setProperty("value", newValue);
   } else {
-    // Fallback for custom controls without a "value" metadata property:
-    // set the inner DOM input value directly so typing still works.
-    const dom = resolveWithCustomResolver(element.getFocusDomRef(), customResolver ?? null);
-    if (dom) {
-      dom.value = newValue;
-    }
+    dom.value = newValue;
   }
 }
 

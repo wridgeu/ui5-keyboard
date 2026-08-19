@@ -31,7 +31,7 @@ export default class TargetInputSession {
   insertText(text: string): void {
     const dom = this._getTargetDomRef();
     if (!dom) return;
-    const pos = opsInsertText(dom, text, this._cursorPos ?? undefined, this._customResolver);
+    const pos = opsInsertText(dom, text, this._cursorPos ?? undefined);
     if (!pos) return;
     this._cursorPos = pos;
     this._lastKnownValue = dom.value;
@@ -43,7 +43,7 @@ export default class TargetInputSession {
     const dom = this._getTargetDomRef();
     if (!dom) return false;
 
-    const pos = opsHandleBackspace(dom, this._cursorPos ?? undefined, this._customResolver);
+    const pos = opsHandleBackspace(dom, this._cursorPos ?? undefined);
     if (!pos) return false;
 
     this._cursorPos = pos;
@@ -59,7 +59,7 @@ export default class TargetInputSession {
       // insert a newline and must not mark the session dirty for change firing.
       // Textareas never emit change on Enter, and fireChangeIfDirty() also
       // skips textarea targets by design.
-      const pos = opsInsertText(dom, "\n", this._cursorPos ?? undefined, this._customResolver);
+      const pos = opsInsertText(dom, "\n", this._cursorPos ?? undefined);
       if (!pos) return;
       this._cursorPos = pos;
       this._lastKnownValue = dom.value;
