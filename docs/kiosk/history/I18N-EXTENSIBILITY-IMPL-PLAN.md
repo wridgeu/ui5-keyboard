@@ -1,5 +1,7 @@
 # Implementation Plan: i18n Extensibility for `ui5.kiosk`
 
+> Status: Implemented (scoped down). The API below is the original design intent; see the implementation note under the heading.
+
 Based on the [I18N-EXTENSIBILITY proposal](./I18N-EXTENSIBILITY.md).
 Incorporates findings from a colleague's plan (merged and superseded).
 

@@ -1,5 +1,7 @@
 # Centralized EventDispatcher & Suspend Guard
 
+> Status: Implemented. `internal/event-dispatcher.ts` owns the single listener set and `HotkeyManager.suspendDispatch()` the guard.
+
 > Supersedes the original "HotkeyManager Suspend Guard" scope. The suspend guard is now one feature of a broader centralized event-dispatching architecture.
 
 ## Problem

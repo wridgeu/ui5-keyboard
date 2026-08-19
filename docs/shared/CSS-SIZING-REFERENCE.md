@@ -175,7 +175,7 @@ At desktop sizes, `modifier-font-size` (0.875rem from `--sapFontSize`) is alread
 }
 ```
 
-This applies to every label with multiple characters, whatever the key type — `123`, `ABC`, `Fn` and `英数` on layout-switch keys as much as `F10`, `Home` or `PgUp`. A word label that does not scale is ellipsized instead. Single-glyph labels are exempt: they take `--glyph` sizing and overflow visibly rather than being clipped.
+This applies to every label with multiple characters, whatever the key type - `123`, `ABC`, `Fn` and `英数` on layout-switch keys as much as `F10`, `Home` or `PgUp`. A word label that does not scale is ellipsized instead. Single-glyph labels are exempt: they take `--glyph` sizing and overflow visibly rather than being clipped.
 
 Each `.kiosk-key` element has `container-type: inline-size`, so `cqi` units inside the key refer to that key's own inline width.
 

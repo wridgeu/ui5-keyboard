@@ -1,5 +1,7 @@
 # CSS-First Responsive Simplification
 
+> Status: Implemented. Width responsiveness is `@container`-only in both packages; the block axis stays JS-driven.
+
 **Goal:** Remove the JS-driven width responsive path from both packages, keeping CSS `@container` queries as the sole width-responsive mechanism. Add browser compatibility documentation to both package READMEs.
 
 **Architecture:** Width responsiveness moves from a dual CSS+JS system (CSS `@container` for defaults, JS `ResizeObserver` + classes for custom thresholds) to pure CSS `@container`. Height responsiveness stays JS-driven: there is no CSS equivalent for `container-type` height queries in this setup (`container-type: inline-size` only exposes width, and `container-type: size` would require explicit height containment that breaks the layout). The consumer-configurable width threshold CSS variables (`cqNarrowThreshold` / `cqCompactThreshold`) are removed as a feature. Consumers who need custom width breakpoints write their own `@container` rules targeting the keyboard's CSS custom properties.

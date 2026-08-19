@@ -1,5 +1,7 @@
 # Feature Proposal: Configurable i18n Extensibility for `ui5.kiosk`
 
+> Status: Implemented (scoped down). The shipped surface is the `I18nResolver` callback in `internal/i18n-registry.ts`, not the wider configuration model sketched here.
+
 > Detailed implementation planning: [I18N-EXTENSIBILITY-IMPL-PLAN.md](./I18N-EXTENSIBILITY-IMPL-PLAN.md)
 
 ## Why
