@@ -1178,13 +1178,13 @@ Read-only and disabled targets are never written to.
 
 ## Interop Cookbook
 
-### 1. Integration Style
+### Integration Style
 
 - Declarative (XML properties like `controls`, `autoShow`, `autoType`) is recommended for standard UI5 forms.
 - Imperative (`setControls()`, `show()`, `close()`) is recommended for dynamic targets, custom controls, and web component bridges.
 - Mixing both is valid: use declarative defaults, then override imperatively for edge flows.
 
-### 2. Standard UI5 Controls
+### Standard UI5 Controls
 
 Use `sap.m.Input`, `sap.m.TextArea`, or `sap.m.StepInput` with the `controls` property (single or multiple field IDs):
 
@@ -1194,7 +1194,7 @@ Use `sap.m.Input`, `sap.m.TextArea`, or `sap.m.StepInput` with the `controls` pr
 <kiosk:KioskKeyboard docked="true" autoShow="true" autoType="true" controls="firstName,lastName" />
 ```
 
-### 3. Custom UI5 Controls
+### Custom UI5 Controls
 
 For auto-show + typing to work, the control should:
 
@@ -1209,7 +1209,7 @@ keyboard.setControls([myCustomControl.getId()]);
 keyboard.show();
 ```
 
-### 4. Web Components and Shadow DOM
+### Web Components and Shadow DOM
 
 There are two paths:
 
@@ -1247,18 +1247,6 @@ myHost.attachBrowserEvent("focusout", () => {
   keyboard.close();
 });
 ```
-
-### 5. Do and Don't
-
-- Do use `controls` for single or multi-field forms
-- Do call `setControls()` explicitly for custom/non-standard integrations
-- Don't rely on implicit auto-detection for arbitrary shadow-hosted inputs
-
-### 6. Troubleshooting
-
-- Keyboard does not open: ensure `docked="true"` and `autoShow="true"`, and target resolves to a UI5 control
-- Typing does not update bindings: ensure control supports `setValue` and `liveChange`
-- Change timing differs from expected: `change` is commit-oriented (Enter/close/target switch) for single-line inputs
 
 ## Auto-Type
 
@@ -2049,6 +2037,10 @@ npm run typecheck
 ## Further Reading
 
 - [Architecture & Internals](../../docs/kiosk/ARCHITECTURE.md): control design, rendering, theming approach
+- [Responsive Layout Patterns](../../docs/kiosk/RESPONSIVE-LAYOUT-PATTERNS.md): breakpoints, per-tier customization, swapping layouts by size
+- [CSS Sizing Reference](../../docs/shared/CSS-SIZING-REFERENCE.md): every custom property, its default, and the rationale behind it
+- [Popover Layout-Switch Behavior](../../docs/kiosk/POPOVER-LAYOUT-SWITCH-BEHAVIOR.md): a known `sap.m.Popover` limitation and its workaround
+- [Testing](../../docs/shared/TESTING.md): suites, visual baselines, and what CI runs
 
 ---
 
@@ -2079,18 +2071,22 @@ npm run typecheck
 
 - Ensure custom key `value` strings don't conflict with built-in action keys (`{backspace}`, `{enter}`, `{shift}`, etc.)
 
+**`change` fires later than expected:**
+
+- On a single-line input `change` is commit-oriented: it fires on Enter, on close, and on a target switch, not per keystroke. Bind `liveChange` for per-keystroke updates
+
 ---
 
 ## When NOT to Use This Library
 
-| Scenario                            | Use Instead                                                           |
-| ----------------------------------- | --------------------------------------------------------------------- |
-| Desktop-only application            | Physical keyboard (no virtual keyboard needed)                        |
-| Mobile browser with native keyboard | Set `mobileKeyboard="Auto"` to defer to the native keyboard on mobile |
-| Complex IME input (CJK)             | Native OS input methods                                               |
-| Rich text editing                   | Dedicated rich text editor controls                                   |
+| Scenario                             | Use Instead                                                                   |
+| ------------------------------------ | ----------------------------------------------------------------------------- |
+| Desktop-only application             | Physical keyboard (no virtual keyboard needed)                                |
+| Mobile browser with native keyboard  | The default `mobileKeyboard="Auto"`, which defers to it on phones and tablets |
+| Kanji conversion / candidate windows | Native OS input methods                                                       |
+| Rich text editing                    | Dedicated rich text editor controls                                           |
 
-This library is designed for **kiosk terminals**, **industrial touchscreens**, and **point-of-sale** applications where the OS does not provide a virtual keyboard or where a controlled input experience is required. For mixed desktop/mobile use, set `mobileKeyboard="Auto"` to let mobile devices use their native keyboard.
+This library is designed for **kiosk terminals**, **industrial touchscreens**, and **point-of-sale** applications where the OS does not provide a virtual keyboard or where a controlled input experience is required. Mixed desktop/mobile use needs no configuration: `mobileKeyboard` already defaults to `"Auto"`. The Japanese and Korean layouts ship composition middleware for kana voicing marks and Hangul syllable assembly, so those scripts are typable, but there is no candidate window and no kanji conversion.
 
 ---
 

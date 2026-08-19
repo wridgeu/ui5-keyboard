@@ -14,4 +14,5 @@ They are kept as historical context and are not the primary source of truth for 
 - [Remove stableHeight Property](./REMOVE-STABLE-HEIGHT.md)
 - [Web Component Package](./WEBCOMPONENT-PACKAGE.md)
 - [Nav Row Wrapping & Responsive Layout Patterns](./NAV-ROW-WRAPPING-AND-RESPONSIVE-PATTERNS.md)
+- [UI5 Transpile Crash Deep Dive](./AS-CONST-UI5-TRANSPILE-CRASH-DEEP-DIVE.md)
 - [Backward Compatibility](./BACKWARD-COMPATIBILITY.md) (rejected)
