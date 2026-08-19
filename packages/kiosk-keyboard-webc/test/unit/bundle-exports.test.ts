@@ -18,11 +18,14 @@ const bundle = await import("../../src/bundle.esm.js");
 // ("kiosk-keyboard-webc/bundle"), so the public value exports must be
 // reachable from it, not only from the main KioskKeyboard entry.
 describe("bundle.esm public surface", () => {
-  it("re-exports the component class and the public enums", () => {
+  it("re-exports both custom-element classes and the public enums", () => {
     expect(bundle.KioskKeyboard).toBeInstanceOf(Function);
+    expect(bundle.CustomLayout).toBeInstanceOf(Function);
     expect(bundle.FKeyMode.Virtual).toBe("Virtual");
     expect(bundle.KeyboardType.Full).toBe("Full");
     expect(bundle.MobileKeyboard.Auto).toBe("Auto");
+    expect(bundle.LayoutFacet.Variants).toBe("Variants");
+    expect(bundle.LayoutRole.Inherit).toBe("Inherit");
   });
 
   it("re-exports the VariantTable type from the element module", () => {
