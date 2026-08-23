@@ -1536,7 +1536,7 @@ QUnit.test("Ctrl+Space on focused key does NOT activate (modifier filtering)", a
   kb.destroy();
 });
 
-QUnit.test("Shift+Enter on focused key does NOT activate (modifier filtering)", async (assert) => {
+QUnit.test("Shift+Enter on a focused key types the shifted glyph", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
 
@@ -1552,7 +1552,190 @@ QUnit.test("Shift+Enter on focused key does NOT activate (modifier filtering)", 
   aKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
   await waitForRender();
 
-  assert.strictEqual(input.getValue(), "", "Shift+Enter does NOT activate the focused key");
+  assert.strictEqual(input.getValue(), "A", "Shift+Enter types the shifted glyph");
+  assert.notOk(isShiftActive(kb), "The transient Shift does not latch the on-screen Shift state");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Shift+Space on a focused key types the shifted glyph", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const bKey = getRequiredKeyElement(kb, "b");
+  bKey.setAttribute("tabindex", "0");
+  bKey.focus();
+
+  bKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", shiftKey: true, bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "B", "Shift+Space types the shifted glyph");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Shift+Enter reports shiftKey on the keyPress event", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const done = assert.async();
+  kb.attachKeyPress((event) => {
+    assert.strictEqual(event.getParameter("key"), "A", "The consumer sees the shifted glyph");
+    assert.strictEqual(event.getParameter("shiftKey"), true, "shiftKey is true");
+    done();
+  });
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.setAttribute("tabindex", "0");
+  aKey.focus();
+
+  aKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Shift combined with another modifier does NOT activate", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.setAttribute("tabindex", "0");
+  aKey.focus();
+
+  for (const extra of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }]) {
+    aKey.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, ...extra, bubbles: true, cancelable: true }),
+    );
+  }
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "", "Ctrl/Alt/Meta stay browser shortcuts even with Shift held");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Held Shift+Enter types the shifted glyph once", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.setAttribute("tabindex", "0");
+  aKey.focus();
+
+  aKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+  for (let i = 0; i < 3; i++) {
+    aKey.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, repeat: true, bubbles: true, cancelable: true }),
+    );
+  }
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "A", "The auto-repeat keydowns insert nothing further");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Shift+Enter on a key with an explicit shiftValue types that value", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  // The digit row declares explicit shift values (1 -> !), which must win over
+  // the uppercase fallback a bare `toUpperCase()` would produce.
+  const oneKey = getRequiredKeyElement(kb, "1");
+  assert.strictEqual(oneKey.dataset.shiftValue, "!", "Precondition: the '1' key declares '!'");
+
+  oneKey.setAttribute("tabindex", "0");
+  oneKey.focus();
+
+  oneKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "!", "Shift+Enter types the declared shift value, not an uppercased '1'");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Keyboard-activation press feedback
+// ──────────────────────────────────────────────
+
+QUnit.test("Activating a key from the keyboard shows pressed feedback until release", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.setAttribute("tabindex", "0");
+  aKey.focus();
+
+  aKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+
+  assert.ok(aKey.classList.contains(DOM.classes.keyPressed), "The keycap reads as pressed while Enter is down");
+
+  aKey.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true, cancelable: true }));
+
+  assert.notOk(aKey.classList.contains(DOM.classes.keyPressed), "The release clears the pressed state");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Losing focus while a key is held clears the pressed feedback", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.setAttribute("tabindex", "0");
+  aKey.focus();
+
+  aKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+  assert.ok(aKey.classList.contains(DOM.classes.keyPressed), "Precondition: the keycap reads as pressed");
+
+  // Alt-Tab and similar take focus away without ever delivering the keyup.
+  aKey.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+
+  assert.notOk(aKey.classList.contains(DOM.classes.keyPressed), "The pressed state does not stick");
 
   input.destroy();
   kb.destroy();

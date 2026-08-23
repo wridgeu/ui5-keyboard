@@ -367,6 +367,7 @@
      (0,3,0). */
   @media (forced-colors: none) {
     &:active[data-has-variants]::after,
+    &.kiosk-key--pressed[data-has-variants]::after,
     &.kiosk-key--highlight[data-has-variants]::after,
     &.kiosk-key--shift-active[data-has-variants]::after,
     &.kiosk-key--action[data-has-variants]::after,
@@ -391,6 +392,7 @@
   }
 
   &:active,
+  &.kiosk-key--pressed,
   &.kiosk-key--highlight {
     background: var(--sapButton_Active_Background, #0064d9);
     color: var(--sapButton_Active_TextColor, #fff);
@@ -455,6 +457,7 @@
   }
 
   &:active,
+  &.kiosk-key--pressed,
   &.kiosk-key--highlight {
     background: var(--sapButton_Lite_Active_Background, #0064d9);
     color: var(--sapButton_Active_TextColor, #fff);
@@ -479,6 +482,7 @@
   }
 
   &:active,
+  &.kiosk-key--pressed,
   &.kiosk-key--highlight {
     background: var(--sapButton_Emphasized_Active_Background, #0053b8);
     color: var(--sapButton_Emphasized_Active_TextColor, #fff);
@@ -546,6 +550,7 @@
   .kiosk-key,
   .kiosk-key:hover,
   .kiosk-key:active,
+  .kiosk-key.kiosk-key--pressed,
   .kiosk-key.kiosk-key--highlight,
   .kiosk-key.kiosk-key--shift-active.kiosk-key--caps-lock,
   .kiosk-keyboard--docked,
@@ -556,6 +561,7 @@
   .kiosk-key:hover,
   .kiosk-key:active,
   .kiosk-key:focus-visible,
+  .kiosk-key.kiosk-key--pressed,
   .kiosk-key.kiosk-key--highlight {
     transform: none;
   }
@@ -570,6 +576,7 @@
     }
 
     &:active,
+    &.kiosk-key--pressed,
     &.kiosk-key--highlight,
     &.kiosk-key--shift-active {
       border-color: Highlight;
@@ -588,6 +595,7 @@
     }
 
     &:active[data-has-variants]::after,
+    &.kiosk-key--pressed[data-has-variants]::after,
     &.kiosk-key--highlight[data-has-variants]::after,
     &.kiosk-key--shift-active[data-has-variants]::after {
       background: HighlightText;

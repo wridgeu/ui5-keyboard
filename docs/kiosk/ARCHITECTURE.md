@@ -17,7 +17,7 @@ The `sap.m` dependency is required because the control uses `sap.ui.core.Element
 - ManagedObject metadata (properties, associations, events)
 - Renderer integration
 - Lifecycle hooks (`init`, `onAfterRendering`, `exit`)
-- UI5 event delegation (`ontouchstart`, `ontouchend`, `ontouchcancel`, `onsapselect`)
+- UI5 event delegation (`ontouchstart`, `ontouchend`, `ontouchcancel`, `onsapselect`, `onsapselectmodifiers`, `onkeyup`, `onfocusout`)
 
 Because `Control` extends `ManagedObject`, the class field initializer trap applies. Private fields are declared with definite assignment (`!`) and initialized in `init()`:
 
@@ -42,13 +42,17 @@ init(): void {
 
 The keyboard renders as a flat DOM structure: a root `<div>` containing row `<div>`s containing key `<div>`s. There are no child UI5 controls; every key is a plain DOM element with `role="button"`.
 
-This avoids per-key control overhead for the 30-50 keys, keeps the control on one renderer and one invalidation cycle, and routes every key through a single set of `ontouchstart`/`ontouchend`/`onsapselect` handlers on the control root.
+This avoids per-key control overhead for the 30-50 keys, keeps the control on one renderer and one invalidation cycle, and routes every key through a single set of `ontouchstart`/`ontouchend`/`onsapselect`/`onsapselectmodifiers` handlers on the control root.
 
 ### Event Delegation
 
-UI5's built-in event delegation dispatches browser events to the nearest UI5 control in the DOM hierarchy. The `ontouchstart`/`ontouchend` (pointer) and `onsapselect` (keyboard Enter/Space on a focused key) methods on `KioskKeyboard` receive all events from child elements.
+UI5's built-in event delegation dispatches browser events to the nearest UI5 control in the DOM hierarchy. The `ontouchstart`/`ontouchend` (pointer) and `onsapselect` / `onsapselectmodifiers` (keyboard Enter/Space on a focused key) methods on `KioskKeyboard` receive all events from child elements. Both keyboard handlers share one body, `_activateFocusedKey`.
 
-`sapselect` is a keydown pseudo-event (`aTypes: ["keydown"]`), so a keycap held down from the physical keyboard would activate at the OS key-repeat rate. `onsapselect` drops the repeats, after the `preventDefault()` that keeps the page from scrolling while Space is held. `{backspace}` is the only key that repeats, and only from pointer input, on `BackspaceRepeatBehavior`'s tuned curve. The web component guards its Enter branch the same way and activates Space on keyup, so neither twin repeats.
+`sapselect` is a keydown pseudo-event (`aTypes: ["keydown"]`), so a keycap held down from the physical keyboard would activate at the OS key-repeat rate. The shared body drops the repeats, after the `preventDefault()` that keeps the page from scrolling while Space is held. `{backspace}` is the only key that repeats, and only from pointer input, on `BackspaceRepeatBehavior`'s tuned curve. The web component guards its Enter branch the same way and activates Space on keyup, so neither twin repeats.
+
+`sapselectmodifiers` is the framework's counterpart for the same keys with a modifier held. Only Shift alone is handled, and it activates the key shifted; Ctrl, Alt and Meta stay browser and OS shortcuts. The Shift is transient - one shifted glyph, no latch on the `{shift}` state and so no relabelled keycaps - because `PhysicalKeyHighlight` binds its modifier sync to the target input, which never has focus while a keycap does. Without it a roving-tabindex user cannot reach a capital except by activating `{shift}` first.
+
+A key activated from the keyboard carries the `keyPressed` class for as long as the activating key is held, released on `onkeyup` or on `onfocusout` when Alt-Tab takes focus away before the keyup lands. The pointer gesture's own `_pressedKeyEl` is tracked separately: it also drives backspace repeat and the variant popup, where a keyboard activation is only the visual half.
 
 The handler flow uses a press/release pattern (`ontouchstart` + `ontouchend`) instead of `ontap`, because `preventDefault()` on the underlying touch/mouse event is needed to prevent focus steal (see below).
 

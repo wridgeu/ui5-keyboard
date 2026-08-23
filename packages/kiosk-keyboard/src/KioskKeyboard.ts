@@ -85,6 +85,12 @@ interface SelectEvent extends KeyboardEvent {
   readonly originalEvent?: KeyboardEvent;
 }
 
+/** The native keydown behind a `sapselect` / `sapselectmodifiers` wrapper. */
+function nativeKeyEvent(event: Event): KeyboardEvent {
+  const select = event as SelectEvent;
+  return select.originalEvent ?? select;
+}
+
 /**
  * Whether a simulated touch event stands for a non-primary mouse button.
  *
@@ -149,6 +155,8 @@ export default class KioskKeyboard extends Control {
   private _controlsDelegation!: ControlsDelegationController;
   private _physicalKeyHighlight!: PhysicalKeyHighlight;
   private _pressedKeyEl!: HTMLElement | null;
+  /** The keycap held down by a keyboard activation, or `null` between activations. */
+  private _keyboardPressedKeyEl!: HTMLElement | null;
   /** Owns press-and-hold continuous delete on the Backspace key. */
   private _backspaceRepeat!: BackspaceRepeatBehavior;
   /** Owns the long-press / right-click accent-variant popup. */
@@ -888,6 +896,7 @@ export default class KioskKeyboard extends Control {
     });
     this._physicalKeyHighlight = new PhysicalKeyHighlight(this, this._shiftState);
     this._pressedKeyEl = null;
+    this._keyboardPressedKeyEl = null;
     this._backspaceRepeat = new BackspaceRepeatBehavior(() => {
       if (this._tryCompositionMiddleware("{backspace}")) return true;
       return this._performBackspaceDelete();
@@ -2211,12 +2220,57 @@ export default class KioskKeyboard extends Control {
    * Uses UI5's `sapselect` pseudo-event, which the framework filters to
    * Enter/Space with no Ctrl/Alt/Shift/Meta held, so Ctrl+Space and
    * similar combinations cannot accidentally trigger key activation.
+   */
+  onsapselect(event: Event): void {
+    this._activateFocusedKey(event, false);
+  }
+
+  /**
+   * Activate the focused key on Shift+Enter or Shift+Space, typing its shifted
+   * glyph.
    *
-   * One activation per press: `sapselect` maps onto keydown, so the OS
+   * `sapselectmodifiers` is UI5's public counterpart to `sapselect`, firing for
+   * the same keys when any of Shift/Alt/Ctrl is held. Only Shift alone means
+   * "activate shifted" here; the rest stay browser and OS shortcuts.
+   *
+   * The Shift is transient - it types one shifted glyph without latching the
+   * on-screen `{shift}` state, so the keycap labels do not flip. That mirrors a
+   * physical keyboard and is the only way a roving-tabindex user can type a
+   * capital without round-tripping through the `{shift}` key: the physical
+   * modifier sync in `PhysicalKeyHighlight` is attached to the target input, so
+   * it never runs while focus sits on a keycap.
+   */
+  onsapselectmodifiers(event: Event): void {
+    const native = nativeKeyEvent(event);
+    if (!native.shiftKey || native.ctrlKey || native.altKey || native.metaKey) return;
+    this._activateFocusedKey(event, true);
+  }
+
+  /**
+   * Releases the keyboard-activation pressed state. A key activated from the
+   * physical keyboard stays visually pressed for as long as the activating key
+   * is held, the way `sap.m.Button` pairs `_activeButton` with `_inactiveButton`.
+   */
+  onkeyup(): void {
+    this._clearKeyboardPressedState();
+  }
+
+  /**
+   * Alt-Tab and similar take focus away without ever delivering the keyup, so
+   * the pressed state would otherwise stick on the abandoned keycap.
+   */
+  onfocusout(): void {
+    this._clearKeyboardPressedState();
+  }
+
+  /**
+   * Shared body of the two keyboard-activation handlers.
+   *
+   * One activation per press: both pseudo-events map onto keydown, so the OS
    * auto-repeat of a held key is dropped. `{backspace}` is the only key that
    * repeats, from pointer input on `BackspaceRepeatBehavior`'s tuned curve.
    */
-  onsapselect(event: Event): void {
+  private _activateFocusedKey(event: Event, shifted: boolean): void {
     if (!this.getEnabled()) return;
 
     const target = event.target;
@@ -2228,11 +2282,27 @@ export default class KioskKeyboard extends Control {
 
     // Ahead of the repeat guard: the page must not scroll while Space is held.
     event.preventDefault();
+    if (nativeKeyEvent(event).repeat) return;
 
-    const select = event as SelectEvent;
-    if ((select.originalEvent ?? select).repeat) return;
+    this._setKeyboardPressedState(target);
+    this._handleKeyAction(keyValue, target, shifted);
+  }
 
-    this._handleKeyAction(keyValue, target);
+  /**
+   * Marks `el` as pressed for the duration of a keyboard activation, so the
+   * keycap gives the same feedback a pointer press does. Held separately from
+   * the pointer gesture's `_pressedKeyEl`, which also drives backspace repeat
+   * and the variant popup; a keyboard activation is only the visual half.
+   */
+  private _setKeyboardPressedState(el: HTMLElement): void {
+    this._clearKeyboardPressedState();
+    this._keyboardPressedKeyEl = el;
+    el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
+  }
+
+  private _clearKeyboardPressedState(): void {
+    this._keyboardPressedKeyEl?.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyPressed);
+    this._keyboardPressedKeyEl = null;
   }
 
   // ── Private: auto-show ──
@@ -2332,8 +2402,12 @@ export default class KioskKeyboard extends Control {
     return this._targetSession.handleBackspace();
   }
 
-  private _handleKeyAction(keyValue: string, el: HTMLElement): void {
-    const shift = this._isShiftActive();
+  /**
+   * @param transientShift Shift held on the activating keystroke itself, which
+   *   types the shifted glyph without latching the on-screen `{shift}` state.
+   */
+  private _handleKeyAction(keyValue: string, el: HTMLElement, transientShift = false): void {
+    const shift = transientShift || this._isShiftActive();
     const action = parseKeyAction(keyValue);
 
     // Shift toggles before composition: the middleware would otherwise treat

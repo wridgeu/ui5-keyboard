@@ -58,6 +58,7 @@ const KEY_PARITY = {
       "keyAction",
       "keyShiftActive",
       "keyCapsLock",
+      "keyPressed",
       "keyHighlight",
       "keyLabel",
       "keyLabelGlyph",

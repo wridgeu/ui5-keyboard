@@ -1621,6 +1621,8 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 - The Shift key has `aria-pressed` reflecting its toggle state
 - Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row, Ctrl+Home/Ctrl+End to the first/last key of the whole grid
 - Enter or Space activates the focused key, once per press: holding the key down does not repeat it. `{backspace}` is the only key that repeats on hold, and only from pointer input
+- Shift held on that keystroke types the key's shifted glyph, so a capital is reachable without first activating `{shift}`. The Shift is transient: it does not latch the on-screen Shift state, so the keycap labels stay as they are. Ctrl, Alt and Meta do not activate a key
+- A key activated from the keyboard shows the same pressed styling a pointer press gives, for as long as the activating key is held
 - The keyboard is an F6 navigation group (`data-sap-ui-fastnavgroup="true"`)
 - Disabled state applies `aria-disabled="true"` to both the root and individual keys
 - ARIA live region announces keyboard open/close and shift state changes to screen readers

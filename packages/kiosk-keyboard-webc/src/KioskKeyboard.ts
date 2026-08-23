@@ -682,6 +682,8 @@ class KioskKeyboard extends UI5Element {
   private _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
   /** Accessed by the JSX template for highlight class binding - not private. */
   _highlightedKey: string | null = null;
+  /** Accessed by the JSX template for pressed class binding - not private. */
+  _pressedKey: KeyPosition | null = null;
   /** Whether the next render must put DOM focus back on the re-seated roving tab stop. */
   private _restoreKeyFocus = false;
   /** Caps the disarmed-variants diagnostic at one emission per element. */
@@ -855,6 +857,9 @@ class KioskKeyboard extends UI5Element {
     getResolvedLayout: () => this._getResolvedLayout(),
     getShadowRoot: () => this.shadowRoot,
     isRtl: () => this.effectiveDir === "rtl",
+    setPressedKey: (pos) => {
+      this._pressedKey = pos;
+    },
   });
 
   // ── Pre-bound template handlers (avoids per-render allocation) ──
@@ -870,6 +875,7 @@ class KioskKeyboard extends UI5Element {
     if (this._variantPopup) return;
     this._keyGridNav.onKeyUp(e);
   };
+  readonly _boundOnFocusOut = (): void => this._keyGridNav.onFocusOut();
   readonly _boundOnVariantClick = (e: Event): void => this._variantGesture.onOptionClick(e);
   readonly _boundOnVariantKeyDown = (e: KeyboardEvent): void => this._variantGesture.onOptionKeydown(e);
 
@@ -1527,7 +1533,13 @@ class KioskKeyboard extends UI5Element {
     if (!keyEl) return;
 
     const value = keyEl.dataset.key!;
-    const shifted = this._shifted;
+    // Shift held on the activating event types the shifted glyph without
+    // latching the on-screen `{shift}` state, mirroring a physical keyboard.
+    // It is the only way a roving-tabindex user can reach a capital without
+    // round-tripping through `{shift}`: the physical-modifier sync in
+    // `PhysicalKeyHighlightController` listens on the target input, so it never
+    // runs while focus sits on a keycap.
+    const shifted = this._shifted || (e as MouseEvent).shiftKey === true;
     const shiftValue = keyEl.dataset.shiftValue;
 
     // A held Backspace already deleted via auto-repeat; swallow the trailing
