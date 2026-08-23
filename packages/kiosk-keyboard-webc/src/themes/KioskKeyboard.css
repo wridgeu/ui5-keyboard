@@ -407,6 +407,13 @@
   &:focus-visible {
     outline: var(--sapContent_FocusWidth, 2px) var(--sapContent_FocusStyle, solid) var(--sapContent_FocusColor, #000);
     outline-offset: 1px;
+  }
+
+  /* A key activated from the physical keyboard is focused and pressed at the
+     same time, and the focus lift would otherwise paint over the depress: the
+     two arms tie at (0,2,0) and `:focus-visible` is declared last. The ring
+     stays unconditionally; only the lift and its shadow step aside. */
+  &:focus-visible:not(.kiosk-key--pressed) {
     transform: translateY(-1px);
     box-shadow: var(--_kiosk-keyboard-key-shadow-hover);
   }
@@ -558,9 +565,13 @@
     transition: none;
   }
 
+  /* `:focus-visible` is listed twice, plainly and in the `:not()` form the key
+     block uses to yield to `--pressed`: that arm sits at (0,3,0) and a lone
+     `.kiosk-key:focus-visible` would lose the lift back to it here. */
   .kiosk-key:hover,
   .kiosk-key:active,
   .kiosk-key:focus-visible,
+  .kiosk-key:focus-visible:not(.kiosk-key--pressed),
   .kiosk-key.kiosk-key--pressed,
   .kiosk-key.kiosk-key--highlight {
     transform: none;
