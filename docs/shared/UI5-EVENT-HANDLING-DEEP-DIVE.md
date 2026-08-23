@@ -74,6 +74,20 @@ There are 51 in total (the full list lives in the [PseudoEvents.js source](https
 
 Each arrow/home/end/page/edit event also has a `...modifiers` variant that fires when any modifier is held. `sapminus` / `sapplus` are classified from `keypress` (experimental since 1.25) and are the only reason UI5 still reads `keypress` (see section 12).
 
+### Held keys: pseudo events auto-repeat, and `repeat` is not on the wrapper
+
+Because they are classified from `keydown`, a pseudo event fires again for every auto-repeat keydown the OS sends while a key stays down. `sapselect` is the one that bites: a handler that treats it as "the user activated this" runs at the OS repeat rate for as long as Enter or Space is held. UI5 does not filter this for you, and neither does `sap.m.Button`; `sap/m/Panel.js` is the in-framework example of a control guarding it by hand.
+
+The guard cannot read `repeat` off the event the handler receives. UI5 delivers a jQuery-fixed event, and jQuery 3.6's `jQuery.event.addProp` list (the props it defines accessors for) has no `repeat` entry, so the wrapper reports `undefined`. Unwrap the native event from `originalEvent` first - the same unwrap `getModifierState` needs, since that is not forwarded either:
+
+```js
+oEvent.preventDefault(); // still owed on the repeats
+const oNative = oEvent.originalEvent ?? oEvent;
+if (oNative.repeat) return;
+```
+
+Order matters: `preventDefault()` belongs above the guard, or the page scrolls while Space is held down.
+
 ## 4. EventSimulation: saptouchstart / saptouchend
 
 **Module:** `sap/ui/events/jquery/EventSimulation` (internal, but stable)
