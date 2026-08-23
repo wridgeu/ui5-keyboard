@@ -89,6 +89,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyAction: "kiosk-key--action",
     keyShiftActive: "kiosk-key--shift-active",
     keyCapsLock: "kiosk-key--caps-lock",
+    keyPressed: "kiosk-key--pressed",
     keyHighlight: "kiosk-key--highlight",
     keyLabel: "kiosk-key__label",
     keyLabelGlyph: "kiosk-key__label--glyph",

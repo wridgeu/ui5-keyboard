@@ -11,6 +11,8 @@ export interface KeyGridNavigationHost {
   getShadowRoot(): ShadowRoot | null;
   /** Whether the host renders right-to-left, mirroring the horizontal arrows. */
   isRtl(): boolean;
+  /** The keycap held down by a keyboard activation, or `null` between activations. */
+  setPressedKey(pos: KeyPosition | null): void;
 }
 
 /**
@@ -22,9 +24,14 @@ export interface KeyGridNavigationHost {
  * the adjacent row at a row boundary, and the visually-backward arrow does the
  * reverse, both stopping at the first/last key of the whole grid. Home/End move
  * within the current row (Ctrl+Home/End jump across the whole grid); Enter
- * activates on press and Space on release, matching native `<button>`. Focus never wraps
+ * activates on press and Space on release, matching native `<button>`, and Shift
+ * held on either types the key's shifted glyph. Focus never wraps
  * around grid edges. Handled navigation keys are always prevented (so holding an
  * arrow at an edge does not scroll the page), even when focus does not move.
+ *
+ * The activated key carries `keyPressed` for as long as the activating key is
+ * held, so a keyboard activation gives the feedback a pointer press gets from
+ * `:active`, which never matches on a `<div role="button">`.
  *
  * A hand-rolled roving tabindex rather than `@ui5/webcomponents-base`'s
  * `ItemNavigation`: that delegate models a uniform matrix sized by a single
@@ -118,15 +125,17 @@ export class KeyGridNavigation {
           col = (layout[row]?.length ?? 1) - 1;
           break;
         case "Enter":
-          // Activate only without modifiers: Ctrl+Enter and similar
-          // combinations are browser/OS shortcuts, not key activations.
+          // Activate only without Ctrl/Alt/Meta: those combinations are
+          // browser/OS shortcuts, not key activations. Shift is the exception -
+          // it means "type the shifted glyph" (see `_activate`).
           if (e.ctrlKey || e.altKey || e.metaKey) return;
           e.preventDefault();
           // One activation per press: drop the OS auto-repeat keydowns.
           // `{backspace}` is the only key that repeats, from pointer input on
           // `BackspaceRepeatController`'s tuned curve.
           if (e.repeat) return;
-          keyEl.click();
+          this._press(keyEl);
+          this._activate(keyEl, e.shiftKey);
           return;
         case " ":
           // Native `<button>` semantics: Space activates on release, not on
@@ -134,6 +143,7 @@ export class KeyGridNavigation {
           // here and remember the pressed key; onKeyUp performs the activation.
           if (e.ctrlKey || e.altKey || e.metaKey) return;
           this._spaceKeyDownTarget = keyEl;
+          this._press(keyEl);
           e.preventDefault();
           return;
         default:
@@ -163,7 +173,10 @@ export class KeyGridNavigation {
    * begun outside the grid never types a character on release.
    */
   onKeyUp(e: KeyboardEvent): void {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    this._release();
     if (e.key !== " ") return;
+
     const pressed = this._spaceKeyDownTarget;
     this._spaceKeyDownTarget = null;
     if (!pressed) return;
@@ -173,6 +186,42 @@ export class KeyGridNavigation {
     const keyEl = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
     if (keyEl !== pressed) return;
     e.preventDefault();
-    keyEl.click();
+    this._activate(keyEl, e.shiftKey);
+  }
+
+  /**
+   * Alt-Tab and similar take focus away without ever delivering the keyup, so
+   * the pressed state would otherwise stick on the abandoned keycap. Also drops
+   * the pending Space target: its release can no longer land on this key.
+   */
+  onFocusOut(): void {
+    this._spaceKeyDownTarget = null;
+    this._release();
+  }
+
+  /**
+   * Activates `keyEl` through the same click path a pointer press takes, so
+   * there is one activation pipeline rather than two.
+   *
+   * `HTMLElement.click()` cannot carry a modifier, so the event is built by
+   * hand: Shift on the activating keystroke means "type the shifted glyph",
+   * which the click handler reads off `shiftKey` exactly as it would from a
+   * real Shift+click.
+   */
+  private _activate(keyEl: HTMLElement, shiftKey: boolean): void {
+    keyEl.dispatchEvent(new MouseEvent("click", { bubbles: true, shiftKey }));
+  }
+
+  private _press(keyEl: HTMLElement): void {
+    this._host.setPressedKey(keyPositionOf(keyEl));
+    keyEl.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
+  }
+
+  private _release(): void {
+    this._host.setPressedKey(null);
+    this._host
+      .getShadowRoot()
+      ?.querySelectorAll<HTMLElement>(`.${KIOSK_KEYBOARD_DOM.classes.keyPressed}`)
+      .forEach((el) => el.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyPressed));
   }
 }

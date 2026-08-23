@@ -49,6 +49,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
         onMouseDown={this._boundOnKeyMouseDown}
         onKeyDown={this._boundOnKeyDown}
         onKeyUp={this._boundOnKeyUp}
+        onFocusOut={this._boundOnFocusOut}
       >
         {layout.map((row, rowIndex) => (
           <div
@@ -106,6 +107,8 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                     [KIOSK_KEYBOARD_DOM.classes.keyAction]: key.type === "action",
                     [KIOSK_KEYBOARD_DOM.classes.keyShiftActive]: isShift && this._shifted,
                     [KIOSK_KEYBOARD_DOM.classes.keyCapsLock]: isShift && this._capsLock,
+                    [KIOSK_KEYBOARD_DOM.classes.keyPressed]:
+                      this._pressedKey?.row === rowIndex && this._pressedKey.col === colIndex,
                     [KIOSK_KEYBOARD_DOM.classes.keyHighlight]: this._highlightedKey === key.value.toLowerCase(),
                     [KIOSK_KEYBOARD_DOM.classes.keyDual]: isDual,
                   }}

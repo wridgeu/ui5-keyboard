@@ -441,6 +441,8 @@ The component implements roving tabindex for physical keyboard users:
 - Arrow keys move focus by the grid coordinate each key publishes in `data-row-index` / `data-key-index`. The element ID pattern `{controlId}-key-{row}-{col}` is what the template uses as the JSX reconciliation key.
 - Home/End move to first/last key in the row
 - Enter activates the focused key on press, Space on release, following native `<button>` semantics. Neither repeats: the Enter branch drops keydowns carrying `repeat`, and Space activates only on the matching keyup.
+- Shift held on the activating keystroke types the key's shifted glyph. Activation runs through a hand-built `MouseEvent("click", { shiftKey })` rather than `HTMLElement.click()`, which cannot carry a modifier, so pointer and keyboard share one activation path and `_onKeyClick` reads the modifier the same way for both. Ctrl/Alt/Meta still reject.
+- The held key carries the `keyPressed` class for the duration of the press - set imperatively for instant feedback and mirrored into `_pressedKey` so it survives a re-render, the same pairing `PhysicalKeyHighlightController` uses. `onFocusOut` releases it, and drops the pending Space target with it.
 - `_lastFocusedKey` tracks the grid position across re-renders
 
 ## Physical Key Highlight

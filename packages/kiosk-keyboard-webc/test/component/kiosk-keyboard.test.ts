@@ -2078,6 +2078,109 @@ describe("kiosk-keyboard", () => {
       expect(fired, "the OS auto-repeat keydowns do not re-activate the key").to.equal(1);
     });
 
+    it("Shift+Enter activates the focused key with its shifted glyph", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const keyA = queryKey(el, "a")!;
+      keyA.focus();
+
+      const keyPressEvent = oneEvent(el, "key-press");
+      keyA.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true }));
+      const { detail } = await keyPressEvent;
+
+      expect(detail.key, "the key token is unchanged").to.equal("a");
+      expect(detail.shiftKey, "the activation reports Shift").to.be.true;
+      expect(detail.char, "the shifted glyph is typed").to.equal("A");
+
+      await nextRender();
+      expect(
+        queryKey(el, "{shift}")!.getAttribute("aria-pressed"),
+        "the transient Shift does not latch the on-screen Shift state",
+      ).to.equal("false");
+    });
+
+    it("Shift+Space activates the focused key with its shifted glyph on release", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const keyA = queryKey(el, "a")!;
+      keyA.focus();
+
+      let fired = 0;
+      el.addEventListener("key-press", () => {
+        fired++;
+      });
+
+      keyA.dispatchEvent(new KeyboardEvent("keydown", { key: " ", shiftKey: true, bubbles: true }));
+      expect(fired, "Space does not activate while it is held down").to.equal(0);
+
+      const keyPressEvent = oneEvent(el, "key-press");
+      keyA.dispatchEvent(new KeyboardEvent("keyup", { key: " ", shiftKey: true, bubbles: true }));
+      const { detail } = await keyPressEvent;
+
+      expect(detail.char, "the release types the shifted glyph").to.equal("A");
+    });
+
+    it("Shift+Enter on a key with an explicit shift value types that value", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const key1 = queryKey(el, "1")!;
+      expect(key1.dataset.shiftValue, "precondition: the '1' key declares '!'").to.equal("!");
+      key1.focus();
+
+      const keyPressEvent = oneEvent(el, "key-press");
+      key1.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true }));
+      const { detail } = await keyPressEvent;
+
+      expect(detail.char, "the declared shift value wins over an uppercased '1'").to.equal("!");
+    });
+
+    it("does not activate a key on Shift combined with another modifier", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const keyA = queryKey(el, "a")!;
+      keyA.focus();
+
+      let fired = 0;
+      el.addEventListener("key-press", () => {
+        fired++;
+      });
+
+      for (const extra of [{ ctrlKey: true }, { altKey: true }, { metaKey: true }]) {
+        keyA.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, ...extra, bubbles: true }));
+      }
+
+      expect(fired, "Ctrl/Alt/Meta stay browser shortcuts even with Shift held").to.equal(0);
+    });
+
+    it("shows pressed feedback on the focused key until the activating key is released", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const keyA = queryKey(el, "a")!;
+      keyA.focus();
+
+      keyA.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      expect(keyA.classList.contains(DOM.classes.keyPressed), "the keycap reads as pressed while Enter is down").to.be
+        .true;
+
+      keyA.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true }));
+      expect(keyA.classList.contains(DOM.classes.keyPressed), "the release clears the pressed state").to.be.false;
+    });
+
+    it("clears pressed feedback when focus leaves while a key is held", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const keyA = queryKey(el, "a")!;
+      keyA.focus();
+
+      keyA.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      expect(keyA.classList.contains(DOM.classes.keyPressed), "precondition: the keycap reads as pressed").to.be.true;
+
+      // Alt-Tab and similar take focus away without ever delivering the keyup.
+      keyA.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+
+      expect(keyA.classList.contains(DOM.classes.keyPressed), "the pressed state does not stick").to.be.false;
+    });
+
     it("activates the focused key on Space release, once per hold", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();

@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { KeyGridNavigation, type KeyGridNavigationHost } from "../../src/core/key-grid-navigation.js";
+import type { KeyPosition } from "../../src/core/dom-utils.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 import type { LayoutDefinition } from "../../src/types.js";
 
@@ -17,6 +18,8 @@ interface Grid {
   keyAt: (row: number, col: number) => HTMLElement;
   press: (el: HTMLElement, key: string, opts?: KeyboardEventInit) => KeyboardEvent;
   release: (el: HTMLElement, key: string, opts?: KeyboardEventInit) => KeyboardEvent;
+  /** The grid position the navigator last reported as pressed, or null. */
+  pressedKey: () => KeyPosition | null;
   tabbable: () => Array<{ row: number; col: number }>;
 }
 
@@ -51,10 +54,14 @@ function makeGrid(rowLens: number[] = ROW_LENS, rtl = false): Grid {
   });
 
   const layout = buildLayout(rowLens);
+  let pressedKey: KeyPosition | null = null;
   const hostBridge: KeyGridNavigationHost = {
     getResolvedLayout: () => layout,
     getShadowRoot: () => shadow,
     isRtl: () => rtl,
+    setPressedKey: (pos) => {
+      pressedKey = pos;
+    },
   };
   const nav = new KeyGridNavigation(hostBridge);
   shadow.addEventListener("keydown", (e) => nav.onKeyDown(e as KeyboardEvent));
@@ -82,7 +89,7 @@ function makeGrid(rowLens: number[] = ROW_LENS, rtl = false): Grid {
       col: Number(k.getAttribute(DOM.attributes.keyIndex)),
     }));
 
-  return { nav, shadow, keyAt, press, release, tabbable };
+  return { nav, shadow, keyAt, press, release, tabbable, pressedKey: () => pressedKey };
 }
 
 let grids: Grid[] = [];
@@ -308,6 +315,87 @@ describe("KeyGridNavigation - activation (Enter / Space)", () => {
     const ev = g.press(key, "Enter", { ctrlKey: true });
     expect(onClick).not.toHaveBeenCalled();
     expect(ev.defaultPrevented).toBe(false);
+  });
+
+  it("Enter carries Shift onto the activation click", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+    g.press(key, "Enter", { shiftKey: true });
+    expect(onClick).toHaveBeenCalledOnce();
+    expect((onClick.mock.calls[0]![0] as MouseEvent).shiftKey).toBe(true);
+  });
+
+  it("Space carries Shift onto the activation click at release", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+    g.press(key, " ", { shiftKey: true });
+    g.release(key, " ", { shiftKey: true });
+    expect((onClick.mock.calls[0]![0] as MouseEvent).shiftKey).toBe(true);
+  });
+
+  it("an unmodified activation click carries no Shift", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+    g.press(key, "Enter");
+    expect((onClick.mock.calls[0]![0] as MouseEvent).shiftKey).toBe(false);
+  });
+});
+
+describe("KeyGridNavigation - keyboard press feedback", () => {
+  it("reports the key pressed while Enter is held and clears it on release", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+
+    g.press(key, "Enter");
+    expect(g.pressedKey()).toEqual({ row: 1, col: 2 });
+    expect(key.classList.contains(DOM.classes.keyPressed)).toBe(true);
+
+    g.release(key, "Enter");
+    expect(g.pressedKey()).toBeNull();
+    expect(key.classList.contains(DOM.classes.keyPressed)).toBe(false);
+  });
+
+  it("reports the key pressed for the whole Space hold, through the activating release", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+
+    g.press(key, " ");
+    expect(g.pressedKey()).toEqual({ row: 1, col: 2 });
+
+    g.release(key, " ");
+    expect(g.pressedKey()).toBeNull();
+    expect(key.classList.contains(DOM.classes.keyPressed)).toBe(false);
+  });
+
+  it("clears the pressed report when focus leaves before the release", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+
+    g.press(key, "Enter");
+    expect(g.pressedKey()).toEqual({ row: 1, col: 2 });
+
+    g.nav.onFocusOut();
+    expect(g.pressedKey()).toBeNull();
+    expect(key.classList.contains(DOM.classes.keyPressed)).toBe(false);
+  });
+
+  it("a Space release after focus loss does not activate", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+
+    g.press(key, " ");
+    g.nav.onFocusOut();
+    g.release(key, " ");
+
+    expect(onClick).not.toHaveBeenCalled();
   });
 });
 

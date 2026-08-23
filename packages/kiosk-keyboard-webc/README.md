@@ -272,7 +272,7 @@ One-shot Shift is spent on a different set of keys, which changes what the key a
 
 Caps Lock is sticky on both and never auto-releases. `{layout:*}` is not an auto-release on either: selecting a layout resets the whole typing context, Caps Lock included.
 
-Activating a focused keycap from the physical keyboard differs in one respect: the web component activates Space on release, following native `<button>` semantics, while the UI5 control routes Space through UI5's `sapselect`, a keydown pseudo-event, and so activates on press. Neither twin repeats on a held key, and `{backspace}` repeats only from pointer input. The UI5 control also rejects Shift+Enter, where the web component accepts it.
+Activating a focused keycap from the physical keyboard differs in one respect: the web component activates Space on release, following native `<button>` semantics, while the UI5 control routes Space through UI5's `sapselect`, a keydown pseudo-event, and so activates on press. Neither twin repeats on a held key, and `{backspace}` repeats only from pointer input. Both treat Shift+Enter and Shift+Space as "type the shifted glyph" and both reject Ctrl, Alt and Meta.
 
 See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for general guidance on web component consumption patterns inside UI5 apps.
 
