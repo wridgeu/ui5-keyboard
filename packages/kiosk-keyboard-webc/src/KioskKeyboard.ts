@@ -1607,7 +1607,12 @@ class KioskKeyboard extends UI5Element {
       action.kind === "char" ? (shifted ? shiftedGlyph(value, shiftValue, this._capsLock) : value) : undefined;
 
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
-    if (!allowed) return;
+    if (!allowed) {
+      // The latch was already spent producing `char`; a veto cancels the
+      // insertion, not the spend. See the `key-press` contract.
+      this._autoReleaseShift();
+      return;
+    }
 
     const target = this._resolveTarget();
 
@@ -1696,17 +1701,15 @@ class KioskKeyboard extends UI5Element {
       shiftKey: this._shifted,
       char: undefined,
     });
+    // Spent once, up front: every branch below spends it, the vetoed one
+    // included, so the tick has exactly one release however it ends.
+    this._autoReleaseShift();
     if (!allowed) return true; // consumer vetoed this tick; keep the gesture alive
     const target = this._resolveTarget();
     const middleware = this._ensureMiddleware();
-    if (middleware && target && middleware.handleKey("{backspace}", target)) {
-      this._autoReleaseShift();
-      return true;
-    }
+    if (middleware && target && middleware.handleKey("{backspace}", target)) return true;
     if (!target) return false;
-    const pos = handleBackspace(target);
-    this._autoReleaseShift();
-    return pos !== null;
+    return handleBackspace(target) !== null;
   }
 
   private _onKeyMouseDown(e: Event): void {
@@ -1755,8 +1758,8 @@ class KioskKeyboard extends UI5Element {
    * preventDefault vetoes the insert), routes the glyph through the composition
    * middleware so a committed variant can seed or continue composition exactly
    * like a pressed key, falls back to a literal insert when the middleware does
-   * not consume it, and auto-releases one-shot Shift. Called by the popup
-   * controller on commit.
+   * not consume it, and auto-releases one-shot Shift on every branch, the
+   * vetoed one included. Called by the popup controller on commit.
    */
   private _insertVariant(glyph: string): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: glyph, shiftKey: this._shifted, char: glyph });
@@ -1768,16 +1771,15 @@ class KioskKeyboard extends UI5Element {
           insertText(target, glyph);
         }
       }
-      this._autoReleaseShift();
     }
+    this._autoReleaseShift();
   }
 
   // ── Layout switch / F-key handling ──
 
   private _handleFKeyPress(fkeyName: string, shifted: boolean): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
-    if (!allowed) return;
-    this._fKeyController.handle(fkeyName, shifted);
+    if (allowed) this._fKeyController.handle(fkeyName, shifted);
     this._autoReleaseShift();
   }
 

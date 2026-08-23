@@ -2403,7 +2403,9 @@ export default class KioskKeyboard extends Control {
    *   the only source.
    */
   private _performBackspaceDelete(shift = this._isShiftActive()): boolean {
-    if (!this.fireKeyPress({ key: "Backspace", shiftKey: shift })) return true; // consumer vetoed this tick; keep the gesture alive
+    const allowed = this.fireKeyPress({ key: "Backspace", shiftKey: shift });
+    this._shiftState.autoRelease();
+    if (!allowed) return true; // consumer vetoed this tick; keep the gesture alive
     return this._targetSession.handleBackspace();
   }
 
@@ -2435,6 +2437,7 @@ export default class KioskKeyboard extends Control {
         if (this.fireKeyPress({ key: "Enter", shiftKey: shift })) {
           this._targetSession.handleEnter();
         }
+        this._shiftState.autoRelease();
         return;
 
       case "layout": {
@@ -2449,8 +2452,10 @@ export default class KioskKeyboard extends Control {
       case "fkey": {
         // Fire keyPress first so consumers can prevent all downstream action
         // (including native F5 reload / F11 fullscreen in fKeyMode="Native").
-        if (!this.fireKeyPress({ key: action.name, shiftKey: shift })) return;
-        this._fKeyController.handle(action.name, shift);
+        if (this.fireKeyPress({ key: action.name, shiftKey: shift })) {
+          this._fKeyController.handle(action.name, shift);
+        }
+        this._shiftState.autoRelease();
         return;
       }
 

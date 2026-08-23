@@ -255,6 +255,110 @@ QUnit.test("Caps Lock does NOT auto-release after character key", async (assert)
   kb.destroy();
 });
 
+// ──────────────────────────────────────────────
+// One-shot Shift: the spending set (#240)
+// ──────────────────────────────────────────────
+
+// A latched modifier is spent by the next non-modifier key. Both twins already
+// *apply* the latch to these keys - `{backspace}` and `{enter}` fire keyPress
+// with `shiftKey: true` - so leaving it armed would let one Shift tap decorate
+// two keystrokes.
+for (const token of ["{backspace}", "{enter}"]) {
+  QUnit.test(`One-shot Shift is spent by ${token}`, async (assert) => {
+    const input = new Input({ value: "ab" });
+    input.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({ controls: [input.getId()] });
+    await placeAndWait(kb);
+    input.focus();
+    await waitForRender();
+
+    tapKey(kb, "{shift}");
+    await waitForRender();
+    assert.ok(isShiftActive(kb), "Precondition: Shift is latched");
+
+    tapKey(kb, token);
+    await waitForRender();
+    assert.notOk(isShiftActive(kb), `${token} spends the one-shot Shift`);
+
+    input.destroy();
+    kb.destroy();
+  });
+
+  QUnit.test(`Caps Lock survives ${token}`, async (assert) => {
+    const input = new Input({ value: "ab" });
+    input.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({ controls: [input.getId()] });
+    await placeAndWait(kb);
+    input.focus();
+    await waitForRender();
+
+    tapKey(kb, "{shift}");
+    tapKey(kb, "{shift}");
+    await waitForRender();
+    assert.ok(isCapsLock(kb), "Precondition: Caps Lock is latched");
+
+    tapKey(kb, token);
+    await waitForRender();
+    assert.ok(isCapsLock(kb), `${token} leaves Caps Lock alone`);
+
+    input.destroy();
+    kb.destroy();
+  });
+}
+
+// ──────────────────────────────────────────────
+// One-shot Shift: a veto does not change the spending set (#241)
+// ──────────────────────────────────────────────
+
+// The latch is consumed to *produce* the payload - keyPress already carries
+// `key: "A"` by the time a consumer sees it. What a veto cancels is the
+// insertion, not the spend, so the spending set is a pure function of the key.
+for (const token of ["q", "{backspace}", "{enter}", "{paste}"]) {
+  QUnit.test(`A vetoed ${token} still spends the one-shot Shift`, async (assert) => {
+    const input = new Input({ value: "ab" });
+    input.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({
+      controls: [input.getId()],
+      layout: "test-veto-spend",
+      customLayouts: [
+        new CustomLayout({
+          name: "test-veto-spend",
+          rows: [
+            [
+              { value: "{shift}" },
+              { value: "q" },
+              { value: "{backspace}" },
+              { value: "{enter}" },
+              { value: "{paste}" },
+            ],
+          ],
+        }),
+      ],
+    });
+    await placeAndWait(kb);
+    input.focus();
+    await waitForRender();
+
+    kb.attachEvent("keyPress", (event: { preventDefault(): void }) => {
+      event.preventDefault();
+    });
+
+    tapKey(kb, "{shift}");
+    await waitForRender();
+    assert.ok(isShiftActive(kb), "Precondition: Shift is latched");
+
+    tapKey(kb, token);
+    await waitForRender();
+    assert.notOk(isShiftActive(kb), `The vetoed ${token} spends the latch anyway`);
+
+    input.destroy();
+    kb.destroy();
+  });
+}
+
 QUnit.test("Shift key renders active class", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);

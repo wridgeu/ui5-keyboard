@@ -1013,7 +1013,7 @@ const sapLayout: LayoutDefinition = [
 ];
 ```
 
-F-key taps do not auto-release Shift, and the `shiftKey` parameter is passed along so applications can distinguish shifted F-key presses if needed.
+An F-key tap spends one-shot Shift like any other non-modifier key (Caps Lock is unaffected), and the `shiftKey` parameter is passed along so applications can distinguish shifted F-key presses.
 
 ---
 

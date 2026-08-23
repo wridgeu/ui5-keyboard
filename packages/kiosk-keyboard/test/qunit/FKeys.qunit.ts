@@ -12,6 +12,7 @@ import {
   getRequiredKeyElement,
   getRowElements,
   hasKeyClass,
+  isCapsLock,
   isShiftActive,
   placeAndWait,
   tapKey,
@@ -178,7 +179,10 @@ QUnit.test("F-key tap does NOT insert text", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("F-key tap does NOT auto-release shift", async (assert) => {
+// `{shift}` and `{fkey:F3}` sit on one surface here on purpose: routing through
+// `{layout:fkeys}` to reach an F-key resets the shift state before the F-key is
+// ever pressed, which is what made the web component's counterpart vacuous (#240).
+QUnit.test("F-key tap spends the one-shot shift", async (assert) => {
   const kb = new KioskKeyboard({
     layout: "test-qwerty-fk",
     customLayouts: [new CustomLayout({ name: "test-qwerty-fk", rows: qwertyFk })],
@@ -192,7 +196,48 @@ QUnit.test("F-key tap does NOT auto-release shift", async (assert) => {
 
   tapKey(kb, "{fkey:F3}");
   await waitForRender();
-  assert.ok(isShiftActive(kb), "Shift remains active after F-key tap");
+  assert.notOk(isShiftActive(kb), "The F-key spends the one-shot shift");
+
+  kb.destroy();
+});
+
+QUnit.test("F-key tap leaves Caps Lock alone", async (assert) => {
+  const kb = new KioskKeyboard({
+    layout: "test-qwerty-fk",
+    customLayouts: [new CustomLayout({ name: "test-qwerty-fk", rows: qwertyFk })],
+  });
+  await placeAndWait(kb);
+
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isCapsLock(kb), "Precondition: Caps Lock is latched");
+
+  tapKey(kb, "{fkey:F3}");
+  await waitForRender();
+  assert.ok(isCapsLock(kb), "Caps Lock survives the F-key tap");
+
+  kb.destroy();
+});
+
+QUnit.test("A vetoed F-key still spends the one-shot shift", async (assert) => {
+  const kb = new KioskKeyboard({
+    layout: "test-qwerty-fk",
+    customLayouts: [new CustomLayout({ name: "test-qwerty-fk", rows: qwertyFk })],
+  });
+  await placeAndWait(kb);
+
+  kb.attachEvent("keyPress", (event: { preventDefault(): void }) => {
+    event.preventDefault();
+  });
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Precondition: Shift is latched");
+
+  tapKey(kb, "{fkey:F3}");
+  await waitForRender();
+  assert.notOk(isShiftActive(kb), "The vetoed F-key spends the latch anyway");
 
   kb.destroy();
 });

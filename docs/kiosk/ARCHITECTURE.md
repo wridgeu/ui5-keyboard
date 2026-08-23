@@ -194,7 +194,9 @@ Caps Lock    Mode.CapsLock true      true
 
 **Double-click detection**: A second Shift press within 400ms (`ShiftState.DOUBLE_CLICK_MS`) of the first activates Caps Lock. A single press outside that window toggles one-shot Shift. Pressing Shift while Caps Lock is active turns everything off.
 
-**Auto-release**: After a character key, an unrecognized `{...}` token or a committed accent variant with Shift active (not Caps Lock), `autoRelease()` sets the mode back to `Off` and fires the `onChange` callback (which the owner wires to `_syncShiftState()`, announcing the transition before repainting) to update the display. `{backspace}`, `{enter}` and `{fkey:*}` leave the latch armed; a vetoed `keyPress` still spends it. Caps Lock is sticky and does not auto-release.
+**Auto-release**: After any key that acts on the target - a character, `{backspace}`, `{enter}`, an `{fkey:*}`, an unrecognized `{...}` token, a committed accent variant, or a key the composition middleware consumed - `autoRelease()` sets the mode back to `Off` and fires the `onChange` callback (which the owner wires to `_syncShiftState()`, announcing the transition before repainting) to update the display. `{shift}` and `{layout:*}` do not spend it (`{layout:*}` resets the whole typing context, Caps Lock included), and Caps Lock is sticky and never auto-releases.
+
+**A veto does not change the spending set** (#241). The latch is consumed to _produce_ the payload: `keyPress` already carries `key: "A"` by the time a consumer sees it, so what `preventDefault()` cancels is the insertion, not the spend. The alternative strands a consumer using the documented veto-and-`insertText()` pattern in Shift with no public API to release it. Both twins follow this rule, and both spend the latch on the same set of keys (#240) - the spending set is a pure function of the key.
 
 > The web component spends the latch on `{backspace}`, `{enter}` and `{fkey:*}` too, and keeps it armed on a vetoed `key-press`. See the event table in the web component's README.
 
