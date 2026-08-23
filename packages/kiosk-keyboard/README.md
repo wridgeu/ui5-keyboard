@@ -1620,6 +1620,7 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 - Each key has `role="button"` with an accessible name from visible text (when icon+label are both present) or `aria-label` (for icon-only keys where `label=""`)
 - The Shift key has `aria-pressed` reflecting its toggle state
 - Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row, Ctrl+Home/Ctrl+End to the first/last key of the whole grid
+- Enter or Space activates the focused key, once per press: holding the key down does not repeat it. `{backspace}` is the only key that repeats on hold, and only from pointer input
 - The keyboard is an F6 navigation group (`data-sap-ui-fastnavgroup="true"`)
 - Disabled state applies `aria-disabled="true"` to both the root and individual keys
 - ARIA live region announces keyboard open/close and shift state changes to screen readers

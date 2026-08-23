@@ -122,9 +122,9 @@ export class KeyGridNavigation {
           // combinations are browser/OS shortcuts, not key activations.
           if (e.ctrlKey || e.altKey || e.metaKey) return;
           e.preventDefault();
-          // One activation per press. A held Enter repeats at the OS rate, and
-          // `{backspace}` is the only key this component repeats, on the tuned
-          // curve `BackspaceRepeatController` drives from pointer input.
+          // One activation per press: drop the OS auto-repeat keydowns.
+          // `{backspace}` is the only key that repeats, from pointer input on
+          // `BackspaceRepeatController`'s tuned curve.
           if (e.repeat) return;
           keyEl.click();
           return;

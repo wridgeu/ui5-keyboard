@@ -77,12 +77,12 @@ interface PressEvent extends Event {
 }
 
 /**
- * A `sapselect` event, which UI5 delivers as a jQuery wrapper whose `addProp` list
- * does not copy `repeat`; the native keydown hangs off `originalEvent`.
+ * The `sapselect` event a UI5 control handler receives: the framework's own fixed
+ * event, carrying the native keydown it was built from in `originalEvent`. jQuery's
+ * `addProp` list omits `repeat`, so a held key shows only on the native event.
  */
-interface SelectEvent extends Event {
+interface SelectEvent extends KeyboardEvent {
   readonly originalEvent?: KeyboardEvent;
-  readonly repeat?: boolean;
 }
 
 /**
@@ -2212,12 +2212,9 @@ export default class KioskKeyboard extends Control {
    * Enter/Space with no Ctrl/Alt/Shift/Meta held, so Ctrl+Space and
    * similar combinations cannot accidentally trigger key activation.
    *
-   * One activation per press: `sapselect` maps onto keydown, so a held key
-   * repeats at the OS rate. `{backspace}` is the only key this component
-   * repeats, on the tuned curve `BackspaceRepeatBehavior` drives from pointer
-   * input; every other key would misbehave on a repeat (`{shift}` cycles
-   * through its three states, `{layout:*}` switches and then types into the
-   * new layout). The scroll suppression still has to run on the repeats.
+   * One activation per press: `sapselect` maps onto keydown, so the OS
+   * auto-repeat of a held key is dropped. `{backspace}` is the only key that
+   * repeats, from pointer input on `BackspaceRepeatBehavior`'s tuned curve.
    */
   onsapselect(event: Event): void {
     if (!this.getEnabled()) return;
@@ -2229,10 +2226,11 @@ export default class KioskKeyboard extends Control {
     const keyValue = target.dataset.key;
     if (!keyValue) return;
 
+    // Ahead of the repeat guard: the page must not scroll while Space is held.
     event.preventDefault();
 
-    const native = (event as SelectEvent).originalEvent ?? (event as SelectEvent);
-    if (native.repeat) return;
+    const select = event as SelectEvent;
+    if ((select.originalEvent ?? select).repeat) return;
 
     this._handleKeyAction(keyValue, target);
   }
