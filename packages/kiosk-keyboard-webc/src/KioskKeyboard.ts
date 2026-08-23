@@ -1607,25 +1607,20 @@ class KioskKeyboard extends UI5Element {
       action.kind === "char" ? (shifted ? shiftedGlyph(value, shiftValue, this._capsLock) : value) : undefined;
 
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
-    if (!allowed) {
-      // The latch was already spent producing `char`; a veto cancels the
-      // insertion, not the spend. See the `key-press` contract.
-      this._autoReleaseShift();
-      return;
-    }
+    // Spent once, up front: the latch was already consumed producing `char`, so
+    // every path below spends it, the vetoed one included - a veto cancels the
+    // insertion, not the spend. See the `key-press` contract.
+    this._autoReleaseShift();
+    if (!allowed) return;
 
     const target = this._resolveTarget();
 
     // ── Composition middleware ──
     const middleware = this._ensureMiddleware();
-    if (middleware && target && middleware.handleKey(value, target)) {
-      this._autoReleaseShift();
-      return;
-    }
+    if (middleware && target && middleware.handleKey(value, target)) return;
 
     if (action.kind === "backspace") {
       if (target) handleBackspace(target);
-      this._autoReleaseShift();
       return;
     }
 
@@ -1637,7 +1632,6 @@ class KioskKeyboard extends UI5Element {
           target.dispatchEvent(new Event("change", { bubbles: true }));
         }
       }
-      this._autoReleaseShift();
       return;
     }
 
@@ -1648,7 +1642,6 @@ class KioskKeyboard extends UI5Element {
       console.warn(
         `[kiosk-keyboard] Unrecognized key token "${value}": not a built-in special key. Ignoring (no text inserted).`,
       );
-      this._autoReleaseShift();
       return;
     }
 
@@ -1658,7 +1651,6 @@ class KioskKeyboard extends UI5Element {
       if (target) {
         insertText(target, char!);
       }
-      this._autoReleaseShift();
       return;
     }
 

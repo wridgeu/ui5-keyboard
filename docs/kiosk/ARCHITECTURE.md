@@ -198,6 +198,8 @@ Caps Lock    Mode.CapsLock true      true
 
 **A veto does not change the spending set** (#241). The latch is consumed to _produce_ the payload: `keyPress` already carries `key: "A"` by the time a consumer sees it, so what `preventDefault()` cancels is the insertion, not the spend. The alternative strands a consumer using the documented veto-and-`insertText()` pattern in Shift with no public API to release it. Both twins follow this rule, and both spend the latch on the same set of keys (#240) - the spending set is a pure function of the key.
 
+**Where in the tick the spend happens is immaterial**, so each call site releases wherever it reads best - `_performBackspaceDelete` spends up front, right after the event fires, while `_handleKeyAction` spends at the end of the branch. Nothing downstream of the fire reads the latch - the payload is resolved before the event is dispatched - and what `autoRelease()` triggers, a repaint and a live-region announcement, does not depend on the insertion having run.
+
 > The web component spends the latch on `{backspace}`, `{enter}` and `{fkey:*}` too, and keeps it armed on a vetoed `key-press`. See the event table in the web component's README.
 
 **Announcements**: `_syncShiftState()` writes one live-region text per transition: `ARIA_CAPS_LOCK_ON`, `ARIA_CAPS_LOCK_OFF`, `ARIA_SHIFT_ON`, `ARIA_SHIFT_OFF`. Caps Lock is settled before Shift because `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift release.
