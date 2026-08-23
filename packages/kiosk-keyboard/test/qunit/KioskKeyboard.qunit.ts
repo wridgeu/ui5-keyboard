@@ -1687,6 +1687,66 @@ QUnit.test("Shift+Enter on a key with an explicit shiftValue types that value", 
   kb.destroy();
 });
 
+/**
+ * Focus `keyValue`'s keycap through the roving tab stop and activate it with
+ * Shift held, the way a keyboard-navigation user reaches a shifted glyph.
+ */
+function shiftActivate(kb: KioskKeyboard, keyValue: string): void {
+  const el = getRequiredKeyElement(kb, keyValue);
+  el.setAttribute("tabindex", "0");
+  el.focus();
+  el.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+}
+
+QUnit.test("Shift+Enter on an action key reports shiftKey on the keyPress event", async (assert) => {
+  const input = new Input({ value: "ab" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  // Every branch of the activation must read the same Shift the keystroke
+  // carried; `{backspace}` reaching for the latch directly instead diverged
+  // from the web component twin, which reports the modifier for every kind.
+  const seen: Record<string, boolean> = {};
+  kb.attachKeyPress((event) => {
+    seen[event.getParameter("key") as string] = event.getParameter("shiftKey") as boolean;
+  });
+
+  shiftActivate(kb, "{backspace}");
+  await waitForRender();
+  shiftActivate(kb, "{enter}");
+  await waitForRender();
+
+  assert.strictEqual(seen["Backspace"], true, "{backspace} reports the Shift the keystroke carried");
+  assert.strictEqual(seen["Enter"], true, "{enter} reports the Shift the keystroke carried");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Shift+Enter on an unrecognized token reports shiftKey on the keyPress event", async (assert) => {
+  const kb = new KioskKeyboard({
+    layout: "test-unknown-token",
+    customLayouts: [new CustomLayout({ name: "test-unknown-token", rows: [[{ value: "{paste}" }]] })],
+  });
+  await placeAndWait(kb);
+
+  let shiftKey: boolean | undefined;
+  kb.attachKeyPress((event) => {
+    shiftKey = event.getParameter("shiftKey") as boolean;
+  });
+
+  shiftActivate(kb, "{paste}");
+  await waitForRender();
+
+  assert.strictEqual(shiftKey, true, "An unrecognized token reports the Shift too");
+
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // Keyboard-activation press feedback
 // ──────────────────────────────────────────────
