@@ -373,6 +373,23 @@ describe("KeyGridNavigation - keyboard press feedback", () => {
     expect(key.classList.contains(DOM.classes.keyPressed)).toBe(false);
   });
 
+  it("keeps the pressed report when a modifier is lifted before the activating key", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+
+    g.press(key, "Enter", { shiftKey: true });
+    expect(g.pressedKey()).toEqual({ row: 1, col: 2 });
+
+    // Shift+Enter is a two-key hold, and Shift is the one a user lifts first.
+    g.release(key, "Shift");
+    expect(g.pressedKey()).toEqual({ row: 1, col: 2 });
+    expect(key.classList.contains(DOM.classes.keyPressed)).toBe(true);
+
+    g.release(key, "Enter");
+    expect(g.pressedKey()).toBeNull();
+    expect(key.classList.contains(DOM.classes.keyPressed)).toBe(false);
+  });
+
   it("clears the pressed report when focus leaves before the release", () => {
     const g = grid();
     const key = g.keyAt(1, 2);
