@@ -383,6 +383,14 @@
     &:focus-visible {
       outline: @sapUiContentFocusWidth @sapUiContentFocusStyle @sapUiContentFocusColor;
       outline-offset: 1px;
+    }
+
+    /* A key activated from the physical keyboard is focused and pressed at the
+       same time, and the focus lift would otherwise paint over the depress:
+       `:focus-visible` sits at (0,2,0) and the single-class `--pressed` at
+       (0,1,0), so source order cannot settle it. The ring stays
+       unconditionally; only the lift and its shadow step aside. */
+    &:focus-visible:not(.ui5KioskKey--pressed) {
       transform: translateY(-1px);
       box-shadow: var(--_ui5KioskKeyboard-keyShadowHover);
     }
@@ -828,9 +836,13 @@
       transition: none;
     }
 
+    /* `:focus-visible` is listed twice, plainly and in the `:not()` form the key
+       block uses to yield to `--pressed`: that arm sits at (0,3,0) and a lone
+       `.ui5KioskKey:focus-visible` would lose the lift back to it here. */
     .ui5KioskKey:hover,
     .ui5KioskKey:active,
     .ui5KioskKey:focus-visible,
+    .ui5KioskKey:focus-visible:not(.ui5KioskKey--pressed),
     .ui5KioskKey--pressed,
     .ui5KioskKey--highlight {
       transform: none;
