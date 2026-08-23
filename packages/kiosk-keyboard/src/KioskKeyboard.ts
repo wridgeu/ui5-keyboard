@@ -2250,8 +2250,13 @@ export default class KioskKeyboard extends Control {
    * Releases the keyboard-activation pressed state. A key activated from the
    * physical keyboard stays visually pressed for as long as the activating key
    * is held, the way `sap.m.Button` pairs `_activeButton` with `_inactiveButton`.
+   *
+   * Only Enter and Space end the press. Shift+Enter is a two-key hold, and
+   * lifting the Shift first must not read as the release.
    */
-  onkeyup(): void {
+  onkeyup(event: Event): void {
+    const { key } = nativeKeyEvent(event);
+    if (key !== "Enter" && key !== " ") return;
     this._clearKeyboardPressedState();
   }
 

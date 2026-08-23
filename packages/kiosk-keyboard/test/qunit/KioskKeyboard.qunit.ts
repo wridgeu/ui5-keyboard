@@ -1880,6 +1880,27 @@ QUnit.test("Activating a key from the keyboard shows pressed feedback until rele
   kb.destroy();
 });
 
+QUnit.test("Lifting Shift while the activating key is held keeps the pressed feedback", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.setAttribute("tabindex", "0");
+  aKey.focus();
+
+  aKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+  assert.ok(aKey.classList.contains(DOM.classes.keyPressed), "Precondition: the keycap reads as pressed");
+
+  // Shift+Enter is a two-key hold, and Shift is the one a user lifts first.
+  aKey.dispatchEvent(new KeyboardEvent("keyup", { key: "Shift", bubbles: true, cancelable: true }));
+  assert.ok(aKey.classList.contains(DOM.classes.keyPressed), "The keycap stays pressed while Enter is still down");
+
+  aKey.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true, cancelable: true }));
+  assert.notOk(aKey.classList.contains(DOM.classes.keyPressed), "Lifting the activating key ends the press");
+
+  kb.destroy();
+});
+
 QUnit.test("Losing focus while a key is held clears the pressed feedback", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
