@@ -1539,7 +1539,7 @@ class KioskKeyboard extends UI5Element {
     // round-tripping through `{shift}`: the physical-modifier sync in
     // `PhysicalKeyHighlightController` listens on the target input, so it never
     // runs while focus sits on a keycap.
-    const shifted = this._shifted || (e as MouseEvent).shiftKey === true;
+    const shifted = this._shifted || (e instanceof MouseEvent && e.shiftKey);
     const shiftValue = keyEl.dataset.shiftValue;
 
     // A held Backspace already deleted via auto-repeat; swallow the trailing

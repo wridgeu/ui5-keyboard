@@ -25,9 +25,9 @@ export interface KeyGridNavigationHost {
  * reverse, both stopping at the first/last key of the whole grid. Home/End move
  * within the current row (Ctrl+Home/End jump across the whole grid); Enter
  * activates on press and Space on release, matching native `<button>`, and Shift
- * held on either types the key's shifted glyph. Focus never wraps
- * around grid edges. Handled navigation keys are always prevented (so holding an
- * arrow at an edge does not scroll the page), even when focus does not move.
+ * held on either types the key's shifted glyph. Focus never wraps around grid
+ * edges. Handled navigation keys are always prevented (so holding an arrow at an
+ * edge does not scroll the page), even when focus does not move.
  *
  * The activated key carries `keyPressed` for as long as the activating key is
  * held, so a keyboard activation gives the feedback a pointer press gets from
