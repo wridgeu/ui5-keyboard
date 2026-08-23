@@ -47,7 +47,8 @@ import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js
 import { ResponsiveSizingController } from "./core/responsive-sizing-controller.js";
 import { AutoCompactController } from "./core/auto-compact-controller.js";
 import { NativeInputModeSuppression } from "./core/native-inputmode-suppression.js";
-import { parseKeyAction, assertNever } from "./core/key-token.js";
+import { parseKeyAction, assertNever, spendsOneShotShift } from "./core/key-token.js";
+import type { KeyAction } from "./core/key-token.js";
 import { SPECIAL_KEY_ICON_NAMES, SPECIAL_KEY_I18N_KEYS } from "./core/key-action-meta.js";
 import { constrainedLayoutName, reconcileBaseSwitch } from "./core/layout-constraint.js";
 import { AnnouncementQueue } from "./core/announcement-queue.js";
@@ -1540,7 +1541,6 @@ class KioskKeyboard extends UI5Element {
     // `PhysicalKeyHighlightController` listens on the target input, so it never
     // runs while focus sits on a keycap.
     const shifted = this._shifted || (e instanceof MouseEvent && e.shiftKey);
-    const shiftValue = keyEl.dataset.shiftValue;
 
     // A held Backspace already deleted via auto-repeat; swallow the trailing
     // release click so lifting off does not delete one extra character.
@@ -1558,6 +1558,23 @@ class KioskKeyboard extends UI5Element {
     if (this._variantPopup) this._variantGesture.close();
 
     const action = parseKeyAction(value);
+    this._performKeyAction(action, keyEl, value, shifted);
+
+    // One key, one decision: which keys spend a latched one-shot Shift is a
+    // pure function of the key, so it is asked once here rather than left to
+    // whichever branch of `_performKeyAction` remembers to call
+    // `_autoReleaseShift()`.
+    if (spendsOneShotShift(action.kind)) this._autoReleaseShift();
+  }
+
+  /**
+   * Runs what the key does, leaving the one-shot Shift to the caller.
+   *
+   * @param shifted The Shift the activation carried - the latched state, or the
+   *   modifier held on the activating click or keystroke.
+   */
+  private _performKeyAction(action: KeyAction, keyEl: HTMLElement, value: string, shifted: boolean): void {
+    const shiftValue = keyEl.dataset.shiftValue;
 
     // Layout, F-key, and Shift each fire their own key-press and return early.
     if (action.kind === "layout") {
@@ -1607,10 +1624,6 @@ class KioskKeyboard extends UI5Element {
       action.kind === "char" ? (shifted ? shiftedGlyph(value, shiftValue, this._capsLock) : value) : undefined;
 
     const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: shifted, char });
-    // Spent once, up front: the latch was already consumed producing `char`, so
-    // every path below spends it, the vetoed one included - a veto cancels the
-    // insertion, not the spend. See the `key-press` contract.
-    this._autoReleaseShift();
     if (!allowed) return;
 
     const target = this._resolveTarget();
@@ -1750,8 +1763,9 @@ class KioskKeyboard extends UI5Element {
    * preventDefault vetoes the insert), routes the glyph through the composition
    * middleware so a committed variant can seed or continue composition exactly
    * like a pressed key, falls back to a literal insert when the middleware does
-   * not consume it, and auto-releases one-shot Shift on every branch, the
-   * vetoed one included. Called by the popup controller on commit.
+   * not consume it. A committed variant is a character key, and
+   * `spendsOneShotShift("char")` is true on every branch, the vetoed one
+   * included. Called by the popup controller on commit.
    */
   private _insertVariant(glyph: string): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: glyph, shiftKey: this._shifted, char: glyph });
@@ -1772,7 +1786,6 @@ class KioskKeyboard extends UI5Element {
   private _handleFKeyPress(fkeyName: string, shifted: boolean): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
     if (allowed) this._fKeyController.handle(fkeyName, shifted);
-    this._autoReleaseShift();
   }
 
   /**

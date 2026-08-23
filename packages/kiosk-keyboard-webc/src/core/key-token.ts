@@ -47,6 +47,40 @@ export function parseKeyAction(value: string): KeyAction {
 }
 
 /**
+ * Whether a key spends a latched one-shot Shift.
+ *
+ * The spending set is a pure function of the key (#240): every key that acts on
+ * the target spends the latch - a character, `{backspace}`, `{enter}`, an
+ * `{fkey:*}`, an unrecognized `{...}` token, a committed accent variant, or a
+ * key the composition middleware consumed - and a veto does not change that
+ * (#241), because the latch is consumed to produce the payload. The two
+ * exceptions are the modifier itself and `{layout:*}`, which resets the whole
+ * typing context rather than spending anything.
+ *
+ * Written as an exhaustive switch on purpose: a new {@link KeyAction} variant
+ * fails to compile here until someone decides whether it spends, rather than
+ * inheriting an answer from whichever branch happens to call `autoRelease()`.
+ *
+ * The `layout` arm records intent rather than observable behavior: a layout
+ * switch resets the whole shift state, Caps Lock included, so a spend on top of
+ * that reset cannot be seen from outside. Flipping this arm alone breaks no
+ * test, and that is expected - do not "fix" it with one.
+ */
+export function spendsOneShotShift(kind: KeyActionKind): boolean {
+  switch (kind) {
+    case "shift":
+    case "layout":
+      return false;
+    case "char":
+    case "backspace":
+    case "enter":
+    case "fkey":
+    case "unknown":
+      return true;
+  }
+}
+
+/**
  * Exhaustiveness guard for a {@link KeyAction} switch: once every `kind` is
  * handled the `default` arm narrows to `never` and compiles; adding a variant
  * without its case becomes a build error here rather than a silent no-op.
