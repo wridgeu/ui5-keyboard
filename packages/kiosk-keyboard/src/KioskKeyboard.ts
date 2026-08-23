@@ -66,7 +66,8 @@ import FKeyController from "./internal/fkey-controller";
 import ControlsDelegationController from "./internal/controls-delegation-controller";
 import { getKeyLabel, getKeyAriaLabel, clearLabelWarnings } from "./internal/key-labels";
 import PhysicalKeyHighlight from "./internal/physical-key-highlight";
-import { parseKeyAction, assertNever, LAYOUT_BASE } from "./internal/key-token";
+import { parseKeyAction, assertNever, spendsOneShotShift, LAYOUT_BASE } from "./internal/key-token";
+import type { KeyAction } from "./internal/key-token";
 import { constrainedLayoutName, reconcileBaseSwitch } from "./internal/layout-constraint";
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
@@ -897,10 +898,7 @@ export default class KioskKeyboard extends Control {
     this._physicalKeyHighlight = new PhysicalKeyHighlight(this, this._shiftState);
     this._pressedKeyEl = null;
     this._keyboardPressedKeyEl = null;
-    this._backspaceRepeat = new BackspaceRepeatBehavior(() => {
-      if (this._tryCompositionMiddleware("{backspace}")) return true;
-      return this._performBackspaceDelete();
-    });
+    this._backspaceRepeat = new BackspaceRepeatBehavior(() => this._performBackspaceRepeatTick());
     this._variantPopup = new VariantPopupBehavior({
       resolveVariants: (keyEl) => this._resolveKeyVariants(keyEl),
       commitVariant: (glyph) => {
@@ -1989,19 +1987,15 @@ export default class KioskKeyboard extends Control {
    * Routing means "commit variant X" is identical to "press key X": a layout
    * whose middleware composes the glyph seeds the composition with it, while a
    * non-composition glyph finalizes any active preedit and falls back to a
-   * literal insert at the caret. Shift auto-releases exactly once on every
-   * branch - `_tryCompositionMiddleware` releases it when it consumes the glyph,
-   * otherwise the literal-insert and veto branches release it here.
+   * literal insert at the caret.
    */
   private _commitVariant(glyph: string): void {
     const shift = this._isShiftActive();
     if (this.fireKeyPress({ key: glyph, shiftKey: shift })) {
-      if (!this._tryCompositionMiddleware(glyph)) {
-        this._targetSession.insertText(glyph);
-        this._shiftState.autoRelease();
-      }
-      return;
+      if (!this._tryCompositionMiddleware(glyph)) this._targetSession.insertText(glyph);
     }
+    // A committed variant is a character key, and `spendsOneShotShift("char")`
+    // is true on every branch above, the vetoed one included.
     this._shiftState.autoRelease();
   }
 
@@ -2388,10 +2382,7 @@ export default class KioskKeyboard extends Control {
       const mwTarget = targetEl
         ? resolveWithCustomResolver(targetEl.getFocusDomRef(), this._getEffectiveResolver())
         : null;
-      if (mwTarget && this._middleware.handleKey(keyValue, mwTarget)) {
-        this._shiftState.autoRelease();
-        return true;
-      }
+      if (mwTarget && this._middleware.handleKey(keyValue, mwTarget)) return true;
     }
     return false;
   }
@@ -2408,10 +2399,20 @@ export default class KioskKeyboard extends Control {
    *   the only source.
    */
   private _performBackspaceDelete(shift = this._isShiftActive()): boolean {
-    const allowed = this.fireKeyPress({ key: "Backspace", shiftKey: shift });
-    this._shiftState.autoRelease();
-    if (!allowed) return true; // consumer vetoed this tick; keep the gesture alive
+    if (!this.fireKeyPress({ key: "Backspace", shiftKey: shift })) return true; // consumer vetoed this tick; keep the gesture alive
     return this._targetSession.handleBackspace();
+  }
+
+  /**
+   * One Backspace deletion for an auto-repeat tick: the middleware-then-delete
+   * path a single tap takes, plus the latch spend the tap gets from
+   * `_handleKeyAction`. Returns `false` only when the key fired but nothing was
+   * deleted, which the repeater uses to stop.
+   */
+  private _performBackspaceRepeatTick(): boolean {
+    const handled = this._tryCompositionMiddleware("{backspace}") || this._performBackspaceDelete();
+    this._shiftState.autoRelease();
+    return handled;
   }
 
   /**
@@ -2429,6 +2430,26 @@ export default class KioskKeyboard extends Control {
       return;
     }
 
+    this._performKeyAction(action, keyValue, el, shift);
+
+    // One key, one decision: which keys spend a latched one-shot Shift is a
+    // pure function of the key, so it is asked once here rather than left to
+    // whichever branch of `_performKeyAction` remembers to call `autoRelease()`.
+    if (spendsOneShotShift(action.kind)) this._shiftState.autoRelease();
+  }
+
+  /**
+   * Runs what the key does, leaving the one-shot Shift to the caller.
+   *
+   * @param action Everything except `{shift}`, which `_handleKeyAction`
+   *   settles itself before composition can see it.
+   */
+  private _performKeyAction(
+    action: Exclude<KeyAction, { kind: "shift" }>,
+    keyValue: string,
+    el: HTMLElement,
+    shift: boolean,
+  ): void {
     // Composition middleware must see {backspace}/{enter}/chars/unknown tokens
     // (but not layout/fkey) before default handling.
     if (this._tryCompositionMiddleware(keyValue)) return;
@@ -2442,7 +2463,6 @@ export default class KioskKeyboard extends Control {
         if (this.fireKeyPress({ key: "Enter", shiftKey: shift })) {
           this._targetSession.handleEnter();
         }
-        this._shiftState.autoRelease();
         return;
 
       case "layout": {
@@ -2460,7 +2480,6 @@ export default class KioskKeyboard extends Control {
         if (this.fireKeyPress({ key: action.name, shiftKey: shift })) {
           this._fKeyController.handle(action.name, shift);
         }
-        this._shiftState.autoRelease();
         return;
       }
 
@@ -2477,7 +2496,6 @@ export default class KioskKeyboard extends Control {
             "ui5.kiosk.KioskKeyboard",
           );
         }
-        this._shiftState.autoRelease();
         return;
 
       case "char": {
@@ -2487,9 +2505,6 @@ export default class KioskKeyboard extends Control {
         if (this.fireKeyPress({ key: effective, shiftKey: shift })) {
           this._targetSession.insertText(effective);
         }
-
-        // Auto-release shift (not caps lock)
-        this._shiftState.autoRelease();
         return;
       }
 
