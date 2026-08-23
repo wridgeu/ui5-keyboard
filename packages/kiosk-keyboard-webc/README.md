@@ -261,16 +261,11 @@ Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 con
 | Active-control event        | `activeControlChange` with `controlId`                               | `active-control-change` with `activeElement`                          |
 | Open / close events         | `afterOpen` / `afterClose`, no parameters                            | `after-open` / `after-close` with `activeElement`                     |
 
-One-shot Shift is spent on a different set of keys, which changes what the key after it types:
+One-shot Shift is spent on the same set of keys on both: any key that acts on the target - a character, an unknown `{...}` token, `{backspace}`, `{enter}`, an `{fkey:*}`, a committed accent variant, or a key the composition middleware consumed. A latched modifier is spent by the next non-modifier key, which is also what XKB, AccessX and Sticky Keys do.
 
-| Key                                              | `ui5-lib-kiosk-keyboard` | `kiosk-keyboard-webc` |
-| ------------------------------------------------ | ------------------------ | --------------------- |
-| Character, unknown `{...}` token, accent variant | released                 | released              |
-| Key consumed by the composition middleware       | released                 | released              |
-| `{backspace}`, `{enter}`, `{fkey:*}`             | stays armed              | released              |
-| The first row's keys, key event vetoed           | released                 | stays armed           |
+Vetoing `key-press` does not change that set on either twin: the latch is consumed to produce the payload, so `preventDefault()` cancels the insertion, not the spend.
 
-Caps Lock is sticky on both and never auto-releases. `{layout:*}` is not an auto-release on either: selecting a layout resets the whole typing context, Caps Lock included.
+Caps Lock is sticky on both and never auto-releases. `{shift}` and `{layout:*}` spend nothing; selecting a layout resets the whole typing context, Caps Lock included.
 
 Activating a focused keycap from the physical keyboard differs in one respect: the web component activates Space on release, following native `<button>` semantics, while the UI5 control routes Space through UI5's `sapselect`, a keydown pseudo-event, and so activates on press. Neither twin repeats on a held key, and `{backspace}` repeats only from pointer input. Both treat Shift+Enter and Shift+Space as "type the shifted glyph" and both reject Ctrl, Alt and Meta.
 

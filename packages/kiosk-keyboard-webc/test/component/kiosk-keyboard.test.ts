@@ -636,6 +636,87 @@ describe("kiosk-keyboard", () => {
       expect(shift.getAttribute("aria-pressed")).to.equal("false");
     });
 
+    // The latch is consumed to *produce* the payload - `key-press` already
+    // carries `char: "A"` by the time a consumer sees it. What a veto cancels is
+    // the insertion, not the spend. Vetoing to route insertion yourself is a
+    // documented pattern (`insertText()`), and leaving the latch armed strands
+    // that consumer in Shift with no public API to release it. (#241)
+    for (const token of ["a", "{backspace}", "{enter}", "{paste}"]) {
+      it(`a vetoed ${token} still spends the one-shot shift`, async () => {
+        const container = document.createElement("div");
+        const target = document.createElement("input");
+        target.id = "target-veto-spend";
+        const kb = document.createElement("kiosk-keyboard") as KioskKeyboard;
+        kb.appendChild(
+          customLayout({
+            name: "test-veto-spend",
+            rows: [
+              [
+                { value: "{shift}" },
+                { value: "a" },
+                { value: "{backspace}" },
+                { value: "{enter}" },
+                { value: "{paste}" },
+              ],
+            ],
+          }),
+        );
+        container.append(target, kb);
+        await fixture(container);
+        kb.controls = "target-veto-spend";
+        kb.layout = "test-veto-spend";
+        await nextRender();
+
+        queryKey(kb, "{shift}")!.click();
+        await nextRender();
+        expect(queryKey(kb, "{shift}")!.getAttribute("aria-pressed"), "precondition: shift latched").to.equal("true");
+
+        // Armed only now: webc fires key-press for `{shift}` too, so a blanket
+        // veto would block the latch this test needs.
+        kb.addEventListener("key-press", (e) => {
+          e.preventDefault();
+        });
+
+        queryKey(kb, token)!.click();
+        await nextRender();
+
+        expect(
+          queryKey(kb, "{shift}")!.getAttribute("aria-pressed"),
+          `the vetoed ${token} spends the latch anyway`,
+        ).to.equal("false");
+      });
+    }
+
+    it("a vetoed F-key still spends the one-shot shift", async () => {
+      const kb = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      kb.appendChild(
+        customLayout({
+          name: "test-veto-fk",
+          rows: [[{ value: "{shift}" }, { value: "{fkey:F1}" }]],
+        }),
+      );
+      await fixture(kb);
+      kb.layout = "test-veto-fk";
+      await nextRender();
+
+      queryKey(kb, "{shift}")!.click();
+      await nextRender();
+      expect(queryKey(kb, "{shift}")!.getAttribute("aria-pressed"), "precondition: shift latched").to.equal("true");
+
+      // Armed only now: webc fires key-press for `{shift}` too.
+      kb.addEventListener("key-press", (e) => {
+        e.preventDefault();
+      });
+
+      queryKey(kb, "{fkey:F1}")!.click();
+      await nextRender();
+
+      expect(
+        queryKey(kb, "{shift}")!.getAttribute("aria-pressed"),
+        "the vetoed F-key spends the latch anyway",
+      ).to.equal("false");
+    });
+
     it("preserves non-default layout after shift toggle", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwertz-de"></kiosk-keyboard> `);
       await nextRender();
@@ -1741,29 +1822,33 @@ describe("kiosk-keyboard", () => {
       expect(el.fKeyMode).to.equal("Native");
     });
 
+    // `{shift}` and `{fkey:F1}` sit on one surface on purpose. Routing through
+    // `{layout:fkeys}` to reach an F-key calls `resetShiftState()`, so shift is
+    // already off before F1 is pressed and the assertion holds with the release
+    // deleted entirely - the vacuous shape #240 caught by fault injection.
     it("auto-releases shift after F-key press", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.appendChild(
+        customLayout({
+          name: "test-shift-fk",
+          rows: [[{ value: "{shift}" }, { value: "{fkey:F1}" }, { value: "a" }]],
+        }),
+      );
+      await fixture(el);
+      el.layout = "test-shift-fk";
       await nextRender();
 
-      // Activate shift
       const shiftKey = queryKey(el, "{shift}")!;
       shiftKey.click();
       await nextRender();
-      expect(shiftKey.getAttribute("aria-pressed")).to.equal("true");
+      expect(queryKey(el, "{shift}")!.getAttribute("aria-pressed")).to.equal("true");
 
-      // Switch to fkeys layout
-      queryKey(el, "{layout:fkeys}")!.click();
-      await nextRender();
-
-      // Press F1
       queryKey(el, "{fkey:F1}")!.click();
       await nextRender();
 
-      // Shift should have auto-released - switch back to check shift key state
-      queryKey(el, "{layout:base}")!.click();
-      await nextRender();
-      const shiftAfter = queryKey(el, "{shift}")!;
-      expect(shiftAfter.getAttribute("aria-pressed")).to.not.equal("true");
+      expect(queryKey(el, "{shift}")!.getAttribute("aria-pressed"), "the F-key spends the one-shot shift").to.equal(
+        "false",
+      );
     });
   });
 

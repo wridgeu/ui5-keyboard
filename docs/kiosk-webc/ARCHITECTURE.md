@@ -291,7 +291,9 @@ Caps Lock    false    true       true
 - Shift → Off: slow second press (resets one-shot)
 - Caps Lock → Off: any press
 
-**Auto-release**: `autoRelease()` clears one-shot Shift after any key that acts on the target - a character, `{backspace}`, `{enter}`, an `{fkey:*}`, a committed accent variant, or a key the composition middleware consumed. `{shift}` and `{layout:*}` do not spend it, and Caps Lock is sticky and never auto-releases. A vetoed `key-press` leaves the latch armed, since nothing was typed.
+**Auto-release**: `autoRelease()` clears one-shot Shift after any key that acts on the target - a character, `{backspace}`, `{enter}`, an `{fkey:*}`, an unrecognized `{...}` token, a committed accent variant, or a key the composition middleware consumed. `{shift}` and `{layout:*}` do not spend it, and Caps Lock is sticky and never auto-releases.
+
+**A veto does not change the spending set** (#241). The latch is consumed to _produce_ the payload: `key-press` already carries `char: "A"` by the time a consumer sees it, so what `preventDefault()` cancels is the insertion, not the spend. Both twins follow this rule and spend on the same set of keys (#240).
 
 > This is one of the twin differences: the UI5 control spends the latch on character keys, unknown tokens and accent variants only - `{backspace}`, `{enter}` and `{fkey:*}` leave it armed there - and it spends it even when the consumer vetoes `keyPress`. See the event table in the web component's README.
 

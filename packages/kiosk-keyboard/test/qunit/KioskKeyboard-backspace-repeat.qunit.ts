@@ -1,6 +1,6 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
-import { placeAndWait, getRequiredKeyElement } from "./test-helpers";
+import { placeAndWait, getRequiredKeyElement, isShiftActive, tapKey, waitForRender } from "./test-helpers";
 import { BACKSPACE_AUTO_REPEAT } from "ui5/kiosk/internal/auto-repeat";
 
 // Integration coverage for the Backspace press-and-hold wiring: ontouchstart
@@ -135,6 +135,48 @@ QUnit.test("a disabled keyboard does not auto-repeat", async (assert) => {
   } finally {
     clock.restore();
   }
+
+  input.destroy();
+  kb.destroy();
+});
+
+// The release lives inside `_performBackspaceDelete`, shared by the single tap
+// and every repeat tick, so a hold spends the latch rather than leaving it
+// armed for whatever the user types next (#240).
+//
+// Asserted after `clock.restore()` and a real render: `isShiftActive` reads the
+// rendered `aria-pressed`, and UI5's re-render never runs while sinon's fake
+// timers are installed, so an in-hold assertion would read a stale attribute
+// and fail whether or not the latch was spent.
+QUnit.test("a held Backspace spends the one-shot Shift", async (assert) => {
+  const input = new Input({ value: "abcdef" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(6, 6);
+  await waitForRender();
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Precondition: Shift is latched");
+
+  const bksp = getRequiredKeyElement(kb, "{backspace}");
+  const clock = sinon.useFakeTimers();
+  try {
+    press(kb, bksp);
+    clock.tick(T.initialDelayMs + 1000);
+    release(kb, bksp);
+  } finally {
+    clock.restore();
+  }
+  await waitForRender();
+
+  // Guards the assertion below against passing for the wrong reason: a hold
+  // that deleted nothing would also leave no latch to spend.
+  assert.ok(input.getValue().length < 6, "Precondition: the hold actually deleted");
+  assert.notOk(isShiftActive(kb), "The hold spends the one-shot Shift");
 
   input.destroy();
   kb.destroy();
