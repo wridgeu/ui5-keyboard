@@ -2134,6 +2134,30 @@ describe("kiosk-keyboard", () => {
       expect(detail.char, "the declared shift value wins over an uppercased '1'").to.equal("!");
     });
 
+    it("Shift+Enter on an action key reports shiftKey on the key-press event", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      // Every key kind must report the Shift the keystroke carried, not just
+      // character keys - the UI5 twin diverged here by reading the latch
+      // directly in its `{backspace}` branch.
+      const seen: Record<string, boolean> = {};
+      el.addEventListener("key-press", (e) => {
+        const detail = (e as CustomEvent<{ key: string; shiftKey: boolean }>).detail;
+        seen[detail.key] = detail.shiftKey;
+      });
+
+      for (const token of ["{backspace}", "{enter}"]) {
+        const key = queryKey(el, token)!;
+        key.focus();
+        key.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true }));
+        await nextRender();
+      }
+
+      expect(seen["{backspace}"], "{backspace} reports the Shift the keystroke carried").to.be.true;
+      expect(seen["{enter}"], "{enter} reports the Shift the keystroke carried").to.be.true;
+    });
+
     it("does not activate a key on Shift combined with another modifier", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();

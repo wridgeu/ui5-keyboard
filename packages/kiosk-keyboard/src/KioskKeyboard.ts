@@ -2396,9 +2396,14 @@ export default class KioskKeyboard extends Control {
    * grapheme from the target. Shared by the single Backspace tap and the
    * auto-repeat tick. Returns `false` only when the key fired but nothing was
    * deleted (empty input / cursor at start), which the repeater uses to stop.
+   *
+   * @param shift The Shift the activation carried, which for a keyboard
+   *   activation may be the transient modifier rather than the latched state.
+   *   The auto-repeat tick drives this from pointer input, where the latch is
+   *   the only source.
    */
-  private _performBackspaceDelete(): boolean {
-    if (!this.fireKeyPress({ key: "Backspace", shiftKey: this._isShiftActive() })) return true; // consumer vetoed this tick; keep the gesture alive
+  private _performBackspaceDelete(shift = this._isShiftActive()): boolean {
+    if (!this.fireKeyPress({ key: "Backspace", shiftKey: shift })) return true; // consumer vetoed this tick; keep the gesture alive
     return this._targetSession.handleBackspace();
   }
 
@@ -2423,7 +2428,7 @@ export default class KioskKeyboard extends Control {
 
     switch (action.kind) {
       case "backspace":
-        this._performBackspaceDelete();
+        this._performBackspaceDelete(shift);
         return;
 
       case "enter":

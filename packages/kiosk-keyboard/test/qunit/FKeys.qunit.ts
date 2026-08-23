@@ -218,6 +218,66 @@ QUnit.test("F-key tap fires keyPress with shiftKey=true when shift active", asyn
   kb.destroy();
 });
 
+QUnit.test("Shift+Enter on a focused F-key dispatches the native key with Shift held", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    layout: "test-qwerty-fk",
+    controls: [input.getId()],
+    fKeyMode: FKeyMode.Native,
+    customLayouts: [new CustomLayout({ name: "test-qwerty-fk", rows: qwertyFk })],
+  });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  // Shift+F3 and Shift+Arrow (select-extend) are the reason this path matters:
+  // the modifier has to survive onto the synthesized native event, not just
+  // onto the keyPress payload.
+  const native: KeyboardEvent[] = [];
+  input.getFocusDomRef()!.addEventListener("keydown", (e) => {
+    native.push(e as KeyboardEvent);
+  });
+
+  let payloadShift: boolean | undefined;
+  kb.attachKeyPress((event) => {
+    payloadShift = event.getParameter("shiftKey") as boolean;
+  });
+
+  const f3 = getRequiredKeyElement(kb, "{fkey:F3}");
+  f3.setAttribute("tabindex", "0");
+  f3.focus();
+  f3.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  assert.strictEqual(payloadShift, true, "keyPress reports the Shift the keystroke carried");
+  assert.strictEqual(native.length, 1, "One native F3 dispatched");
+  assert.strictEqual(native[0]!.key, "F3", "The native event is F3");
+  assert.ok(native[0]!.shiftKey, "The native event carries Shift");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Shift+Enter on a focused F-key does not latch the on-screen Shift state", async (assert) => {
+  const kb = new KioskKeyboard({
+    layout: "test-qwerty-fk",
+    customLayouts: [new CustomLayout({ name: "test-qwerty-fk", rows: qwertyFk })],
+  });
+  await placeAndWait(kb);
+
+  const f3 = getRequiredKeyElement(kb, "{fkey:F3}");
+  f3.setAttribute("tabindex", "0");
+  f3.focus();
+  f3.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  assert.notOk(isShiftActive(kb), "The transient Shift leaves the {shift} keycap alone");
+
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // Fn button on base layouts
 // ──────────────────────────────────────────────
