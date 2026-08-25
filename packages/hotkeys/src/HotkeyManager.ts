@@ -11,7 +11,6 @@ import { INTERNAL_TOKEN } from "./internal/internal-token";
 import { GLOBAL_SCOPE } from "./internal/constants";
 import FocusFallbackTracker from "./internal/FocusFallbackTracker";
 import { getEventTarget, isInputElement } from "./internal/dom";
-import { createIdGenerator } from "./internal/idgen";
 import { parseHotkey, formatParsed } from "./internal/parse";
 import RegistrationIndex from "./internal/registration-index";
 import ConflictResolver from "./internal/conflict-resolver";
@@ -44,7 +43,8 @@ import type {
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
-const idGen = createIdGenerator("hk_");
+/** Monotonic source of registration ids. Never repeats for the page lifetime. */
+let idSeq = 0;
 
 /**
  * Resolve the public target option into the internal discriminated union.
@@ -276,7 +276,7 @@ export default class HotkeyManager extends BaseObject {
     const resolved = resolveOptions(options);
     const parsedHotkey = parseHotkey(hotkey, this._platform);
     const normalizedHotkey = formatParsed(parsedHotkey);
-    const id = idGen.next();
+    const id = `hk_${++idSeq}`;
 
     // Conflict detection within the same scope
     this._conflictResolver.resolve(normalizedHotkey, resolved.scope, resolved.target, resolved.conflictBehavior);

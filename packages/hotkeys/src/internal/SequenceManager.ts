@@ -1,7 +1,6 @@
 import Log from "sap/base/Log";
 import { GLOBAL_SCOPE } from "./constants";
 import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./dom";
-import { createIdGenerator } from "./idgen";
 import { getCandidateKeys, matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import { resolveScopeOrGlobal } from "./scope";
@@ -19,7 +18,8 @@ import type {
 const LOG_COMPONENT = "ui5.hotkeys.SequenceManager";
 const DEFAULT_TIMEOUT = 1000;
 
-const idGen = createIdGenerator("seq_");
+/** Monotonic source of sequence-registration ids. Never repeats for the page lifetime. */
+let idSeq = 0;
 
 function assertValidTimeout(timeout: number): number {
   if (!Number.isFinite(timeout) || timeout <= 0) {
@@ -128,7 +128,7 @@ export default class SequenceManager {
       throw new Error("A sequence must have at least 2 steps");
     }
 
-    const id = idGen.next();
+    const id = `seq_${++idSeq}`;
     const parsedSteps = sequence.map((s, i) => {
       try {
         return parseHotkey(s, this._platform);

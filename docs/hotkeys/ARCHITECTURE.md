@@ -352,7 +352,6 @@ packages/hotkeys/
       internal-token.ts    Runtime instantiation guard symbol
       scope.ts             Scope string resolution and validation
       skip-reason.ts       Internal skip-reason models
-      idgen.ts             Internal ID generator
       registration-index.ts Scope/target registration index
       hotkey-matcher.ts    Two-pass targeted/untargeted matching
       conflict-resolver.ts Duplicate-registration conflict detection/resolution
