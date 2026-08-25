@@ -11,12 +11,12 @@
         </landmarkInfo>
         <content>
             <Panel class="sapUiSmallMarginBottom" headerText="Controls">
-                <VBox class="sapUiSmallMargin">
-                    <HBox alignItems="Center">
+                <HBox wrap="Wrap" alignItems="Center" class="sapUiSmallMargin">
+                    <HBox alignItems="Center" class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                         <Label id="enabledLabel" text="Enabled:" class="sapUiSmallMarginEnd" />
                         <Switch state="{docked>/kioskEnabled}" ariaLabelledBy="enabledLabel" />
                     </HBox>
-                    <HBox alignItems="Center" wrap="Wrap" class="sapUiSmallMarginTop">
+                    <HBox alignItems="Center" class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                         <Label id="mobileKeyboardLabel" text="Mobile Keyboard:" class="sapUiSmallMarginEnd" />
                         <SegmentedButton selectedKey="{docked>/kioskMobileKeyboard}" ariaLabelledBy="mobileKeyboardLabel" width="15rem">
                             <items>
@@ -26,14 +26,14 @@
                             </items>
                         </SegmentedButton>
                     </HBox>
-                    <HBox alignItems="Center" wrap="Wrap" class="sapUiSmallMarginTop">
+                    <HBox alignItems="Center" class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                         <Label text="Layout:" labelFor="layoutSelect" class="sapUiSmallMarginEnd" />
                         <Select id="layoutSelect" selectedKey="{docked>/kioskLayout}"
                             items="{docked>/layouts}">
                             <core:Item key="{docked>key}" text="{docked>text}" />
                         </Select>
                     </HBox>
-                    <HBox alignItems="Center" wrap="Wrap" class="sapUiSmallMarginTop">
+                    <HBox alignItems="Center" class="sapUiTinyMarginBottom">
                         <Label id="fKeyModeLabel" text="F-Key Mode:" class="sapUiSmallMarginEnd" />
                         <SegmentedButton selectedKey="{docked>/kioskFKeyMode}" ariaLabelledBy="fKeyModeLabel" width="15rem">
                             <items>
@@ -43,7 +43,7 @@
                             </items>
                         </SegmentedButton>
                     </HBox>
-                </VBox>
+                </HBox>
             </Panel>
 
             <Panel class="sapUiSmallMarginBottom" headerText="Docked Keyboard (tap any input)">
