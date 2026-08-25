@@ -3,7 +3,7 @@ import CustomLayout from "ui5/kiosk/CustomLayout";
 import Input from "sap/m/Input";
 import { KeyboardType } from "ui5/kiosk/library";
 import type { CompositionMiddleware } from "ui5/kiosk/types";
-import { placeAndWait, waitForRender, tapKey } from "./test-helpers";
+import { placeAndWait, waitForRender, isShiftActive, tapKey } from "./test-helpers";
 
 function commonAfterEach(): void {
   const fixture = document.getElementById("qunit-fixture");
@@ -99,6 +99,31 @@ QUnit.test("commits an in-progress composition when a keyboardType change swaps 
   tapKey(kb, "7");
   assert.deepEqual(calls.handled, ["ㄱ"], "old middleware does not receive keys after the swap");
   assert.strictEqual(input.getValue(), "7", "numpad digit inserts directly after the swap");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("a middleware-consumed key spends the one-shot Shift latch", async (assert) => {
+  const { kb, input } = await setupHangul();
+  const { calls, factory } = spyMiddleware();
+  kb.addCustomLayout(new CustomLayout({ name: "ko-hangul", middleware: factory }));
+  await waitForRender();
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Shift is latched going into the consumed key");
+
+  tapKey(kb, "ㄱ");
+  // The consumption is asserted too: a key the middleware declined would reach
+  // the same spend gate down the default branch, so the latch assertion alone
+  // would stay green with the early return moved above that gate.
+  // The middleware is handed the key's base value, not its shifted glyph.
+  assert.deepEqual(calls.handled, ["ㄱ"], "the middleware consumed the key");
+  assert.strictEqual(input.getValue(), "", "the consumed key wrote nothing directly");
+
+  await waitForRender();
+  assert.notOk(isShiftActive(kb), "the consumed key still spent the one-shot Shift latch");
 
   input.destroy();
   kb.destroy();
