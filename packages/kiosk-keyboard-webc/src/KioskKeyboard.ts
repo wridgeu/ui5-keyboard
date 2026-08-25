@@ -858,6 +858,7 @@ class KioskKeyboard extends UI5Element {
     getResolvedLayout: () => this._getResolvedLayout(),
     getShadowRoot: () => this.shadowRoot,
     isRtl: () => this.effectiveDir === "rtl",
+    isDisabled: () => this.disabled,
     setPressedKey: (pos) => {
       this._pressedKey = pos;
     },
@@ -1702,6 +1703,10 @@ class KioskKeyboard extends UI5Element {
    * cursor at start), which stops the repeat.
    */
   private _performBackspaceRepeatDelete(): boolean {
+    // The disabled flag is read here, where the tick consumes it, and not only
+    // where the hold was armed: disabling mid-hold ends the gesture on the next
+    // tick rather than letting it keep deleting and keep firing `key-press`.
+    if (this.disabled) return false;
     // char is undefined for action keys, matching the single-tap {backspace} branch.
     const allowed = this.fireDecoratorEvent("key-press", {
       key: "{backspace}",

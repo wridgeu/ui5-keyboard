@@ -11,6 +11,11 @@ export interface KeyGridNavigationHost {
   getShadowRoot(): ShadowRoot | null;
   /** Whether the host renders right-to-left, mirroring the horizontal arrows. */
   isRtl(): boolean;
+  /**
+   * Whether the host is disabled. Read at event time, not at wiring time: the
+   * flag can flip while a keycap holds focus.
+   */
+  isDisabled(): boolean;
   /** The keycap held down by a keyboard activation, or `null` between activations. */
   setPressedKey(pos: KeyPosition | null): void;
 }
@@ -61,6 +66,10 @@ export class KeyGridNavigation {
   }
 
   onKeyDown(e: KeyboardEvent): void {
+    // A disabled keyboard handles no key: no move, no roving-tabindex rewrite
+    // over the `tabindex="-1"` the template renders while disabled, and no press
+    // feedback on a key whose activation is discarded anyway.
+    if (this._host.isDisabled()) return;
     // SAFETY: the template binds this to `keydown` on the keyboard root inside the
     // shadow root, so the target is one of the HTML elements rendered there; `closest`
     // then yields a keycap or null, and null returns early.
@@ -183,7 +192,9 @@ export class KeyGridNavigation {
 
     const pressed = this._spaceKeyDown;
     this._spaceKeyDown = null;
-    if (!pressed) return;
+    // `_release()` above runs either way: a keyboard disabled between the press
+    // and the release must still drop the press feedback it left painted.
+    if (!pressed || this._host.isDisabled()) return;
     // SAFETY: the template binds this to `keyup` on the keyboard root inside the shadow
     // root, so the target is one of the HTML elements rendered there; `closest` then
     // yields a keycap or null, and only an exact match with the pressed key activates.

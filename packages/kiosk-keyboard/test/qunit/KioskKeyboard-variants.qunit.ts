@@ -572,6 +572,24 @@ QUnit.test("Escape dismisses the popup without inserting", async (assert) => {
   cleanup(kb, input);
 });
 
+// The arm-time check is not enough on its own: the hold timer fires later, so
+// the open is gated again at fire time. Mirrors the webc twin, whose
+// `resolveOpenState` refuses on a disabled keyboard.
+QUnit.test("disabling mid-hold keeps the popup from opening when the timer fires", async (assert) => {
+  const { kb, input } = await makeKeyboard("z");
+  const aKey = getRequiredKeyElement(kb, "a");
+  press(kb, aKey);
+  kb.setEnabled(false);
+  await new Promise((resolve) => setTimeout(resolve, VARIANT_HOLD_MS + 40));
+
+  assert.notOk(variantPopup(kb).isOpen(), "the elapsed hold opened nothing on a disabled keyboard");
+  assert.strictEqual(getOptions().length, 0, "no option buttons were rendered");
+
+  release(kb, aKey);
+  assert.strictEqual(input.getValue(), "z", "and the release typed nothing either");
+  cleanup(kb, input);
+});
+
 QUnit.test("Shift surfaces the uppercase variants including ẞ for ß", async (assert) => {
   const { kb, input } = await makeKeyboard();
   tapKey(kb, "{shift}");

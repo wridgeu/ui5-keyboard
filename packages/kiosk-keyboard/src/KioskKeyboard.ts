@@ -874,7 +874,7 @@ export default class KioskKeyboard extends Control {
       setLiveRegionText: (text) => this._setLiveRegionText(text),
     });
     this._shiftState = new ShiftState(() => this._syncShiftState());
-    this._keyGridNav = new KeyGridNavigation(KIOSK_KEYBOARD_DOM);
+    this._keyGridNav = new KeyGridNavigation(KIOSK_KEYBOARD_DOM, () => this.getEnabled());
     // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
     this.addDelegate(this._keyGridNav, true);
     this._open = false;
@@ -1969,6 +1969,10 @@ export default class KioskKeyboard extends Control {
    * behavior to build the option listbox.
    */
   private _resolveKeyVariants(keyEl: HTMLElement): { base: string; glyphs: string[] } | null {
+    // Gated here rather than only at arm time, so a keyboard disabled while the
+    // hold is running does not open the popup when the timer fires. Mirrors the
+    // webc twin, whose `_resolveVariantOpenState` opens with the same check.
+    if (!this.getEnabled()) return null;
     const pos = keyPositionOf(keyEl);
     if (!pos) return null;
     const key = this._getResolvedLayout()[pos.row]?.[pos.col];
@@ -2414,6 +2418,10 @@ export default class KioskKeyboard extends Control {
    * deleted, which the repeater uses to stop.
    */
   private _performBackspaceRepeatTick(): boolean {
+    // The enabled flag is read here, where the tick consumes it, and not only
+    // where the hold was armed: disabling mid-hold ends the gesture on the next
+    // tick rather than letting it keep deleting and keep firing `keyPress`.
+    if (!this.getEnabled()) return false;
     const handled = this._tryCompositionMiddleware("{backspace}") || this._performBackspaceDelete();
     this._shiftState.autoRelease();
     return handled;

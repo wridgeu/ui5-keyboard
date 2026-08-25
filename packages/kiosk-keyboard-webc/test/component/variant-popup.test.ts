@@ -139,6 +139,19 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     pointerUp();
   });
 
+  // Pins the fire-time gate the UI5 twin is gaining: the arm-time check alone
+  // would let a hold begun while enabled open the popup after the flag flipped.
+  it("does not open when the keyboard is disabled mid-hold", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    pointerDown(requireKey(kb, "a"));
+    kb.disabled = true;
+    await delay(HOLD_MS);
+    await renderFinished();
+
+    expect(popoverEl(kb), "the elapsed hold opened nothing on a disabled keyboard").to.not.exist;
+    pointerUp();
+  });
+
   it("opens the popup on a host that was given an id after its first render", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     // `id` is not a decorated property, so assigning it re-renders nothing; the

@@ -1137,3 +1137,37 @@ QUnit.test("single controls entry is auto-targeted after rendering", async (asse
   input.destroy();
   kb.destroy();
 });
+
+// The control's own guards keep a keycap from holding focus while disabled, so
+// this is defence in depth for a key a consumer focused directly: the delegate
+// must not move focus or rewrite the tab stop the renderer set to -1.
+QUnit.test("Arrow keys do not navigate a disabled keyboard", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const firstRowKeys = getRowKeys(kb, 0);
+  const origin = firstRowKeys[0]!;
+  const neighbour = firstRowKeys[1]!;
+
+  kb.setEnabled(false);
+  await waitForRender();
+  origin.focus();
+
+  origin.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", keyCode: 39, bubbles: true }));
+
+  assert.notStrictEqual(document.activeElement, neighbour, "Focus did not move to the neighbour");
+  assert.strictEqual(getFocusableKeys(kb).length, 0, "No key gained tabindex=0");
+
+  // Re-arm: the guard must not leave navigation dead once the keyboard is usable
+  // again (CLAUDE.md's re-arm rule for anything gated on a flag).
+  kb.setEnabled(true);
+  await waitForRender();
+  const reEnabledKeys = getRowKeys(kb, 0);
+  reEnabledKeys[0]!.setAttribute("tabindex", "0");
+  reEnabledKeys[0]!.focus();
+  reEnabledKeys[0]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", keyCode: 39, bubbles: true }));
+
+  assert.strictEqual(document.activeElement, reEnabledKeys[1], "Navigation works again after re-enabling");
+
+  kb.destroy();
+});

@@ -21,6 +21,8 @@ interface Grid {
   /** The grid position the navigator last reported as pressed, or null. */
   pressedKey: () => KeyPosition | null;
   tabbable: () => Array<{ row: number; col: number }>;
+  /** Flip the host's disabled state the way a consumer would mid-interaction. */
+  setDisabled: (disabled: boolean) => void;
 }
 
 /**
@@ -55,10 +57,12 @@ function makeGrid(rowLens: number[] = ROW_LENS, rtl = false): Grid {
 
   const layout = buildLayout(rowLens);
   let pressedKey: KeyPosition | null = null;
+  let disabled = false;
   const hostBridge: KeyGridNavigationHost = {
     getResolvedLayout: () => layout,
     getShadowRoot: () => shadow,
     isRtl: () => rtl,
+    isDisabled: () => disabled,
     setPressedKey: (pos) => {
       pressedKey = pos;
     },
@@ -89,7 +93,18 @@ function makeGrid(rowLens: number[] = ROW_LENS, rtl = false): Grid {
       col: Number(k.getAttribute(DOM.attributes.keyIndex)),
     }));
 
-  return { nav, shadow, keyAt, press, release, tabbable, pressedKey: () => pressedKey };
+  return {
+    nav,
+    shadow,
+    keyAt,
+    press,
+    release,
+    tabbable,
+    pressedKey: () => pressedKey,
+    setDisabled: (value: boolean) => {
+      disabled = value;
+    },
+  };
 }
 
 let grids: Grid[] = [];
@@ -507,5 +522,60 @@ describe("KeyGridNavigation - last-focused-key tracking", () => {
     expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 1 });
     g.nav.setLastFocusedKey(null);
     expect(g.nav.getLastFocusedKey()).toBeNull();
+  });
+});
+
+describe("KeyGridNavigation - a disabled keyboard handles nothing", () => {
+  it("does not move focus or rewrite the roving tab stop", () => {
+    const g = grid();
+    const origin = g.keyAt(0, 0);
+    g.setDisabled(true);
+
+    const ev = g.press(origin, "ArrowRight");
+    expect(g.nav.getLastFocusedKey()).toBeNull();
+    expect(g.tabbable()).toEqual([{ row: 0, col: 0 }]);
+    expect(ev.defaultPrevented, "an unhandled key keeps its default").toBe(false);
+  });
+
+  it("does not activate or paint press feedback", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+    g.setDisabled(true);
+
+    g.press(key, "Enter");
+    g.press(key, " ");
+    g.release(key, " ");
+    expect(onClick).not.toHaveBeenCalled();
+    expect(g.pressedKey()).toBeNull();
+    expect(key.classList.contains(DOM.classes.keyPressed)).toBe(false);
+  });
+
+  it("drops the press feedback of a Space held across the disable", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+
+    g.press(key, " ");
+    expect(key.classList.contains(DOM.classes.keyPressed), "pressed while still enabled").toBe(true);
+
+    g.setDisabled(true);
+    g.release(key, " ");
+    expect(onClick, "the release does not activate a disabled key").not.toHaveBeenCalled();
+    expect(key.classList.contains(DOM.classes.keyPressed), "but the feedback is cleared").toBe(false);
+    expect(g.pressedKey()).toBeNull();
+  });
+
+  it("navigates again after the keyboard is re-enabled", () => {
+    const g = grid();
+    g.setDisabled(true);
+    g.press(g.keyAt(0, 0), "ArrowRight");
+    expect(g.nav.getLastFocusedKey()).toBeNull();
+
+    g.setDisabled(false);
+    g.press(g.keyAt(0, 0), "ArrowRight");
+    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 1 });
   });
 });
