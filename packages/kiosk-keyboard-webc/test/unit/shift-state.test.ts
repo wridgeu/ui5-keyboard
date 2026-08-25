@@ -79,6 +79,56 @@ describe("ShiftState", () => {
     });
   });
 
+  describe("peekToggle()", () => {
+    it("predicts each arm of toggle()", () => {
+      const spy = vi.spyOn(performance, "now");
+      spy.mockReturnValue(1000);
+      expect(state.peekToggle(), "Off -> Shift").toBe(true);
+      state.toggle();
+
+      spy.mockReturnValue(1100);
+      expect(state.peekToggle(), "Shift -> CapsLock, within the window").toBe(true);
+      state.toggle();
+
+      spy.mockReturnValue(1200);
+      expect(state.peekToggle(), "CapsLock -> Off").toBe(false);
+      state.toggle();
+
+      spy.mockReturnValue(1300);
+      expect(state.peekToggle(), "Off -> CapsLock, within the window").toBe(true);
+      state.toggle();
+      expect(state.isCapsLock).toBe(true);
+      spy.mockRestore();
+    });
+
+    it("reports the Shift -> Off arm the mirrored caps-lock flag cannot see", () => {
+      const spy = vi.spyOn(performance, "now");
+      spy.mockReturnValue(1000);
+      state.toggle(); // Off -> Shift
+
+      spy.mockReturnValue(1000 + ShiftState.DOUBLE_CLICK_MS + 100);
+      expect(state.peekToggle(), "outside the window: Shift -> Off").toBe(false);
+      spy.mockRestore();
+    });
+
+    it("neither transitions nor moves the double-click window", () => {
+      const spy = vi.spyOn(performance, "now");
+      spy.mockReturnValue(1000);
+      state.toggle(); // Off -> Shift
+      onChange.mockClear();
+
+      spy.mockReturnValue(1100);
+      state.peekToggle();
+      state.peekToggle();
+      expect(state.isShifted).toBe(true);
+      expect(onChange).not.toHaveBeenCalled();
+
+      state.toggle(); // still measured from t=1000, so still within the window
+      expect(state.isCapsLock).toBe(true);
+      spy.mockRestore();
+    });
+  });
+
   describe("autoRelease()", () => {
     it("releases shift and fires onChange", () => {
       state.toggle(); // shift on (1st onChange)

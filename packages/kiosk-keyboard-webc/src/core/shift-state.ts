@@ -52,24 +52,29 @@ export class ShiftState {
   toggle(): void {
     const prev = this._mode;
     const now = performance.now();
-    const withinWindow = now - this._lastToggleTime < ShiftState.DOUBLE_CLICK_MS;
-
-    if (this._mode === Mode.CapsLock) {
-      this._mode = Mode.Off;
-    } else if (this._mode === Mode.Shift && withinWindow) {
-      this._mode = Mode.CapsLock;
-    } else if (this._mode === Mode.Off && withinWindow) {
-      // Rapid Off -> CapsLock: the previous click turned Shift off
-      // (or CapsLock off), and this click arrived within the window.
-      this._mode = Mode.CapsLock;
-    } else if (this._mode === Mode.Shift) {
-      this._mode = Mode.Off;
-    } else {
-      this._mode = Mode.Shift;
-    }
-
+    this._mode = this._nextMode(now);
     this._lastToggleTime = now;
     if (prev !== this._mode) this._onChange();
+  }
+
+  /**
+   * Whether shift would be active after the next {@link toggle}, without
+   * performing it. A `{shift}` key event that reports the state the toggle
+   * produces has to ask the transition table: `Shift -> Off` and
+   * `Off -> Shift` both leave {@link isCapsLock} false.
+   */
+  peekToggle(): boolean {
+    return this._nextMode(performance.now()) !== Mode.Off;
+  }
+
+  /** The mode a toggle at `now` produces; performing the move is the caller's. */
+  private _nextMode(now: number): Mode {
+    if (this._mode === Mode.CapsLock) return Mode.Off;
+    // Rapid second click -> caps lock from either remaining mode. The Off case
+    // covers: Shift held > 400ms -> click turns Off -> a quick click should
+    // still reach CapsLock, not bounce back to Shift.
+    if (now - this._lastToggleTime < ShiftState.DOUBLE_CLICK_MS) return Mode.CapsLock;
+    return this._mode === Mode.Shift ? Mode.Off : Mode.Shift;
   }
 
   /** Auto-releases shift (but not caps lock) after a key press. */

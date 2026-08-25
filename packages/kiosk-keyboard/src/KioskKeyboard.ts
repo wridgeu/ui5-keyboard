@@ -1386,6 +1386,10 @@ export default class KioskKeyboard extends Control {
     // any prior user-driven layout switch; the resolved layout must follow
     // the new constraint context.
     this._layoutState.clearUserOverride();
+    // A keyboardType change swaps the rendered surface exactly as `{layout:*}`
+    // does, so it ends the typing context the same way: shift and Caps Lock
+    // included (webc parity).
+    this._shiftState.reset();
     // End any in-progress composition so the next key resolves against the new
     // effective layout, the way a layout switch does.
     this._dropComposition("commit");
