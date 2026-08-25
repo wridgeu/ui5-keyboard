@@ -26,11 +26,7 @@ export default class KeyGridNavigation extends EventProvider {
   private _isEnabled: () => boolean;
   private _lastFocusedKey: KeyPosition | null = null;
 
-  /**
-   * @param isEnabled Read at event time, not at wiring time: the control's own
-   *   guards keep a keycap from holding focus while disabled, so this is
-   *   defence in depth for a key focused directly by a consumer.
-   */
+  /** @param isEnabled Asked per event: the flag flips while a keycap holds focus. */
   constructor(dom: KioskKeyboardDomContract, isEnabled: () => boolean) {
     super();
     this._dom = dom;
@@ -134,8 +130,7 @@ export default class KeyGridNavigation extends EventProvider {
 
   /**
    * The keycap a pseudo-event was dispatched on, or null when it landed
-   * elsewhere or the keyboard is disabled. Every handler above funnels through
-   * here, so the disabled check covers the whole delegate.
+   * elsewhere or the keyboard is disabled. Every handler funnels through here.
    */
   private _keyTargetOf(event: Event): HTMLElement | null {
     if (!this._isEnabled()) return null;

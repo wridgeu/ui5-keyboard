@@ -2218,9 +2218,9 @@ describe("kiosk-keyboard", () => {
 
       expect(el.shadowRoot!.activeElement, "focus stays on the originally focused key").to.equal(originKey);
       expect(
-        [...queryKeys(el)].filter((k) => k.getAttribute("tabindex") === "0"),
+        [...queryKeys(el)].filter((k) => k.getAttribute("tabindex") === "0").length,
         "the disabled keyboard still exposes no tab stop",
-      ).to.deep.equal([]);
+      ).to.equal(0);
 
       // Re-arm: a guard that never lifts would pass the suppression assertions
       // above while leaving the keyboard permanently unnavigable.

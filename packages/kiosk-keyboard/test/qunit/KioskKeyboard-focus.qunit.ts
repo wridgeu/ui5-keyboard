@@ -1145,9 +1145,7 @@ QUnit.test("Arrow keys do not navigate a disabled keyboard", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const firstRowKeys = getRowKeys(kb, 0);
-  const origin = firstRowKeys[0]!;
-  const neighbour = firstRowKeys[1]!;
+  const origin = getRowKeys(kb, 0)[0]!;
 
   kb.setEnabled(false);
   await waitForRender();
@@ -1155,7 +1153,7 @@ QUnit.test("Arrow keys do not navigate a disabled keyboard", async (assert) => {
 
   origin.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", keyCode: 39, bubbles: true }));
 
-  assert.notStrictEqual(document.activeElement, neighbour, "Focus did not move to the neighbour");
+  assert.strictEqual(document.activeElement, origin, "Focus stayed on the key it started on");
   assert.strictEqual(getFocusableKeys(kb).length, 0, "No key gained tabindex=0");
 
   // Re-arm: the guard must not leave navigation dead once the keyboard is usable

@@ -1969,9 +1969,8 @@ export default class KioskKeyboard extends Control {
    * behavior to build the option listbox.
    */
   private _resolveKeyVariants(keyEl: HTMLElement): { base: string; glyphs: string[] } | null {
-    // Gated here rather than only at arm time, so a keyboard disabled while the
-    // hold is running does not open the popup when the timer fires. Mirrors the
-    // webc twin, whose `_resolveVariantOpenState` opens with the same check.
+    // Gated at fire time as well as at arm time, so a hold that outlives the
+    // enabled flag opens nothing. The webc twin refuses in the same place.
     if (!this.getEnabled()) return null;
     const pos = keyPositionOf(keyEl);
     if (!pos) return null;
@@ -2418,9 +2417,8 @@ export default class KioskKeyboard extends Control {
    * deleted, which the repeater uses to stop.
    */
   private _performBackspaceRepeatTick(): boolean {
-    // The enabled flag is read here, where the tick consumes it, and not only
-    // where the hold was armed: disabling mid-hold ends the gesture on the next
-    // tick rather than letting it keep deleting and keep firing `keyPress`.
+    // Read where the tick consumes it, not only where the hold was armed, so
+    // disabling mid-hold ends the gesture on the next tick rather than at the release.
     if (!this.getEnabled()) return false;
     const handled = this._tryCompositionMiddleware("{backspace}") || this._performBackspaceDelete();
     this._shiftState.autoRelease();

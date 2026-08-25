@@ -1594,9 +1594,7 @@ class KioskKeyboard extends UI5Element {
 
     if (action.kind === "shift") {
       // Shift is handled separately: shiftKey reports the *resulting* state
-      // (what shift will become after toggle), not the pre-toggle state. Only
-      // the state machine can tell `Shift -> Off` from `Off -> Shift`; the
-      // mirrored `_capsLock` flag reads false for both.
+      // (what shift will become after toggle), not the pre-toggle state.
       const nextShifted = this._shiftState.peekToggle();
       const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: nextShifted });
       if (!allowed) return;
@@ -1703,9 +1701,8 @@ class KioskKeyboard extends UI5Element {
    * cursor at start), which stops the repeat.
    */
   private _performBackspaceRepeatDelete(): boolean {
-    // The disabled flag is read here, where the tick consumes it, and not only
-    // where the hold was armed: disabling mid-hold ends the gesture on the next
-    // tick rather than letting it keep deleting and keep firing `key-press`.
+    // Read where the tick consumes it, not only where the hold was armed, so
+    // disabling mid-hold ends the gesture on the next tick rather than at the release.
     if (this.disabled) return false;
     // char is undefined for action keys, matching the single-tap {backspace} branch.
     const allowed = this.fireDecoratorEvent("key-press", {
