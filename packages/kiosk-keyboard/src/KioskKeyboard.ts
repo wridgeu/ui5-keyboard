@@ -874,7 +874,7 @@ export default class KioskKeyboard extends Control {
       setLiveRegionText: (text) => this._setLiveRegionText(text),
     });
     this._shiftState = new ShiftState(() => this._syncShiftState());
-    this._keyGridNav = new KeyGridNavigation(KIOSK_KEYBOARD_DOM, () => this.getEnabled());
+    this._keyGridNav = new KeyGridNavigation(KIOSK_KEYBOARD_DOM);
     // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
     this.addDelegate(this._keyGridNav, true);
     this._open = false;

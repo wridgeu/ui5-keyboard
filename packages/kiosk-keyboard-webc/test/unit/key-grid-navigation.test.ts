@@ -526,17 +526,6 @@ describe("KeyGridNavigation - last-focused-key tracking", () => {
 });
 
 describe("KeyGridNavigation - a disabled keyboard handles nothing", () => {
-  it("does not move focus or rewrite the roving tab stop", () => {
-    const g = grid();
-    const origin = g.keyAt(0, 0);
-    g.setDisabled(true);
-
-    const ev = g.press(origin, "ArrowRight");
-    expect(g.nav.getLastFocusedKey()).toBeNull();
-    expect(g.tabbable()).toEqual([{ row: 0, col: 0 }]);
-    expect(ev.defaultPrevented, "an unhandled key keeps its default").toBe(false);
-  });
-
   it("does not activate or paint press feedback", () => {
     const g = grid();
     const key = g.keyAt(1, 2);

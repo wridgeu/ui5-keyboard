@@ -23,14 +23,11 @@ import type { KioskKeyboardDomContract } from "./dom-contract";
 export default class KeyGridNavigation extends EventProvider {
   private _rootRef: HTMLElement | null = null;
   private _dom: KioskKeyboardDomContract;
-  private _isEnabled: () => boolean;
   private _lastFocusedKey: KeyPosition | null = null;
 
-  /** @param isEnabled Asked per event: the flag flips while a keycap holds focus. */
-  constructor(dom: KioskKeyboardDomContract, isEnabled: () => boolean) {
+  constructor(dom: KioskKeyboardDomContract) {
     super();
     this._dom = dom;
-    this._isEnabled = isEnabled;
   }
 
   setRootRef(root: HTMLElement | null): void {
@@ -128,12 +125,8 @@ export default class KeyGridNavigation extends EventProvider {
     return true;
   }
 
-  /**
-   * The keycap a pseudo-event was dispatched on, or null when it landed
-   * elsewhere or the keyboard is disabled. Every handler funnels through here.
-   */
+  /** The keycap a pseudo-event was dispatched on, or null when it landed elsewhere. */
   private _keyTargetOf(event: Event): HTMLElement | null {
-    if (!this._isEnabled()) return null;
     // SAFETY: UI5 forwards these pseudo-events from the browser keyboard event on the
     // focused node, and this control renders keys as HTML elements only, so the target
     // is one; _isKey then decides whether it is a keycap of this grid.

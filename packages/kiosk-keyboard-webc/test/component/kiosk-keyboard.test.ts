@@ -26,6 +26,8 @@ function hasCqTier(el: KioskKeyboard, tier: string): boolean {
   return el.getAttribute(DOM.attributes.cqTier) === tier;
 }
 
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function waitForResponsiveSync(): Promise<void> {
   await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -462,8 +464,6 @@ describe("kiosk-keyboard", () => {
   // ── Backspace press-and-hold auto-repeat ──
 
   describe("backspace auto-repeat", () => {
-    const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-
     function pressBackspace(bksp: HTMLElement): void {
       bksp.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true, button: 0, pointerId: 1 }));
     }
@@ -675,7 +675,7 @@ describe("kiosk-keyboard", () => {
 
       /** Tap `{shift}`, optionally after waiting out the double-click window. */
       const tapShift = async (waitMs = 0): Promise<{ payload: boolean; pressed: string | null }> => {
-        if (waitMs) await new Promise((resolve) => setTimeout(resolve, waitMs));
+        if (waitMs) await delay(waitMs);
         queryKey(el, "{shift}")!.click();
         await nextRender();
         return {
