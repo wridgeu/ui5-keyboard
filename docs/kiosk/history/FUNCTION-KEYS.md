@@ -149,3 +149,4 @@ Add `"fkeys"` to `_BUILTIN_LAYOUTS` in `KioskKeyboard.ts` and to `SECONDARY_LAYO
 1. **Bottom row layout**: `Fn` replaces `#+=` in default base layouts.
 2. **F-key visual style**: F-keys use `type: "modifier"`.
 3. **Shift behavior**: F-key taps do not insert text and do not auto-release shift; `shiftKey` is still exposed in `keyPress`.
+   Superseded by #245 (2026-08-19): an F-key tap now spends the one-shot Shift latch like any other non-modifier key. The rest of the line still holds.

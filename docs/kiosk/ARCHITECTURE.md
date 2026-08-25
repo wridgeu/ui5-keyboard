@@ -198,9 +198,7 @@ Caps Lock    Mode.CapsLock true      true
 
 **A veto does not change the spending set** (#241). The latch is consumed to _produce_ the payload: `keyPress` already carries `key: "A"` by the time a consumer sees it, so what `preventDefault()` cancels is the insertion, not the spend. The alternative strands a consumer using the documented veto-and-`insertText()` pattern in Shift with no public API to release it. Both twins follow this rule, and both spend the latch on the same set of keys (#240) - the spending set is a pure function of the key.
 
-**Where in the tick the spend happens is immaterial**, so each call site releases wherever it reads best - `_performBackspaceDelete` spends up front, right after the event fires, while `_handleKeyAction` spends at the end of the branch. Nothing downstream of the fire reads the latch - the payload is resolved before the event is dispatched - and what `autoRelease()` triggers, a repaint and a live-region announcement, does not depend on the insertion having run.
-
-> The web component spends the latch on `{backspace}`, `{enter}` and `{fkey:*}` too, and keeps it armed on a vetoed `key-press`. See the event table in the web component's README.
+**One key, one decision.** `_handleKeyAction` reads the spend off the parsed key once (`spendsOneShotShift(action.kind)`) rather than leaving it to whichever branch remembers to call `autoRelease()`, so the click path has a single spend site. `_commitVariant` and `_performBackspaceRepeatTick` are the two paths that do not run through it and carry their own. **Where in the tick the spend happens is immaterial**: nothing downstream of the fire reads the latch - the payload is resolved before the event is dispatched - and what `autoRelease()` triggers, a repaint and a live-region announcement, does not depend on the insertion having run.
 
 **Announcements**: `_syncShiftState()` writes one live-region text per transition: `ARIA_CAPS_LOCK_ON`, `ARIA_CAPS_LOCK_OFF`, `ARIA_SHIFT_ON`, `ARIA_SHIFT_OFF`. Caps Lock is settled before Shift because `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift release.
 
@@ -555,34 +553,34 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 
 ## Edge Cases
 
-| Edge Case                                 | How It Is Handled                                                                                         |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Focus steal on key tap                    | `ontouchstart` `preventDefault()` keeps focus on input                                                    |
-| Target input not yet focused              | `_getTargetDomRef()` places cursor at end via `setSelectionRange()` (no focus)                            |
-| Auto-show flicker on focus transitions    | Synchronous `relatedTarget` check, plus one-tick deferred fallback when null                              |
-| Focus on keyboard during auto-show        | `relatedTarget` checked against keyboard DOM via `contains()`                                             |
-| Auto-show vs input owned by other kbd     | `_wouldClaimInput()` checks `_isTargetOfOther()`                                                          |
-| Focus moves to claimed input while open   | `_wouldClaimInput()` checks `_isTargetOfOther()`, closes normally                                         |
-| Layout switch in non-Full mode            | User pick overrides the constraint (`LayoutState.getSource()` is `"user"`); `{layout:base}` re-engages it |
-| Shift auto-release vs Caps Lock           | `ShiftState.autoRelease()` only releases `Mode.Shift`, not `Mode.CapsLock`                                |
-| `sap.ui.core.Element` name collision      | `globalThis.Element` for DOM Element references                                                           |
-| `$KioskKeyboardSettings` availability     | Generated into the committed `src/KioskKeyboard.gen.d.ts`; run `npm run generate`, never hand-edit        |
-| `_setActiveTarget` re-render              | `setAssociation(name, value, true)` suppresses invalidation                                               |
-| `_setActiveTarget` re-entrancy            | Change event deferred to after state transitions via `captureAndClearDirty()`                             |
-| Docked show/close during render           | `onAfterRendering` syncs CSS with `_open` state                                                           |
-| Destroy with auto-show active             | `exit()` removes from instance registry, disables auto-show, restores inputmode                           |
-| Target control without a `value` property | `setTargetValue()` falls back `setValue()` -> `setProperty("value")` -> raw DOM value                     |
-| `controls` with `autoShow`                | `_resolveClaimableControl()` filters by `controls`; delegation triggers `show()`                          |
-| `controls` property churn                 | `_syncControls()` rebinds delegates by control ID on each auto-show `focusin`                             |
-| Locale detection no region                | Falls through to language prefix, then `DEFAULT_LAYOUT`                                                   |
-| Explicit `keyboardType` vs auto-type      | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                                          |
-| Constructor sets `keyboardType`           | `applySettings` calls custom setter, which sets the source tag                                            |
-| `inputmode` restore on target switch      | `_nativeKbSuppression.suppress()` restores previous before suppressing new                                |
-| `inputmode` restore on destroy            | `exit()` calls `_nativeKbSuppression.restore()`                                                           |
-| Combi device (tablet + desktop)           | `Device.system.tablet && !Device.system.desktop` → treats as desktop                                      |
-| `show()` without target input             | `_nativeKbSuppression.suppress()` is a no-op when no target element exists                                |
-| Resolver throws                           | `getText` catches, logs warning, returns base bundle text                                                 |
-| Last `KioskKeyboard` instance destroyed   | `exit()` clears the i18n resolver (FLP safety)                                                            |
+| Edge Case                                 | How It Is Handled                                                                                              |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Focus steal on key tap                    | `ontouchstart` `preventDefault()` keeps focus on input                                                         |
+| Target input not yet focused              | `TargetInputSession` seeds its own tracked cursor at the end of the value; the DOM selection is left untouched |
+| Auto-show flicker on focus transitions    | Synchronous `relatedTarget` check, plus one-tick deferred fallback when null                                   |
+| Focus on keyboard during auto-show        | `relatedTarget` checked against keyboard DOM via `contains()`                                                  |
+| Auto-show vs input owned by other kbd     | `_wouldClaimInput()` checks `_isTargetOfOther()`                                                               |
+| Focus moves to claimed input while open   | `_wouldClaimInput()` checks `_isTargetOfOther()`, closes normally                                              |
+| Layout switch in non-Full mode            | User pick overrides the constraint (`LayoutState.getSource()` is `"user"`); `{layout:base}` re-engages it      |
+| Shift auto-release vs Caps Lock           | `ShiftState.autoRelease()` only releases `Mode.Shift`, not `Mode.CapsLock`                                     |
+| `sap.ui.core.Element` name collision      | `globalThis.Element` for DOM Element references                                                                |
+| `$KioskKeyboardSettings` availability     | Generated into the committed `src/KioskKeyboard.gen.d.ts`; run `npm run generate`, never hand-edit             |
+| `_setActiveTarget` re-render              | `setAssociation(name, value, true)` suppresses invalidation                                                    |
+| `_setActiveTarget` re-entrancy            | Change event deferred to after state transitions via `captureAndClearDirty()`                                  |
+| Docked show/close during render           | `onAfterRendering` syncs CSS with `_open` state                                                                |
+| Destroy with auto-show active             | `exit()` removes from instance registry, disables auto-show, restores inputmode                                |
+| Target control without a `value` property | `setTargetValue()` falls back `setValue()` -> `setProperty("value")` -> raw DOM value                          |
+| `controls` with `autoShow`                | `_resolveClaimableControl()` filters by `controls`; delegation triggers `show()`                               |
+| `controls` property churn                 | `_syncControls()` rebinds delegates by control ID on each auto-show `focusin`                                  |
+| Locale detection no region                | Falls through to language prefix, then `DEFAULT_LAYOUT`                                                        |
+| Explicit `keyboardType` vs auto-type      | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                                               |
+| Constructor sets `keyboardType`           | `applySettings` calls custom setter, which sets the source tag                                                 |
+| `inputmode` restore on target switch      | `_nativeKbSuppression.suppress()` restores previous before suppressing new                                     |
+| `inputmode` restore on destroy            | `exit()` calls `_nativeKbSuppression.restore()`                                                                |
+| Combi device (tablet + desktop)           | `Device.system.tablet && !Device.system.desktop` → treats as desktop                                           |
+| `show()` without target input             | `_nativeKbSuppression.suppress()` is a no-op when no target element exists                                     |
+| Resolver throws                           | `getText` catches, logs warning, returns base bundle text                                                      |
+| Last `KioskKeyboard` instance destroyed   | `exit()` clears the i18n resolver (FLP safety)                                                                 |
 
 ## Project Layout
 

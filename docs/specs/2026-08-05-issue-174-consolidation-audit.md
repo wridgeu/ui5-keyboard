@@ -234,6 +234,9 @@ Both fixes ship with regression tests confirmed to fail against the defect.
   ("insertText") would preserve native undo but is deprecated and equally invisible to UI5's
   property bag. The webc twin already writes the DOM value directly, so there is nothing to gain
   there either.
+  Superseded by #234 (2026-08-17): both twins now insert and delete through `execCommand`. The
+  kiosk objection was answered by `nativeEditWithSync`, which performs the platform edit and then
+  syncs UI5's property bag.
 - **Keycaps → native `<button>`.** Already settled in CLAUDE.md with the full cost accounting
   (`sapselect` is stricter than a native button's activation, `preventDefault()` on the surface
   kills the click chain, `disabled` breaks the roving tabindex). Not reopened.
