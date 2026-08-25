@@ -391,9 +391,9 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack - Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends. An input inside an open shadow root qualifies; the focus check descends shadow roots to find it.
 
-When the target does not hold focus - after `setTargetElement()` without a focus move, for instance - or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; what dispatches the `input` event is not.
+The platform path needs a focused target **whose input type supports selection**. When the target does not hold focus - after `setTargetElement()` without a focus move, for instance - or its type refuses `setSelectionRange()` (`type="number"` and `type="email"` throw), or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; what dispatches the `input` event is not.
 
-|                    | Target focused (platform edit)  | Target not focused (assignment)                                                                          |
+|                    | Platform edit                   | Assignment                                                                                               |
 | ------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `maxlength`        | Applied by the browser          | Applied in JS                                                                                            |
 | Browser undo stack | Edit recorded                   | Not recorded                                                                                             |

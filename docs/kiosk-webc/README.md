@@ -9,3 +9,7 @@ Documentation for the `kiosk-keyboard-webc` package, the native web component va
 - [Build Pipelines](./BUILD-PIPELINE.md)
 - [Custom Elements Manifest](./CUSTOM-ELEMENTS-MANIFEST.md)
 - [TypeScript and Decorator Setup](./TYPESCRIPT-DECORATOR-SETUP.md)
+
+## Notes
+
+- Files under [`images/`](./images/) contain theme screenshots and regeneration instructions.

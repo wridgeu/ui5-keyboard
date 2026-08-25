@@ -920,7 +920,7 @@ keyboard.attachKeyPress((event) => {
 
 Set `fKeyMode="Native"` to opt into browser-style F-key handling.
 
-The component dispatches a synthetic `KeyboardEvent("keydown")` to the target input for all F-keys (F1-F12) and navigation keys (ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, End, PageUp, PageDown). `keyPress` still fires afterward for compatibility.
+`keyPress` fires first. If it is not cancelled, the component then dispatches a synthetic `KeyboardEvent("keydown")` to the target input for all F-keys (F1-F12) and navigation keys (ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, End, PageUp, PageDown).
 
 > [!IMPORTANT]
 > Browsers treat synthetic `KeyboardEvent` instances as untrusted (`isTrusted: false`) and block them from triggering security-sensitive browser actions such as page reload, fullscreen, or developer tools. A synthetic F5 keydown does **not** reload the page.
@@ -953,7 +953,7 @@ Or in XML view:
 <kiosk:KioskKeyboard fKeyMode="Native" keyPress=".onKeyPress" />
 ```
 
-When `fKeyMode="Native"`, the synthetic `keydown` is dispatched to the target input **before** `keyPress` fires. Any global keyboard shortcut system listening on the document (for example, ui5-lib-hotkeys) will also see the F-key event, independent of whether the `keyPress` handler calls `preventDefault()`.
+When `fKeyMode="Native"`, `keyPress` fires **before** the synthetic `keydown` is dispatched, so `preventDefault()` in the handler suppresses everything downstream: the synthetic `keydown`, the built-in F5/F11 action, and the caret move. A global keyboard shortcut system listening on the document (for example, ui5-lib-hotkeys) sees the F-key event only when the press was not vetoed.
 
 This mirrors how SAP GUI intercepts physical F-keys and maps them to transaction commands. The virtual keyboard fires the event; your application provides the meaning.
 
@@ -1163,14 +1163,14 @@ myCustomInput.attachBrowserEvent("focusout", () => {
 
 Keys write into the target the way the platform does. While the target input holds focus, the keyboard selects the range it is about to replace and performs the edit through `document.execCommand("insertText" | "delete")`, so the browser applies `maxlength` itself and records the edit on its own undo stack - Ctrl+Z in the target reverts keyboard input exactly as it reverts physical typing. The grapheme cluster Backspace removes is still resolved in JS beforehand, because the engines disagree on where one ends.
 
-When the target does not hold focus - a programmatic `setControls()` + `show()` that never moved focus, for instance - or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; the eventing is not.
+The platform path needs a focused target **whose input type supports selection**. When the target does not hold focus - a programmatic `setControls()` + `show()` that never moved focus, for instance - or its type refuses `setSelectionRange()` (`type="number"` and `type="email"` throw), or the command is unavailable or declines it, the value is assigned instead and `maxlength` is applied in JS. The resulting text is the same on both paths; the eventing is not.
 
-|                                    | Target focused (platform edit)                                                             | Target not focused (assignment) |
-| ---------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------- |
-| `maxlength`                        | Applied by the browser                                                                     | Applied in JS                   |
-| Browser undo stack                 | Edit recorded                                                                              | Not recorded                    |
-| DOM `input` event on the target    | One, dispatched by the platform                                                            | None                            |
-| `liveChange` on the target control | One - the control's own where it raises one from `input`, otherwise raised by the keyboard | One, raised by the keyboard     |
+|                                    | Platform edit                                                                              | Assignment                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------- |
+| `maxlength`                        | Applied by the browser                                                                     | Applied in JS               |
+| Browser undo stack                 | Edit recorded                                                                              | Not recorded                |
+| DOM `input` event on the target    | One, dispatched by the platform                                                            | None                        |
+| `liveChange` on the target control | One - the control's own where it raises one from `input`, otherwise raised by the keyboard | One, raised by the keyboard |
 
 So `liveChange` fires once per edit either way and data binding stays in step on both paths. Bind to it rather than to the DOM `input` event: **a raw `input` listener on the target's DOM element observes the keyboard's edits only while that target holds focus.** An edit that a saturated `maxlength` leaves empty writes nothing and raises nothing.
 
