@@ -26,6 +26,8 @@ function hasCqTier(el: KioskKeyboard, tier: string): boolean {
   return el.getAttribute(DOM.attributes.cqTier) === tier;
 }
 
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function waitForResponsiveSync(): Promise<void> {
   await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -462,8 +464,6 @@ describe("kiosk-keyboard", () => {
   // ── Backspace press-and-hold auto-repeat ──
 
   describe("backspace auto-repeat", () => {
-    const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-
     function pressBackspace(bksp: HTMLElement): void {
       bksp.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, composed: true, button: 0, pointerId: 1 }));
     }
@@ -587,6 +587,32 @@ describe("kiosk-keyboard", () => {
 
       expect(input.value, "disabled keyboard ignores the hold").to.equal("abcdef");
     });
+
+    // The arm-time check is not enough on its own: the ticks run for as long as
+    // the gesture is held, so a keyboard disabled mid-hold has to stop deleting
+    // on the next tick rather than at the release.
+    it("stops the repeat when the keyboard is disabled mid-hold", async () => {
+      const { input, kb, bksp } = await setup("abcdefghijklmnopqrstuvwxyz");
+      let keyPresses = 0;
+      kb.addEventListener("key-press", () => {
+        keyPresses++;
+      });
+
+      pressBackspace(bksp);
+      await delay(900);
+      const midHold = input.value;
+      const midHoldPresses = keyPresses;
+      expect(midHold.length, "precondition: the hold is deleting").to.be.lessThan(26);
+      expect(midHoldPresses, "precondition: the hold is firing key-press").to.be.greaterThan(0);
+
+      kb.disabled = true;
+      await delay(900);
+      expect(input.value, "no further deletion once disabled").to.equal(midHold);
+      expect(keyPresses, "and no further key-press").to.equal(midHoldPresses);
+
+      releasePointer();
+      expect(input.value, "the release adds nothing either").to.equal(midHold);
+    });
   });
 
   // ── Shift / Caps ──
@@ -649,7 +675,7 @@ describe("kiosk-keyboard", () => {
 
       /** Tap `{shift}`, optionally after waiting out the double-click window. */
       const tapShift = async (waitMs = 0): Promise<{ payload: boolean; pressed: string | null }> => {
-        if (waitMs) await new Promise((resolve) => setTimeout(resolve, waitMs));
+        if (waitMs) await delay(waitMs);
         queryKey(el, "{shift}")!.click();
         await nextRender();
         return {
@@ -2173,6 +2199,37 @@ describe("kiosk-keyboard", () => {
 
       expect(el.shadowRoot!.activeElement, "ArrowRight focuses row 1, column 3").to.equal(targetKey);
       expect(targetKey.getAttribute("tabindex"), "roving tabindex follows the move").to.equal("0");
+    });
+
+    // The keycaps stay focusable while disabled (the APG prefers a reachable
+    // disabled control), but the keyboard advertises `aria-disabled` and renders
+    // every key at `tabindex="-1"`, so the arrow handler must not write over
+    // that decision.
+    it("arrow keys neither move focus nor rewrite the tab stop while disabled", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const rowKeys = queryRows(el)[1]!.querySelectorAll<HTMLElement>(DOM.selectors.key);
+      const originKey = rowKeys[2]!;
+      originKey.focus();
+
+      el.disabled = true;
+      await nextRender();
+      originKey.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+
+      expect(el.shadowRoot!.activeElement, "focus stays on the originally focused key").to.equal(originKey);
+      expect(
+        [...queryKeys(el)].filter((k) => k.getAttribute("tabindex") === "0").length,
+        "the disabled keyboard still exposes no tab stop",
+      ).to.equal(0);
+
+      // Re-arm: a guard that never lifts would pass the suppression assertions
+      // above while leaving the keyboard permanently unnavigable.
+      el.disabled = false;
+      await nextRender();
+      const reEnabled = queryRows(el)[1]!.querySelectorAll<HTMLElement>(DOM.selectors.key);
+      reEnabled[2]!.focus();
+      reEnabled[2]!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      expect(el.shadowRoot!.activeElement, "navigation works again once re-enabled").to.equal(reEnabled[3]!);
     });
 
     it("does not activate a key on Enter/Space with a modifier held", async () => {

@@ -11,6 +11,8 @@ export interface KeyGridNavigationHost {
   getShadowRoot(): ShadowRoot | null;
   /** Whether the host renders right-to-left, mirroring the horizontal arrows. */
   isRtl(): boolean;
+  /** Whether the host is disabled, asked per event: the flag flips under focus. */
+  isDisabled(): boolean;
   /** The keycap held down by a keyboard activation, or `null` between activations. */
   setPressedKey(pos: KeyPosition | null): void;
 }
@@ -61,6 +63,9 @@ export class KeyGridNavigation {
   }
 
   onKeyDown(e: KeyboardEvent): void {
+    // A disabled keyboard handles no key: no move, no rewrite of the
+    // `tabindex="-1"` the template renders while disabled, no press feedback.
+    if (this._host.isDisabled()) return;
     // SAFETY: the template binds this to `keydown` on the keyboard root inside the
     // shadow root, so the target is one of the HTML elements rendered there; `closest`
     // then yields a keycap or null, and null returns early.
@@ -142,9 +147,8 @@ export class KeyGridNavigation {
           // Native `<button>` semantics: Space activates on release, not on
           // press, and does not repeat while held. Suppress the page scroll
           // here and remember the pressed key; onKeyUp performs the activation.
-          // The Shift is taken here, not at the release: a modifier states the
-          // user's intent when the key goes down, and the release order of two
-          // keys under different hands is not something they control.
+          // The Shift comes from the press, not the release: nothing makes the
+          // user lift two keys under different hands in a fixed order.
           if (e.ctrlKey || e.altKey || e.metaKey) return;
           this._spaceKeyDown = { el: keyEl, shift: e.shiftKey };
           this._press(keyEl);
@@ -183,7 +187,9 @@ export class KeyGridNavigation {
 
     const pressed = this._spaceKeyDown;
     this._spaceKeyDown = null;
-    if (!pressed) return;
+    // `_release()` above runs either way: a keyboard disabled between the press
+    // and the release must still drop the press feedback it left painted.
+    if (!pressed || this._host.isDisabled()) return;
     // SAFETY: the template binds this to `keyup` on the keyboard root inside the shadow
     // root, so the target is one of the HTML elements rendered there; `closest` then
     // yields a keycap or null, and only an exact match with the pressed key activates.

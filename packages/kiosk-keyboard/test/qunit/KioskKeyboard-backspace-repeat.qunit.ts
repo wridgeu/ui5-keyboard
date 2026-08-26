@@ -181,3 +181,46 @@ QUnit.test("a held Backspace spends the one-shot Shift", async (assert) => {
   input.destroy();
   kb.destroy();
 });
+
+// The arm-time check is not enough on its own: the ticks run for as long as the
+// gesture is held, so a keyboard disabled mid-hold has to stop deleting on the
+// next tick rather than at the release.
+QUnit.test("disabling mid-hold stops the repeat, deletions and keyPress alike", async (assert) => {
+  const input = new Input({ value: "abcdefghij" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  input.focus();
+  (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(10, 10);
+
+  let keyPresses = 0;
+  kb.attachKeyPress(() => {
+    keyPresses++;
+  });
+
+  const bksp = getRequiredKeyElement(kb, "{backspace}");
+  const clock = sinon.useFakeTimers();
+  try {
+    press(kb, bksp);
+    clock.tick(T.initialDelayMs + T.startIntervalMs);
+    const midHold = input.getValue();
+    const midHoldPresses = keyPresses;
+    assert.ok(midHold.length < 10, "Precondition: the hold is deleting");
+    assert.ok(midHoldPresses > 0, "Precondition: the hold is firing keyPress");
+
+    kb.setEnabled(false);
+    clock.tick(2000);
+    assert.strictEqual(input.getValue(), midHold, "no further deletion once disabled");
+    assert.strictEqual(keyPresses, midHoldPresses, "and no further keyPress");
+
+    release(kb, bksp);
+    clock.tick(2000);
+    assert.strictEqual(input.getValue(), midHold, "the release adds nothing either");
+  } finally {
+    clock.restore();
+  }
+
+  input.destroy();
+  kb.destroy();
+});

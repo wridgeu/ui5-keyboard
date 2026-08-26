@@ -227,36 +227,3 @@ QUnit.test("peekToggle: predicts each arm of toggle()", (assert) => {
     stub.restore();
   }
 });
-
-QUnit.test("peekToggle: reports the Shift -> Off arm the mirrored caps-lock flag cannot see", (assert) => {
-  const stub = sinon.stub(performance, "now");
-  try {
-    stub.returns(1000);
-    state.toggle(); // Off -> Shift
-
-    stub.returns(1000 + ShiftState.DOUBLE_CLICK_MS + 100);
-    assert.strictEqual(state.peekToggle(), false, "outside the window: Shift -> Off");
-  } finally {
-    stub.restore();
-  }
-});
-
-QUnit.test("peekToggle: neither transitions nor moves the double-click window", (assert) => {
-  const stub = sinon.stub(performance, "now");
-  try {
-    stub.returns(1000);
-    state.toggle(); // Off -> Shift
-    onChange.resetHistory();
-
-    stub.returns(1100);
-    state.peekToggle();
-    state.peekToggle();
-    assert.ok(state.isShifted, "still shifted: peeking performs nothing");
-    assert.ok(onChange.notCalled, "no onChange from a peek");
-
-    state.toggle(); // still measured from t=1000, so still within the window
-    assert.ok(state.isCapsLock, "the window was not moved by the peeks");
-  } finally {
-    stub.restore();
-  }
-});

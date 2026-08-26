@@ -488,7 +488,20 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   @property({ type: Boolean })
-  disabled = false;
+  set disabled(value: boolean) {
+    this._disabledValue = value;
+    // The accent popup is part of the keyboard's surface, and it renders into the
+    // top layer where the disabled styling does not reach it. Left open its
+    // options still commit, so the disable closes it. A hold armed but not yet
+    // fired is left alone: `_resolveVariantOpenState` refuses it at fire time.
+    if (value && this._variantPopup) this._variantGesture.close();
+  }
+
+  get disabled(): boolean {
+    return this._disabledValue;
+  }
+
+  private _disabledValue = false;
 
   /**
    * Comma-separated list of target input element IDs. The keyboard targets
@@ -858,6 +871,7 @@ class KioskKeyboard extends UI5Element {
     getResolvedLayout: () => this._getResolvedLayout(),
     getShadowRoot: () => this.shadowRoot,
     isRtl: () => this.effectiveDir === "rtl",
+    isDisabled: () => this.disabled,
     setPressedKey: (pos) => {
       this._pressedKey = pos;
     },
@@ -1593,9 +1607,7 @@ class KioskKeyboard extends UI5Element {
 
     if (action.kind === "shift") {
       // Shift is handled separately: shiftKey reports the *resulting* state
-      // (what shift will become after toggle), not the pre-toggle state. Only
-      // the state machine can tell `Shift -> Off` from `Off -> Shift`; the
-      // mirrored `_capsLock` flag reads false for both.
+      // (what shift will become after toggle), not the pre-toggle state.
       const nextShifted = this._shiftState.peekToggle();
       const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: nextShifted });
       if (!allowed) return;
@@ -1702,6 +1714,9 @@ class KioskKeyboard extends UI5Element {
    * cursor at start), which stops the repeat.
    */
   private _performBackspaceRepeatDelete(): boolean {
+    // Read where the tick consumes it, not only where the hold was armed, so
+    // disabling mid-hold ends the gesture on the next tick rather than at the release.
+    if (this.disabled) return false;
     // char is undefined for action keys, matching the single-tap {backspace} branch.
     const allowed = this.fireDecoratorEvent("key-press", {
       key: "{backspace}",
