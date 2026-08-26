@@ -31,6 +31,7 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     rootDisabled: "ui5KioskKeyboard--disabled",
     rootCqShort: "ui5KioskKeyboard--cqShort",
     rootCqTiny: "ui5KioskKeyboard--cqTiny",
+    liveRegion: "ui5KioskKeyboard__liveRegion",
     row: "ui5KioskRow",
     key: "ui5KioskKey",
     keyModifier: "ui5KioskKey--modifier",

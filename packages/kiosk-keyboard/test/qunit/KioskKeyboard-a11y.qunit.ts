@@ -552,6 +552,30 @@ QUnit.test("aria-controls survives re-render for a non-Control target", async (a
 // Static API: getKeyIcon
 // ──────────────────────────────────────────────
 
+// Every other live-region assertion in this file reads `textContent`, which
+// survives both `display: none` and an inherited `visibility: hidden` - and
+// either one takes the region out of the accessibility tree, so nothing is ever
+// spoken. `position` is the canary: it fails loudly if the package stylesheet
+// has not applied, instead of passing because nothing is styled at all.
+QUnit.test("the live region stays exposed to assistive tech, docked-closed included", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+  const open = getComputedStyle(kb.getDomRef("liveState")!);
+  assert.strictEqual(open.position, "absolute", "precondition: the package stylesheet applied");
+  assert.notStrictEqual(open.display, "none", "not display:none");
+  assert.notStrictEqual(open.visibility, "hidden", "not visibility:hidden");
+  kb.destroy();
+
+  // A docked keyboard renders closed, and close() adds the closed class before
+  // it announces, so the announcement lands in whatever that state leaves behind.
+  const docked = new KioskKeyboard({ docked: true });
+  await placeAndWait(docked);
+  const closed = getComputedStyle(docked.getDomRef("liveState")!);
+  assert.notStrictEqual(closed.display, "none", "docked-closed: still not display:none");
+  assert.notStrictEqual(closed.visibility, "hidden", "docked-closed: still not visibility:hidden");
+  docked.destroy();
+});
+
 QUnit.test("getKeyIcon: maps icon keys and returns undefined for plain characters", (assert) => {
   const cases: [string, string | undefined][] = [
     ["{shift}", "sap-icon://arrow-top"],

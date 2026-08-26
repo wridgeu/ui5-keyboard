@@ -650,7 +650,7 @@ QUnit.test("the open announcement names the key's explicit shiftValue under Shif
   const oneKey = getRequiredKeyElement(kb, "1");
   await holdOpen(kb, oneKey);
 
-  const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "2").replace("{1}", "!");
+  const expected = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "2").replace("{1}", "!");
   assert.strictEqual(kb.getDomRef("liveState")?.textContent, expected, "announced with the shiftValue as the base");
   release(kb, oneKey);
   cleanup(kb, input);
@@ -676,9 +676,35 @@ QUnit.test("the open announcement names the base under CapsLock, not the shiftVa
   const oneKey = getRequiredKeyElement(kb, "1");
   await holdOpen(kb, oneKey);
 
-  const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "2").replace("{1}", "1");
+  const expected = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "2").replace("{1}", "1");
   assert.strictEqual(kb.getDomRef("liveState")?.textContent, expected, "announced with the base as the glyph");
   release(kb, oneKey);
+  cleanup(kb, input);
+});
+
+// A key can carry exactly one variant, and the announcement is built by
+// substitution with no plural form, so the count sat in the slot where English,
+// German and Arabic all require numeral-noun agreement.
+QUnit.test("a single variant announces without a plural disagreement", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    accentVariants: true,
+    controls: [input.getId()],
+    customLayouts: [new CustomLayout({ name: "qwerty", variants: { a: ["ā"] } })],
+  });
+  await placeAndWait(kb);
+  input.focus();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  assert.deepEqual(getOptions().map(glyphOf), ["ā"], "precondition: exactly one variant is offered");
+  assert.strictEqual(
+    kb.getDomRef("liveState")?.textContent,
+    "Variants for a: 1",
+    "the count trails the noun, so no locale needs a plural form",
+  );
+  release(kb, aKey);
   cleanup(kb, input);
 });
 

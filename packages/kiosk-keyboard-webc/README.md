@@ -1112,7 +1112,7 @@ Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i1
 | `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened                       | ARIA live region announcement on `show()`                                       |
 | `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed                       | ARIA live region announcement on `close()`                                      |
 | `ARIA_RETURN_TO_NUMBERS`         | Return to numbers                             | Accessible name for the back key that returns to the numbers surface            |
-| `ARIA_VARIANTS_OPENED`           | {0} variants for {1}                          | ARIA live region announcement when the accent-variant popup opens               |
+| `ARIA_VARIANTS_OPENED`           | Variants for {1}: {0}                         | ARIA live region announcement when the accent-variant popup opens               |
 | `ARIA_VARIANTS_CLOSED`           | Variants closed                               | ARIA live region announcement when the accent-variant popup is dismissed        |
 | `ARIA_LAYOUT_COMPACTED`          | Switched to the compact keyboard layout       | ARIA live region announcement when `auto-compact` takes a layout's compact form |
 | `ARIA_LAYOUT_UNCOMPACTED`        | Switched back to the standard keyboard layout | ARIA live region announcement when `auto-compact` gives it back                 |

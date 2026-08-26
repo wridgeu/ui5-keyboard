@@ -66,6 +66,7 @@ const KEY_PARITY = {
       "keyIcon",
       "keyDual",
       "variantPopup",
+      "liveRegion",
     ],
     // Light-DOM only: no shadow host, a static-area popover, an explicit closed
     // state, the JS-driven height-responsive classes, and the pressed/anchor
@@ -79,9 +80,9 @@ const KEY_PARITY = {
       "variantPopover",
       "variantOption",
     ],
-    // Shadow-DOM only: the aria-hidden host, numpad/numeric host variants, the
-    // live region and the in-shadow variant popup host.
-    webcOnly: ["rootHidden", "rootNumpad", "rootNumeric", "liveRegion", "variantPopupHost"],
+    // Shadow-DOM only: the aria-hidden host, numpad/numeric host variants and
+    // the in-shadow variant popup host.
+    webcOnly: ["rootHidden", "rootNumpad", "rootNumeric", "variantPopupHost"],
   },
   selectors: {
     core: [

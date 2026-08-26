@@ -1809,7 +1809,7 @@ The library ships with an English resource bundle for all accessibility labels a
 | `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed                       | ARIA live region announcement on `close()`                                             |
 | `ARIA_LAYOUT_COMPACTED`          | Switched to the compact keyboard layout       | ARIA live region announcement when `autoCompact` takes a layout's compact form         |
 | `ARIA_LAYOUT_UNCOMPACTED`        | Switched back to the standard keyboard layout | ARIA live region announcement when `autoCompact` gives it back                         |
-| `ARIA_VARIANTS_OPENED`           | `{0} variants for {1}`                        | ARIA live region announcement when the accent-variant popup opens (count, base letter) |
+| `ARIA_VARIANTS_OPENED`           | `Variants for {1}: {0}`                       | ARIA live region announcement when the accent-variant popup opens (count, base letter) |
 | `ARIA_VARIANTS_CLOSED`           | Variants closed                               | ARIA live region announcement when the accent-variant popup closes                     |
 
 The two `autoCompact` announcements name no layout on purpose: the layout a width picks is one the user never chose and never sees named, and an identifier dropped into a translated sentence stays untranslated. They also have to differ from each other - the live region re-announces only on a text change, so one shared wording would leave every second crossing unspoken.

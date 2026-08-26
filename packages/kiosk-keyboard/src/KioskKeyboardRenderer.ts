@@ -120,7 +120,7 @@ const KioskKeyboardRenderer = {
   renderLiveRegion(rm: RenderManager, oControl: KioskKeyboard): void {
     const { _getLiveRegionText } = oControl._getRendererApi();
     rm.openStart("span", `${oControl.getId()}-liveState`);
-    rm.class("sapUiInvisibleText");
+    rm.class(KIOSK_KEYBOARD_DOM.classes.liveRegion);
     rm.attr("role", "status");
     rm.openEnd();
     rm.text(_getLiveRegionText());

@@ -407,10 +407,10 @@ export default class VariantPopupBehavior {
     });
     popover.addContent(grid);
 
-    // The localized "N variants for {base}" group name, built once and shared by
+    // The localized "Variants for {base}: N" group name, built once and shared by
     // the Popover's aria-labelledby (via this InvisibleText) and the live-region
     // open announcement, so the option grid announces as a named group.
-    const labelText = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}")
+    const labelText = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}")
       .replace("{0}", String(glyphs.length))
       .replace("{1}", base);
     const label = new InvisibleText({ text: labelText }).toStatic();
