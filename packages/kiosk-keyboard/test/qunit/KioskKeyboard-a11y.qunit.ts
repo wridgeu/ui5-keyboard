@@ -263,6 +263,34 @@ QUnit.test("Live region stays silent for a requested layout switch", async (asse
   kb.destroy();
 });
 
+// `sap.m.InputBase.exit` calls `destroy()` on the InvisibleMessage singleton, which
+// is shared with every other control on the page - and this keyboard exists to type
+// into Inputs, which a navigation destroys routinely. The singleton has no `exit`, so
+// its spans stay in the static area and `announce` (which reads no instance state)
+// keeps working; that is a reading of the framework, and this asserts it.
+QUnit.test("announcements survive an Input being destroyed", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  resetAnnouncements();
+  kb.show();
+  await waitForAnnouncement();
+  assert.strictEqual(announcedText(), "Virtual keyboard opened", "precondition: announcements work");
+
+  // Exactly what a navigation away from the form does.
+  input.destroy();
+  await waitForRender();
+
+  resetAnnouncements();
+  kb.close();
+  await waitForAnnouncement();
+  assert.strictEqual(announcedText(), "Virtual keyboard closed", "still announcing after the target is gone");
+
+  kb.destroy();
+});
+
 // Being in the DOM is not enough: every other assertion here reads `textContent`,
 // which survives both `display: none` and an inherited `visibility: hidden`, and
 // either one keeps the text out of the accessibility tree entirely. The announcement
