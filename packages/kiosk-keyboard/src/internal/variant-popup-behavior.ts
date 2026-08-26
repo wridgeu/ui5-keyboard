@@ -77,7 +77,7 @@ interface VariantPopupHost {
   commitVariant(glyph: string): void;
   /**
    * Announce popup open through the live region. Receives the pre-formatted
-   * "N variants for {base}" group name, built once and shared with the
+   * "Variants for {base}: N" group name, built once and shared with the
    * aria-labelledby InvisibleText.
    */
   announceOpen(label: string): void;

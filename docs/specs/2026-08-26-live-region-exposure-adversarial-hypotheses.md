@@ -1,124 +1,167 @@
 # The live region and the variant count: adversarial validation (#247, #254)
 
-Written before the new suites were trusted, per CLAUDE.md §7. Each hypothesis
-names a way the green run could have been lying; each is cleared only against a
-run that was **seen** to go red, then reverted.
+Written before the new suites were trusted, per CLAUDE.md §7. Each hypothesis names
+a way the green run could have been lying; each is cleared only against a run that
+was **seen** to go red, then reverted.
 
-Both fixes are invisible by construction. #247 changes only whether a node is in
-the accessibility tree — every pre-existing live-region assertion in
-`KioskKeyboard-a11y.qunit.ts` reads `textContent`, which survives both
-`display: none` and `visibility: hidden`, so the whole suite was green against a
-region that never announced anything. #254 changes only a string that no user
-ever sees. Neither has a visible symptom a normal assertion would catch.
+Both fixes are invisible by construction. #247 changes only whether an announcement
+reaches the accessibility tree — every pre-existing live-region assertion read
+`textContent`, which survives both `display: none` and `visibility: hidden`, so the
+whole suite was green against a region that never announced anything. #254 changes
+only a string no user sees. Neither has a visible symptom a normal assertion catches.
+
+## What shipped, and why the first fix was replaced
+
+The kiosk control rendered its own `role="status"` span inside its root and wrote
+`sapUiInvisibleText` on it — `display: none !important` in the pinned OpenUI5
+(`sap/ui/core/themes/base/shared.less:313`), so nothing was ever announced.
+
+The first fix gave the package its own screen-reader-only rule, with an extra
+`visibility: visible` because `.ui5KioskKeyboard--closed` sets `visibility: hidden`
+on the root and a docked keyboard renders closed. That worked, and it is not what
+shipped: UI5 already answers this with `sap/ui/core/InvisibleMessage` (since 1.78),
+a singleton whose `role="status" aria-live="polite"` span lives in the static area —
+a `<body>`-level sibling the control's own hidden state cannot reach. Announcing
+through it deletes the renderer hook, the class, the stylesheet rule, the
+`liveRegion` DOM-contract key and the `_liveRegionText` re-emit, and makes the whole
+bug class structurally impossible rather than merely fixed. It also clears its node
+before each write, which is the one thing a same-value write cannot do on its own.
+
+The webc twin keeps its own region: it renders outside the `aria-hidden` root and
+was never affected, and it has no UI5 core to borrow the announcer from.
 
 ## What is under test
 
-- `KioskKeyboardRenderer.renderLiveRegion` and the package-owned
-  `.ui5KioskKeyboard__liveRegion` rule that replaces the framework's
-  `sapUiInvisibleText`.
-- The `ARIA_VARIANTS_OPENED` value in all eight bundles, and the two code
-  fallbacks that shadow them.
+- `KioskKeyboard._setLiveRegionText`, now one call to `InvisibleMessage.announce`.
+- The webc `_writeLiveRegion`, which writes the shadow-DOM node directly.
+- The `ARIA_VARIANTS_OPENED` value in all eight bundles, and the two code fallbacks
+  that shadow them.
+- `tools/check-i18n-bundles.mjs` invariant 4, the new twin value-parity guard.
 
-## H1 — the exposure assertions could pass because no stylesheet applied at all
+## H1 — the exposure assertions could be unfalsifiable
 
-`getComputedStyle` on an unstyled node reports `display: inline`, which is not
-`"none"`. A cold run with the package CSS missing would satisfy every
-`notStrictEqual(..., "none")` assertion while proving nothing.
+The region is framework-owned now. If nothing this repo controls can hide it, the
+`display` / `visibility` assertions are decoration and the test only looks thorough.
 
-**Falsified.** With the renderer reverted to `rm.class("sapUiInvisibleText")`:
-
-```
-1 assertions of 5 passed, 4 failed
-  precondition: the package stylesheet applied   expected "absolute", got "static"
-  not display:none                               expected NOT "none", got "none"
-  docked-closed: still not display:none          expected NOT "none", got "none"
-  docked-closed: still not visibility:hidden     expected NOT "hidden", got "hidden"
-```
-
-The `position === "absolute"` assertion is the canary: it fails loudly when the
-stylesheet has not applied, so an unstyled run goes red rather than green.
-
-## H2 — the docked-closed half could be decoration
-
-The open-state assertions alone would pass under the one-word class swap
-everyone reaches for first (`sapUiInvisibleText` → `sapUiPseudoInvisibleText`).
-If the docked-closed case adds nothing, the extra `visibility: visible` and the
-whole package-owned rule are unearned.
-
-**Falsified.** With only `visibility: visible` deleted from the rule:
+**Falsified.** With `#sap-ui-static { display: none; }` added to the package
+stylesheet — a rule this repo could plausibly ship:
 
 ```
-4 assertions of 5 passed, 1 failed
-  docked-closed: still not visibility:hidden
+KioskKeyboard accessibility ▶ the announced text lands in a node assistive tech can reach
+  its container is not display:none either
 ```
 
-Exactly one assertion, and it is the one the framework class cannot satisfy:
-`.sapUiPseudoInvisibleText` declares no `visibility`, `.ui5KioskKeyboard--closed`
-sets `visibility: hidden`, the live region is a child of the root, a docked
-keyboard renders closed, and `close()` adds that class _before_ it announces. So
-the one-word swap fixes the open case and leaves every docked announcement
-inaudible. This hypothesis is why the fix owns the rule instead of borrowing one.
+The package stylesheet can still take the announcement out of the accessibility
+tree, from the other side, and the test catches it. (The variant-popup suite goes
+red too: the accent popover is a static-area Popover.)
 
-## H3 — the fix could be "just unhide it", leaving the region in normal flow
+## H2 — the repeat-announcement test could pass without the fix
 
-A rule that only escapes `display: none` would put a text node into the root's
-flex column, moving every visual baseline and giving the per-key
-`elementFromPoint` probes something new to land on.
+The webc live-region text is a reactive property. The claim is that re-announcing the
+text already standing there is dropped by the change guard. If the test passes
+against the unfixed code, it proves nothing.
 
-**Falsified.** With the whole rule deleted and the class left on the span:
+**Falsified in two rounds, and the first round is the point.** The assertion started
+as "the region was emptied and refilled", read from `MutationRecord`s. Removing the
+`node.textContent = ""` line left the suite **green**: assigning `textContent` at all
+replaces the text node, so removals and additions appear either way. That assertion
+could not tell the fix from its absence.
+
+Rewritten to assert what the defect actually is — the repeat reaching the DOM at all —
+and injected with the real pre-fix body (`this._liveRegionText = text;` alone):
 
 ```
-3 assertions of 5 passed, 2 failed
-  precondition: the package stylesheet applied   expected "absolute", got "static"
-  docked-closed: still not visibility:hidden
+❌ kiosk-keyboard > accessibility > re-announces a text the region is already holding
+     AssertionError: the repeat reached the DOM instead of being skipped: expected [] not to be empty
 ```
 
-`display` is no longer `"none"` here — the framework class is gone — yet the
-test still goes red. It distinguishes "unhidden" from "properly screen-reader
-only", which is the property that keeps the region out of the layout.
+Zero mutations, one failing test. Whether the _emptying_ specifically is what makes a
+screen reader speak again is not observable from a DOM test; it follows
+`InvisibleMessage`, which does the same thing for the same stated reason.
+
+## H3 — the kiosk twin of that test was vacuous, and was deleted
+
+The review that prompted this called the repeat swallow a defect in **both** twins.
+For kiosk that was wrong: the old code assigned `textContent` directly, which always
+wrote to the DOM, so there was never a skipped write to catch. A kiosk twin of the H2
+test could only assert something that cannot fail. It is not in the suite. The kiosk
+side of the concern — that a same-value write is not a text _change_ for assistive
+tech — is real, unobservable from a DOM test, and now handled by the framework
+announcer rather than asserted.
 
 ## H4 — the #254 tests could be asserting the in-code fallback, not the shipped bundle
 
-Both call sites pass a literal fallback to `getText`. A test that happens to
-match that literal would stay green even if no bundle were ever updated.
+Both call sites pass a literal fallback to `getText`. A test that happens to match
+that literal would stay green even if no bundle were ever updated.
 
-**Falsified.** With the four kiosk bundle values reverted and the new code
-fallbacks left in place:
+**Falsified.** With the four kiosk bundle values reverted and the new code fallbacks
+left in place:
 
 ```
 3 assertions of 4 passed, 1 failed
   the count trails the noun, so no locale needs a plural form
 ```
 
-Only the count-1 case goes red; the two pre-existing count-2 announcement tests
-stay green. So the assertion reads the shipped bundle, and the fallback literal
-is shadowed exactly as expected.
+Only the count-1 case goes red; the two pre-existing count-2 announcement tests stay
+green. So the assertion reads the shipped bundle, and the fallback literal is
+shadowed exactly as expected.
 
 ## H5 — the fix could reach only one twin
 
-Nothing in CI compares message _values_ across the two packages:
-`tools/check-i18n-bundles.mjs` rebuilds its expected key list per package and
-compares no values, and no i18n path appears in `tools/check-twin-drift.mjs`'s
-manifest. A one-twin fix would pass every guard.
-
-**Falsified,** observed rather than injected: an early run with the webc bundle
-edited but `src/generated/i18n/i18n-defaults.ts` not yet regenerated left webc
-resolving the old string while kiosk was already green.
+Nothing in CI compared message _values_ across the two packages, and the drift was
+not hypothetical: an early run with the webc bundle edited but
+`src/generated/i18n/i18n-defaults.ts` not yet regenerated left webc resolving the old
+string while kiosk was already green.
 
 ```
 kiosk-keyboard - accent-variant popup > announces a single variant ...
   AssertionError: expected '1 variants for a' to equal 'Variants for a: 1'
 ```
 
-Each twin's own regression test is therefore the only thing holding the parity.
+`tools/check-i18n-bundles.mjs` now compares the intersection of the twins' keys,
+locale by locale (invariant 4). **Verified by injection**, with one German value
+edited in one twin:
+
+```
+Message-bundle check failed (1):
+  - "ARIA_VARIANTS_OPENED" differs between the twins in messagebundle_de.properties: ...
+    A wording change has to land in both bundles.
+```
+
+17 shared keys, four locales. Each twin's own regression test is no longer the only
+thing holding the parity.
+
+## H6 — the migrated assertions could be reading a stale or foreign region
+
+The framework region is page-global and empties itself three seconds after a write.
+Both properties can make an assertion pass or fail for reasons that have nothing to
+do with the control.
+
+**Observed rather than injected**, twice, while migrating the suites:
+
+- Reading the node directly left `The live region announces which way a width moved
+the layout` red with `actual=""` — a three-second timer armed by an _earlier_ test
+  in the same module wiping an identical text this one had just written.
+- Recording writes but reading only the recording left `Open and close announcements
+are spoken in turn` red: `MutationObserver` runs a microtask later, so a read taken
+  in the same task as the announcement saw the previous entry.
+
+`test/qunit/test-helpers.ts` therefore reads the node first (synchronous, authoritative
+while populated) and falls back to the recording (survives the three-second wipe), and
+arms the recorder from `placeAndWait` / `waitForAnnouncement` rather than on first read.
+`resetAnnouncements()` clears both, so a silence assertion means "nothing was announced
+since the reset" rather than "the shared node happens to be empty".
 
 ## Not covered
 
-- Whether a real screen reader speaks the new string. The suites assert
-  accessibility-tree _exposure_ (computed `display` / `visibility` / `position`)
-  and the announced text; they cannot assert what a screen reader does with it.
-- The Arabic wording. The value is now count-last and so can no longer disagree
-  the way "1 variants" did, but nobody in this repo can verify its register.
-- Two pre-existing webc live-region defects, both out of scope and unfixed: an
-  announcement identical to the text already held is swallowed by UI5Element's
-  change guard, and `_liveRegionText` survives teardown.
+- Whether a real screen reader speaks the new string, or re-speaks a repeat. The
+  suites assert accessibility-tree _exposure_ and the announced text; they cannot
+  assert what a screen reader does with either.
+- The Arabic wording. The value is now count-last and so can no longer disagree the
+  way "1 variants" did, but nobody in this repo can verify its register.
+- One pre-existing webc defect, out of scope and unfixed: `_liveRegionText` survives
+  teardown.
+- The static-area region is shared by every control on the page. Two keyboards
+  announcing at once would interleave, where each previously had its own node. That
+  is the ARIA-recommended arrangement and the framework's own, but it is a behaviour
+  change, not a neutral refactor.

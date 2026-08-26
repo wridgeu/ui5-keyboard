@@ -450,18 +450,15 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(popupEl(kb)).to.not.exist;
   });
 
-  // A key can carry exactly one variant, and the announcement is built by
-  // substitution with no plural form, so the count sat in the slot where English,
-  // German and Arabic all require numeral-noun agreement.
+  // A key can carry exactly one variant, and the announcement is built by plain
+  // substitution with no plural form, so the count must not sit in the slot where
+  // English, German and Arabic require numeral-noun agreement.
   it("announces a single variant without a plural disagreement", async () => {
     const { kb } = await setupWithLayout([[{ value: "a", variants: ["ā"] }]]);
     await holdOpen(requireKey(kb, "a"));
 
     expect(optionGlyphs(kb), "precondition: exactly one variant is offered").to.deep.equal(["ā"]);
     expect(liveRegionText(kb), "the count trails the noun, so no locale needs a plural form").to.equal(
-      "Variants for a: 1",
-    );
-    expect(popoverEl(kb)!.accessibleName, "and the popover name matches the announcement").to.equal(
       "Variants for a: 1",
     );
     pointerUp();

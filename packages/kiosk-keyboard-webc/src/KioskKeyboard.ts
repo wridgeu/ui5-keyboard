@@ -705,9 +705,7 @@ class KioskKeyboard extends UI5Element {
   /** Owns the ARIA live-region announcement queue and its drain timer. */
   private readonly _announcements = new AnnouncementQueue({
     isConnected: () => this.isConnected,
-    setLiveRegionText: (text) => {
-      this._liveRegionText = text;
-    },
+    setLiveRegionText: (text) => this._writeLiveRegion(text),
   });
 
   // ── Inputmode suppression (ref-counted, shared across instances) ──
@@ -1017,6 +1015,25 @@ class KioskKeyboard extends UI5Element {
 
     this._keyGridNav.setLastFocusedKey(null);
     this._restoreKeyFocus = false;
+  }
+
+  /**
+   * Writes one announcement to the live region, emptying the node first.
+   *
+   * `_liveRegionText` alone is not enough: it is a reactive property, so re-announcing
+   * the text already standing there is skipped by the change guard and never reaches a
+   * render at all. Writing the node directly is what puts the repeat in the DOM. The
+   * emptying step follows `sap/ui/core/InvisibleMessage`, which clears its node for the
+   * same purpose - assistive tech reads a live region on a text CHANGE, and a same-value
+   * write is not one. The property write keeps the next render in step and is a no-op
+   * when the text is unchanged.
+   */
+  private _writeLiveRegion(text: string): void {
+    this._liveRegionText = text;
+    const node = this.shadowRoot?.querySelector(`.${KIOSK_KEYBOARD_DOM.classes.liveRegion}`);
+    if (!node) return;
+    node.textContent = "";
+    node.textContent = text;
   }
 
   override onAfterRendering(): void {

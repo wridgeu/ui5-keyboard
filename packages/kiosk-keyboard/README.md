@@ -1625,7 +1625,10 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 - A key activated from the keyboard shows the same pressed styling a pointer press gives, for as long as the activating key is held
 - The keyboard is an F6 navigation group (`data-sap-ui-fastnavgroup="true"`)
 - Disabled state applies `aria-disabled="true"` to both the root and individual keys
-- ARIA live region announces keyboard open/close and shift state changes to screen readers
+- ARIA live region announces keyboard open/close, Shift and Caps Lock, layout compaction, and accent-variant
+  popup open/close to screen readers. The control speaks through `sap.ui.core.InvisibleMessage`, so the region
+  is the framework's shared one in the static area (`#sap-ui-static`) rather than a node inside the keyboard -
+  a docked keyboard hidden between uses cannot take its own announcements out of the accessibility tree with it
 - A key carrying accent variants advertises them with `aria-haspopup="dialog"`. Keyboard users open the popup with the context-menu gesture (the Menu key, or Shift+F10) on the focused key, arrow/Home/End to choose, Enter or Space to insert, and Escape to dismiss and return focus to the key. The key carries no `aria-expanded`: its own Enter/Space types the base character rather than toggling the popup
 - Keycaps written in a script other than the UI language carry a `lang` attribute on their label, so a screen reader announces them with that language's pronunciation rules (WCAG 2.2 SC 3.1.2 Language of Parts). The built-in `arabic`, `ja-kana`, `ja-kana-compact` and `ko-hangul` layouts declare `ar` / `ja` / `ja` / `ko`; `ja-romaji` declares none, because its keycaps are Latin letters and JIS punctuation and only the text they compose is Japanese. The attribute sits on the key label alone, since the keyboard's own label and its live region are UI-language text. Only a key that types a character carries the layout's script: space and the action keys take their label from i18n, and a layout-switch key is a control affordance rather than keycap content. A custom layout declares its own with the `keycapLang` property of a `customLayouts` entry
 - Closing the keyboard or switching targets fires a `change` event on modified single-line inputs (mirrors physical keyboard commit behavior)
@@ -1813,6 +1816,8 @@ The library ships with an English resource bundle for all accessibility labels a
 | `ARIA_VARIANTS_CLOSED`           | Variants closed                               | ARIA live region announcement when the accent-variant popup closes                     |
 
 The two `autoCompact` announcements name no layout on purpose: the layout a width picks is one the user never chose and never sees named, and an identifier dropped into a translated sentence stays untranslated. They also have to differ from each other - the live region re-announces only on a text change, so one shared wording would leave every second crossing unspoken.
+
+`ARIA_VARIANTS_OPENED` keeps `{0}` (the count) last on purpose: neither runtime substitutes a plural form, so a count placed in front of the noun would announce "1 variants for a" in every language that inflects. Keep the count trailing when you translate this key or supply it through a resolver.
 
 **Adding translations (library contributors):**
 

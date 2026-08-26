@@ -12,6 +12,9 @@ export function rootRemPx(): number {
 export async function placeAndWait(control: KioskKeyboard): Promise<void> {
   control.placeAt("qunit-fixture");
   await nextUIUpdate();
+  // The first control brings the live region into the page; catch every announcement
+  // from here on rather than from whenever a test first reads one.
+  armRecorder();
 }
 
 /** Wait for a re-render cycle after a state change. */
@@ -25,7 +28,63 @@ export async function waitForRender(): Promise<void> {
  * another one lands a beat later rather than in the same task.
  */
 export async function waitForAnnouncement(): Promise<void> {
+  armRecorder();
   await new Promise((resolve) => setTimeout(resolve, 150));
+}
+
+const announcements: string[] = [];
+let recorder: MutationObserver | null = null;
+
+/**
+ * Start recording what is written to the live region, once the node exists - which
+ * it does from the first KioskKeyboard, since `init` reaches for the singleton.
+ */
+function armRecorder(): void {
+  if (recorder) return;
+  const node = liveRegionNode();
+  if (!node) return;
+  recorder = new MutationObserver(() => {
+    const text = node.textContent ?? "";
+    if (text) announcements.push(text);
+  });
+  recorder.observe(node, { childList: true, characterData: true, subtree: true });
+}
+
+/**
+ * The most recent announcement, or `""` when none was raised since the last reset.
+ *
+ * The node first, the recording second. The node is authoritative while it holds text:
+ * it is written synchronously, whereas the recorder runs a microtask later and would
+ * lag a read taken in the same task as the announcement. The recording covers the one
+ * case the node cannot: `sap/ui/core/InvisibleMessage` empties its node three seconds
+ * after a write (a JAWS buffer workaround), and that node is shared by the whole page,
+ * so a timer armed by an earlier test can wipe an identical text this one just wrote.
+ */
+export function announcedText(): string {
+  armRecorder();
+  const standing = liveRegionNode()?.textContent ?? "";
+  return standing || (announcements.at(-1) ?? "");
+}
+
+/**
+ * Forget what was announced and empty the region, so a test can assert on silence.
+ * Arms the recorder, so everything the test goes on to raise is captured.
+ */
+export function resetAnnouncements(): void {
+  armRecorder();
+  announcements.length = 0;
+  const node = liveRegionNode();
+  if (node) node.textContent = "";
+}
+
+/**
+ * The polite live-region node itself, for assertions about its exposure rather than
+ * its text. `InvisibleMessage.announce` finds it the same way, by class rather than
+ * by id: the id is derived from a private singleton name, the class is what the
+ * framework itself queries.
+ */
+export function liveRegionNode(): Element | null {
+  return document.querySelector(".sapUiInvisibleMessagePolite");
 }
 
 /** Find a rendered key by its data-key value and tap it via touch simulation. */

@@ -1119,6 +1119,8 @@ Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i1
 
 The two `auto-compact` announcements name no layout on purpose: the layout a width picks is one the user never chose and never sees named, and an identifier dropped into a translated sentence stays untranslated. They also have to differ from each other - the live region re-announces only on a text change, so one shared wording would leave every second crossing unspoken.
 
+`ARIA_VARIANTS_OPENED` keeps `{0}` (the count) last on purpose: neither runtime substitutes a plural form, so a count placed in front of the noun would announce "1 variants for a" in every language that inflects. Keep the count trailing when you translate this key or supply it through a resolver.
+
 ### Custom i18n Resolver
 
 Use `KioskKeyboard.setI18nResolver()` to override or extend translations at runtime without modifying the library. The resolver receives the i18n key, the current locale (from the configured UI5 Web Components locale via `getLocale()`), and the text resolved from the built-in bundle:

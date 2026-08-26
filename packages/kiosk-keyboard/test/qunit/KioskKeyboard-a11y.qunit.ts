@@ -3,13 +3,16 @@ import Input from "sap/m/Input";
 import InvisibleText from "sap/ui/core/InvisibleText";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
+  announcedText,
   freezeDoubleClickWindow,
   getKeyElement,
   getKeyElements,
   getRequiredKeyElement,
   getKeyAttr,
   hasKeyClass,
+  liveRegionNode,
   placeAndWait,
+  resetAnnouncements,
   tapKey,
   waitForAnnouncement,
   waitForRender,
@@ -126,17 +129,15 @@ QUnit.test("Space key has the space width span", async (assert) => {
 });
 
 // ──────────────────────────────────────────────
-// ARIA live region for shift state
+// ARIA live region
 // ──────────────────────────────────────────────
 
 QUnit.test("Live region announces Shift state", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const sId = kb.getId();
-  let liveRegion = document.getElementById(`${sId}-liveState`);
-  assert.ok(liveRegion, "Live region element exists");
-  assert.strictEqual(liveRegion!.textContent, "", "Empty when shift is off");
+  resetAnnouncements();
+  assert.strictEqual(announcedText(), "", "Empty when shift is off");
 
   const clock = freezeDoubleClickWindow();
   try {
@@ -144,8 +145,7 @@ QUnit.test("Live region announces Shift state", async (assert) => {
     tapKey(kb, "{shift}");
     await waitForRender();
 
-    liveRegion = document.getElementById(`${sId}-liveState`);
-    assert.strictEqual(liveRegion!.textContent, "Shift on", "Announces Shift on");
+    assert.strictEqual(announcedText(), "Shift on", "Announces Shift on");
 
     // Activate caps lock. The double-tap lands close behind the tap that turned Shift
     // on, so its announcement waits for the queue's gap.
@@ -153,16 +153,14 @@ QUnit.test("Live region announces Shift state", async (assert) => {
     await waitForRender();
     await waitForAnnouncement();
 
-    liveRegion = document.getElementById(`${sId}-liveState`);
-    assert.strictEqual(liveRegion!.textContent, "Caps Lock on", "Announces Caps Lock on");
+    assert.strictEqual(announcedText(), "Caps Lock on", "Announces Caps Lock on");
 
     // Deactivate
     tapKey(kb, "{shift}");
     await waitForRender();
     await waitForAnnouncement();
 
-    liveRegion = document.getElementById(`${sId}-liveState`);
-    assert.strictEqual(liveRegion!.textContent, "Caps Lock off", "Announces Caps Lock off");
+    assert.strictEqual(announcedText(), "Caps Lock off", "Announces Caps Lock off");
   } finally {
     clock.restore();
   }
@@ -174,18 +172,17 @@ QUnit.test("Live region reports Caps Lock ending even when Shift takes over", as
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  const liveRegion = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
   const shiftState = kb["_shiftState"];
 
   shiftState.syncFromPhysical(false, true);
-  assert.strictEqual(liveRegion(), "Caps Lock on", "Announces Caps Lock on");
+  assert.strictEqual(announcedText(), "Caps Lock on", "Announces Caps Lock on");
 
   // `isShifted` is true on both sides of this step, so the mode that ended is the
   // only thing that changed.
   shiftState.syncFromPhysical(true, false);
   await waitForAnnouncement();
 
-  assert.strictEqual(liveRegion(), "Caps Lock off", "Announces Caps Lock off");
+  assert.strictEqual(announcedText(), "Caps Lock off", "Announces Caps Lock off");
 
   kb.destroy();
 });
@@ -194,7 +191,6 @@ QUnit.test("Announcements raised while the keyboard has no DOM are dropped, not 
   const kb = new KioskKeyboard({ docked: true });
   await placeAndWait(kb);
 
-  const liveRegion = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
   const shiftState = kb["_shiftState"];
 
   // setVisible(false) renders the invisible placeholder, so getDomRef() is null while
@@ -214,7 +210,11 @@ QUnit.test("Announcements raised while the keyboard has no DOM are dropped, not 
 
   // Banking the detached ones would make the screen reader read a backlog before
   // reaching the announcement the user actually just caused.
-  assert.strictEqual(liveRegion(), "Virtual keyboard opened", "the open announcement is not queued behind a backlog");
+  assert.strictEqual(
+    announcedText(),
+    "Virtual keyboard opened",
+    "the open announcement is not queued behind a backlog",
+  );
 
   kb.destroy();
 });
@@ -223,24 +223,22 @@ QUnit.test("Open and close announcements are spoken in turn, not collapsed", asy
   const kb = new KioskKeyboard({ docked: true });
   await placeAndWait(kb);
 
-  const liveRegion = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
-
   // Both land in the same task. A single-slot live region would hold only the
   // second, and assistive tech would never speak the first.
   kb.show();
   kb.close();
 
-  assert.strictEqual(liveRegion(), "Virtual keyboard opened", "the first announcement holds the region");
+  assert.strictEqual(announcedText(), "Virtual keyboard opened", "the first announcement holds the region");
 
   await waitForAnnouncement();
-  assert.strictEqual(liveRegion(), "Virtual keyboard closed", "the second follows once the first has been read");
+  assert.strictEqual(announcedText(), "Virtual keyboard closed", "the second follows once the first has been read");
 
   // Far enough behind the last write that the gap is already spent, so this one
   // reaches the region in the task that raised it.
   await waitForAnnouncement();
   kb.show();
   assert.strictEqual(
-    liveRegion(),
+    announcedText(),
     "Virtual keyboard opened",
     "an announcement clear of the gap is written straight away",
   );
@@ -252,17 +250,50 @@ QUnit.test("Live region stays silent for a requested layout switch", async (asse
   const kb = new KioskKeyboard({ layout: "qwerty" });
   await placeAndWait(kb);
 
-  const liveRegion = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
-  assert.strictEqual(liveRegion(), "", "nothing is announced on first paint");
+  resetAnnouncements();
+  assert.strictEqual(announcedText(), "", "nothing is announced on first paint");
 
   kb.setLayout("numeric");
   await waitForRender();
 
   // A switch the user asked for is its own feedback, and it moves focus onto the
   // key it followed, which announces itself.
-  assert.strictEqual(liveRegion(), "", "a requested switch adds no announcement");
+  assert.strictEqual(announcedText(), "", "a requested switch adds no announcement");
 
   kb.destroy();
+});
+
+// Being in the DOM is not enough: every other assertion here reads `textContent`,
+// which survives both `display: none` and an inherited `visibility: hidden`, and
+// either one keeps the text out of the accessibility tree entirely. The announcement
+// is raised from a docked keyboard mid-close, the state whose `visibility: hidden`
+// used to swallow it, so the check covers the node and its container together.
+QUnit.test("the announced text lands in a node assistive tech can reach", async (assert) => {
+  const docked = new KioskKeyboard({ docked: true });
+  await placeAndWait(docked);
+  assert.ok(
+    docked.getDomRef()!.classList.contains("ui5KioskKeyboard--closed"),
+    "precondition: a docked keyboard renders closed",
+  );
+
+  resetAnnouncements();
+  docked.show();
+  docked.close();
+  await waitForAnnouncement();
+  assert.strictEqual(announcedText(), "Virtual keyboard closed", "the close announcement reached the region");
+
+  const region = liveRegionNode()!;
+  assert.strictEqual(region.getAttribute("aria-live"), "polite", "it is a polite live region");
+  const style = getComputedStyle(region);
+  assert.notStrictEqual(style.display, "none", "not display:none");
+  assert.notStrictEqual(style.visibility, "hidden", "not visibility:hidden");
+  // The static area is a sibling of the app subtree, so the keyboard's own hidden
+  // state cannot reach it - but the container has to be exposed in its own right.
+  const container = getComputedStyle(region.parentElement!);
+  assert.notStrictEqual(container.display, "none", "its container is not display:none either");
+  assert.notStrictEqual(container.visibility, "hidden", "nor visibility:hidden");
+
+  docked.destroy();
 });
 
 // ──────────────────────────────────────────────
@@ -551,30 +582,6 @@ QUnit.test("aria-controls survives re-render for a non-Control target", async (a
 // ──────────────────────────────────────────────
 // Static API: getKeyIcon
 // ──────────────────────────────────────────────
-
-// Every other live-region assertion in this file reads `textContent`, which
-// survives both `display: none` and an inherited `visibility: hidden` - and
-// either one takes the region out of the accessibility tree, so nothing is ever
-// spoken. `position` is the canary: it fails loudly if the package stylesheet
-// has not applied, instead of passing because nothing is styled at all.
-QUnit.test("the live region stays exposed to assistive tech, docked-closed included", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-  const open = getComputedStyle(kb.getDomRef("liveState")!);
-  assert.strictEqual(open.position, "absolute", "precondition: the package stylesheet applied");
-  assert.notStrictEqual(open.display, "none", "not display:none");
-  assert.notStrictEqual(open.visibility, "hidden", "not visibility:hidden");
-  kb.destroy();
-
-  // A docked keyboard renders closed, and close() adds the closed class before
-  // it announces, so the announcement lands in whatever that state leaves behind.
-  const docked = new KioskKeyboard({ docked: true });
-  await placeAndWait(docked);
-  const closed = getComputedStyle(docked.getDomRef("liveState")!);
-  assert.notStrictEqual(closed.display, "none", "docked-closed: still not display:none");
-  assert.notStrictEqual(closed.visibility, "hidden", "docked-closed: still not visibility:hidden");
-  docked.destroy();
-});
 
 QUnit.test("getKeyIcon: maps icon keys and returns undefined for plain characters", (assert) => {
   const cases: [string, string | undefined][] = [

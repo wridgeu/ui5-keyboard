@@ -263,19 +263,6 @@
     }
   }
 
-  /* Screen-reader-only live region. `visibility` is declared rather than left to
-     inherit: the region is a child of the root, and the docked closed state hides
-     the root with `visibility: hidden`, which would take the announcement with it. */
-  .ui5KioskKeyboard__liveRegion {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-    visibility: visible;
-  }
-
   // The :not(--numpad) guard is defense-in-depth: the controller already
   // returns early for numpad, so a cq class only lands here if a consumer
   // force-adds it. The webc twin mirrors this on the host via
