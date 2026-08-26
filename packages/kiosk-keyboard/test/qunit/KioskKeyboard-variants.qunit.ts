@@ -99,17 +99,21 @@ function glyphOf(option: HTMLElement): string {
  * Tap an option button through a touch press/release, firing the sap.m.Button
  * `press` the popup commits on. The test runner reports touch support, so a bare
  * synthetic `click` never reaches the button - a touchstart/touchend pair does.
+ * The touch carries the option's centre: without coordinates a tap made while a
+ * Popover is open surfaces as a non-finite `document.elementFromPoint` call.
  */
 function tapOption(option: HTMLElement): void {
+  const rect = option.getBoundingClientRect();
+  const touch = { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };
   const start = new Event("touchstart", { bubbles: true, cancelable: true });
-  Object.defineProperty(start, "targetTouches", { value: [{}] });
-  Object.defineProperty(start, "touches", { value: [{}] });
-  Object.defineProperty(start, "changedTouches", { value: [{}] });
+  Object.defineProperty(start, "targetTouches", { value: [touch] });
+  Object.defineProperty(start, "touches", { value: [touch] });
+  Object.defineProperty(start, "changedTouches", { value: [touch] });
   option.dispatchEvent(start);
   const end = new Event("touchend", { bubbles: true, cancelable: true });
   Object.defineProperty(end, "targetTouches", { value: [] });
   Object.defineProperty(end, "touches", { value: [] });
-  Object.defineProperty(end, "changedTouches", { value: [{}] });
+  Object.defineProperty(end, "changedTouches", { value: [touch] });
   option.dispatchEvent(end);
 }
 
@@ -569,6 +573,25 @@ QUnit.test("Escape dismisses the popup without inserting", async (assert) => {
   keydownOnPopup("Escape");
   assert.notOk(variantPopup(kb).isOpen(), "popup dismissed on Escape");
   assert.strictEqual(input.getValue(), "z", "nothing inserted on Escape");
+  cleanup(kb, input);
+});
+
+// The popup is part of the keyboard's surface, so a disabled keyboard shows
+// none: left open, its options still reach the commit path and type.
+QUnit.test("disabling the keyboard dismisses an open popup", async (assert) => {
+  const { kb, input } = await makeKeyboard("z");
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  release(kb, aKey);
+  const aimedAt = getOptions()[0]!;
+  assert.ok(getOptions().length > 0, "precondition: the popup is open with options");
+
+  kb.setEnabled(false);
+  await waitForRender();
+
+  assert.notOk(variantPopup(kb).isOpen(), "the popup is dismissed");
+  tapOption(aimedAt);
+  assert.strictEqual(input.getValue(), "z", "the option the press was aimed at types nothing");
   cleanup(kb, input);
 });
 

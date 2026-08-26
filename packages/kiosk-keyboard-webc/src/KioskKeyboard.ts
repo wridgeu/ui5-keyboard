@@ -488,7 +488,20 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   @property({ type: Boolean })
-  disabled = false;
+  set disabled(value: boolean) {
+    this._disabledValue = value;
+    // The accent popup is part of the keyboard's surface, and it renders into the
+    // top layer where the disabled styling does not reach it. Left open its
+    // options still commit, so the disable closes it. A hold armed but not yet
+    // fired is left alone: `_resolveVariantOpenState` refuses it at fire time.
+    if (value && this._variantPopup) this._variantGesture.close();
+  }
+
+  get disabled(): boolean {
+    return this._disabledValue;
+  }
+
+  private _disabledValue = false;
 
   /**
    * Comma-separated list of target input element IDs. The keyboard targets

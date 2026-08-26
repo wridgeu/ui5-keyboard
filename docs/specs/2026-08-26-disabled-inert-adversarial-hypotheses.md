@@ -10,7 +10,9 @@ gesture is armed, and the branch adds a check where the gesture is consumed. A
 test that never gets a gesture armed in the first place is green either way, and
 so is a test whose keycap loses its class for an unrelated reason. The injections
 below each remove exactly one of the added reads, so a red run names the read it
-came from.
+came from. H5 is the exception in kind, not in trap: it removes a dismissal
+rather than a read, and the popup it closes is the one gesture whose surface
+outlives the gesture itself.
 
 ## What is under test
 
@@ -20,6 +22,8 @@ came from.
   (kiosk): the auto-repeat tick, not the arm.
 - `_resolveKeyVariants` (kiosk), and its pre-existing webc counterpart
   `_resolveVariantOpenState`, at the moment the hold timer fires.
+- The dismissal of an already-open popup at the moment the flag flips:
+  `setEnabled` (kiosk) and the `disabled` setter (webc).
 
 ## H1 — the arrow-key tests could pass on a keyboard that never navigates
 
@@ -99,10 +103,46 @@ connected at all — removing `_resolveVariantOpenState`'s `disabled` read stops
 the suite passing (`61 passed` → the run never finishes, `0 passed`, popup left
 open). A hang is a blunt signal, but it is not green, and it is the same read.
 
+## H5 — the dismissal tests could be green against a popup that never opened
+
+Both new cases assert "no popup, nothing typed" after the flag flips. A gesture
+that never opened one satisfies that outright, and so does a tap helper that
+never reaches the option.
+
+**Falsified,** both twins, with only the dismissal removed.
+
+```
+KioskKeyboard-variants   61/62
+  "disabling the keyboard dismisses an open popup"
+    the popup is dismissed:                          expected false, got true
+    the option the press was aimed at types nothing: expected "z", got "zà"
+```
+
+```
+kiosk-keyboard - accent-variant popup > dismisses an open popup when the keyboard is disabled
+  AssertionError: the option the press was aimed at types nothing: expected 'â' to equal ''
+```
+
+Both reds name the typing assertion, not only the "is it open" one, so the tap
+helper is demonstrably live and the popup demonstrably opened. The sibling case
+in the same run ("disabling mid-hold keeps the popup from opening when the timer
+fires") stays green under this injection, which separates the two mechanisms:
+the dismissal closes what is open, `_resolveKeyVariants` refuses what is pending.
+
+Two notes on the shape of the red:
+
+- The kiosk assertion is only reachable because `tapOption` now carries the
+  option's centre. A coordinate-less synthetic touch throws out of
+  `document.elementFromPoint` while a Popover is open, and the uncaught error
+  ended the test before its typing assertion could be reached — the injection
+  looked red for the wrong reason.
+- On webc the whole file stops finishing under this injection (`0 passed`, a
+  runner timeout) rather than reporting one failure: clicking a live option on a
+  disabled keyboard wedges the component. Not green, but blunt — the named red
+  above comes from running that test alone. Same signal class as H4's.
+
 ## Not covered
 
 - The kiosk arrow path. #256 is webc-only: kiosk already refuses arrows on a
   disabled keyboard, and the kiosk-side navigation guard this branch first added
   was cut again for that reason. No injection here, because there is no new read.
-- `enabled` flipping during an accent-variant _commit_ (as opposed to the open).
-  Out of scope for #251/#256 and unasserted.

@@ -152,6 +152,24 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     pointerUp();
   });
 
+  // The popup is part of the keyboard's surface, so a disabled keyboard shows
+  // none: left open, its options still reach the commit path and type.
+  it("dismisses an open popup when the keyboard is disabled", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    await holdOpen(requireKey(kb, "a"));
+    pointerUp();
+    const aimedAt = optionEls(kb)[2]!;
+    expect(optionGlyphs(kb), "precondition: the popup is open with options").to.deep.equal(["ä", "à", "â"]);
+
+    kb.disabled = true;
+    await renderFinished();
+    await waitForPopoverGone(kb);
+
+    expect(popupEl(kb), "the popup is gone").to.not.exist;
+    aimedAt.click();
+    expect(input.value, "the option the press was aimed at types nothing").to.equal("");
+  });
+
   it("opens the popup on a host that was given an id after its first render", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     // `id` is not a decorated property, so assigning it re-renders nothing; the

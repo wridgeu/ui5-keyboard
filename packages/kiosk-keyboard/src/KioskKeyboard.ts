@@ -1076,6 +1076,11 @@ export default class KioskKeyboard extends Control {
   setEnabled(isEnabled: boolean): this {
     if (!isEnabled) {
       this._redirectFocusToTargetIfOwned();
+      // The accent popup is part of the keyboard's surface, and it renders into
+      // the static area where the disabled styling does not reach it. Left open
+      // its options still commit, so the disable closes it. A hold armed but not
+      // yet fired is left alone: `_resolveKeyVariants` refuses it at fire time.
+      this._variantPopup.dismissOpen();
     }
     // The renderer handles the disabled CSS class (ui5KioskKeyboard--disabled)
     // and per-key aria-disabled attributes at render time. Uses setProperty
