@@ -3,7 +3,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { LayoutFacet, MobileKeyboard, LATIN_DIACRITIC_VARIANTS } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import Popover from "sap/m/Popover";
-import { placeAndWait, getRequiredKeyElement, simulateTap, tapKey, waitForRender } from "./test-helpers";
+import { placeAndWait, getRequiredKeyElement, isShiftActive, simulateTap, tapKey, waitForRender } from "./test-helpers";
 import type VariantPopupBehavior from "ui5/kiosk/internal/variant-popup-behavior";
 import { VARIANT_HOLD_MS } from "ui5/kiosk/internal/variant-popup-behavior";
 import { insertText } from "ui5/kiosk/internal/input-operations";
@@ -584,6 +584,10 @@ QUnit.test("Shift surfaces the uppercase variants including ẞ for ß", async (
   const sharp = getOptions().find((o) => glyphOf(o) === "ẞ");
   tapOption(sharp!);
   assert.strictEqual(input.getValue(), "ẞ", "ẞ inserted");
+  // A committed variant is a character key, so it spends the one-shot latch.
+  // `isShiftActive` reads the rendered `aria-pressed`, hence the render wait.
+  await waitForRender();
+  assert.notOk(isShiftActive(kb), "the committed variant spent the one-shot Shift latch");
   cleanup(kb, input);
 });
 
@@ -855,6 +859,27 @@ QUnit.test("a consumer preventDefault on keyPress vetoes the variant insert", as
   keydownOnPopup("Enter");
   assert.strictEqual(input.getValue(), "z", "the vetoed variant inserted nothing");
   assert.notOk(variantPopup(kb).isOpen(), "the popup still closes after a veto");
+  cleanup(kb, input);
+});
+
+QUnit.test("a vetoed variant commit still spends the one-shot Shift latch", async (assert) => {
+  const { kb, input } = await makeKeyboard("z");
+  kb.attachKeyPress((e) => {
+    if (e.getParameter("key") === "ẞ") e.preventDefault();
+  });
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Shift is latched going into the commit");
+  const sKey = getRequiredKeyElement(kb, "s");
+  await holdOpen(kb, sKey);
+  release(kb, sKey);
+  const sharp = getOptions().find((o) => glyphOf(o) === "ẞ");
+  tapOption(sharp!);
+  assert.strictEqual(input.getValue(), "z", "the vetoed variant inserted nothing");
+  // Which keys spend the latch is a pure function of the key, so the veto
+  // cancels the insertion and leaves the spend alone.
+  await waitForRender();
+  assert.notOk(isShiftActive(kb), "the veto does not keep the latch armed");
   cleanup(kb, input);
 });
 

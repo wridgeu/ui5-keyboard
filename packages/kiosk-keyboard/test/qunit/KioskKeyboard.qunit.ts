@@ -1685,6 +1685,71 @@ QUnit.test("Shift+Space on a focused key types the shifted glyph", async (assert
   kb.destroy();
 });
 
+// `sapselect` / `sapselectmodifiers` are keydown pseudo-events, so the Shift
+// that counts is the one held when Space goes down. The keyup only clears the
+// pressed styling. This pins the side the web-component twin converges onto.
+QUnit.test("a Space keyup carrying a different Shift does not change what was typed", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const bKey = getRequiredKeyElement(kb, "b");
+  bKey.setAttribute("tabindex", "0");
+  bKey.focus();
+
+  bKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", shiftKey: true, bubbles: true, cancelable: true }));
+  bKey.dispatchEvent(new KeyboardEvent("keyup", { key: " ", shiftKey: false, bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "B", "the Shift released before the Space still applied");
+
+  const cKey = getRequiredKeyElement(kb, "c");
+  cKey.setAttribute("tabindex", "0");
+  cKey.focus();
+
+  cKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
+  cKey.dispatchEvent(new KeyboardEvent("keyup", { key: " ", shiftKey: true, bubbles: true, cancelable: true }));
+  await waitForRender();
+
+  assert.strictEqual(input.getValue(), "Bc", "a Shift arriving after the press did not apply");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// Twin of the webc case in `kiosk-keyboard.test.ts`: a keyboardType change is
+// the same kind of surface swap as `{layout:*}`, which already resets. The
+// round trip back to Full is what makes the assertion readable - the numpad
+// surface has no `{shift}` keycap to read the state off.
+QUnit.test("a keyboardType change resets the Shift latch, Caps Lock included", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{shift}"); // second tap inside the double-click window -> Caps Lock
+  await waitForRender();
+  assert.ok(isCapsLock(kb), "precondition: Caps Lock latched");
+
+  kb.setKeyboardType(KeyboardType.Numpad);
+  await waitForRender();
+  kb.setKeyboardType(KeyboardType.Full);
+  await waitForRender();
+
+  assert.notOk(isCapsLock(kb), "the surface swap cleared Caps Lock");
+  assert.notOk(isShiftActive(kb), "and left no shift latched");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Shift+Enter reports shiftKey on the keyPress event", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");

@@ -327,7 +327,7 @@ describe("KeyGridNavigation - activation (Enter / Space)", () => {
     expect((onClick.mock.calls[0]![0] as MouseEvent).shiftKey).toBe(true);
   });
 
-  it("Space carries Shift onto the activation click at release", () => {
+  it("Space carries Shift onto the activation click", () => {
     const g = grid();
     const key = g.keyAt(1, 2);
     const onClick = vi.fn();
@@ -335,6 +335,30 @@ describe("KeyGridNavigation - activation (Enter / Space)", () => {
     g.press(key, " ", { shiftKey: true });
     g.release(key, " ", { shiftKey: true });
     expect((onClick.mock.calls[0]![0] as MouseEvent).shiftKey).toBe(true);
+  });
+
+  // Space activates on release, but the modifier is read at the press: Shift
+  // sits under the other hand and nothing makes the user release the two keys
+  // in a fixed order. The UI5 twin samples at the press for the same reason -
+  // `sapselect` / `sapselectmodifiers` are keydown pseudo-events.
+  it("Space keeps a Shift released before it", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+    g.press(key, " ", { shiftKey: true });
+    g.release(key, " ", { shiftKey: false });
+    expect((onClick.mock.calls[0]![0] as MouseEvent).shiftKey).toBe(true);
+  });
+
+  it("Space ignores a Shift pressed after it", () => {
+    const g = grid();
+    const key = g.keyAt(1, 2);
+    const onClick = vi.fn();
+    key.addEventListener("click", onClick);
+    g.press(key, " ");
+    g.release(key, " ", { shiftKey: true });
+    expect((onClick.mock.calls[0]![0] as MouseEvent).shiftKey).toBe(false);
   });
 
   it("an unmodified activation click carries no Shift", () => {

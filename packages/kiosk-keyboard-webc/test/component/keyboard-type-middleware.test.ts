@@ -96,4 +96,27 @@ describe("kiosk-keyboard - keyboardType vs composition middleware", () => {
     expect(calls.handled, "old middleware does not receive keys after the swap").to.deep.equal(["ㄱ"]);
     expect(input.value, "numpad digit inserts directly after the swap").to.equal("7");
   });
+
+  it("spends the one-shot Shift latch on a middleware-consumed key", async () => {
+    const { calls, factory } = spyMiddleware();
+    const { kb, input } = await setupHangul(factory);
+
+    requireKey(kb, "{shift}").click();
+    await nextRender();
+    expect(requireKey(kb, "{shift}").getAttribute("aria-pressed"), "precondition: shift latched").to.equal("true");
+
+    requireKey(kb, "ㄱ").click();
+    // The consumption is asserted too: a key the middleware declined would
+    // reach the same spend gate down the default branch, so the latch
+    // assertion alone would stay green with the early return moved above it.
+    // The middleware is handed the key's base value, not its shifted glyph.
+    expect(calls.handled, "the middleware consumed the key").to.deep.equal(["ㄱ"]);
+    expect(input.value, "the consumed key wrote nothing directly").to.equal("");
+
+    await nextRender();
+    expect(
+      requireKey(kb, "{shift}").getAttribute("aria-pressed"),
+      "the consumed key still spent the one-shot Shift latch",
+    ).to.equal("false");
+  });
 });

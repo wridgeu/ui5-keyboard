@@ -546,6 +546,14 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     pointerUp();
     optionEls(kb)[0]!.click(); // ẞ
     expect(input.value).to.equal("ẞ");
+
+    // A committed variant is a character key, so it spends the one-shot latch.
+    // The assertion reads the rendered `aria-pressed`, hence the render wait.
+    await renderFinished();
+    expect(
+      requireKey(kb, "{shift}").getAttribute("aria-pressed"),
+      "the committed variant spent the one-shot Shift latch",
+    ).to.equal("false");
   });
 
   it("lets a consumer veto the insert via preventDefault on key-press", async () => {
@@ -560,6 +568,28 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(input.value).to.equal("");
     await renderFinished();
     expect(popupEl(kb), "popup still closes after a veto").to.not.exist;
+  });
+
+  it("spends the one-shot Shift latch on a vetoed variant commit", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    kb.addEventListener("key-press", (e: Event) => {
+      if ((e as CustomEvent<{ key: string }>).detail.key === "ẞ") e.preventDefault();
+    });
+    requireKey(kb, "{shift}").click();
+    await renderFinished();
+    expect(requireKey(kb, "{shift}").getAttribute("aria-pressed"), "precondition: shift latched").to.equal("true");
+
+    await holdOpen(requireKey(kb, "s"));
+    pointerUp();
+    optionEls(kb)[0]!.click(); // ẞ (vetoed)
+    expect(input.value).to.equal("");
+
+    // Which keys spend the latch is a pure function of the key, so the veto
+    // cancels the insertion and leaves the spend alone.
+    await renderFinished();
+    expect(requireKey(kb, "{shift}").getAttribute("aria-pressed"), "the veto does not keep the latch armed").to.equal(
+      "false",
+    );
   });
 
   // ── Opt-in Latin-diacritics table via the accent-variants attribute ──

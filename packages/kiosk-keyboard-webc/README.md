@@ -267,7 +267,7 @@ Vetoing `key-press` does not change that set on either twin: the latch is consum
 
 Caps Lock is sticky on both and never auto-releases. `{shift}` and `{layout:*}` spend nothing; selecting a layout resets the whole typing context, Caps Lock included.
 
-Activating a focused keycap from the physical keyboard differs in one respect: the web component activates Space on release, following native `<button>` semantics, while the UI5 control routes Space through UI5's `sapselect`, a keydown pseudo-event, and so activates on press. Neither twin repeats on a held key, and `{backspace}` repeats only from pointer input. Both treat Shift+Enter and Shift+Space as "type the shifted glyph" and both reject Ctrl, Alt and Meta.
+Activating a focused keycap from the physical keyboard differs in one respect: the web component activates Space on release, following native `<button>` semantics, while the UI5 control routes Space through UI5's `sapselect`, a keydown pseudo-event, and so activates on press. Neither twin repeats on a held key, and `{backspace}` repeats only from pointer input. Both treat Shift+Enter and Shift+Space as "type the shifted glyph" and both reject Ctrl, Alt and Meta. Both also read that Shift from the **press**, whichever key is released first, so the two agree on the glyph for every release ordering.
 
 See [`UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md`](../../docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) for general guidance on web component consumption patterns inside UI5 apps.
 

@@ -47,7 +47,8 @@ export interface KeyGridNavigationHost {
  */
 export class KeyGridNavigation {
   private _lastFocusedKey: KeyPosition | null = null;
-  private _spaceKeyDownTarget: HTMLElement | null = null;
+  /** The keycap holding a Space press, and the Shift that press carried. */
+  private _spaceKeyDown: { el: HTMLElement; shift: boolean } | null = null;
 
   constructor(private readonly _host: KeyGridNavigationHost) {}
 
@@ -141,8 +142,11 @@ export class KeyGridNavigation {
           // Native `<button>` semantics: Space activates on release, not on
           // press, and does not repeat while held. Suppress the page scroll
           // here and remember the pressed key; onKeyUp performs the activation.
+          // The Shift is taken here, not at the release: a modifier states the
+          // user's intent when the key goes down, and the release order of two
+          // keys under different hands is not something they control.
           if (e.ctrlKey || e.altKey || e.metaKey) return;
-          this._spaceKeyDownTarget = keyEl;
+          this._spaceKeyDown = { el: keyEl, shift: e.shiftKey };
           this._press(keyEl);
           e.preventDefault();
           return;
@@ -177,16 +181,16 @@ export class KeyGridNavigation {
     this._release();
     if (e.key !== " ") return;
 
-    const pressed = this._spaceKeyDownTarget;
-    this._spaceKeyDownTarget = null;
+    const pressed = this._spaceKeyDown;
+    this._spaceKeyDown = null;
     if (!pressed) return;
     // SAFETY: the template binds this to `keyup` on the keyboard root inside the shadow
     // root, so the target is one of the HTML elements rendered there; `closest` then
     // yields a keycap or null, and only an exact match with the pressed key activates.
     const keyEl = (e.target as HTMLElement).closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
-    if (keyEl !== pressed) return;
+    if (keyEl !== pressed.el) return;
     e.preventDefault();
-    this._activate(keyEl, e.shiftKey);
+    this._activate(keyEl, pressed.shift);
   }
 
   /**
@@ -195,7 +199,7 @@ export class KeyGridNavigation {
    * the pending Space target: its release can no longer land on this key.
    */
   onFocusOut(): void {
-    this._spaceKeyDownTarget = null;
+    this._spaceKeyDown = null;
     this._release();
   }
 

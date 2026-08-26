@@ -636,6 +636,58 @@ describe("kiosk-keyboard", () => {
       expect(shift.getAttribute("aria-pressed")).to.equal("false");
     });
 
+    it("fires {shift} key-press with the shift state the toggle produces", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      const payloads: boolean[] = [];
+      // Armed before the first click: the arm at issue is the one that turns
+      // Shift off, so a listener attached after a first click cannot see it.
+      el.addEventListener("key-press", (e: Event) => {
+        payloads.push((e as CustomEvent<{ shiftKey: boolean }>).detail.shiftKey);
+      });
+
+      /** Tap `{shift}`, optionally after waiting out the double-click window. */
+      const tapShift = async (waitMs = 0): Promise<{ payload: boolean; pressed: string | null }> => {
+        if (waitMs) await new Promise((resolve) => setTimeout(resolve, waitMs));
+        queryKey(el, "{shift}")!.click();
+        await nextRender();
+        return {
+          payload: payloads.at(-1)!,
+          pressed: queryKey(el, "{shift}")!.getAttribute("aria-pressed"),
+        };
+      };
+
+      expect(await tapShift(), "Off -> Shift").to.deep.equal({ payload: true, pressed: "true" });
+      // 500ms is past the 400ms double-click window, so this tap turns Shift
+      // off instead of reaching caps lock - the one arm a mirrored caps-lock
+      // flag cannot distinguish from Off -> Shift.
+      expect(await tapShift(500), "Shift -> Off").to.deep.equal({ payload: false, pressed: "false" });
+      expect(await tapShift(), "Off -> CapsLock").to.deep.equal({ payload: true, pressed: "true" });
+      expect(await tapShift(), "CapsLock -> Off").to.deep.equal({ payload: false, pressed: "false" });
+    });
+
+    // Twin of the UI5 case in `KioskKeyboard.qunit.ts`: a keyboardType change is
+    // the same kind of surface swap as `{layout:*}`, which already resets. The
+    // round trip back to Full is what makes the assertion readable - the numpad
+    // surface has no `{shift}` keycap to read the state off.
+    it("resets the shift latch on a keyboardType change, caps lock included", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      queryKey(el, "{shift}")!.click();
+      queryKey(el, "{shift}")!.click(); // second tap inside the window -> caps lock
+      await nextRender();
+      expect(queryKey(el, "{shift}")!.getAttribute("aria-pressed"), "precondition: caps lock").to.equal("true");
+
+      el.keyboardType = "Numpad";
+      await nextRender();
+      el.keyboardType = "Full";
+      await nextRender();
+
+      expect(queryKey(el, "{shift}")!.getAttribute("aria-pressed"), "the surface swap cleared it").to.equal("false");
+    });
+
     // The latch is consumed to *produce* the payload - `key-press` already
     // carries `char: "A"` by the time a consumer sees it. What a veto cancels is
     // the insertion, not the spend. Vetoing to route insertion yourself is a

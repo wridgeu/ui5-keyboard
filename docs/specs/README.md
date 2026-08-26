@@ -38,3 +38,4 @@ Dated design specifications and adversarial-validation records, kept for context
 | [Native Text Insertion (#230)](./2026-08-11-native-text-insertion-design.md)                            | Inserting through `execCommand` so `maxlength` and the browser undo stack survive.             |
 | [Native Insertion Adversarial Hypotheses](./2026-08-11-native-text-insertion-adversarial-hypotheses.md) | Adversarial validation of the native-insertion suites, per CLAUDE.md §7.                       |
 | [Per-Key Parts Adversarial Hypotheses (#231)](./2026-08-17-per-key-parts-adversarial-hypotheses.md)     | Adversarial validation of the bounded per-key `::part()` names, per CLAUDE.md §7.              |
+| [Shift Latch Adversarial Hypotheses](./2026-08-25-shift-latch-adversarial-hypotheses.md)                | Adversarial validation of the Shift-sampling fixes and the latch pins, per CLAUDE.md §7.       |
