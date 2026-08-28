@@ -22,12 +22,17 @@ QUnit.test("Returns null for unregistered layouts", (assert) => {
 });
 
 QUnit.test("Lookup normalizes the layout name (trim + lowercase)", (assert) => {
+  // Pinned as a function before anything is compared against it: an emptied
+  // registry answers every lookup with null, which satisfies an equality
+  // between two lookups without either one having normalized anything.
+  const builtIn = getMiddlewareFactory(BUILT_IN_LAYOUT);
+  assert.strictEqual(typeof builtIn, "function", "The built-in layout has a registered factory");
   assert.strictEqual(
     getMiddlewareFactory("Ko-Hangul "),
-    getMiddlewareFactory(BUILT_IN_LAYOUT),
+    builtIn,
     "Trailing space + mixed case resolves to the same built-in factory",
   );
-  assert.notStrictEqual(getMiddlewareFactory(" KO-HANGUL"), null, "Leading space + uppercase still resolves");
+  assert.strictEqual(getMiddlewareFactory(" KO-HANGUL"), builtIn, "Leading space + uppercase resolves to the same one");
 });
 
 QUnit.test("Instance map shadows the built-in factory", (assert) => {
