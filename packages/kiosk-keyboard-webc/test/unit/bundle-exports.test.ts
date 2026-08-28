@@ -2,8 +2,12 @@ import { describe, it, expect } from "vitest";
 
 // Taken from the element module rather than from core/latin-variants, because the
 // re-export at KioskKeyboard.ts is the route consumers use and nothing else in the
-// suite exercises it: without this import, deleting that line still typechecks.
+// suite exercises it. A type has no runtime presence, so there is nothing here to
+// assert: the import itself is the guard, and `typecheck:kiosk-webc:test` fails on
+// it the moment the re-export goes. The alias keeps the import from reading as dead.
 import type { VariantTable } from "../../src/KioskKeyboard.js";
+
+export type VariantTableIsReExported = VariantTable;
 
 // The bundle entry boots the UI5 WC style engine, which reads
 // `document.adoptedStyleSheets`. jsdom ships no constructable stylesheets, so
@@ -26,10 +30,5 @@ describe("bundle.esm public surface", () => {
     expect(bundle.MobileKeyboard.Auto).toBe("Auto");
     expect(bundle.LayoutFacet.Variants).toBe("Variants");
     expect(bundle.LayoutRole.Inherit).toBe("Inherit");
-  });
-
-  it("re-exports the VariantTable type from the element module", () => {
-    const table: VariantTable = { a: ["à", "á"] };
-    expect(table.a).toEqual(["à", "á"]);
   });
 });

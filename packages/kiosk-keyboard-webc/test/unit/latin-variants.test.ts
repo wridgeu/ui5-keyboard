@@ -154,8 +154,6 @@ describe("resolveVariantTable", () => {
     const table = resolveVariantTable("qwerty", named("qwerty", polluted))!;
     expect(Object.getPrototypeOf(table)).toBeNull();
     expect(Object.hasOwn(table, "__proto__")).toBe(true);
-    const fresh: VariantTable = {};
-    expect(fresh.x).toBeUndefined();
   });
 
   it("a suppressing named entry with no table of its own opts the layout out", () => {
