@@ -430,12 +430,18 @@ QUnit.test("The announcement names no layout, so it carries no untranslated iden
   const { resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
 
   // The user never chose the layout a width picks and never sees its name, and the
-  // name would sit untranslated inside a translated sentence.
+  // name would sit untranslated inside a translated sentence. Each crossing is read
+  // into a local and asserted non-empty first: `"".includes(...)` is false, so a
+  // control that announced nothing at all would satisfy the exclusion on its own.
   await resize(NARROW_PX);
-  assert.notOk(announcedText().includes("ja-kana"), "the compacting announcement quotes no layout name");
+  const compacting = announcedText();
+  assert.ok(compacting, "precondition: the compacting crossing announced something");
+  assert.notOk(compacting.includes("ja-kana"), "the compacting announcement quotes no layout name");
 
   await resize(WIDE_PX);
-  assert.notOk(announcedText().includes("ja-kana"), "and neither does the one restoring it");
+  const restoring = announcedText();
+  assert.ok(restoring, "precondition: the restoring crossing announced something");
+  assert.notOk(restoring.includes("ja-kana"), "and neither does the one restoring it");
 });
 
 QUnit.test("Consecutive announcements alternate, so none is dropped as a repeat", async (assert) => {

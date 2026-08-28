@@ -6,6 +6,7 @@ import Popover from "sap/m/Popover";
 import {
   announcedText,
   placeAndWait,
+  resetAnnouncements,
   getRequiredKeyElement,
   isShiftActive,
   simulateTap,
@@ -656,6 +657,7 @@ QUnit.test("the open announcement names the key's explicit shiftValue under Shif
   // announce "!" rather than the uppercased raw value ("1").
   tapKey(kb, "{shift}");
   const oneKey = getRequiredKeyElement(kb, "1");
+  resetAnnouncements();
   await holdOpen(kb, oneKey);
 
   const expected = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "2").replace("{1}", "!");
@@ -682,6 +684,7 @@ QUnit.test("the open announcement names the base under CapsLock, not the shiftVa
   tapKey(kb, "{shift}");
   await waitForRender();
   const oneKey = getRequiredKeyElement(kb, "1");
+  resetAnnouncements();
   await holdOpen(kb, oneKey);
 
   const expected = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "2").replace("{1}", "1");
@@ -705,6 +708,7 @@ QUnit.test("a single variant announces without a plural disagreement", async (as
   input.focus();
 
   const aKey = getRequiredKeyElement(kb, "a");
+  resetAnnouncements();
   await holdOpen(kb, aKey);
   assert.deepEqual(getOptions().map(glyphOf), ["ā"], "precondition: exactly one variant is offered");
   assert.strictEqual(

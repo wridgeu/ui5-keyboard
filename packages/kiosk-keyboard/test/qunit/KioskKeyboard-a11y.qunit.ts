@@ -175,6 +175,10 @@ QUnit.test("Live region reports Caps Lock ending even when Shift takes over", as
 
   const shiftState = kb["_shiftState"];
 
+  // "Caps Lock off" is what the preceding test leaves standing in the page-global
+  // region, and it is what this one ends on, so it starts from silence.
+  resetAnnouncements();
+
   shiftState.syncFromPhysical(false, true);
   assert.strictEqual(announcedText(), "Caps Lock on", "Announces Caps Lock on");
 
@@ -298,10 +302,11 @@ QUnit.test("announcements survive an Input being destroyed", async (assert) => {
 });
 
 // Being in the DOM is not enough: every other assertion here reads `textContent`,
-// which survives both `display: none` and an inherited `visibility: hidden`, and
-// either one keeps the text out of the accessibility tree entirely. The announcement
-// is raised from a docked keyboard mid-close, the state whose `visibility: hidden`
-// used to swallow it, so the check covers the node and its container together.
+// which survives `display: none`, an inherited `visibility: hidden` and an
+// `aria-hidden` ancestor, each of which keeps the text out of the accessibility tree.
+// The region is a `<body>`-level sibling in the static area, so the keyboard's own
+// hidden state cannot reach it; the docked mid-close setup is there to raise an
+// announcement from the state that used to swallow one, not to expose the node.
 QUnit.test("the announced text lands in a node assistive tech can reach", async (assert) => {
   const docked = new KioskKeyboard({ docked: true });
   await placeAndWait(docked);
@@ -326,6 +331,10 @@ QUnit.test("the announced text lands in a node assistive tech can reach", async 
   const container = getComputedStyle(region.parentElement!);
   assert.notStrictEqual(container.display, "none", "its container is not display:none either");
   assert.notStrictEqual(container.visibility, "hidden", "nor visibility:hidden");
+  // `aria-hidden` takes a node out of the tree while display, visibility and
+  // textContent all still read as exposed. UI5's modal `Popup` puts it on the static
+  // area's `<body>` siblings, so this is a live path rather than a hypothetical.
+  assert.notOk(region.closest("[aria-hidden='true']"), "no aria-hidden ancestor");
 
   docked.destroy();
 });

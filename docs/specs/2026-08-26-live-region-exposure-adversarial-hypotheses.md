@@ -184,78 +184,140 @@ The same pass added a reset to `Open and close announcements are spoken in turn`
 expects `"Virtual keyboard opened"`, which is the text the preceding test leaves
 standing in the shared node, so a broken `show()` would have read as a pass.
 
-## Where `InvisibleMessage.getInstance()` is reached from, and why not bare in `init`
+## Where `InvisibleMessage.getInstance()` is reached from
 
 ARIA wants a live region in the page and empty before anything is written to it, so the
-singleton is taken eagerly rather than on the first announcement. Three placements can
-carry that, and only one is safe for this control.
+singleton is taken eagerly rather than on the first announcement. `getInstance()` inserts its
+spans synchronously (`ManagedObject.js:530` calls `init` inside the constructor;
+`InvisibleMessage.js:151` inserts), and `announce` writes immediately after, so without an
+eager call the region would be created and filled in one task - the case every practitioner
+source says is unreliable. It is not normative: WAI-ARIA 1.2 and Core-AAM say nothing about it.
+Treat it as "may be dropped", not "is dropped".
 
-**`init`, unguarded — throws.** `InvisibleMessage.prototype.init` calls
-`StaticArea.getDomRef()` with no guard; its own `if (!oStatic)` fallback is dead against
-the 1.136 `StaticArea`, which never returns a falsy value, only throws. And
-`_createStaticAreaRef` opens with
+`sap.m.IconTabFilter` primes the same singleton for the same stated reason, with a bare call
+and no announce (`IconTabFilter.js:762-767`): _"force initializing the invisible message, as the
+live region should be rendered, when we announce the text"_. `sap.f.GridContainer` does the same
+(`:690`, not the pinned version). That is the pattern this control follows.
+
+**Why the gate.** `InvisibleMessage.prototype.init` calls `StaticArea.getDomRef()` unguarded -
+its own `if (!oStatic)` fallback is dead against the 1.136 `StaticArea`, which never returns a
+falsy value, only throws - and `_createStaticAreaRef` opens with
 `if (!bDomReady) throw new Error("DOM is not ready yet. Static UIArea cannot be created.")`.
 
-A `sap.ui.require` callback is **not** gated on DOM readiness the way `Core.ready` and
-`attachInit` are; it fires as soon as its modules resolve. A consumer building a keyboard
-from one in a head script therefore reaches `init` mid-parse. Measured against the pinned
-1.136.18 with a page whose parser is held by a deliberately slow blocking script, so the
-module callback lands while the document is still loading:
+**How wide the window really is.** Narrower than first recorded here. `StaticArea.js` is a
+static dependency of `Core.js` (`Core.js:21`), so it is evaluated at the very start of core
+boot, and `_ready()` resolves _synchronously_ when `document.readyState !== "loading"`
+(`_ready.js:23`, `SyncPromise.js:344`). On a normally-parsing page `bDomReady` latches `true`
+right there and an unguarded call can never throw for the life of that page. The window stays
+open only while the parser is held after the bootstrap tag. Nothing this repo ships or documents
+reaches it: every page boots through `data-sap-ui-on-init` / ComponentSupport, which runs inside
+`Core._executeInitialization`, and no `new KioskKeyboard()` exists outside tests and README
+snippets. The measurement below establishes reachability under a page built to expose it, not
+that a consumer would write one.
 
-| reached from                         | `document.readyState` | outcome                                        |
-| ------------------------------------ | --------------------- | ---------------------------------------------- |
-| `sap.ui.require` callback, unguarded | `loading`             | **THROW** - DOM is not ready yet               |
-| a `Control`'s `init`                 | `loading`             | runs - so the throw above is reachable from it |
-| a `Control`'s `onBeforeRendering`    | `complete`            | runs                                           |
-| the same call under `Core.ready`     | `interactive`         | runs, region in `#sap-ui-static`               |
+**Why gate anyway.** `Control.prototype.placeAt` wraps its entire body in `Core.ready`
+(`Control.js:660`), so UI5 itself guarantees `new Control(); ctrl.placeAt(...)` works before the
+core is ready. Construction pre-ready is a supported framework pattern, so a public control
+whose `init` throws there breaks a contract the framework maintains on its behalf - an argument
+that does not depend on guessing what a consumer writes. `Core.ready` is also the exact gate:
+core init is behind the sync point that includes the `document.ready` task (`Core.js:741-759`),
+so the throwing window is a strict subset of "core not ready". And it costs nothing - the
+callback runs inline when the core is already ready (`Core.js:3332-3341`).
 
-Then on the real control, driven in a headed Chrome against `ui5 serve` (the whole library,
-transpiled as it is served) behind the same held parser, `new KioskKeyboard()` from a
-`sap.ui.require` callback:
+**Measured.** Framework call in isolation, then the real control: the whole library served by
+`ui5 serve` and driven in a headed Chrome, parser held by a slow blocking script, keyboard built
+from a `sap.ui.require` callback.
 
 | `init` does                                        | `readyState` at `new` | outcome                                                                             |
 | -------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------- |
 | `InvisibleMessage.getInstance()`                   | `loading`             | **THROW** - the keyboard is never constructed, and no region exists even after load |
 | `Core.ready(() => InvisibleMessage.getInstance())` | `loading`             | constructs; region present in `#sap-ui-static` once the page reaches `complete`     |
 
-**`onBeforeRendering` — legal, but off-contract here.** Of the 16 `getInstance()` call
-sites in the pinned libraries, five take the instance in `onBeforeRendering` and keep it
-(`InputBase.js:421`, `Select.js:1493`, `SinglePlanningCalendarGrid.js:480`,
-`SinglePlanningCalendarMonthGrid.js:431`, `SliderTooltip.js:128`); the rest create and
-announce together at event time. That is the framework's create-early pattern, and it does
-not transfer here:
-`SelectRenderer`, `InputBaseRenderer` and `ListBaseRenderer` are all `apiVersion: 2`,
-while `KioskKeyboardRenderer` is `apiVersion: 4`, whose contract states that the
-`onBeforeRendering` and `onAfterRendering` hooks "must not be used to manipulate or access
-any elements outside of the control's own DOM structure"
-(`RenderManager.js:227`). Inserting spans into the static area is exactly that. Harmless
-in practice - the first render is never skipped, and the creation is one-time - but it
-spends the marker's contract for no reason when a placement outside the render hooks
-exists.
+**Why not a rendering hook, and what `apiVersion: 4` does and does not say.** `init` is earlier,
+which is the entire point. The `apiVersion: 4` contract does say the `onBeforeRendering` and
+`onAfterRendering` hooks "must not be used to manipulate or access any elements outside of the
+control's own DOM structure" (`RenderManager.js:227`), and `KioskKeyboardRenderer` declares
+`apiVersion: 4` - but that is **not** why a hook was rejected, and it must not be cited as a bar:
 
-**`Core.ready` from `init` — what shipped.** `Core.ready(fn)` runs `fn` immediately when
-the core is already ready (`Core.js:3332-3341`), so the ordinary case costs no extra task
-and the region exists before `init` returns; otherwise it waits, which is precisely the
-window that throws. It is also what the `InvisibleMessage` docstring asks for - "instantiate
-as early as possible in the application logic ... after Core initialization" - and what
-`InvisibleMessage.init` itself falls back to - the only place in the framework where
-`Core.ready` and `InvisibleMessage` meet. No shipped control uses `Core.ready` for this,
-so this placement follows the class's documentation rather than its callers. No rendering
-hook is involved, so the `apiVersion: 4` contract is untouched. Nothing needs detaching in
-`exit`: the callback references no instance state and creates a page-global singleton.
+- The prerequisite is unenforced. `RenderManager.canSkipRendering` is purely structural
+  (`apiVersion == 4 && !hasRenderingDelegate()`, `:2560-2576`); nothing inspects what the hooks
+  do. The only consequence is that a hook silently does not run on a parent-only re-render, and
+  the first render is never skipped (`:1206-1216`).
+- **This control's own `onAfterRendering` already writes to the static area**, through
+  `takePendingAnnouncement()` -> `_announceLiveRegion` -> `InvisibleMessage.announce`, and also
+  arms a document-level listener and delegates onto other controls. Citing the clause against
+  `onBeforeRendering` while the sibling hook crosses it is incoherent.
+- No shipped renderer declares `apiVersion: 4` anywhere - not in the pinned libraries, not in
+  `sap.f` / `sap.ui.table` / `sap.ui.mdc`, not at 1.150. The clause has no corroborating example
+  either way.
 
-**One framework call site is at construction time.** `AccessibleMessageStrip` takes the
-instance from `applySettings` and announces in the same statement
-(`sap/m/p13n/MessageStrip.js:59`), unguarded - the same window that throws above, and also
-the same-task create-and-write the class docstring warns against. It is
-`@ui5-restricted sap.m.p13n, sap.ui.mdc` and only ever built inside an already-open dialog,
-so neither bites it. A public library control that any consumer can `new` from anywhere has
-no such protection, which is the whole difference.
+So the honest reason is ordering, not contract: a hook would also clear the throwing window, and
+the six `sap.m` controls that keep an instance do exactly that, but it lands later than `init`
+for no gain, and this control has no `onBeforeRendering` to put it in.
 
-**Not covered by the suite.** The QUnit page's document is always ready, so the failing
-state cannot be produced in-suite. Manual repro: serve `sap-ui-core.js`, put the bootstrap
-and a `sap.ui.require([...])` in `<head>`, and put a blocking `<script src>` that responds
-slowly in the `<body>`; the callback runs at `readyState === "loading"`.
+**Framework survey** (pinned 1.136.18; `sap.ui.layout` and `sap.ui.unified` have no mentions).
+15 `getInstance()` call sites, all in `sap.m`: **six** create-early-and-keep, all in
+`onBeforeRendering` (`InputBase.js:421`, `MessageView.js:393`, `Select.js:1493`,
+`SinglePlanningCalendarGrid.js:480`, `SinglePlanningCalendarMonthGrid.js:431`,
+`SliderTooltip.js:128`); **eight** create-and-announce inline at event time; **one** prime-only
+(`IconTabFilter.js:767`). None from `init`. The single construction-time site is
+`AccessibleMessageStrip.prototype.applySettings` (`p13n/MessageStrip.js:59`), unguarded and
+announcing in the same statement; it is `@ui5-restricted` and only built inside an already-open
+dialog, so neither the throw nor the same-task write bites it. `Core.ready` and
+`InvisibleMessage` meet nowhere in the framework except inside `InvisibleMessage.init` itself.
+
+**A hazard the survey turned up.** `sap.m.InputBase.exit` and `sap.m.SliderTooltip.exit` call
+`destroy()` on the shared singleton (`InputBase.js:513-515`, `SliderTooltip.js:120-122`), and
+`InvisibleMessage.js`'s module-level `oInstance` is not cleared by `destroy()`, so later
+`getInstance()` calls hand back the destroyed object. This is why `_setLiveRegionText` calls
+`getInstance()` fresh on every announcement instead of caching it the way those controls do.
+Regression-tested in `KioskKeyboard-a11y.qunit.ts` ("announcements survive an Input being
+destroyed").
+
+**Not covered by the suite.** The QUnit page's document is always ready, so the failing state
+cannot be produced in-suite, and the test helper arms the region itself - deleting the eager
+call leaves the suite green. Manual repro: serve `sap-ui-core.js`, put the bootstrap and a
+`sap.ui.require([...])` in `<head>`, and hold the parser with a blocking `<script src>` that
+responds slowly.
+
+## H8 — a negative assertion is not a test of the thing it names
+
+Five lenses were run over this branch, two of them paid to refute it. Four findings survived
+against the code; the fixes are in this branch.
+
+- `The announcement names no layout` (autoCompact) asserted only
+  `announcedText().includes("ja-kana") === false`, and `"".includes(...)` is false, so it passed
+  against a control that announced nothing at all. **Injected**: `if (crossed)` in
+  `layout-state.ts:177` made dead. The test stayed green before the fix and goes red after it
+  (autoCompact 20/24), alongside the three positive tests that always caught it.
+- `Live region reports Caps Lock ending even when Shift takes over` (a11y) took no reset, and its
+  closing expectation `"Caps Lock off"` is verbatim what the preceding test leaves standing in the
+  page-global node and last in the recorder. It was one assertion away from vacuous; it now starts
+  from silence.
+- `KioskKeyboard-variants.qunit.ts` never imported `resetAnnouncements` at all. Its three
+  announcement assertions survived only because no earlier test happens to produce their exact
+  strings - a property of the built-in variant table, not of the tests. They now reset first.
+- webc `does not announce a dismissal when an option commits` asserted only "not the dismissal
+  text", which an empty region also satisfies. It now asserts the open announcement still stands.
+
+The exposure test gained an `aria-hidden` ancestor check: `display`, `visibility` and
+`textContent` all read as exposed while an `aria-hidden` ancestor takes the node out of the tree,
+and UI5's modal `Popup` applies exactly that to the static area's `<body>` siblings. Its comment
+also claimed the docked mid-close setup covered "the node and its container together"; the
+container is `#sap-ui-static`, which the keyboard's state cannot reach, so the comment now says
+what the setup is actually for.
+
+**One reported finding was rejected.** `QUnit.config.reorder` is not enabled by the test starter:
+`_setupAndStart.js:90` is an entry in `QUNIT_KNOWN_OPTIONS`, a URL-parameter whitelist, not a
+config assignment. Each run launches a fresh browser with empty `sessionStorage`, so the
+injections above and in H7 executed in declaration order, and "red, then green on revert" compares
+like with like.
+
+**Not fixed, recorded.** The a11y module's `afterEach` only empties `#qunit-fixture` without
+destroying tracked controls, so a keyboard whose inline `destroy()` is skipped by a failing
+assertion keeps a 120 ms queue timer writing into the shared node. That turns one failure into a
+cascade of misleading ones - a false-red amplifier, not a false green, which is why it is noted
+rather than fixed here.
 
 ## Not covered
 

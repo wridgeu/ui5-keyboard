@@ -1076,8 +1076,10 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     await renderFinished();
 
     expect(input.value, "the option click committed the variant").to.equal("ä");
-    expect(liveRegionText(kb), "a commit is not announced as a dismissal").to.not.equal(
-      getText("ARIA_VARIANTS_CLOSED", "Variants closed"),
+    // Positive, not merely "not the dismissal": an empty region satisfies the exclusion
+    // too, so a `_writeLiveRegion` that wrote nothing at all would pass.
+    expect(liveRegionText(kb), "the open announcement still stands, undisturbed by the commit").to.equal(
+      getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "3").replace("{1}", "a"),
     );
     pointerUp();
   });
