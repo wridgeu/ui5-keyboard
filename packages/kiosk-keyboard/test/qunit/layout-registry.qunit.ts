@@ -286,6 +286,12 @@ QUnit.test("getRegisteredLayoutNames includes all built-in layouts", (assert) =>
 
 QUnit.test("getRegisteredLayoutNames does not include instance-only layouts", (assert) => {
   // The view is intentionally global-only; instance names are scoped per control.
+  // Resolved through the instance map first, so the exclusion has something to
+  // exclude: the guard is that the lookup does not write the name into the
+  // built-in map behind it.
+  const custom: LayoutDefinition = [[{ value: "x" }]];
+  const instanceLayouts = new Map([["instance-only", custom]]);
+  assert.strictEqual(getRegisteredLayout("instance-only", instanceLayouts), custom, "Resolves from the instance map");
   const names = getRegisteredLayoutNames();
   assert.notOk(names.includes("instance-only"), "Instance-only names not in global view");
 });

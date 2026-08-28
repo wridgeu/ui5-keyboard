@@ -55,7 +55,12 @@ describe("layout-registry", () => {
     });
 
     it("does not include instance-only names in getRegisteredLayoutNames", () => {
-      // Instance-only names are scoped per element and never appear globally.
+      // Resolved through the instance map first, so the exclusion has something
+      // to exclude: the guard is that the lookup does not write the name into
+      // the module-level map behind it.
+      const custom: LayoutDefinition = [[{ value: "x" }]];
+      const instanceMap = new Map([["instance-only", custom]]);
+      expect(getRegisteredLayout("instance-only", instanceMap)).toBe(custom);
       expect(getRegisteredLayoutNames()).not.toContain("instance-only");
     });
   });
