@@ -866,9 +866,6 @@ export default class KioskKeyboard extends Control {
 
   override init(): void {
     KioskKeyboard._instances.add(this);
-    // ARIA wants a live region present and empty before it is written to, so the
-    // node is brought into the static area here rather than on the first announcement.
-    InvisibleMessage.getInstance();
     this._announcedShifted = false;
     this._announcedCapsLock = false;
     this._announcements = new AnnouncementQueue({
@@ -976,6 +973,17 @@ export default class KioskKeyboard extends Control {
 
   onLocalizationChanged(): void {
     this.invalidate();
+  }
+
+  override onBeforeRendering(): void {
+    // ARIA wants a live region present and empty before anything is written to it, so
+    // the framework's node is brought into the static area a render ahead of the first
+    // announcement - which cannot land earlier, the queue dropping whatever is raised
+    // while `getDomRef()` is null. Not in `init`: `InvisibleMessage` reaches straight
+    // for the static area, and `StaticArea.getDomRef` throws before the document is
+    // ready. `sap.m.Select.onBeforeRendering` takes the same instance for the same
+    // reason.
+    InvisibleMessage.getInstance();
   }
 
   override onAfterRendering(): void {

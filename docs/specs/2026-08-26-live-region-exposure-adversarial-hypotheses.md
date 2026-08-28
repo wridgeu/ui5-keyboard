@@ -184,6 +184,43 @@ The same pass added a reset to `Open and close announcements are spoken in turn`
 expects `"Virtual keyboard opened"`, which is the text the preceding test leaves
 standing in the shared node, so a broken `show()` would have read as a pass.
 
+## Where `InvisibleMessage.getInstance()` is reached from, and why not `init`
+
+ARIA wants a live region in the page and empty before anything is written to it, so the
+singleton is taken eagerly rather than on the first announcement. The first draft took it
+in `KioskKeyboard.init`. That is reachable before the document is ready, and it throws
+there:
+
+`InvisibleMessage.prototype.init` calls `StaticArea.getDomRef()` with no guard - its own
+`if (!oStatic)` fallback is dead against the 1.136 `StaticArea`, which never returns a
+falsy value, only throws - and `_createStaticAreaRef` opens with
+`if (!bDomReady) throw new Error("DOM is not ready yet. Static UIArea cannot be created.")`.
+
+A `sap.ui.require` callback is **not** gated on DOM readiness the way `Core.ready` and
+`attachInit` are; it fires as soon as its modules resolve. A consumer building a keyboard
+from one in a head script therefore reaches `init` mid-parse. Measured against the pinned
+1.136.18 with a page whose parser is held by a deliberately slow blocking script, so the
+module callback lands while the document is still loading:
+
+| reached from                      | `document.readyState` | outcome                                                            |
+| --------------------------------- | --------------------- | ------------------------------------------------------------------ |
+| `sap.ui.require` callback         | `loading`             | **THROW** - DOM is not ready yet. Static UIArea cannot be created. |
+| a `Control`'s `init`              | `loading`             | runs - so the throw above is reachable from it                     |
+| a `Control`'s `onBeforeRendering` | `complete`            | runs - rendering is gated behind DOM ready                         |
+
+`onBeforeRendering` is therefore where it is taken, which is also where `sap.m.Select`
+takes it (`Select.js:1491-1494`) for the same reason. Of the seventeen core controls that
+use `InvisibleMessage`, none reaches `getInstance()` from `init`; every one waits for a
+render or an event.
+
+Nothing is lost by the wait: no announcement can reach the region before the first render
+either, because `AnnouncementQueue` drops whatever is raised while `getDomRef()` is null.
+
+**Not covered by the suite.** The QUnit page's document is always ready, so the failing
+state cannot be produced in-suite. Manual repro: serve `sap-ui-core.js`, put the bootstrap
+and a `sap.ui.require([...])` in `<head>`, and put a blocking `<script src>` that responds
+slowly in the `<body>`; the callback runs at `readyState === "loading"`.
+
 ## Not covered
 
 - Whether a real screen reader speaks the new string, or re-speaks a repeat. The
