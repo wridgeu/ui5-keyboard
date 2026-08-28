@@ -184,16 +184,16 @@ The same pass added a reset to `Open and close announcements are spoken in turn`
 expects `"Virtual keyboard opened"`, which is the text the preceding test leaves
 standing in the shared node, so a broken `show()` would have read as a pass.
 
-## Where `InvisibleMessage.getInstance()` is reached from, and why not `init`
+## Where `InvisibleMessage.getInstance()` is reached from, and why not bare in `init`
 
 ARIA wants a live region in the page and empty before anything is written to it, so the
-singleton is taken eagerly rather than on the first announcement. The first draft took it
-in `KioskKeyboard.init`. That is reachable before the document is ready, and it throws
-there:
+singleton is taken eagerly rather than on the first announcement. Two placements were
+tried and rejected before `Core.ready` was.
 
-`InvisibleMessage.prototype.init` calls `StaticArea.getDomRef()` with no guard - its own
-`if (!oStatic)` fallback is dead against the 1.136 `StaticArea`, which never returns a
-falsy value, only throws - and `_createStaticAreaRef` opens with
+**`init`, unguarded — throws.** `InvisibleMessage.prototype.init` calls
+`StaticArea.getDomRef()` with no guard; its own `if (!oStatic)` fallback is dead against
+the 1.136 `StaticArea`, which never returns a falsy value, only throws. And
+`_createStaticAreaRef` opens with
 `if (!bDomReady) throw new Error("DOM is not ready yet. Static UIArea cannot be created.")`.
 
 A `sap.ui.require` callback is **not** gated on DOM readiness the way `Core.ready` and
@@ -202,19 +202,33 @@ from one in a head script therefore reaches `init` mid-parse. Measured against t
 1.136.18 with a page whose parser is held by a deliberately slow blocking script, so the
 module callback lands while the document is still loading:
 
-| reached from                      | `document.readyState` | outcome                                                            |
-| --------------------------------- | --------------------- | ------------------------------------------------------------------ |
-| `sap.ui.require` callback         | `loading`             | **THROW** - DOM is not ready yet. Static UIArea cannot be created. |
-| a `Control`'s `init`              | `loading`             | runs - so the throw above is reachable from it                     |
-| a `Control`'s `onBeforeRendering` | `complete`            | runs - rendering is gated behind DOM ready                         |
+| reached from                         | `document.readyState` | outcome                                        |
+| ------------------------------------ | --------------------- | ---------------------------------------------- |
+| `sap.ui.require` callback, unguarded | `loading`             | **THROW** - DOM is not ready yet               |
+| a `Control`'s `init`                 | `loading`             | runs - so the throw above is reachable from it |
+| a `Control`'s `onBeforeRendering`    | `complete`            | runs                                           |
+| the same call under `Core.ready`     | `interactive`         | runs, region in `#sap-ui-static`               |
 
-`onBeforeRendering` is therefore where it is taken, which is also where `sap.m.Select`
-takes it (`Select.js:1491-1494`) for the same reason. Of the seventeen core controls that
-use `InvisibleMessage`, none reaches `getInstance()` from `init`; every one waits for a
-render or an event.
+**`onBeforeRendering` — legal, but off-contract here.** It is where `sap.m.Select` takes
+the instance (`Select.js:1491-1494`), and none of the seventeen core controls using
+`InvisibleMessage` reaches `getInstance()` from `init`. That precedent does not transfer:
+`SelectRenderer`, `InputBaseRenderer` and `ListBaseRenderer` are all `apiVersion: 2`,
+while `KioskKeyboardRenderer` is `apiVersion: 4`, whose contract states that the
+`onBeforeRendering` and `onAfterRendering` hooks "must not be used to manipulate or access
+any elements outside of the control's own DOM structure"
+(`RenderManager.js:227`). Inserting spans into the static area is exactly that. Harmless
+in practice - the first render is never skipped, and the creation is one-time - but it
+spends the marker's contract for no reason when a placement outside the render hooks
+exists.
 
-Nothing is lost by the wait: no announcement can reach the region before the first render
-either, because `AnnouncementQueue` drops whatever is raised while `getDomRef()` is null.
+**`Core.ready` from `init` — what shipped.** `Core.ready(fn)` runs `fn` immediately when
+the core is already ready (`Core.js:3332-3341`), so the ordinary case costs no extra task
+and the region exists before `init` returns; otherwise it waits, which is precisely the
+window that throws. It is also what the `InvisibleMessage` docstring asks for - "instantiate
+as early as possible in the application logic ... after Core initialization" - and what
+`InvisibleMessage.init` itself falls back to. No rendering hook is involved, so the
+`apiVersion: 4` contract is untouched. Nothing needs detaching in `exit`: the callback
+references no instance state and creates a page-global singleton.
 
 **Not covered by the suite.** The QUnit page's document is always ready, so the failing
 state cannot be produced in-suite. Manual repro: serve `sap-ui-core.js`, put the bootstrap

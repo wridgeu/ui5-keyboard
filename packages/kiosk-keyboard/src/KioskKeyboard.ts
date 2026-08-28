@@ -5,6 +5,7 @@ import type PropertyBinding from "sap/ui/model/PropertyBinding";
 import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
 import syncStyleClass from "sap/ui/core/syncStyleClass";
+import Core from "sap/ui/core/Core";
 import InvisibleMessage from "sap/ui/core/InvisibleMessage";
 import type { AccessibilityInfo } from "sap/ui/core/library";
 import { InvisibleMessageMode } from "sap/ui/core/library";
@@ -866,6 +867,15 @@ export default class KioskKeyboard extends Control {
 
   override init(): void {
     KioskKeyboard._instances.add(this);
+    // ARIA wants a live region present and empty before anything is written to it, so the
+    // framework's node is brought into the static area now rather than on the first
+    // announcement. Through `Core.ready` rather than called outright: `InvisibleMessage`
+    // reaches straight for the static area, and `StaticArea.getDomRef` throws before the
+    // document is ready. Unlike a controller's `onInit`, which runs well after boot, a
+    // control's `init` runs wherever something says `new` - and a `sap.ui.require`
+    // callback fires as soon as its modules resolve, waiting on no DOM. The callback form
+    // runs inline once the core is ready, so the ordinary case costs no deferral.
+    Core.ready(() => InvisibleMessage.getInstance());
     this._announcedShifted = false;
     this._announcedCapsLock = false;
     this._announcements = new AnnouncementQueue({
@@ -973,17 +983,6 @@ export default class KioskKeyboard extends Control {
 
   onLocalizationChanged(): void {
     this.invalidate();
-  }
-
-  override onBeforeRendering(): void {
-    // ARIA wants a live region present and empty before anything is written to it, so
-    // the framework's node is brought into the static area a render ahead of the first
-    // announcement - which cannot land earlier, the queue dropping whatever is raised
-    // while `getDomRef()` is null. Not in `init`: `InvisibleMessage` reaches straight
-    // for the static area, and `StaticArea.getDomRef` throws before the document is
-    // ready. `sap.m.Select.onBeforeRendering` takes the same instance for the same
-    // reason.
-    InvisibleMessage.getInstance();
   }
 
   override onAfterRendering(): void {
