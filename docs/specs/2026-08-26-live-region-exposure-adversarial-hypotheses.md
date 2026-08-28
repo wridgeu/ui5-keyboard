@@ -187,8 +187,8 @@ standing in the shared node, so a broken `show()` would have read as a pass.
 ## Where `InvisibleMessage.getInstance()` is reached from, and why not bare in `init`
 
 ARIA wants a live region in the page and empty before anything is written to it, so the
-singleton is taken eagerly rather than on the first announcement. Two placements were
-tried and rejected before `Core.ready` was.
+singleton is taken eagerly rather than on the first announcement. Three placements can
+carry that, and only one is safe for this control.
 
 **`init`, unguarded — throws.** `InvisibleMessage.prototype.init` calls
 `StaticArea.getDomRef()` with no guard; its own `if (!oStatic)` fallback is dead against

@@ -867,14 +867,10 @@ export default class KioskKeyboard extends Control {
 
   override init(): void {
     KioskKeyboard._instances.add(this);
-    // ARIA wants a live region present and empty before anything is written to it, so the
-    // framework's node is brought into the static area now rather than on the first
-    // announcement. Through `Core.ready` rather than called outright: `InvisibleMessage`
-    // reaches straight for the static area, and `StaticArea.getDomRef` throws before the
-    // document is ready. Unlike a controller's `onInit`, which runs well after boot, a
-    // control's `init` runs wherever something says `new` - and a `sap.ui.require`
-    // callback fires as soon as its modules resolve, waiting on no DOM. The callback form
-    // runs inline once the core is ready, so the ordinary case costs no deferral.
+    // The live region every announcement goes through, in the page before the first write
+    // as ARIA wants. Gated, not called outright: `getInstance` resolves the static area,
+    // which throws before the document is ready, and `init` runs wherever something says
+    // `new`. See the `Core.ready` convention in CLAUDE.md.
     Core.ready(() => InvisibleMessage.getInstance());
     this._announcedShifted = false;
     this._announcedCapsLock = false;
