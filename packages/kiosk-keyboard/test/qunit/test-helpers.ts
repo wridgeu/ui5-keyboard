@@ -16,6 +16,17 @@ export async function placeAndWait(control: KioskKeyboard): Promise<void> {
   armRecorder();
 }
 
+/**
+ * Destroy every keyboard still alive. A test that throws before its own `destroy()`
+ * leaves an `AnnouncementQueue` drain timer running, and since the live region is now
+ * page-global that timer writes into the node the NEXT test is asserting on - turning
+ * one real failure into a run of misleading ones. `destroy` ignores repeated calls
+ * (`ManagedObject.js:2967`), so this is safe alongside the inline teardown tests do.
+ */
+export function destroyKeyboards(): void {
+  for (const kb of KioskKeyboard["_instances"]) kb.destroy();
+}
+
 /** Wait for a re-render cycle after a state change. */
 export async function waitForRender(): Promise<void> {
   await nextUIUpdate();

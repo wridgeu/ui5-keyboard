@@ -5,6 +5,7 @@ import Input from "sap/m/Input";
 import Popover from "sap/m/Popover";
 import {
   announcedText,
+  destroyKeyboards,
   placeAndWait,
   resetAnnouncements,
   getRequiredKeyElement,
@@ -154,6 +155,7 @@ function cleanup(kb: KioskKeyboard, input: Input): void {
 
 QUnit.module("KioskKeyboard accent-variant popup", {
   afterEach() {
+    destroyKeyboards();
     getPopup()?.remove();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
@@ -964,6 +966,7 @@ QUnit.test("a vetoed variant commit still spends the one-shot Shift latch", asyn
 
 QUnit.module("KioskKeyboard accent-variant commit during composition", {
   afterEach() {
+    destroyKeyboards();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },

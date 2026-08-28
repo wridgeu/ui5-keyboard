@@ -4,6 +4,7 @@ import InvisibleText from "sap/ui/core/InvisibleText";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
   announcedText,
+  destroyKeyboards,
   freezeDoubleClickWindow,
   getKeyElement,
   getKeyElements,
@@ -26,6 +27,7 @@ const DOM = KioskKeyboard.DOM;
 
 QUnit.module("KioskKeyboard accessibility", {
   afterEach() {
+    destroyKeyboards();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },

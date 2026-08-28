@@ -313,11 +313,23 @@ config assignment. Each run launches a fresh browser with empty `sessionStorage`
 injections above and in H7 executed in declaration order, and "red, then green on revert" compares
 like with like.
 
-**Not fixed, recorded.** The a11y module's `afterEach` only empties `#qunit-fixture` without
-destroying tracked controls, so a keyboard whose inline `destroy()` is skipped by a failing
-assertion keeps a 120 ms queue timer writing into the shared node. That turns one failure into a
-cascade of misleading ones - a false-red amplifier, not a false green, which is why it is noted
-rather than fixed here.
+**The failure amplifier, fixed and measured.** Three modules emptied `#qunit-fixture` without
+destroying controls, so a keyboard whose inline `destroy()` is skipped by a throwing assertion kept
+an `AnnouncementQueue` drain timer writing into the now page-global node while the next tests
+asserted on it - turning one real failure into a run of misleading ones. `destroyKeyboards()`
+(`test-helpers.ts`) sweeps the control's own live-instance registry from `afterEach` in all three;
+`destroy` ignores repeated calls (`ManagedObject.js:2967`), so it composes with the inline teardown
+tests already do.
+
+**Injected**: a `throw` after `show()`/`close()` in `Open and close announcements are spoken in
+turn`, which leaves a drain pending.
+
+| a11y module `afterEach`     | result                                                               |
+| --------------------------- | -------------------------------------------------------------------- |
+| empties the fixture only    | **27/29** - the injected test, plus collateral damage in a later one |
+| sweeps live keyboards first | **28/29** - the injected test alone                                  |
+
+One failure stays one failure. Reverted, 29/29.
 
 ## Not covered
 
