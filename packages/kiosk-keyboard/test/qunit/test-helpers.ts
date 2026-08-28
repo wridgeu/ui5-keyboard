@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import InvisibleMessage from "sap/ui/core/InvisibleMessage";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 
 const DOM = KioskKeyboard.DOM;
@@ -12,8 +13,6 @@ export function rootRemPx(): number {
 export async function placeAndWait(control: KioskKeyboard): Promise<void> {
   control.placeAt("qunit-fixture");
   await nextUIUpdate();
-  // The first control brings the live region into the page; catch every announcement
-  // from here on rather than from whenever a test first reads one.
   armRecorder();
 }
 
@@ -36,11 +35,13 @@ const announcements: string[] = [];
 let recorder: MutationObserver | null = null;
 
 /**
- * Start recording what is written to the live region, once the node exists - which
- * it does from the first KioskKeyboard, since `init` reaches for the singleton.
+ * Start recording what is written to the live region. Reaching for the singleton
+ * brings the node into the page, so a test can arm before it builds a keyboard -
+ * which is what an assertion about first-paint silence needs.
  */
 function armRecorder(): void {
   if (recorder) return;
+  InvisibleMessage.getInstance();
   const node = liveRegionNode();
   if (!node) return;
   recorder = new MutationObserver(() => {
@@ -53,12 +54,11 @@ function armRecorder(): void {
 /**
  * The most recent announcement, or `""` when none was raised since the last reset.
  *
- * The node first, the recording second. The node is authoritative while it holds text:
- * it is written synchronously, whereas the recorder runs a microtask later and would
- * lag a read taken in the same task as the announcement. The recording covers the one
- * case the node cannot: `sap/ui/core/InvisibleMessage` empties its node three seconds
- * after a write (a JAWS buffer workaround), and that node is shared by the whole page,
- * so a timer armed by an earlier test can wipe an identical text this one just wrote.
+ * The standing node wins over the recording: it is written synchronously, while the
+ * recorder runs a microtask later and would lag a read taken in the announcement's own
+ * task. The recording covers the case the node cannot - `InvisibleMessage` empties its
+ * node three seconds after a write, and that node is shared by the whole page, so a
+ * timer armed by an earlier test can wipe an identical text this one just wrote.
  */
 export function announcedText(): string {
   armRecorder();
@@ -67,8 +67,9 @@ export function announcedText(): string {
 }
 
 /**
- * Forget what was announced and empty the region, so a test can assert on silence.
- * Arms the recorder, so everything the test goes on to raise is captured.
+ * Forget what was announced and empty the region. Call it BEFORE the step whose
+ * silence is asserted, never between that step and the assertion - clearing and then
+ * reading back is a tautology, not a test.
  */
 export function resetAnnouncements(): void {
   armRecorder();

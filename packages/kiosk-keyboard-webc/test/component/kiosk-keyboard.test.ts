@@ -2061,14 +2061,12 @@ describe("kiosk-keyboard", () => {
     });
 
     it("re-announces a text the region is already holding", async () => {
-      // `_liveRegionText` is reactive, so re-announcing the text already standing in
-      // the region is dropped by the change guard and never reaches a render: the
-      // repeat leaves the DOM untouched, and there is nothing for assistive tech to
-      // pick up. Every announcement site alternates today, which is why nothing has
-      // hit this yet; the queue is the seam because no public gesture raises the same
-      // text twice in a row. Whether the EMPTYING specifically is what makes a screen
-      // reader speak again is not observable here - a same-value `textContent` write
-      // replaces the text node either way - so this asserts the reachable half.
+      // `_liveRegionText` is reactive, so a re-announcement of the text already standing
+      // in the region is dropped by the change guard and never reaches the DOM at all.
+      // The queue is the seam because no public gesture raises the same text twice in a
+      // row. Whether the EMPTYING specifically is what makes a screen reader speak again
+      // is not observable here - a same-value `textContent` write replaces the text node
+      // either way - so this asserts the reachable half: that the repeat reaches the DOM.
       const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
       await nextRender();
       const queue = (el as unknown as { _announcements: { announce(t: string): void; flush(): void } })._announcements;

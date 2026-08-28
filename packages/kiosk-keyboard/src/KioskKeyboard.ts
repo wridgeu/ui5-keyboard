@@ -866,10 +866,8 @@ export default class KioskKeyboard extends Control {
 
   override init(): void {
     KioskKeyboard._instances.add(this);
-    // The framework's live region is created with its first instance and lives in
-    // the static area. Reaching it here rather than on the first announcement keeps
-    // the node in the page before any text is written to it, which is what ARIA
-    // requires of a live region.
+    // ARIA wants a live region present and empty before it is written to, so the
+    // node is brought into the static area here rather than on the first announcement.
     InvisibleMessage.getInstance();
     this._announcedShifted = false;
     this._announcedCapsLock = false;

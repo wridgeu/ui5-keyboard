@@ -1815,7 +1815,7 @@ The library ships with an English resource bundle for all accessibility labels a
 | `ARIA_VARIANTS_OPENED`           | `Variants for {1}: {0}`                       | ARIA live region announcement when the accent-variant popup opens (count, base letter) |
 | `ARIA_VARIANTS_CLOSED`           | Variants closed                               | ARIA live region announcement when the accent-variant popup closes                     |
 
-The two `autoCompact` announcements name no layout on purpose: the layout a width picks is one the user never chose and never sees named, and an identifier dropped into a translated sentence stays untranslated. They also have to differ from each other - the live region re-announces only on a text change, so one shared wording would leave every second crossing unspoken.
+The two `autoCompact` announcements name no layout on purpose: the layout a width picks is one the user never chose and never sees named, and an identifier dropped into a translated sentence stays untranslated. They also have to differ from each other: the two crossings are opposite moves, and one shared wording would not say which way the layout just went.
 
 `ARIA_VARIANTS_OPENED` keeps `{0}` (the count) last on purpose: neither runtime substitutes a plural form, so a count placed in front of the noun would announce "1 variants for a" in every language that inflects. Keep the count trailing when you translate this key or supply it through a resolver.
 

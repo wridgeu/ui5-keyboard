@@ -150,7 +150,39 @@ are spoken in turn` red: `MutationObserver` runs a microtask later, so a read ta
 while populated) and falls back to the recording (survives the three-second wipe), and
 arms the recorder from `placeAndWait` / `waitForAnnouncement` rather than on first read.
 `resetAnnouncements()` clears both, so a silence assertion means "nothing was announced
-since the reset" rather than "the shared node happens to be empty".
+since the reset" rather than "the shared node happens to be empty" - provided the reset
+runs before the step whose silence is asserted, which is what H7 is about.
+
+## H7 — a silence assertion could be clearing the very thing it then reads back
+
+`resetAnnouncements()` empties the shared node and the recording, and `announcedText()`
+reads exactly those two. A reset placed _between_ the step and the assertion therefore
+makes the assertion true by construction, whatever the control did.
+
+**Injected**: `onAfterRendering` announces on every paint
+(`this._announceLiveRegion("INJECTED first-paint chatter")`). Every assertion that a
+first paint is silent must go red.
+
+Against the suites as first written, three stayed **green**:
+
+- `Live region stays silent for a requested layout switch` (a11y)
+- `The live region announces which way a width moved the layout` (autoCompact)
+- `A keyboard that was always narrow announces nothing on first paint` (autoCompact)
+
+Each cleared the region after mounting the keyboard and before reading it back. The
+first assertion of `Live region announces Shift state` was the same shape; that test
+went red anyway, on its later assertions.
+
+Cleared by moving each reset ahead of the keyboard it is about, which needs the region
+to exist before the first control does — `armRecorder` now calls
+`InvisibleMessage.getInstance()` itself rather than waiting for a `KioskKeyboard.init`
+to bring the node into the page. With the same injection in place the three now go red
+(a11y 22/29, autoCompact 20/24, against 23/29 and 22/24 before); reverted, both modules
+are green again.
+
+The same pass added a reset to `Open and close announcements are spoken in turn`: it
+expects `"Virtual keyboard opened"`, which is the text the preceding test leaves
+standing in the shared node, so a broken `show()` would have read as a pass.
 
 ## Not covered
 

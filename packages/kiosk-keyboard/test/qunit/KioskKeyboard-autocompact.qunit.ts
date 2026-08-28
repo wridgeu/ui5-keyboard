@@ -412,16 +412,17 @@ QUnit.test("A swap that drops the focused key falls back to the first key", asyn
 });
 
 QUnit.test("The live region announces which way a width moved the layout", async (assert) => {
-  const { resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
+  // Cleared before the keyboard exists, so first paint is inside what is asserted on.
   resetAnnouncements();
+  const { resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
   assert.strictEqual(announcedText(), "", "a keyboard with room to spare announces nothing");
 
   await resize(NARROW_PX);
   assert.strictEqual(announcedText(), "Switched to the compact keyboard layout", "the swap says which way it went");
 
   await resize(WIDE_PX);
-  // A distinct text every time: a live region drops a repeat of what it already
-  // holds, so alternating swaps would announce only the first.
+  // A distinct text every time: the two crossings are opposite moves, so one shared
+  // wording would not say which way this one went.
   assert.strictEqual(announcedText(), "Switched back to the standard keyboard layout", "and so does the way back");
 });
 
@@ -446,9 +447,8 @@ QUnit.test("Consecutive announcements alternate, so none is dropped as a repeat"
     spoken.push(announcedText());
   }
 
-  // The live region re-announces only on a text change, so a direction repeating
-  // itself back to back would go unspoken. The tier reports a verdict only when it
-  // differs from the last, which is what keeps them alternating.
+  // The tier reports a verdict only when it differs from the last, which is what
+  // keeps the two texts alternating rather than repeating.
   assert.deepEqual(
     spoken,
     [
@@ -462,11 +462,12 @@ QUnit.test("Consecutive announcements alternate, so none is dropped as a repeat"
 });
 
 QUnit.test("A keyboard that was always narrow announces nothing on first paint", async (assert) => {
+  // Cleared before the keyboard exists, so first paint is inside what is asserted on.
+  resetAnnouncements();
   const { kb, resize } = await mount(NARROW_PX, { layout: "ja-kana", autoCompact: true });
 
   assert.strictEqual(kb.getLayout(), "ja-kana-compact", "the compact form is what mounted");
   // Nothing was rearranged under the user: this is the arrangement they first saw.
-  resetAnnouncements();
   assert.strictEqual(announcedText(), "", "the first resolution is not a change to announce");
 
   await resize(WIDE_PX);
@@ -478,8 +479,8 @@ QUnit.test("A keyboard that was always narrow announces nothing on first paint",
 });
 
 QUnit.test("A request drops a tier announcement that has not reached the live region yet", async (assert) => {
-  const { kb } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
   resetAnnouncements();
+  const { kb } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
 
   // The tier writes its announcement for the next render. Driving it directly is
   // what puts a request in the same frame, which a resize cannot do: the observer

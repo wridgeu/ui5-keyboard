@@ -133,10 +133,11 @@ QUnit.test("Space key has the space width span", async (assert) => {
 // ──────────────────────────────────────────────
 
 QUnit.test("Live region announces Shift state", async (assert) => {
+  // Cleared before the keyboard exists, so first paint is inside what is asserted on.
+  resetAnnouncements();
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
-  resetAnnouncements();
   assert.strictEqual(announcedText(), "", "Empty when shift is off");
 
   const clock = freezeDoubleClickWindow();
@@ -223,6 +224,10 @@ QUnit.test("Open and close announcements are spoken in turn, not collapsed", asy
   const kb = new KioskKeyboard({ docked: true });
   await placeAndWait(kb);
 
+  // The region is page-global, so an earlier test's identical text would otherwise
+  // stand in for the one this test is checking for.
+  resetAnnouncements();
+
   // Both land in the same task. A single-slot live region would hold only the
   // second, and assistive tech would never speak the first.
   kb.show();
@@ -247,10 +252,11 @@ QUnit.test("Open and close announcements are spoken in turn, not collapsed", asy
 });
 
 QUnit.test("Live region stays silent for a requested layout switch", async (assert) => {
+  // Cleared before the keyboard exists, so first paint is inside what is asserted on.
+  resetAnnouncements();
   const kb = new KioskKeyboard({ layout: "qwerty" });
   await placeAndWait(kb);
 
-  resetAnnouncements();
   assert.strictEqual(announcedText(), "", "nothing is announced on first paint");
 
   kb.setLayout("numeric");
