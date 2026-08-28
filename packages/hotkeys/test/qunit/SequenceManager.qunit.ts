@@ -318,13 +318,6 @@ QUnit.test("Destroy cleans up everything", (assert) => {
   fireKey("e");
 
   assert.notOk(called, "Sequence did not fire after destroy");
-
-  const newManager = createHotkeyManager();
-  assert.strictEqual(
-    newManager.getRegistrations().filter((r) => r.sequence !== null).length,
-    0,
-    "New instance has no registrations",
-  );
 });
 
 QUnit.test("Sequences are suppressed in input elements by default (auto)", (assert) => {

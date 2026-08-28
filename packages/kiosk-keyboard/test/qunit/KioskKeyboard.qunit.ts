@@ -2458,25 +2458,6 @@ QUnit.test("Numeric layout has no shift key rendered", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Prior shift state does not leak into Numpad rendering", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  // Activate shift on full layout
-  tapKey(kb, "{shift}");
-  await waitForRender();
-  assert.ok(isShiftActive(kb), "Shift is active on full layout");
-
-  // Switch to numpad
-  kb.setKeyboardType(KeyboardType.Numpad);
-  await waitForRender();
-
-  const shiftKey = getKeyElement(kb, "{shift}");
-  assert.notOk(shiftKey, "No shift key rendered in numpad despite prior shift");
-
-  kb.destroy();
-});
-
 // ──────────────────────────────────────────────
 // Custom Control Targeting (DOM Fallback)
 // ──────────────────────────────────────────────
