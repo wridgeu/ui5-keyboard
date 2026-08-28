@@ -209,9 +209,21 @@ module callback lands while the document is still loading:
 | a `Control`'s `onBeforeRendering`    | `complete`            | runs                                           |
 | the same call under `Core.ready`     | `interactive`         | runs, region in `#sap-ui-static`               |
 
-**`onBeforeRendering` — legal, but off-contract here.** It is where `sap.m.Select` takes
-the instance (`Select.js:1491-1494`), and none of the seventeen core controls using
-`InvisibleMessage` reaches `getInstance()` from `init`. That precedent does not transfer:
+Then on the real control, driven in a headed Chrome against `ui5 serve` (the whole library,
+transpiled as it is served) behind the same held parser, `new KioskKeyboard()` from a
+`sap.ui.require` callback:
+
+| `init` does                                        | `readyState` at `new` | outcome                                                                             |
+| -------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------- |
+| `InvisibleMessage.getInstance()`                   | `loading`             | **THROW** - the keyboard is never constructed, and no region exists even after load |
+| `Core.ready(() => InvisibleMessage.getInstance())` | `loading`             | constructs; region present in `#sap-ui-static` once the page reaches `complete`     |
+
+**`onBeforeRendering` — legal, but off-contract here.** Of the 16 `getInstance()` call
+sites in the pinned libraries, five take the instance in `onBeforeRendering` and keep it
+(`InputBase.js:421`, `Select.js:1493`, `SinglePlanningCalendarGrid.js:480`,
+`SinglePlanningCalendarMonthGrid.js:431`, `SliderTooltip.js:128`); the rest create and
+announce together at event time. That is the framework's create-early pattern, and it does
+not transfer here:
 `SelectRenderer`, `InputBaseRenderer` and `ListBaseRenderer` are all `apiVersion: 2`,
 while `KioskKeyboardRenderer` is `apiVersion: 4`, whose contract states that the
 `onBeforeRendering` and `onAfterRendering` hooks "must not be used to manipulate or access
@@ -226,9 +238,19 @@ the core is already ready (`Core.js:3332-3341`), so the ordinary case costs no e
 and the region exists before `init` returns; otherwise it waits, which is precisely the
 window that throws. It is also what the `InvisibleMessage` docstring asks for - "instantiate
 as early as possible in the application logic ... after Core initialization" - and what
-`InvisibleMessage.init` itself falls back to. No rendering hook is involved, so the
-`apiVersion: 4` contract is untouched. Nothing needs detaching in `exit`: the callback
-references no instance state and creates a page-global singleton.
+`InvisibleMessage.init` itself falls back to - the only place in the framework where
+`Core.ready` and `InvisibleMessage` meet. No shipped control uses `Core.ready` for this,
+so this placement follows the class's documentation rather than its callers. No rendering
+hook is involved, so the `apiVersion: 4` contract is untouched. Nothing needs detaching in
+`exit`: the callback references no instance state and creates a page-global singleton.
+
+**One framework call site is at construction time.** `AccessibleMessageStrip` takes the
+instance from `applySettings` and announces in the same statement
+(`sap/m/p13n/MessageStrip.js:59`), unguarded - the same window that throws above, and also
+the same-task create-and-write the class docstring warns against. It is
+`@ui5-restricted sap.m.p13n, sap.ui.mdc` and only ever built inside an already-open dialog,
+so neither bites it. A public library control that any consumer can `new` from anywhere has
+no such protection, which is the whole difference.
 
 **Not covered by the suite.** The QUnit page's document is always ready, so the failing
 state cannot be produced in-suite. Manual repro: serve `sap-ui-core.js`, put the bootstrap
