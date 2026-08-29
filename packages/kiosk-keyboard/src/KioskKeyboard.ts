@@ -5,7 +5,6 @@ import type PropertyBinding from "sap/ui/model/PropertyBinding";
 import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
 import syncStyleClass from "sap/ui/core/syncStyleClass";
-import Core from "sap/ui/core/Core";
 import InvisibleMessage from "sap/ui/core/InvisibleMessage";
 import type { AccessibilityInfo } from "sap/ui/core/library";
 import { InvisibleMessageMode } from "sap/ui/core/library";
@@ -867,11 +866,6 @@ export default class KioskKeyboard extends Control {
 
   override init(): void {
     KioskKeyboard._instances.add(this);
-    // The live region every announcement goes through, in the page before the first write
-    // as ARIA wants. Gated, not called outright: `getInstance` resolves the static area,
-    // which throws before the document is ready, and `init` runs wherever something says
-    // `new`. See the `Core.ready` convention in CLAUDE.md.
-    Core.ready(() => InvisibleMessage.getInstance());
     this._announcedShifted = false;
     this._announcedCapsLock = false;
     this._announcements = new AnnouncementQueue({
@@ -979,6 +973,18 @@ export default class KioskKeyboard extends Control {
 
   onLocalizationChanged(): void {
     this.invalidate();
+  }
+
+  override onBeforeRendering(): void {
+    // The live region every announcement goes through, in the page and empty before
+    // the first write, as ARIA asks. `getInstance` resolves the static area, which
+    // throws while the document is still parsing - but rendering cannot begin that
+    // early, because `Control.placeAt` wraps its body in `Core.ready`. So the hook
+    // is the gate, and nothing is announced before it: the queue only flushes once
+    // `getDomRef()` is non-null, and the earliest write is `onAfterRendering`'s
+    // pending tier announcement. `sap.m.InputBase`, `Select`, `SliderTooltip` and
+    // `MessageView` prime the same singleton from this same hook.
+    InvisibleMessage.getInstance();
   }
 
   override onAfterRendering(): void {

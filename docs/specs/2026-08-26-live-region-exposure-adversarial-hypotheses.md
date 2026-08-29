@@ -199,6 +199,15 @@ and no announce (`IconTabFilter.js:762-767`): _"force initializing the invisible
 live region should be rendered, when we announce the text"_. `sap.f.GridContainer` does the same
 (`:690`, not the pinned version). That is the pattern this control follows.
 
+**From which hook.** A later survey of the pinned 1.136.18 `sap.m` settled this, and corrected
+what an earlier revision of this document claimed. No `sap.m` control primes from `init`.
+`InputBase:421`, `Select:1493`, `SliderTooltip:128` and `MessageView:393` prime from
+`onBeforeRendering`, caching to `this._oInvisibleMessage`; `IconTabFilter:762` primes from
+`_onAfterParentRendering`; `ListBase:1664`, `SelectDialog:1226` and `TableSelectDialog` do not
+prime at all and call `getInstance().announce()` at the point of use. `IconTabFilter` was cited
+here and in CLAUDE.md as the precedent for preferring `init` over a rendering hook, which it is
+not - it primes from a rendering hook. This control now primes from `onBeforeRendering`.
+
 **Why the gate.** `InvisibleMessage.prototype.init` calls `StaticArea.getDomRef()` unguarded -
 its own `if (!oStatic)` fallback is dead against the 1.136 `StaticArea`, which never returns a
 falsy value, only throws - and `_createStaticAreaRef` opens with
@@ -215,14 +224,27 @@ reaches it: every page boots through `data-sap-ui-on-init` / ComponentSupport, w
 snippets. The measurement below establishes reachability under a page built to expose it, not
 that a consumer would write one.
 
-**Why gate anyway.** `Control.prototype.placeAt` wraps its entire body in `Core.ready`
-(`Control.js:660`), so UI5 itself guarantees `new Control(); ctrl.placeAt(...)` works before the
-core is ready. Construction pre-ready is a supported framework pattern, so a public control
-whose `init` throws there breaks a contract the framework maintains on its behalf - an argument
-that does not depend on guessing what a consumer writes. `Core.ready` is also the exact gate:
-core init is behind the sync point that includes the `document.ready` task (`Core.js:741-759`),
-so the throwing window is a strict subset of "core not ready". And it costs nothing - the
-callback runs inline when the core is already ready (`Core.js:3332-3341`).
+**Why no gate is needed.** The reasoning above argued for a `Core.ready` gate around a call in
+`init`, and it holds for that placement: `Control.prototype.placeAt` wraps its entire body in
+`Core.ready` (`Control.js:660`), so UI5 guarantees `new Control(); ctrl.placeAt(...)` works before
+the core is ready, and a public control whose `init` throws there breaks a contract the framework
+maintains on its behalf.
+
+The same fact removes the problem when the call moves. `placeAt` deferring to `Core.ready` means
+rendering cannot begin before the core is ready, so `onBeforeRendering` is already past the sync
+point that `Core.ready` waits for - the hook _is_ the gate. Priming there needs no `Core.ready`
+call, no `Core` import, and leaves no throwing window to reason about. Nothing announces earlier:
+`AnnouncementQueue` only flushes while `getDomRef()` is non-null, and the earliest write is the
+pending tier announcement in `onAfterRendering`. It also stops an unrendered `new KioskKeyboard()`
+from materialising the static area at all.
+
+**Not test-observable.** `oInstance` is module-global in `InvisibleMessage` and never reset, so
+once anything calls `getInstance()` the spans stay for the life of the page. `armRecorder` in
+`test-helpers.ts` calls it directly, which is what lets a test arm before it builds a keyboard.
+A test asserting "the region exists after render" would therefore pass whether or not the control
+primes at all - it would be exactly the tautology class swept elsewhere in this repo. The priming
+is an ARIA robustness measure, verified by reading the framework source rather than by an
+assertion.
 
 **Measured.** Framework call in isolation, then the real control: the whole library served by
 `ui5 serve` and driven in a headed Chrome, parser held by a slow blocking script, keyboard built
@@ -233,8 +255,7 @@ from a `sap.ui.require` callback.
 | `InvisibleMessage.getInstance()`                   | `loading`             | **THROW** - the keyboard is never constructed, and no region exists even after load |
 | `Core.ready(() => InvisibleMessage.getInstance())` | `loading`             | constructs; region present in `#sap-ui-static` once the page reaches `complete`     |
 
-**Why not a rendering hook, and what `apiVersion: 4` does and does not say.** `init` is earlier,
-which is the entire point. The `apiVersion: 4` contract does say the `onBeforeRendering` and
+**Why a rendering hook, and what `apiVersion: 4` does and does not say.** The `apiVersion: 4` contract does say the `onBeforeRendering` and
 `onAfterRendering` hooks "must not be used to manipulate or access any elements outside of the
 control's own DOM structure" (`RenderManager.js:227`), and `KioskKeyboardRenderer` declares
 `apiVersion: 4` - but that is **not** why a hook was rejected, and it must not be cited as a bar:
@@ -251,9 +272,14 @@ control's own DOM structure" (`RenderManager.js:227`), and `KioskKeyboardRendere
   `sap.f` / `sap.ui.table` / `sap.ui.mdc`, not at 1.150. The clause has no corroborating example
   either way.
 
-So the honest reason is ordering, not contract: a hook would also clear the throwing window, and
-the six `sap.m` controls that keep an instance do exactly that, but it lands later than `init`
-for no gain, and this control has no `onBeforeRendering` to put it in.
+So the clause is a real one to weigh and not a bar, which is what the three points above
+establish. Set against it: `onBeforeRendering` clears the throwing window outright rather than
+gating it, it is where the six `sap.m` controls that keep an instance prime, and the ordering
+cost is nil - the first render is never skipped, and nothing in this control can announce before
+it. That is the trade this control now takes. The earlier revision resolved it the other way and
+justified `init` on ordering, citing `IconTabFilter`; the survey below, in this same document,
+already recorded that no `sap.m` control primes from `init` and that `IconTabFilter` primes from
+a rendering hook. The conclusion did not match the evidence sitting under it.
 
 **Framework survey** (pinned 1.136.18; `sap.ui.layout` and `sap.ui.unified` have no mentions).
 15 `getInstance()` call sites, all in `sap.m`: **six** create-early-and-keep, all in
@@ -276,9 +302,14 @@ destroyed").
 
 **Not covered by the suite.** The QUnit page's document is always ready, so the failing state
 cannot be produced in-suite, and the test helper arms the region itself - deleting the eager
-call leaves the suite green. Manual repro: serve `sap-ui-core.js`, put the bootstrap and a
-`sap.ui.require([...])` in `<head>`, and hold the parser with a blocking `<script src>` that
-responds slowly.
+call leaves the suite green. That stays true of the `onBeforeRendering` placement: `oInstance` is
+module-global and never reset, so any earlier `getInstance()` primes the page for every test that
+follows. An assertion that the region exists after render would pass with the priming deleted -
+the tautology class swept elsewhere in this repo - so none was written. The placement rests on
+the framework source read above, not on a test. Manual repro for the `init` throw the gate used to
+cover: serve `sap-ui-core.js`, put the bootstrap and a `sap.ui.require([...])` in `<head>`, and
+hold the parser with a blocking `<script src>` that responds slowly; note that the throw is no
+longer reachable through this control, because it no longer touches the static area from `init`.
 
 ## H8 — a negative assertion is not a test of the thing it names
 
