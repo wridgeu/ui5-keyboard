@@ -1,7 +1,9 @@
 import { fixture, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import type KioskKeyboard from "../../src/KioskKeyboard.js";
-import { requireKey } from "../helpers/fixtures.js";
+import type { LayoutDefinition } from "../../src/types.js";
+import { createHangulComposeMiddleware } from "../../src/middleware/hangul-compose.js";
+import { requireKey, setupWithLayout } from "../helpers/fixtures.js";
 
 // These run in real Chromium, where `document.execCommand` exists and edits go
 // through the platform: `maxlength`, the undo stack and the real `input` event
@@ -9,6 +11,10 @@ import { requireKey } from "../helpers/fixtures.js";
 // `execCommand`, so it only ever reaches the fallback.
 
 const DECOY_VALUE = "decoy";
+
+// Jamo enough to compose 가 and then steal its ㄴ into a second syllable,
+// plus a non-jamo key whose press commits the live preedit.
+const HANGUL_LAYOUT: LayoutDefinition = [[{ value: "ㄱ" }, { value: "ㅏ" }, { value: "ㄴ" }, { value: "x" }]];
 
 interface Setup {
   kb: KioskKeyboard;
@@ -152,6 +158,20 @@ describe("native text insertion", () => {
       expect(input.selectionStart).to.equal(1);
     });
   }
+
+  // The committed syllable is inserted through the platform, so `maxlength` is
+  // the browser's: the preedit that overran it while composing does not survive
+  // the commit.
+  it("enforces maxlength on the committed syllable", async () => {
+    const { kb, input } = await setupWithLayout(HANGUL_LAYOUT, { middleware: createHangulComposeMiddleware });
+    input.maxLength = 1;
+    focusAtEnd(input);
+
+    for (const jamo of ["ㄱ", "ㅏ", "ㄴ", "ㅏ"]) requireKey(kb, jamo).click();
+    requireKey(kb, "x").click();
+
+    expect(input.value, "the saturated field keeps the one syllable it has room for").to.equal("가");
+  });
 
   // execCommand acts on whatever is focused. With the target unfocused the
   // platform edit is declined, so the keyboard writes the target itself and the

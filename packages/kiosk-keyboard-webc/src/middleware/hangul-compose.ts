@@ -157,6 +157,9 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
 
   return {
     handleKey(key: string, el: HTMLInputElement | HTMLTextAreaElement): boolean {
+      // A refused target takes no edits, and declining hands the key to the host's guarded default branch.
+      if (el.readOnly || el.disabled) return false;
+
       if (key === "{backspace}") {
         if (!isComposing(compState)) return false;
         if (phase === "LVT") {
