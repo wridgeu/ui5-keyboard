@@ -1,4 +1,5 @@
 import type { KeyDefinition, LayoutDefinition } from "../types";
+import type { KeyPosition } from "./dom";
 
 /**
  * Internal bridge type for renderer/test access to renderer-only control helpers.
@@ -10,6 +11,7 @@ import type { KeyDefinition, LayoutDefinition } from "../types";
 export type RendererInternalApi = {
   _isShiftActive(): boolean;
   _isCapsLock(): boolean;
+  _getPressedKey(): KeyPosition | null;
   _getResolvedLayout(): LayoutDefinition;
   _getLayoutLang(): string | undefined;
   _getKeyLabel(key: KeyDefinition): string;

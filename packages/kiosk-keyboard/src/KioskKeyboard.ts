@@ -1838,6 +1838,10 @@ export default class KioskKeyboard extends Control {
       this._rendererApi = {
         _isShiftActive: () => this._isShiftActive(),
         _isCapsLock: () => this._isCapsLock(),
+        _getPressedKey: () => {
+          const el = this._keyboardPressedKeyEl ?? this._pressedKeyEl;
+          return el ? keyPositionOf(el) : null;
+        },
         _getResolvedLayout: () => this._getResolvedLayout(),
         _getLayoutLang: () => this._getLayoutLang(),
         _getKeyLabel: (key) => getKeyLabel(key, this._isShiftActive(), this._isCapsLock()),

@@ -2005,6 +2005,110 @@ QUnit.test("Losing focus while a key is held clears the pressed feedback", async
 });
 
 /**
+ * Moves the roving focus onto a keycap the way arrow navigation does, so the
+ * control's focus info agrees with the DOM. A bare `el.focus()` leaves
+ * `lastFocusedKey` null, and the next re-render then restores focus to the
+ * first key - firing focusout on the keycap under test.
+ */
+function navigateToKey(keyboard: KioskKeyboard, keyValue: string): HTMLElement {
+  const wanted = getRequiredKeyElement(keyboard, keyValue);
+  const steps = getKeyElements(keyboard).length;
+  getFirstKeyElement(keyboard).focus();
+  for (let i = 0; i < steps && document.activeElement !== wanted; i++) {
+    (document.activeElement as HTMLElement).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", keyCode: 39, bubbles: true, cancelable: true }),
+    );
+  }
+  return wanted;
+}
+
+QUnit.test("A keycap whose own activation re-renders the keyboard stays pressed", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  const shiftKey = navigateToKey(kb, "{shift}");
+
+  shiftKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyPressed), "Precondition: the keycap reads as pressed");
+
+  // Toggling Shift invalidates the control, so the keycap is repainted while
+  // Enter is still down.
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Precondition: the activation re-rendered the keyboard");
+
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyPressed), "The keycap survives the re-render still pressed");
+
+  shiftKey.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true, cancelable: true }));
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyPressed), "The release clears the pressed state");
+
+  kb.destroy();
+});
+
+QUnit.test("A keycap that spends a latched Shift stays pressed across the re-render", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  await waitForRender();
+
+  const shiftKey = navigateToKey(kb, "{shift}");
+  shiftKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+  shiftKey.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true, cancelable: true }));
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Precondition: Shift is latched");
+
+  const aKey = navigateToKey(kb, "a");
+  aKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+  assert.ok(hasKeyClass(kb, "a", DOM.classes.keyPressed), "Precondition: the keycap reads as pressed");
+
+  await waitForRender();
+  assert.notOk(isShiftActive(kb), "Precondition: spending the latch re-rendered the keyboard");
+
+  assert.ok(hasKeyClass(kb, "a", DOM.classes.keyPressed), "The keycap survives the re-render still pressed");
+
+  aKey.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true, cancelable: true }));
+  assert.notOk(hasKeyClass(kb, "a", DOM.classes.keyPressed), "The release clears the pressed state");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("A keycap held by a pointer stays pressed across a re-render", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+
+  const qKey = getRequiredKeyElement(kb, "q");
+  const start = new Event("touchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: qKey, writable: false });
+  kb.ontouchstart(start);
+  assert.ok(hasKeyClass(kb, "q", DOM.classes.keyPressed), "Precondition: the keycap reads as pressed");
+
+  // A physical Shift on the target input while the finger is still down syncs
+  // the shift state, which invalidates the control mid-hold.
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift", shiftKey: true, bubbles: true }));
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Precondition: the physical Shift re-rendered the keyboard");
+
+  assert.ok(hasKeyClass(kb, "q", DOM.classes.keyPressed), "The keycap survives the re-render still pressed");
+
+  const end = new Event("touchend", { bubbles: true });
+  Object.defineProperty(end, "target", { value: qKey, writable: false });
+  kb.ontouchend(end);
+  assert.notOk(hasKeyClass(kb, "q", DOM.classes.keyPressed), "The release clears the pressed state");
+
+  input.destroy();
+  kb.destroy();
+});
+
+/**
  * Hold `key` on `el`: the initial keydown, then the auto-repeat keydowns the OS
  * sends while the key stays down.
  */

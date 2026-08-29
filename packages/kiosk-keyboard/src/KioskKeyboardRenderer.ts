@@ -149,12 +149,19 @@ const KioskKeyboardRenderer = {
     focusTarget: KeyPosition | null,
   ): void {
     // Resolve icon and label once per key, pass to all sub-hooks
-    const { _getKeyLabel } = oControl._getRendererApi();
+    const { _getKeyLabel, _getPressedKey } = oControl._getRendererApi();
     const icon = this.resolveKeyIcon(oControl, key);
     const label = _getKeyLabel(key);
 
     rm.openStart("div", keyElementId(oControl.getId(), ri, ci));
     this.addKeyClasses(rm, oControl, key, icon, label);
+    // The keycap currently held down, by pointer or by keyboard activation. The
+    // renderer owns the class so a press whose own key invalidates the control
+    // keeps its feedback across the patch that repaints the keycap.
+    const pressed = _getPressedKey();
+    if (pressed?.row === ri && pressed.col === ci) {
+      rm.class(KIOSK_KEYBOARD_DOM.classes.keyPressed);
+    }
     this.writeKeyAttributes(rm, oControl, key, ri, ci, focusTarget, label);
     rm.openEnd();
 
