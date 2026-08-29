@@ -561,11 +561,11 @@
     }
 
     /* Variant: Active Shift indicator
-       Scoped as --modifier&--shiftActive (specificity 0,2,0) to always beat
-       --modifier:active (0,1,1) regardless of source order. This ensures the
-       toggled-on shift key keeps its emphasized look through all interactive
-       states (hover, press, focus). */
-    &--modifier&--shiftActive {
+       Keyed off --shiftActive alone, matching the renderer, which writes the
+       class on the {shift} key's value whatever its type. The compound with the
+       base class ranks the fill at (0,2,0) and the arms below at (0,3,0), over
+       the --modifier and --action categories and their own interactive arms. */
+    &.ui5KioskKey--shiftActive {
       background: @sapUiButtonEmphasizedBackground;
       color: @sapUiButtonEmphasizedTextColor;
       border-color: ~"var(--ui5KioskKeyboard-keyBorderColor," @sapUiButtonEmphasizedBorderColor ~")";
@@ -816,7 +816,7 @@
       border-color: @sapUiButtonEmphasizedHoverBorderColor;
     }
 
-    .ui5KioskKey--modifier.ui5KioskKey--shiftActive:hover {
+    .ui5KioskKey.ui5KioskKey--shiftActive:hover {
       background: @sapUiButtonEmphasizedHoverBackground;
       border-color: @sapUiButtonEmphasizedHoverBorderColor;
     }
