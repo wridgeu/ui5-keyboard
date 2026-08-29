@@ -109,11 +109,8 @@ describe("middleware integration", () => {
       mwA.handleKey("\u314f", inputA);
 
       expect(inputA.value).toBe("\uAC00");
-      // No assertion on inputB here: mwA only ever received inputA, so inputB still
-      // holds the "" the test gave it. A factory handing back a shared instance would
-      // still write to inputA - the assertion below, after mwB types, is what catches
-      // that, because the shared phase state absorbs the next jamo.
-
+      // A shared instance would still write to inputA; what catches it is inputB's
+      // value below, because the shared phase state absorbs mwB's first jamo.
       mwB.handleKey("\u3134", inputB);
       mwB.handleKey("\u3153", inputB);
 

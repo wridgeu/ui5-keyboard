@@ -568,10 +568,8 @@ describe("kiosk-keyboard", () => {
       await delay(800);
       releasePointer();
 
-      // The stop, not the empty value: no backspace path lengthens a value, so
-      // `value === ""` holds however broken the repeat is. One tick fires, then
-      // the tick reports nothing deleted and AutoRepeater stops - a broken stop
-      // would tick for the whole 800ms hold. Mirrors the kiosk twin.
+      // One tick fires, reports nothing deleted, and AutoRepeater stops; a repeat
+      // that ignored that would tick for the whole 800ms hold.
       expect(keyPresses, "the repeat stops once there is nothing to delete").to.equal(1);
     });
 
@@ -2854,11 +2852,6 @@ describe("kiosk-keyboard", () => {
       // 15rem host triggers cq-short (threshold: 16rem)
       expect(hasCqTier(el, DOM.cqTierValues.short), "cq-short applied at 15rem").to.be.true;
       expect(hasCqTier(el, DOM.cqTierValues.tiny), "not tiny at 15rem").to.be.false;
-
-      // No assertion on root.style.minHeight, before or after the switch: that
-      // reads the inline style attribute, and nothing under src/ writes one on
-      // the root - the tier is a cq-tier attribute on the host and the sizing is
-      // CSS custom properties. It was residue of the removed stableHeight.
 
       // Switch layout: keyboard remains within the fixed host
       el.layout = "numeric";

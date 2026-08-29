@@ -976,14 +976,10 @@ export default class KioskKeyboard extends Control {
   }
 
   override onBeforeRendering(): void {
-    // The live region every announcement goes through, in the page and empty before
-    // the first write, as ARIA asks. `getInstance` resolves the static area, which
-    // throws while the document is still parsing - but rendering cannot begin that
-    // early, because `Control.placeAt` wraps its body in `Core.ready`. So the hook
-    // is the gate, and nothing is announced before it: the queue only flushes once
-    // `getDomRef()` is non-null, and the earliest write is `onAfterRendering`'s
-    // pending tier announcement. `sap.m.InputBase`, `Select`, `SliderTooltip` and
-    // `MessageView` prime the same singleton from this same hook.
+    // The live region every announcement goes through, in the page and empty
+    // before the first write, as ARIA asks. This hook rather than `init`: it
+    // cannot run before the core is ready, so the static area resolves without a
+    // gate. See the priming convention in CLAUDE.md.
     InvisibleMessage.getInstance();
   }
 

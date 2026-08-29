@@ -81,8 +81,8 @@ describe("kiosk-keyboard - custom layouts", () => {
 
     expect(readDataKeys(elOverride)).to.deep.equal([["ax", "bx"]]);
     // The other element keeps the built-in qwerty: the declaration never leaked.
-    // Pinned on "q" rather than on "not the custom rows", which an element
-    // rendering nothing at all would satisfy just as well.
+    // "q" is in qwerty and not in layoutA. readDataKeys returns [] when nothing
+    // renders, which "not the custom rows" would satisfy just as well.
     expect(readDataKeys(elDefault).flat()).to.include("q");
   });
 
@@ -111,9 +111,8 @@ describe("kiosk-keyboard - custom layouts", () => {
     entry.remove();
     await nextRender();
 
-    // Positive, not merely "no longer the custom rows": readDataKeys returns []
-    // when nothing renders at all, which satisfies the exclusion while the
-    // claimed fallback never happened. "q" appears in qwerty and not in layoutA.
+    // "q" is in qwerty and not in layoutA. readDataKeys returns [] when nothing
+    // renders, so "no longer the custom rows" would hold with nothing painted.
     expect(readDataKeys(el).flat(), "the built-in qwerty is back").to.include("q");
   });
 
