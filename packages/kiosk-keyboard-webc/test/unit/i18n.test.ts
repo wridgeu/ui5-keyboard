@@ -79,4 +79,19 @@ describe("i18n", () => {
     BUNDLE_TEXTS[KEY_SHIFT.key] = KEY_SHIFT.key;
     expect(getText("KEY_SHIFT", "fallback")).toBe("Shift");
   });
+
+  it("rejects a non-function argument and keeps the previous resolver", () => {
+    BUNDLE_TEXTS[KEY_SHIFT.key] = "BundleText";
+    setI18nResolver(() => "override");
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // @ts-expect-error a value only plain JS can supply, which is what the guard covers
+    setI18nResolver("not a function");
+
+    // Two resolutions: a stored non-function warns on each one instead of naming itself once.
+    expect(getText("KEY_SHIFT", "fallback")).toBe("override");
+    expect(getText("NONEXISTENT_KEY", "fallback")).toBe("override");
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("must be a function or null"));
+  });
 });
