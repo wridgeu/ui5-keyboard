@@ -645,15 +645,25 @@ QUnit.test("controls auto-target does not trigger re-render", async (assert) => 
   kb.placeAt("qunit-fixture");
   await waitForRender();
 
-  const domBefore = kb.getDomRef();
-  assert.ok(domBefore, "Keyboard is rendered after controls auto-target");
+  assert.ok(kb.getDomRef(), "Keyboard is rendered after controls auto-target");
 
-  // Wait a tick to let any potential async re-render occur
+  // The re-render itself, not the node identity: the renderer declares apiVersion 4,
+  // so a re-render patches the existing root in place and `getDomRef()` returns the
+  // same element either way. The target has to genuinely change, because
+  // `setAssociation` early-returns on an unchanged id (ManagedObject.js:1746) and
+  // would never reach the suppressInvalidate this is about.
+  const other = new Input();
+  other.placeAt("qunit-fixture");
+  await waitForRender();
+
+  const renderSpy = sinon.spy(kb, "onAfterRendering");
+  kb._setActiveTarget(other.getId());
   await nextUIUpdate();
 
-  // Should still be the same DOM ref (no re-render from suppressInvalidate)
-  assert.strictEqual(kb.getDomRef(), domBefore, "DOM ref unchanged after auto-target");
+  assert.strictEqual(renderSpy.callCount, 0, "moving the active target did not re-render the keyboard");
+  renderSpy.restore();
 
+  other.destroy();
   input.destroy();
   kb.destroy();
 });

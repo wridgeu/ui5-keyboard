@@ -414,11 +414,15 @@ QUnit.test("Mixed-case language tags resolve case-insensitively", async (assert)
 QUnit.test("Mixed-case BCP-47 regions resolve case-insensitively", async (assert) => {
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("en", "GB"));
 
+  // Mapped to a name that is not DEFAULT_LAYOUT: resolving to "qwerty" is what a
+  // lookup that matched nothing at all also produces, so it cannot tell the
+  // case-insensitive hit from the fallback.
   const { kb } = await mount({
-    customLayouts: [new CustomLayout({ name: "qwerty", locales: ["EN-GB"] })],
+    customLayouts: [new CustomLayout({ name: "Warehouse-GB", rows: makeLayout("wh"), locales: ["EN-GB"] })],
   });
 
-  assert.strictEqual(kb.getLayout(), "qwerty", "Mixed-case 'EN-GB' resolves to qwerty via locale lookup");
+  assert.strictEqual(kb.getLayout(), "warehouse-gb", "Mixed-case 'EN-GB' resolves via locale lookup");
+  assert.deepEqual(getRenderedLayoutKeys(kb), [["wh"]], "Resolved layout renders");
 });
 
 QUnit.test("A single locale string widens to a one-entry list, whichever form the caller wrote", async (assert) => {

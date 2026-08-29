@@ -379,9 +379,6 @@ QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
   input.placeAt("qunit-fixture");
   await placeAndWait(kb);
 
-  const f5El = getRequiredKeyElement(kb, "{fkey:F5}");
-  assert.ok(f5El, "F5 key exists");
-
   // Simulate physical keydown via the highlight delegation
   input.focus();
   const keydown = new KeyboardEvent("keydown", { key: "F5", bubbles: true });

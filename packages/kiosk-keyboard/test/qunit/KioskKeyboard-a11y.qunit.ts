@@ -323,8 +323,10 @@ QUnit.test("the announced text lands in a node assistive tech can reach", async 
   await waitForAnnouncement();
   assert.strictEqual(announcedText(), "Virtual keyboard closed", "the close announcement reached the region");
 
+  // No assertion on `aria-live` here: the node is selected by
+  // `.sapUiInvisibleMessagePolite`, and InvisibleMessage writes that class and
+  // `aria-live="polite"` in one hardcoded markup string, so it cannot disagree.
   const region = liveRegionNode()!;
-  assert.strictEqual(region.getAttribute("aria-live"), "polite", "it is a polite live region");
   const style = getComputedStyle(region);
   assert.notStrictEqual(style.display, "none", "not display:none");
   assert.notStrictEqual(style.visibility, "hidden", "not visibility:hidden");
