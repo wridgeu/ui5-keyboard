@@ -11,7 +11,6 @@ import {
   getRequiredKeyElement,
   getKeyAttr,
   hasKeyClass,
-  liveRegionNode,
   placeAndWait,
   resetAnnouncements,
   tapKey,
@@ -323,22 +322,31 @@ QUnit.test("the announced text lands in a node assistive tech can reach", async 
   await waitForAnnouncement();
   assert.strictEqual(announcedText(), "Virtual keyboard closed", "the close announcement reached the region");
 
-  // No assertion on `aria-live` here: the node is selected by
-  // `.sapUiInvisibleMessagePolite`, and InvisibleMessage writes that class and
-  // `aria-live="polite"` in one hardcoded markup string, so it cannot disagree.
-  const region = liveRegionNode()!;
-  const style = getComputedStyle(region);
-  assert.notStrictEqual(style.display, "none", "not display:none");
-  assert.notStrictEqual(style.visibility, "hidden", "not visibility:hidden");
-  // The static area is a sibling of the app subtree, so the keyboard's own hidden
-  // state cannot reach it - but the container has to be exposed in its own right.
-  const container = getComputedStyle(region.parentElement!);
-  assert.notStrictEqual(container.display, "none", "its container is not display:none either");
-  assert.notStrictEqual(container.visibility, "hidden", "nor visibility:hidden");
-  // `aria-hidden` takes a node out of the tree while display, visibility and
-  // textContent all still read as exposed. UI5's modal `Popup` puts it on the static
-  // area's `<body>` siblings, so this is a live path rather than a hypothetical.
-  assert.notOk(region.closest("[aria-hidden='true']"), "no aria-hidden ancestor");
+  // Whatever node ended up holding the text is the one that has to be reachable, so
+  // it is found BY that text. Selecting it by `.sapUiInvisibleMessagePolite` would
+  // pin the framework's own markup instead: that span exists, empty and exposed, no
+  // matter where this control writes, so a region rendered back into the keyboard -
+  // `sapUiInvisibleText`, which is `display: none !important` - would read as a pass
+  // beside it. No assertion on `aria-live`: InvisibleMessage writes the class and
+  // `aria-live="polite"` in one hardcoded markup string, so they cannot disagree.
+  const carrying = [...document.querySelectorAll("body *")].filter(
+    (el) => el.childElementCount === 0 && el.textContent === "Virtual keyboard closed",
+  );
+  assert.ok(carrying.length > 0, "precondition: some node in the page carries the announcement");
+  for (const node of carrying) {
+    // Walks the ancestors, which reading the node's own computed style does not:
+    // `display: none` on a parent leaves the child computing to `inline`, and the
+    // region this control used to own was hidden by exactly that - its own class
+    // inside the keyboard's root, both gone from the tree with a closed keyboard.
+    assert.ok(
+      node.checkVisibility({ checkVisibilityCSS: true, contentVisibilityAuto: true }),
+      "it is not hidden by display, visibility or skipped content",
+    );
+    // `aria-hidden` takes a node out of the tree while display, visibility and
+    // textContent all still read as exposed. UI5's modal `Popup` puts it on the static
+    // area's `<body>` siblings, so this is a live path rather than a hypothetical.
+    assert.notOk(node.closest("[aria-hidden='true']"), "and sits under no aria-hidden ancestor");
+  }
 
   docked.destroy();
 });

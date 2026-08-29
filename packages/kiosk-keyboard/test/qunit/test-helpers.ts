@@ -90,12 +90,11 @@ export function resetAnnouncements(): void {
 }
 
 /**
- * The polite live-region node itself, for assertions about its exposure rather than
- * its text. `InvisibleMessage.announce` finds it the same way, by class rather than
- * by id: the id is derived from a private singleton name, the class is what the
- * framework itself queries.
+ * The polite live-region node. `InvisibleMessage.announce` finds it the same way, by
+ * class rather than by id: the id is derived from a private singleton name, the class
+ * is what the framework itself queries.
  */
-export function liveRegionNode(): Element | null {
+function liveRegionNode(): Element | null {
   return document.querySelector(".sapUiInvisibleMessagePolite");
 }
 
