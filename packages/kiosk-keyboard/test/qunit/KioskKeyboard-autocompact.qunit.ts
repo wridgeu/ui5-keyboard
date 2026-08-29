@@ -433,11 +433,17 @@ QUnit.test("The announcement names no layout, so it carries no untranslated iden
   // name would sit untranslated inside a translated sentence. Each crossing is read
   // into a local and asserted non-empty first: `"".includes(...)` is false, so a
   // control that announced nothing at all would satisfy the exclusion on its own.
+  // The reset before each crossing is what gives that precondition its teeth: the
+  // region is page-global and `announcedText` falls back to the last write recorded,
+  // so an unreset read answers with the crossing before it - which names no layout
+  // either, and would carry both assertions on its own.
+  resetAnnouncements();
   await resize(NARROW_PX);
   const compacting = announcedText();
   assert.ok(compacting, "precondition: the compacting crossing announced something");
   assert.notOk(compacting.includes("ja-kana"), "the compacting announcement quotes no layout name");
 
+  resetAnnouncements();
   await resize(WIDE_PX);
   const restoring = announcedText();
   assert.ok(restoring, "precondition: the restoring crossing announced something");
