@@ -1641,6 +1641,9 @@ QUnit.test("Ctrl+Space on focused key does NOT activate (modifier filtering)", a
   aKey.setAttribute("tabindex", "0");
   aKey.focus();
 
+  // `sapselect` skips this, but `sapselectmodifiers` fires for Enter/Space with ANY
+  // modifier held - so what rejects it is `onsapselectmodifiers`' own `!shiftKey`
+  // clause, not UI5's dispatch filter.
   aKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", ctrlKey: true, bubbles: true, cancelable: true }));
   await waitForRender();
 

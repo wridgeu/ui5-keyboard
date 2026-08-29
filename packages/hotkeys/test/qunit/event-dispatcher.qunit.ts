@@ -1642,6 +1642,76 @@ QUnit.test("Fallback does NOT activate for non-Escape keys", (assert) => {
   assert.ok(untargetedFired, "Untargeted handler fires for F5");
 });
 
+QUnit.test("A detached last-focused element does NOT resurrect its target scope", (assert) => {
+  const target = document.createElement("div");
+  const input = document.createElement("input");
+  target.appendChild(input);
+  fixture.appendChild(target);
+
+  let targetFired = false;
+  let untargetedFired = false;
+
+  manager.register("Escape", () => {
+    untargetedFired = true;
+  });
+  manager.register(
+    "Escape",
+    () => {
+      targetFired = true;
+    },
+    { target, stopPropagation: true },
+  );
+
+  input.focus();
+
+  // Detaching moves document.activeElement to body, but the tracker still holds a
+  // live WeakRef to the input - so this is the path that actually sees a
+  // disconnected node, and the only thing keeping it out of the resolved path is
+  // the isConnected guard.
+  target.remove();
+  assert.notOk(input.isConnected, "precondition: the last-focused element is detached");
+
+  fireKey("Escape");
+
+  assert.notOk(targetFired, "a registration scoped to the detached target does NOT fire");
+  assert.ok(untargetedFired, "the Escape still dispatched, so the miss is the guard and not a dead event");
+});
+
+QUnit.test("A disconnected activeElement does NOT augment the event path", (assert) => {
+  const target = document.createElement("div");
+  const child = document.createElement("div");
+  target.appendChild(child);
+  // Never appended, so the staged activeElement below is disconnected.
+
+  let targetFired = false;
+  let untargetedFired = false;
+
+  manager.register("F5", () => {
+    untargetedFired = true;
+  });
+  manager.register(
+    "F5",
+    () => {
+      targetFired = true;
+    },
+    { target, stopPropagation: true },
+  );
+
+  // The browser never leaves a detached node in document.activeElement, so the
+  // state this guard exists for has to be staged. F5 rather than Escape keeps the
+  // focus fallback out of it, leaving the activeElement pass as the only augmenter.
+  Object.defineProperty(document, "activeElement", { configurable: true, get: () => child });
+  try {
+    assert.notOk(child.isConnected, "precondition: the staged activeElement is detached");
+    fireKey("F5");
+  } finally {
+    Reflect.deleteProperty(document, "activeElement");
+  }
+
+  assert.notOk(targetFired, "a registration scoped to the detached ancestry does NOT fire");
+  assert.ok(untargetedFired, "the F5 still dispatched, so the miss is the guard and not a dead event");
+});
+
 // ──────────────────────────────────────────────
 // Generic root ID API
 // ──────────────────────────────────────────────

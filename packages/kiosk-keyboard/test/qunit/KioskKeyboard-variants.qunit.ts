@@ -12,6 +12,7 @@ import {
   isShiftActive,
   simulateTap,
   tapKey,
+  waitForAnnouncement,
   waitForRender,
 } from "./test-helpers";
 import type VariantPopupBehavior from "ui5/kiosk/internal/variant-popup-behavior";
@@ -719,6 +720,47 @@ QUnit.test("a single variant announces without a plural disagreement", async (as
     "the count trails the noun, so no locale needs a plural form",
   );
   release(kb, aKey);
+  cleanup(kb, input);
+});
+
+// The gesture the announcement queue exists for: one tap raises two announcements
+// from two handlers, milliseconds apart, and no caller can combine them because they
+// are in different tasks. A live region written twice that fast speaks only the
+// second, so the first has to wait its turn.
+QUnit.test("a tap that dismisses the popup and latches Shift announces each in turn", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ accentVariants: true, controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  release(kb, aKey);
+  assert.ok(getPopup(), "precondition: the popup is open");
+
+  // The open announcement armed the gap; spend it, then start from silence so the
+  // two the gesture raises are the only ones in play.
+  await waitForAnnouncement();
+  resetAnnouncements();
+
+  // `{shift}` declares no variants, so the press dismisses the popup and the
+  // release latches Shift - one tap, two announcements.
+  simulateTap(kb, getRequiredKeyElement(kb, "{shift}"));
+
+  assert.strictEqual(
+    announcedText(),
+    getText("ARIA_VARIANTS_CLOSED", "Variants closed"),
+    "the press announcement holds the region",
+  );
+
+  await waitForAnnouncement();
+  assert.strictEqual(
+    announcedText(),
+    getText("ARIA_SHIFT_ON", "Shift on"),
+    "the release announcement follows once the first has been read",
+  );
+
   cleanup(kb, input);
 });
 
