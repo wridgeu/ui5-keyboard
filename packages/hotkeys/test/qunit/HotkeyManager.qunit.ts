@@ -1904,7 +1904,9 @@ QUnit.test("Target element: replace cleans up old target listener", (assert) => 
   newHandle.unregister();
   newCalled = false;
 
-  fireKeyOn(div, "F3");
+  // F10, the key actually registered on this target: firing anything else leaves
+  // newCalled false whether or not the listener was ever removed.
+  fireKeyOn(div, "F10");
   assert.notOk(newCalled, "No callbacks fire after unregistering all registrations");
 });
 
@@ -2034,7 +2036,7 @@ QUnit.test("Target element: two registrations on same target, unregister one", (
   firstCalled = false;
   secondCalled = false;
 
-  fireKeyOn(div, "F3");
+  fireKeyOn(div, "F10");
   fireKeyOn(div, "F4");
   assert.notOk(firstCalled, "No first callback after unregistering both handles");
   assert.notOk(secondCalled, "No second callback after unregistering both handles");
