@@ -91,3 +91,59 @@ describe("AutoShowController teardown vs. pending deferred close", () => {
     expect(bridge.close).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("AutoShowController auto-type detection vs. inputmode suppression", () => {
+  let host: MutableHost;
+  let bridge: AutoShowBridge;
+  let controller: AutoShowController;
+  let input: HTMLInputElement;
+
+  beforeEach(() => {
+    input = document.createElement("input");
+    input.type = "text";
+    input.setAttribute("inputmode", "numeric");
+    document.body.appendChild(input);
+
+    host = makeHost();
+    host.autoType = true;
+
+    let target: HTMLInputElement | HTMLTextAreaElement | null = null;
+    bridge = {
+      ...makeBridge(),
+      getTargetElement: () => target,
+      resolveInputFrom: (el) => (el === input ? input : null),
+      setTarget: vi.fn((el) => {
+        target = el;
+      }),
+      setKeyboardTypeInternal: vi.fn((value) => {
+        host.keyboardType = value;
+      }),
+      // The real bridge delegates to NativeInputModeSuppression, which stamps
+      // the live element - the mask an authored inputmode disappears behind.
+      suppressInputMode: vi.fn(() => input.setAttribute("inputmode", "none")),
+    };
+
+    controller = new AutoShowController(host, bridge);
+    controller.register();
+    controller.sync();
+  });
+
+  afterEach(() => {
+    controller.unregister();
+    host.remove();
+    input.remove();
+  });
+
+  it("keeps the detected type when the already-active target is refocused", () => {
+    input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+
+    expect(bridge.setKeyboardTypeInternal).toHaveBeenCalledTimes(1);
+    expect(bridge.setKeyboardTypeInternal).toHaveBeenCalledWith("Numpad");
+    expect(input.getAttribute("inputmode"), "the open keyboard masks the authored inputmode").toBe("none");
+
+    input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+
+    expect(bridge.setKeyboardTypeInternal).toHaveBeenCalledTimes(1);
+    expect(host.keyboardType).toBe("Numpad");
+  });
+});

@@ -137,7 +137,11 @@ export class AutoShowController {
 
     // Detect keyboard type before open - this may trigger onInvalidation for
     // keyboardType, but the target is already set so subsequent logic is safe.
-    if (this._host.autoType && this._bridge.getKeyboardTypeSource() !== "explicit") {
+    // A refocus of the already-active target is not detectable: while the
+    // keyboard is open that element carries the inputmode="none" suppression
+    // written on its previous focus, which masks an authored
+    // numeric/decimal/tel value, so it keeps the type it already has.
+    if (targetChanged && this._host.autoType && this._bridge.getKeyboardTypeSource() !== "explicit") {
       const detected = detectKeyboardType(inputEl);
       if (detected !== this._host.keyboardType) {
         this._bridge.setKeyboardTypeInternal(detected);

@@ -104,20 +104,29 @@ export default class AutoShowBehavior extends BaseObject {
     // Focus landed on a claimable input, so cancel any pending close
     this.cancelPendingClose();
 
+    // Detection reads the target's authored metadata, so it runs before
+    // _setActiveTarget: while the keyboard is open that call writes
+    // inputmode="none" on the new target to suppress its native keyboard, which
+    // masks an authored numeric/decimal/tel value. The already-active target
+    // carries that mask from its previous focus, so a refocus is not detectable
+    // at all and keeps the type it already has.
+    const targetChanged = this._host._getActiveTargetId() !== ui5Control.getId();
+    const detected = targetChanged ? detectKbType(ui5Control, this._host._getEffectiveResolver()) : null;
+
     this._host._setActiveTarget(ui5Control);
 
-    // Auto-detect keyboard type from input metadata.
+    // Apply the detected keyboard type.
     // Skip if re-entrancy (from deferred change handler) superseded this target.
     if (
+      detected !== null &&
       this._host.getAutoType() &&
       this._host._getKeyboardTypeSource() !== "explicit" &&
       this._host._getActiveTargetId() === ui5Control.getId()
     ) {
-      const detected = detectKbType(ui5Control, this._host._getEffectiveResolver());
       const previous = this._host.getKeyboardType();
       // Only (re)apply detection when the type actually changes. Re-running on
-      // every focusin (e.g. refocusing the same input to reposition the caret)
-      // would call _setKeyboardTypeSource, which resets the user-driven
+      // every focusin (e.g. moving between two plain text inputs) would call
+      // _setKeyboardTypeSource, which resets the user-driven
       // {layout:*} override (LayoutState source -> "external") and reverts a
       // layout the user explicitly chose. Mirrors the webc focusin guard
       // (`if (detected !== this.keyboardType)`).
