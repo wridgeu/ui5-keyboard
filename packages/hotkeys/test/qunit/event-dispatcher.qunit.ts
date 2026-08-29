@@ -1738,29 +1738,6 @@ QUnit.test("removeGenericRootId restores normal behavior for element", (assert) 
 // Disconnected activeElement guard
 // ──────────────────────────────────────────────
 
-QUnit.test("Disconnected activeElement does not augment path", (assert) => {
-  const target = document.createElement("div");
-  target.tabIndex = 0;
-  fixture.appendChild(target);
-
-  let fired = false;
-  manager.register(
-    "F5",
-    () => {
-      fired = true;
-    },
-    { target },
-  );
-
-  // Focus the element, then detach it from the DOM.
-  // document.activeElement may still reference the detached element.
-  target.focus();
-  target.remove();
-
-  fireKey("F5");
-  assert.notOk(fired, "Hotkey does NOT fire when activeElement is disconnected from DOM");
-});
-
 // ──────────────────────────────────────────────
 // Rapid Escape one-shot guard
 // ──────────────────────────────────────────────

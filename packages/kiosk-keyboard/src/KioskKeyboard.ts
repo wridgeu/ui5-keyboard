@@ -5,7 +5,9 @@ import type PropertyBinding from "sap/ui/model/PropertyBinding";
 import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
 import syncStyleClass from "sap/ui/core/syncStyleClass";
+import InvisibleMessage from "sap/ui/core/InvisibleMessage";
 import type { AccessibilityInfo } from "sap/ui/core/library";
+import { InvisibleMessageMode } from "sap/ui/core/library";
 import Popover from "sap/m/Popover";
 import { PlacementType } from "sap/m/library";
 import { getLayoutMeta } from "./internal/layout-meta";
@@ -166,8 +168,6 @@ export default class KioskKeyboard extends Control {
   private _layoutState!: LayoutState;
   /** Owns the ARIA live-region announcement queue and its drain timer. */
   private _announcements!: AnnouncementQueue;
-  /** The live region's current text, so a re-render re-emits it instead of clearing it. */
-  private _liveRegionText!: string;
   /** The shift/caps pair the last announcement described, so only transitions speak. */
   private _announcedShifted!: boolean;
   private _announcedCapsLock!: boolean;
@@ -866,7 +866,6 @@ export default class KioskKeyboard extends Control {
 
   override init(): void {
     KioskKeyboard._instances.add(this);
-    this._liveRegionText = "";
     this._announcedShifted = false;
     this._announcedCapsLock = false;
     this._announcements = new AnnouncementQueue({
@@ -974,6 +973,14 @@ export default class KioskKeyboard extends Control {
 
   onLocalizationChanged(): void {
     this.invalidate();
+  }
+
+  override onBeforeRendering(): void {
+    // The live region every announcement goes through, in the page and empty
+    // before the first write, as ARIA asks. This hook rather than `init`: it
+    // cannot run before the core is ready, so the static area resolves without a
+    // gate. See the priming convention in CLAUDE.md.
+    InvisibleMessage.getInstance();
   }
 
   override onAfterRendering(): void {
@@ -1804,13 +1811,12 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Writes the live-region text to both the field the renderer reads and the live
-   * node, so the announcement survives the next patch without waiting for one.
+   * Speaks one announcement through the framework's shared polite live region in
+   * the static area. `announce` clears the node before it writes, so a repeat of
+   * the text already standing there is still read out.
    */
   private _setLiveRegionText(text: string): void {
-    this._liveRegionText = text;
-    const liveRegion = this.getDomRef("liveState");
-    if (liveRegion) liveRegion.textContent = text;
+    InvisibleMessage.getInstance().announce(text, InvisibleMessageMode.Polite);
   }
 
   // ── Internal renderer helpers ──
@@ -1833,7 +1839,6 @@ export default class KioskKeyboard extends Control {
         _isShiftActive: () => this._isShiftActive(),
         _isCapsLock: () => this._isCapsLock(),
         _getResolvedLayout: () => this._getResolvedLayout(),
-        _getLiveRegionText: () => this._liveRegionText,
         _getLayoutLang: () => this._getLayoutLang(),
         _getKeyLabel: (key) => getKeyLabel(key, this._isShiftActive(), this._isCapsLock()),
         _getKeyAriaLabel: (key) => getKeyAriaLabel(key, this._isShiftActive(), this._isCapsLock()),

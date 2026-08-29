@@ -40,7 +40,6 @@ const KioskKeyboardRenderer = {
     rm.openEnd();
 
     this.renderContent(rm, oControl);
-    this.renderLiveRegion(rm, oControl);
 
     rm.close("div");
   },
@@ -111,20 +110,6 @@ const KioskKeyboardRenderer = {
     if (last && layout[last.row]?.[last.col]) return last;
 
     return { row: 0, col: 0 };
-  },
-
-  /**
-   * ARIA live region. The queue owns what is said and when, and writes the live node
-   * itself; re-emitting its last text here keeps a patch from clearing it mid-read.
-   */
-  renderLiveRegion(rm: RenderManager, oControl: KioskKeyboard): void {
-    const { _getLiveRegionText } = oControl._getRendererApi();
-    rm.openStart("span", `${oControl.getId()}-liveState`);
-    rm.class("sapUiInvisibleText");
-    rm.attr("role", "status");
-    rm.openEnd();
-    rm.text(_getLiveRegionText());
-    rm.close("span");
   },
 
   // ── Row-level hooks ──

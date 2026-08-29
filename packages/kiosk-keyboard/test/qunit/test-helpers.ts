@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import InvisibleMessage from "sap/ui/core/InvisibleMessage";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 
 const DOM = KioskKeyboard.DOM;
@@ -12,6 +13,18 @@ export function rootRemPx(): number {
 export async function placeAndWait(control: KioskKeyboard): Promise<void> {
   control.placeAt("qunit-fixture");
   await nextUIUpdate();
+  armRecorder();
+}
+
+/**
+ * Destroy every keyboard still alive. A test that throws before its own `destroy()`
+ * leaves an `AnnouncementQueue` drain timer running, and since the live region is now
+ * page-global that timer writes into the node the NEXT test is asserting on - turning
+ * one real failure into a run of misleading ones. `destroy` ignores repeated calls
+ * (`ManagedObject.js:2967`), so this is safe alongside the inline teardown tests do.
+ */
+export function destroyKeyboards(): void {
+  for (const kb of KioskKeyboard["_instances"]) kb.destroy();
 }
 
 /** Wait for a re-render cycle after a state change. */
@@ -25,7 +38,64 @@ export async function waitForRender(): Promise<void> {
  * another one lands a beat later rather than in the same task.
  */
 export async function waitForAnnouncement(): Promise<void> {
+  armRecorder();
   await new Promise((resolve) => setTimeout(resolve, 150));
+}
+
+const announcements: string[] = [];
+let recorder: MutationObserver | null = null;
+
+/**
+ * Start recording what is written to the live region. Reaching for the singleton
+ * brings the node into the page, so a test can arm before it builds a keyboard -
+ * which is what an assertion about first-paint silence needs.
+ */
+function armRecorder(): void {
+  if (recorder) return;
+  InvisibleMessage.getInstance();
+  const node = liveRegionNode();
+  if (!node) return;
+  recorder = new MutationObserver(() => {
+    const text = node.textContent ?? "";
+    if (text) announcements.push(text);
+  });
+  recorder.observe(node, { childList: true, characterData: true, subtree: true });
+}
+
+/**
+ * The most recent announcement, or `""` when none was raised since the last reset.
+ *
+ * The standing node wins over the recording: it is written synchronously, while the
+ * recorder runs a microtask later and would lag a read taken in the announcement's own
+ * task. The recording covers the case the node cannot - `InvisibleMessage` empties its
+ * node three seconds after a write, and that node is shared by the whole page, so a
+ * timer armed by an earlier test can wipe an identical text this one just wrote.
+ */
+export function announcedText(): string {
+  armRecorder();
+  const standing = liveRegionNode()?.textContent ?? "";
+  return standing || (announcements.at(-1) ?? "");
+}
+
+/**
+ * Forget what was announced and empty the region. Call it BEFORE the step whose
+ * silence is asserted, never between that step and the assertion - clearing and then
+ * reading back is a tautology, not a test.
+ */
+export function resetAnnouncements(): void {
+  armRecorder();
+  announcements.length = 0;
+  const node = liveRegionNode();
+  if (node) node.textContent = "";
+}
+
+/**
+ * The polite live-region node. `InvisibleMessage.announce` finds it the same way, by
+ * class rather than by id: the id is derived from a private singleton name, the class
+ * is what the framework itself queries.
+ */
+function liveRegionNode(): Element | null {
+  return document.querySelector(".sapUiInvisibleMessagePolite");
 }
 
 /** Find a rendered key by its data-key value and tap it via touch simulation. */

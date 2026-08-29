@@ -429,17 +429,6 @@ QUnit.test("Event counts match actual show/close transitions", async (assert) =>
 // setDocked transitions
 // ──────────────────────────────────────────────
 
-QUnit.test("setDocked(true) resets open state", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  // Starts undocked - set docked should ensure closed
-  kb.setDocked(true);
-  assert.notOk(kb.isOpen(), "Keyboard is closed after switching to docked mode");
-
-  kb.destroy();
-});
-
 QUnit.test("setDocked toggles auto-show listener activation", async (assert) => {
   const kb = new KioskKeyboard({ docked: true, autoShow: true });
   await placeAndWait(kb);

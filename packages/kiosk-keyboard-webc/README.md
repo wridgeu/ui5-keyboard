@@ -1112,12 +1112,14 @@ Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i1
 | `ARIA_KEYBOARD_OPENED`           | Virtual keyboard opened                       | ARIA live region announcement on `show()`                                       |
 | `ARIA_KEYBOARD_CLOSED`           | Virtual keyboard closed                       | ARIA live region announcement on `close()`                                      |
 | `ARIA_RETURN_TO_NUMBERS`         | Return to numbers                             | Accessible name for the back key that returns to the numbers surface            |
-| `ARIA_VARIANTS_OPENED`           | {0} variants for {1}                          | ARIA live region announcement when the accent-variant popup opens               |
+| `ARIA_VARIANTS_OPENED`           | Variants for {1}: {0}                         | ARIA live region announcement when the accent-variant popup opens               |
 | `ARIA_VARIANTS_CLOSED`           | Variants closed                               | ARIA live region announcement when the accent-variant popup is dismissed        |
 | `ARIA_LAYOUT_COMPACTED`          | Switched to the compact keyboard layout       | ARIA live region announcement when `auto-compact` takes a layout's compact form |
 | `ARIA_LAYOUT_UNCOMPACTED`        | Switched back to the standard keyboard layout | ARIA live region announcement when `auto-compact` gives it back                 |
 
-The two `auto-compact` announcements name no layout on purpose: the layout a width picks is one the user never chose and never sees named, and an identifier dropped into a translated sentence stays untranslated. They also have to differ from each other - the live region re-announces only on a text change, so one shared wording would leave every second crossing unspoken.
+The two `auto-compact` announcements name no layout on purpose: the layout a width picks is one the user never chose and never sees named, and an identifier dropped into a translated sentence stays untranslated. They also have to differ from each other: the two crossings are opposite moves, and one shared wording would not say which way the layout just went.
+
+`ARIA_VARIANTS_OPENED` keeps `{0}` (the count) last on purpose: neither runtime substitutes a plural form, so a count placed in front of the noun would announce "1 variants for a" in every language that inflects. Keep the count trailing when you translate this key or supply it through a resolver.
 
 ### Custom i18n Resolver
 

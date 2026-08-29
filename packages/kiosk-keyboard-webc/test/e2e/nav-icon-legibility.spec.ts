@@ -98,7 +98,11 @@ test("nav key icons are tellable apart when the label is hidden", async ({ page 
   // A font with no glyph for an icon renders nothing, which would make every
   // comparison against it trivially pass. Fail loudly instead.
   expect(distances.blank, "nav icons render no ink in this font stack").toEqual([]);
-  expect(distances.pairs).toHaveLength((NAV_KEYS.length * (NAV_KEYS.length - 1)) / 2);
+  // Literal, not C(NAV_KEYS.length, 2): both sides of that derive from navRow, so it
+  // holds for any row size - including an emptied one, where 0 === -0 passes while
+  // the blank and collision checks either side pass vacuously too.
+  expect(NAV_KEYS, "the shipped nav row").toHaveLength(8);
+  expect(distances.pairs, "every nav icon pair was measured").toHaveLength(28);
 
   const tooClose = distances.pairs.filter((p) => !MIRROR_PAIRS.has(p.pair) && p.distance < MIN_DISTANCE);
 

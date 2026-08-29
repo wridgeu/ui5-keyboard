@@ -40,3 +40,4 @@ Dated design specifications and adversarial-validation records, kept for context
 | [Per-Key Parts Adversarial Hypotheses (#231)](./2026-08-17-per-key-parts-adversarial-hypotheses.md)         | Adversarial validation of the bounded per-key `::part()` names, per CLAUDE.md §7.              |
 | [Shift Latch Adversarial Hypotheses](./2026-08-25-shift-latch-adversarial-hypotheses.md)                    | Adversarial validation of the Shift-sampling fixes and the latch pins, per CLAUDE.md §7.       |
 | [Disabled-Inert Adversarial Hypotheses (#251, #256)](./2026-08-26-disabled-inert-adversarial-hypotheses.md) | Adversarial validation of the mid-gesture `disabled` guards, per CLAUDE.md §7.                 |
+| [Live-Region Exposure (#247, #254)](./2026-08-26-live-region-exposure-adversarial-hypotheses.md)            | Adversarial validation of the ARIA live-region exposure fix and the variant-count rephrase.    |

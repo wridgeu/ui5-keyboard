@@ -558,13 +558,19 @@ describe("kiosk-keyboard", () => {
     });
 
     it("is a no-op while held over an empty input", async () => {
-      const { input, bksp } = await setup("");
+      const { kb, bksp } = await setup("");
+      let keyPresses = 0;
+      kb.addEventListener("key-press", () => {
+        keyPresses++;
+      });
 
       pressBackspace(bksp);
       await delay(800);
       releasePointer();
 
-      expect(input.value).to.equal("");
+      // One tick fires, reports nothing deleted, and AutoRepeater stops; a repeat
+      // that ignored that would tick for the whole 800ms hold.
+      expect(keyPresses, "the repeat stops once there is nothing to delete").to.equal(1);
     });
 
     it("does not start auto-repeat when the keyboard is disabled", async () => {
@@ -2060,6 +2066,39 @@ describe("kiosk-keyboard", () => {
       expect(region.textContent ?? "", "shift-on announcement appears in live region").to.equal("Shift on");
     });
 
+    it("re-announces a text the region is already holding", async () => {
+      // `_liveRegionText` is reactive, so a re-announcement of the text already standing
+      // in the region is dropped by the change guard and never reaches the DOM at all.
+      // The queue is the seam because no public gesture raises the same text twice in a
+      // row. Whether the EMPTYING specifically is what makes a screen reader speak again
+      // is not observable here - a same-value `textContent` write replaces the text node
+      // either way - so this asserts the reachable half: that the repeat reaches the DOM.
+      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+      await nextRender();
+      const queue = (el as unknown as { _announcements: { announce(t: string): void; flush(): void } })._announcements;
+      const region = el.shadowRoot!.querySelector('[role="status"][aria-live="polite"]')!;
+
+      const say = async (text: string) => {
+        queue.announce(text);
+        queue.flush();
+        await new Promise((r) => setTimeout(r, 200));
+      };
+
+      await say("Shift on");
+      expect(region.textContent, "precondition: the region holds the text").to.equal("Shift on");
+
+      const records: MutationRecord[] = [];
+      new MutationObserver((batch) => records.push(...batch)).observe(region, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+      await say("Shift on");
+
+      expect(region.textContent, "the region still ends on the text").to.equal("Shift on");
+      expect(records, "the repeat reached the DOM instead of being skipped").to.not.be.empty;
+    });
+
     it("releasing Caps Lock announces caps-lock-off, not shift-off", async () => {
       // ShiftState.isShifted is true in CapsLock mode, so a CapsLock -> Off
       // transition also reads as a shift release. The shift-off announcement is
@@ -2810,22 +2849,18 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       await waitForResponsiveSync();
 
-      const root = rootDiv(el);
-
       // 15rem host triggers cq-short (threshold: 16rem)
       expect(hasCqTier(el, DOM.cqTierValues.short), "cq-short applied at 15rem").to.be.true;
       expect(hasCqTier(el, DOM.cqTierValues.tiny), "not tiny at 15rem").to.be.false;
-
-      // No minHeight is set on the root
-      expect(root.style.minHeight).to.equal("");
 
       // Switch layout: keyboard remains within the fixed host
       el.layout = "numeric";
       await nextRender();
       await waitForResponsiveSync();
 
-      // No minHeight after layout switch
-      expect(root.style.minHeight).to.equal("", "no minHeight after layout switch");
+      // The tier is re-derived on a layout switch rather than latched: numeric is
+      // the shorter layout, so in the same 15rem host it needs no tier at all.
+      expect(el.hasAttribute(DOM.attributes.cqTier), "the shorter layout drops the tier").to.be.false;
     });
 
     it("reacts to a style-only intrinsic height change inside a fixed host", async () => {

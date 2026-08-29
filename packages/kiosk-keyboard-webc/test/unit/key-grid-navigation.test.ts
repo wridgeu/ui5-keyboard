@@ -516,12 +516,10 @@ describe("KeyGridNavigation - element ids take no part in resolution", () => {
 });
 
 describe("KeyGridNavigation - last-focused-key tracking", () => {
-  it("exposes and clears the last focused key position", () => {
+  it("records the key a move lands on", () => {
     const g = grid();
     g.press(g.keyAt(0, 0), "ArrowRight");
     expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 1 });
-    g.nav.setLastFocusedKey(null);
-    expect(g.nav.getLastFocusedKey()).toBeNull();
   });
 });
 

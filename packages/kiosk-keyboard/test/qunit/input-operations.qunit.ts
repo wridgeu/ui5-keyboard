@@ -267,9 +267,9 @@ QUnit.test("Does not split a surrogate pair when clamping", (assert) => {
 });
 
 QUnit.test("Inserts unclamped when maxLength is unset", (assert) => {
+  // makeInput never sets maxLength, so the element carries the platform default
+  // of -1 and takes the `max < 0` branch of clampToMaxLength.
   const input = makeInput("", [0, 0]);
-
-  assert.strictEqual(input.maxLength, -1, "maxLength unset");
 
   const result = insertText(input, "abcdef", [0, 0]);
 

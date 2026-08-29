@@ -845,7 +845,10 @@ QUnit.test("Layout switch leaves exactly one keyboard-focusable key", async (ass
 
   const focusableKeys = getFocusableKeys(kb);
   assert.strictEqual(focusableKeys.length, 1, "Exactly one key remains keyboard-focusable");
-  assert.ok(focusableKeys[0].classList.contains(DOM.classes.key), "Focusable key is a rendered keyboard key");
+  // Which key holds it, not that it carries the key class - `selectors.focusableKey`
+  // is `.ui5KioskKey[tabindex="0"]`, so the class is true of anything it can return.
+  const firstKey = kb.getDomRef()!.querySelector<HTMLElement>(DOM.selectors.key);
+  assert.strictEqual(focusableKeys[0], firstKey, "The tab stop sits on the first key of the new layout");
 
   kb.destroy();
 });

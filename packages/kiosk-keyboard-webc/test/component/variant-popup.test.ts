@@ -450,6 +450,20 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(popupEl(kb)).to.not.exist;
   });
 
+  // A key can carry exactly one variant, and the announcement is built by plain
+  // substitution with no plural form, so the count must not sit in the slot where
+  // English, German and Arabic require numeral-noun agreement.
+  it("announces a single variant without a plural disagreement", async () => {
+    const { kb } = await setupWithLayout([[{ value: "a", variants: ["ā"] }]]);
+    await holdOpen(requireKey(kb, "a"));
+
+    expect(optionGlyphs(kb), "precondition: exactly one variant is offered").to.deep.equal(["ā"]);
+    expect(liveRegionText(kb), "the count trails the noun, so no locale needs a plural form").to.equal(
+      "Variants for a: 1",
+    );
+    pointerUp();
+  });
+
   it("labels the popup with the localized i18n string, not a hardcoded literal", async () => {
     // Route the key through a resolver so the assertion fails if the label is
     // hardcoded instead of going through getText.
@@ -458,7 +472,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
       const { kb } = await setupWithLayout(VARIANT_LAYOUT);
       await holdOpen(requireKey(kb, "a"));
 
-      const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "3").replace("{1}", "a");
+      const expected = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "3").replace("{1}", "a");
       expect(expected).to.equal("3 accents (a)");
       expect(popoverEl(kb)!.accessibleName).to.equal(expected);
       pointerUp();
@@ -563,7 +577,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     // Shift makes the key type its explicit shiftValue ("!"), so the popup's
     // accessible name must say "!" rather than the uppercased raw value ("1").
     await holdOpen(requireKey(kb, "1"));
-    const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "2").replace("{1}", "!");
+    const expected = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "2").replace("{1}", "!");
     expect(popoverEl(kb)!.accessibleName).to.equal(expected);
     pointerUp();
   });
@@ -1002,7 +1016,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     await holdOpen(requireKey(kb, "a"));
 
-    const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "3").replace("{1}", "a");
+    const expected = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "3").replace("{1}", "a");
     expect(popupEl(kb)!.getAttribute("role"), "the option container is a toolbar").to.equal("toolbar");
     expect(popoverEl(kb)!.accessibleName, "the popover carries the group name").to.equal(expected);
     // The popover is the single name source; naming the toolbar with the same
@@ -1062,8 +1076,10 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     await renderFinished();
 
     expect(input.value, "the option click committed the variant").to.equal("ä");
-    expect(liveRegionText(kb), "a commit is not announced as a dismissal").to.not.equal(
-      getText("ARIA_VARIANTS_CLOSED", "Variants closed"),
+    // Positive, not merely "not the dismissal": an empty region satisfies the exclusion
+    // too, so a `_writeLiveRegion` that wrote nothing at all would pass.
+    expect(liveRegionText(kb), "the open announcement still stands, undisturbed by the commit").to.equal(
+      getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "3").replace("{1}", "a"),
     );
     pointerUp();
   });

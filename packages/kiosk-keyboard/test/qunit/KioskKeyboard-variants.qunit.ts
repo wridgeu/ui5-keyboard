@@ -3,7 +3,17 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { LayoutFacet, MobileKeyboard, LATIN_DIACRITIC_VARIANTS } from "ui5/kiosk/library";
 import Input from "sap/m/Input";
 import Popover from "sap/m/Popover";
-import { placeAndWait, getRequiredKeyElement, isShiftActive, simulateTap, tapKey, waitForRender } from "./test-helpers";
+import {
+  announcedText,
+  destroyKeyboards,
+  placeAndWait,
+  resetAnnouncements,
+  getRequiredKeyElement,
+  isShiftActive,
+  simulateTap,
+  tapKey,
+  waitForRender,
+} from "./test-helpers";
 import type VariantPopupBehavior from "ui5/kiosk/internal/variant-popup-behavior";
 import { VARIANT_HOLD_MS } from "ui5/kiosk/internal/variant-popup-behavior";
 import { insertText } from "ui5/kiosk/internal/input-operations";
@@ -145,6 +155,7 @@ function cleanup(kb: KioskKeyboard, input: Input): void {
 
 QUnit.module("KioskKeyboard accent-variant popup", {
   afterEach() {
+    destroyKeyboards();
     getPopup()?.remove();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
@@ -648,10 +659,11 @@ QUnit.test("the open announcement names the key's explicit shiftValue under Shif
   // announce "!" rather than the uppercased raw value ("1").
   tapKey(kb, "{shift}");
   const oneKey = getRequiredKeyElement(kb, "1");
+  resetAnnouncements();
   await holdOpen(kb, oneKey);
 
-  const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "2").replace("{1}", "!");
-  assert.strictEqual(kb.getDomRef("liveState")?.textContent, expected, "announced with the shiftValue as the base");
+  const expected = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "2").replace("{1}", "!");
+  assert.strictEqual(announcedText(), expected, "announced with the shiftValue as the base");
   release(kb, oneKey);
   cleanup(kb, input);
 });
@@ -674,11 +686,39 @@ QUnit.test("the open announcement names the base under CapsLock, not the shiftVa
   tapKey(kb, "{shift}");
   await waitForRender();
   const oneKey = getRequiredKeyElement(kb, "1");
+  resetAnnouncements();
   await holdOpen(kb, oneKey);
 
-  const expected = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}").replace("{0}", "2").replace("{1}", "1");
-  assert.strictEqual(kb.getDomRef("liveState")?.textContent, expected, "announced with the base as the glyph");
+  const expected = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "2").replace("{1}", "1");
+  assert.strictEqual(announcedText(), expected, "announced with the base as the glyph");
   release(kb, oneKey);
+  cleanup(kb, input);
+});
+
+// A key can carry exactly one variant, and the announcement is built by plain
+// substitution with no plural form, so the count must not sit in the slot where
+// English, German and Arabic require numeral-noun agreement.
+QUnit.test("a single variant announces without a plural disagreement", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({
+    accentVariants: true,
+    controls: [input.getId()],
+    customLayouts: [new CustomLayout({ name: "qwerty", variants: { a: ["ā"] } })],
+  });
+  await placeAndWait(kb);
+  input.focus();
+
+  const aKey = getRequiredKeyElement(kb, "a");
+  resetAnnouncements();
+  await holdOpen(kb, aKey);
+  assert.deepEqual(getOptions().map(glyphOf), ["ā"], "precondition: exactly one variant is offered");
+  assert.strictEqual(
+    announcedText(),
+    "Variants for a: 1",
+    "the count trails the noun, so no locale needs a plural form",
+  );
+  release(kb, aKey);
   cleanup(kb, input);
 });
 
@@ -926,6 +966,7 @@ QUnit.test("a vetoed variant commit still spends the one-shot Shift latch", asyn
 
 QUnit.module("KioskKeyboard accent-variant commit during composition", {
   afterEach() {
+    destroyKeyboards();
     const fixture = document.getElementById("qunit-fixture");
     if (fixture) fixture.innerHTML = "";
   },

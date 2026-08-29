@@ -6,8 +6,10 @@ import type { LayoutDefinition } from "ui5/kiosk/types";
 import Log from "sap/base/Log";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import {
+  announcedText,
   getRenderedLayoutKeys,
   getRequiredKeyElement,
+  resetAnnouncements,
   tapKey,
   waitForAnnouncement,
   waitForRender,
@@ -410,45 +412,55 @@ QUnit.test("A swap that drops the focused key falls back to the first key", asyn
 });
 
 QUnit.test("The live region announces which way a width moved the layout", async (assert) => {
-  const { kb, resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
-  const announced = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
-  assert.strictEqual(announced(), "", "a keyboard with room to spare announces nothing");
+  // Cleared before the keyboard exists, so first paint is inside what is asserted on.
+  resetAnnouncements();
+  const { resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
+  assert.strictEqual(announcedText(), "", "a keyboard with room to spare announces nothing");
 
   await resize(NARROW_PX);
-  assert.strictEqual(announced(), "Switched to the compact keyboard layout", "the swap says which way it went");
+  assert.strictEqual(announcedText(), "Switched to the compact keyboard layout", "the swap says which way it went");
 
   await resize(WIDE_PX);
-  // A distinct text every time: a live region drops a repeat of what it already
-  // holds, so alternating swaps would announce only the first.
-  assert.strictEqual(announced(), "Switched back to the standard keyboard layout", "and so does the way back");
+  // A distinct text every time: the two crossings are opposite moves, so one shared
+  // wording would not say which way this one went.
+  assert.strictEqual(announcedText(), "Switched back to the standard keyboard layout", "and so does the way back");
 });
 
 QUnit.test("The announcement names no layout, so it carries no untranslated identifier", async (assert) => {
-  const { kb, resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
-  const announced = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent ?? "";
+  const { resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
 
   // The user never chose the layout a width picks and never sees its name, and the
-  // name would sit untranslated inside a translated sentence.
+  // name would sit untranslated inside a translated sentence. Each crossing is read
+  // into a local and asserted non-empty first: `"".includes(...)` is false, so a
+  // control that announced nothing at all would satisfy the exclusion on its own.
+  // The reset before each crossing is what gives that precondition its teeth: the
+  // region is page-global and `announcedText` falls back to the last write recorded,
+  // so an unreset read answers with the crossing before it - which names no layout
+  // either, and would carry both assertions on its own.
+  resetAnnouncements();
   await resize(NARROW_PX);
-  assert.notOk(announced().includes("ja-kana"), "the compacting announcement quotes no layout name");
+  const compacting = announcedText();
+  assert.ok(compacting, "precondition: the compacting crossing announced something");
+  assert.notOk(compacting.includes("ja-kana"), "the compacting announcement quotes no layout name");
 
+  resetAnnouncements();
   await resize(WIDE_PX);
-  assert.notOk(announced().includes("ja-kana"), "and neither does the one restoring it");
+  const restoring = announcedText();
+  assert.ok(restoring, "precondition: the restoring crossing announced something");
+  assert.notOk(restoring.includes("ja-kana"), "and neither does the one restoring it");
 });
 
 QUnit.test("Consecutive announcements alternate, so none is dropped as a repeat", async (assert) => {
-  const { kb, resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
-  const announced = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent ?? "";
+  const { resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
 
   const spoken: string[] = [];
   for (const width of [NARROW_PX, WIDE_PX, NARROW_PX, WIDE_PX]) {
     await resize(width);
-    spoken.push(announced());
+    spoken.push(announcedText());
   }
 
-  // The live region re-announces only on a text change, so a direction repeating
-  // itself back to back would go unspoken. The tier reports a verdict only when it
-  // differs from the last, which is what keeps them alternating.
+  // The tier reports a verdict only when it differs from the last, which is what
+  // keeps the two texts alternating rather than repeating.
   assert.deepEqual(
     spoken,
     [
@@ -462,20 +474,25 @@ QUnit.test("Consecutive announcements alternate, so none is dropped as a repeat"
 });
 
 QUnit.test("A keyboard that was always narrow announces nothing on first paint", async (assert) => {
+  // Cleared before the keyboard exists, so first paint is inside what is asserted on.
+  resetAnnouncements();
   const { kb, resize } = await mount(NARROW_PX, { layout: "ja-kana", autoCompact: true });
-  const announced = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
 
   assert.strictEqual(kb.getLayout(), "ja-kana-compact", "the compact form is what mounted");
   // Nothing was rearranged under the user: this is the arrangement they first saw.
-  assert.strictEqual(announced(), "", "the first resolution is not a change to announce");
+  assert.strictEqual(announcedText(), "", "the first resolution is not a change to announce");
 
   await resize(WIDE_PX);
-  assert.strictEqual(announced(), "Switched back to the standard keyboard layout", "a width they crossed is announced");
+  assert.strictEqual(
+    announcedText(),
+    "Switched back to the standard keyboard layout",
+    "a width they crossed is announced",
+  );
 });
 
 QUnit.test("A request drops a tier announcement that has not reached the live region yet", async (assert) => {
+  resetAnnouncements();
   const { kb } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
-  const announced = () => document.getElementById(`${kb.getId()}-liveState`)!.textContent;
 
   // The tier writes its announcement for the next render. Driving it directly is
   // what puts a request in the same frame, which a resize cannot do: the observer
@@ -488,7 +505,7 @@ QUnit.test("A request drops a tier announcement that has not reached the live re
   // The pending text names the layout the request just replaced, so announcing it
   // would tell a screen reader user the keyboard is on a layout it has left.
   assert.strictEqual(kb.getLayout(), "qwerty", "the request took effect");
-  assert.strictEqual(announced(), "", "the superseded announcement never reaches the region");
+  assert.strictEqual(announcedText(), "", "the superseded announcement never reaches the region");
 });
 
 QUnit.test("The tier follows the threshold custom property, not a fixed width", async (assert) => {

@@ -705,9 +705,7 @@ class KioskKeyboard extends UI5Element {
   /** Owns the ARIA live-region announcement queue and its drain timer. */
   private readonly _announcements = new AnnouncementQueue({
     isConnected: () => this.isConnected,
-    setLiveRegionText: (text) => {
-      this._liveRegionText = text;
-    },
+    setLiveRegionText: (text) => this._writeLiveRegion(text),
   });
 
   // ── Inputmode suppression (ref-counted, shared across instances) ──
@@ -1017,6 +1015,23 @@ class KioskKeyboard extends UI5Element {
 
     this._keyGridNav.setLastFocusedKey(null);
     this._restoreKeyFocus = false;
+  }
+
+  /**
+   * Writes one announcement to the live region, emptying the node first.
+   *
+   * The property write keeps the next render in step; the direct write is what carries
+   * a REPEAT into the DOM, since `_liveRegionText` is reactive and its change guard
+   * drops a re-announcement of the text already standing there. Emptying first follows
+   * `sap/ui/core/InvisibleMessage`: assistive tech reads a live region on a text
+   * change, and a same-value write is not one.
+   */
+  private _writeLiveRegion(text: string): void {
+    this._liveRegionText = text;
+    const node = this.shadowRoot?.querySelector(`.${KIOSK_KEYBOARD_DOM.classes.liveRegion}`);
+    if (!node) return;
+    node.textContent = "";
+    node.textContent = text;
   }
 
   override onAfterRendering(): void {
@@ -1758,7 +1773,7 @@ class KioskKeyboard extends UI5Element {
     const glyphs = upper ? toShiftVariants(variants) : [...variants];
     // The shifted base is what the key itself types under Shift or CapsLock.
     const base = upper ? shiftedGlyph(value, keyEl.dataset.shiftValue, this._capsLock) : value;
-    const label = getText("ARIA_VARIANTS_OPENED", "{0} variants for {1}", String(glyphs.length), base);
+    const label = getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}", String(glyphs.length), base);
 
     return {
       anchorKey,

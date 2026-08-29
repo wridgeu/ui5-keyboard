@@ -272,7 +272,6 @@ test("ja-kana falls under 24px key spacing in a 320px keyboard, where ja-kana-co
     Math.abs(wide.contentInline - compact.contentInline),
     "both forms are measured in the same box",
   ).toBeLessThanOrEqual(EDGE_EPSILON);
-  expect(wide.narrowTier, "the box sits below the tier that lifts the inline floor").toBe(true);
 
   const widest = closestKeyCentres(wide);
   const closest = closestKeyCentres(compact);

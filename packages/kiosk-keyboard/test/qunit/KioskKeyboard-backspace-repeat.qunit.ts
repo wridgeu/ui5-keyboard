@@ -101,13 +101,23 @@ QUnit.test("holding over an empty input deletes nothing", async (assert) => {
   input.focus();
   (input.getFocusDomRef() as HTMLInputElement).setSelectionRange(0, 0);
 
+  let keyPresses = 0;
+  kb.attachKeyPress(() => {
+    keyPresses++;
+  });
+
   const bksp = getRequiredKeyElement(kb, "{backspace}");
   const clock = sinon.useFakeTimers();
   try {
     press(kb, bksp);
     clock.tick(T.initialDelayMs + 2000);
     release(kb, bksp);
-    assert.strictEqual(input.getValue(), "", "empty input is left untouched");
+    // The stop, not the empty value: backspace has no path that lengthens a value,
+    // so `getValue() === ""` holds however broken the repeat is. One tick fires and
+    // then `_performBackspaceRepeatTick` returns false because nothing was deleted,
+    // which is what ends the gesture - a repeat that ignored that would fire dozens
+    // of times across the 2s hold.
+    assert.strictEqual(keyPresses, 1, "the repeat stopped itself after the first fruitless tick");
   } finally {
     clock.restore();
   }
