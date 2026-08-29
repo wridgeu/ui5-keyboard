@@ -558,13 +558,21 @@ describe("kiosk-keyboard", () => {
     });
 
     it("is a no-op while held over an empty input", async () => {
-      const { input, bksp } = await setup("");
+      const { kb, bksp } = await setup("");
+      let keyPresses = 0;
+      kb.addEventListener("key-press", () => {
+        keyPresses++;
+      });
 
       pressBackspace(bksp);
       await delay(800);
       releasePointer();
 
-      expect(input.value).to.equal("");
+      // The stop, not the empty value: no backspace path lengthens a value, so
+      // `value === ""` holds however broken the repeat is. One tick fires, then
+      // the tick reports nothing deleted and AutoRepeater stops - a broken stop
+      // would tick for the whole 800ms hold. Mirrors the kiosk twin.
+      expect(keyPresses, "the repeat stops once there is nothing to delete").to.equal(1);
     });
 
     it("does not start auto-repeat when the keyboard is disabled", async () => {
@@ -2843,22 +2851,23 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       await waitForResponsiveSync();
 
-      const root = rootDiv(el);
-
       // 15rem host triggers cq-short (threshold: 16rem)
       expect(hasCqTier(el, DOM.cqTierValues.short), "cq-short applied at 15rem").to.be.true;
       expect(hasCqTier(el, DOM.cqTierValues.tiny), "not tiny at 15rem").to.be.false;
 
-      // No minHeight is set on the root
-      expect(root.style.minHeight).to.equal("");
+      // No assertion on root.style.minHeight, before or after the switch: that
+      // reads the inline style attribute, and nothing under src/ writes one on
+      // the root - the tier is a cq-tier attribute on the host and the sizing is
+      // CSS custom properties. It was residue of the removed stableHeight.
 
       // Switch layout: keyboard remains within the fixed host
       el.layout = "numeric";
       await nextRender();
       await waitForResponsiveSync();
 
-      // No minHeight after layout switch
-      expect(root.style.minHeight).to.equal("", "no minHeight after layout switch");
+      // The tier is re-derived on a layout switch rather than latched: numeric is
+      // the shorter layout, so in the same 15rem host it needs no tier at all.
+      expect(el.hasAttribute(DOM.attributes.cqTier), "the shorter layout drops the tier").to.be.false;
     });
 
     it("reacts to a style-only intrinsic height change inside a fixed host", async () => {

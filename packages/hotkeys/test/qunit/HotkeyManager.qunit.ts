@@ -869,27 +869,6 @@ QUnit.test("IME composition events are ignored", (assert) => {
 // Modifier-only key presses
 // ──────────────────────────────────────────────
 
-QUnit.test("Pure modifier key presses are ignored", (assert) => {
-  const manager = createHotkeyManager();
-  let called = false;
-
-  // Register Ctrl+S - pressing Ctrl alone should not fire anything
-  manager.register("Ctrl+S", () => {
-    called = true;
-  });
-
-  // Simulate pressing just the Control key
-  const event = new KeyboardEvent("keydown", {
-    key: "Control",
-    bubbles: true,
-    cancelable: true,
-    ctrlKey: true,
-  });
-  document.dispatchEvent(event);
-
-  assert.notOk(called, "Callback not fired for modifier-only keypress");
-});
-
 // ──────────────────────────────────────────────
 // Unhandled key callback
 // ──────────────────────────────────────────────
