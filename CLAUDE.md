@@ -81,3 +81,23 @@ A green suite can lie: a test asserts nothing, the runner reports success while 
 - Clear each hypothesis only after you have SEEN the suite go red for it, then revert: flip one assertion (is it live?), corrupt one committed baseline (does the visual test compare?), inject one failing assertion (does the exit code propagate?), point the runner at a bogus path (does it pass empty?).
 - Code review and agent audits are corroboration, not proof. Confirm empirically.
 - Watch for: vacuous assertions, skips that fire on all targets, snapshot tolerances large enough to mask a one-element change, and runners that pass while running zero tests.
+
+## 8. Every assertion must be able to fail
+
+**Hard rule: before writing or accepting an assertion, name the concrete change to production source that would make it fail. If no such change exists, it is not a test.** Delete it, or replace it with one that can. This is not a style preference - an assertion that holds for every implementation costs the same to run as a real one and buys a false sense of coverage, which is worse than an acknowledged gap (#268 is exactly that: a tautological test that looked like coverage for two `isConnected` guards nothing else touched).
+
+The check is per assertion, not per test. A test can carry three real assertions and one that cannot fail.
+
+**Shapes that have actually shipped here.** Each was found and fixed; recognise them on sight:
+
+1. **A negative an absence satisfies.** `expect(readDataKeys(el)).to.not.deep.equal(CUSTOM)` passed when nothing rendered at all, because the helper returns `[]`. Pin the positive: `to.include("q")`. Same for `notOk`/`not.toContain` where an empty or missing value clears the bar with nothing pinning the positive case in the same test.
+2. **Excluding a value production cannot produce.** `expect(getRegisteredLayoutNames()).not.toContain("instance-only")` where the getter takes no instance map and the name was registered nowhere - `not.toContain("banana")`.
+3. **An unreachable precondition.** `setDocked(true) resets open state` where `show()` returns early unless docked, so `_open` was never true; `Disconnected activeElement` where removing an element moves `activeElement` to `<body>`. The state being "reset" was never entered.
+4. **A value the test or a helper authored end to end.** `assert.ok(getRequiredKeyElement(...))` when that helper throws on a miss; `classList.contains(classes.key)` when the selector is already `.ui5KioskKey[tabindex="0"]`; `input.maxLength === -1` on an element the test built and never configured.
+5. **An expected value that equals the fallback.** Asserting a locale resolves to `"qwerty"` when `DEFAULT_LAYOUT` is `"qwerty"`: a lookup matching nothing gives the same answer. Point the fixture at a non-default name.
+6. **The wrong key, target or instance.** Registering `F10` and firing `F3`; asserting on a freshly built manager instead of the destroyed one; asserting `inputB` is untouched before `mwB` has run. The assertion is about something production never reached.
+7. **Both sides derived from one source.** `toHaveLength(C(NAV_KEYS.length, 2))` where the loop and the expectation both read `navRow` - true for any row size, including an empty one. Pin the literal.
+
+**These are NOT tautological. Do not "fix" them:** `assert.ok(true, "did not throw")` as a sole assertion (QUnit fails the test if the call throws, and an uncaught throw inside a listener is converted to a failure too - verified); `assert.ok(true)` paired with `assert.expect(N)`; a round-trip used as a precondition guard immediately before a real assertion; identity assertions against a shared frozen constant, which pin that no copy was allocated; golden-literal pins; existence checks on a lookup result that can return `undefined`.
+
+**Proof obligation.** When you fix one of these, break the production line it now guards, watch that test go red, revert, watch it go green - and say so in the commit. Reasoning is not enough: two fixes in the #265 sweep were themselves unfalsifiable and only injection caught it (a spy that re-set an unchanged association never reached the flag, because `ManagedObject.setAssociation` early-returns on an unchanged id). Where a claim genuinely cannot be observed from a test - priming a module-global singleton that any earlier call already primed - say that explicitly instead of writing a test that passes for the wrong reason.
