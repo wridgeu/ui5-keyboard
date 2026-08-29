@@ -46,6 +46,9 @@ const DEFAULT_BUNDLE = "messagebundle.properties";
 
 const errors = [];
 
+/** Message bundles carry the default plus one file per locale; nothing else in the folder does. */
+const isBundle = (name) => /^messagebundle.*\.properties$/.test(name);
+
 /** The keys a bundle declares, in file order. Comment and blank lines are skipped. */
 function readKeys(file) {
   const keys = [];
@@ -154,7 +157,7 @@ let keyCount = 0;
 
 for (const pkg of PACKAGES) {
   const dir = path.join(repoRoot, "packages", pkg, "src", "i18n");
-  const bundles = readdirSync(dir).filter((name) => /^messagebundle.*\.properties$/.test(name));
+  const bundles = readdirSync(dir).filter(isBundle);
   if (!bundles.includes(DEFAULT_BUNDLE)) {
     errors.push(`packages/${pkg}/src/i18n has no ${DEFAULT_BUNDLE} to compare the locales against.`);
     continue;
@@ -189,18 +192,19 @@ for (const pkg of PACKAGES) {
 
 // Invariant 4: the shared keys agree across the twins, locale by locale.
 let sharedCount = 0;
-const localeBundles = readdirSync(path.join(repoRoot, "packages", KIOSK_PKG, "src", "i18n")).filter((name) =>
-  /^messagebundle.*\.properties$/.test(name),
-);
+const i18nDir = (pkg) => path.join(repoRoot, "packages", pkg, "src", "i18n");
+// The union of both listings, because a locale that exists in one twin only is the
+// drift this checks for: enumerating from one side would never open the file that
+// has no counterpart, and invariants 1-3 are per-package and would stay green.
+const localeBundles = [...new Set(PACKAGES.flatMap((pkg) => readdirSync(i18nDir(pkg))))].filter(isBundle);
 for (const name of localeBundles) {
-  const kioskFile = path.join(repoRoot, "packages", KIOSK_PKG, "src", "i18n", name);
-  const webcFile = path.join(repoRoot, "packages", WEBC_PKG, "src", "i18n", name);
-  if (!existsSync(webcFile)) {
-    errors.push(`packages/${WEBC_PKG}/src/i18n/${name} is missing, so that locale exists in only one twin.`);
-    continue;
+  const absent = PACKAGES.filter((pkg) => !existsSync(path.join(i18nDir(pkg), name)));
+  for (const pkg of absent) {
+    errors.push(`packages/${pkg}/src/i18n/${name} is missing, so that locale exists in only one twin.`);
   }
-  const kioskEntries = readEntries(kioskFile);
-  const webcEntries = readEntries(webcFile);
+  if (absent.length > 0) continue;
+  const kioskEntries = readEntries(path.join(i18nDir(KIOSK_PKG), name));
+  const webcEntries = readEntries(path.join(i18nDir(WEBC_PKG), name));
   for (const [key, value] of kioskEntries) {
     const twin = webcEntries.get(key);
     if (twin === undefined) continue;
