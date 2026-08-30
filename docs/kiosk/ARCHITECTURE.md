@@ -109,14 +109,15 @@ _setActiveTarget(newInput)
   3. _nativeKbSuppression.restore()  - restore old target's inputmode (if keyboard is open)
   4. resetForTargetSwitch()         - reset cursor state
   5. setAssociation(newInput)       - update the association
-  5a. on a REAL switch only        - reset shift state, drop in-progress composition,
-                                     clear a user {layout:*} override
+  5a. on a real switch only         - reset shift/caps, commit any in-progress
+                                      composition, drop a user {layout:*} override
   6. _physicalKeyHighlight.attach() - attach to new target
-  6a. sync aria-controls on the DOM - setAssociation suppressed the re-render
+  6a. sync aria-controls            - written to the DOM, since setAssociation
+                                      suppressed the re-render
   7. _nativeKbSuppression.suppress() - suppress new target's inputmode (if keyboard is open)
   8. fireDeferredChange()          - fire "change" on the OLD target (captured in step 1)
-  9. fireActiveControlChange()     - only when the association still holds the id THIS
-                                     call set, and only on a real switch
+  9. fireActiveControlChange()      - on a real switch, and only if the association
+                                      still holds the id this call set
 ```
 
 **Re-entrant flow**: when the deferred `change` handler focuses another input:
@@ -476,7 +477,7 @@ focusout event
   |     Otherwise -> defer one frame, re-check document.activeElement, then close()
 ```
 
-The close decision is always deferred to the next animation frame. `relatedTarget` drives only the three synchronous keep-open fast paths above; once none of them matches, the handler schedules a `requestAnimationFrame` callback that re-runs the same three checks against `document.activeElement` and closes only if all fail. A null `relatedTarget` therefore needs no special case - the deferred re-check covers it, along with every other browser or shadow-DOM transition where the destination is not knowable synchronously.
+The close decision is always deferred to the next animation frame. `relatedTarget` drives only the three synchronous keep-open fast paths above; once none of them matches, the handler schedules a `requestAnimationFrame` callback that re-runs the same three checks against `document.activeElement` and closes only if all fail. A null `relatedTarget` therefore needs no special case: the deferred re-check covers it.
 
 The "would this keyboard claim" check uses `_wouldClaimInput()`, which consults `_isTargetOfOther()`. If the new target input belongs to a different keyboard, the docked keyboard closes rather than staying open for an input it should not control.
 
@@ -542,7 +543,7 @@ Rows are never wrapped or reordered at a breakpoint. Arrow-key grid navigation m
 
 One width behavior is not CSS: the opt-in `autoCompact` tier. `AutoCompactBehavior` (`internal/auto-compact-behavior.ts`) observes the root's border-box inline size and swaps to a layout's compact counterpart through `LayoutState.applyTier`. A container query can restyle a row but cannot re-seat its keys, and grid navigation runs on the resolved layout, so the narrow arrangement has to be a real layout swap. No observer is allocated while `autoCompact` is off.
 
-**Height responsiveness** uses JS (a native `ResizeObserver`) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds `clientHeight`; both are untransformed layout pixels, so an ancestor `transform: scale()` does not shift the breakpoints, and the root border cancels out of that comparison). The tier is then chosen against the _granted border box_ - `clientHeight` plus the root border - so unlike the detection above, a thick root border does shift the 16rem/12rem boundaries. The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
+**Height responsiveness** uses JS (a native `ResizeObserver`) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds `clientHeight`; both are untransformed layout pixels, so an ancestor `transform: scale()` does not shift the breakpoints, and the root border cancels out of that comparison). The tier itself is chosen against the granted border box - `clientHeight` plus the root border - so a thick root border does move the 16rem/12rem boundaries. The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
 
 - `ui5KioskKeyboard--cqShort` (height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
 - `ui5KioskKeyboard--cqTiny` (height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.

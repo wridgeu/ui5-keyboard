@@ -825,7 +825,7 @@ SAP GUI transactions rely heavily on function keys (F1 Help, F3 Back, F4 Value H
 
 ### Approach 1: Fn button on base layouts
 
-Every built-in base layout except `ja-romaji` - `qwerty`, `qwertz-de`, `qwerty-es`, `ja-kana`, `ja-kana-compact`, `arabic` and `ko-hangul` - includes an **Fn** button on the bottom row, as does the secondary `nav` layout. Tapping it switches to the standalone `fkeys` layout (F1-F12 + ABC to return). This is the default, no configuration needed. `ja-romaji` omits it by Japanese IME convention, which claims that key position for the Romaji/Kana toggle; switch to `ja-kana` to reach the F-keys.
+Every built-in base layout except `ja-romaji` includes an **Fn** button on the bottom row, as does the secondary `nav` layout. Tapping it switches to the standalone `fkeys` layout (F1-F12 + ABC to return). This is the default, no configuration needed. `ja-romaji` omits it by Japanese IME convention, which claims that key position for the Romaji/Kana toggle; switch to `ja-kana` to reach the F-keys.
 
 ### Approach 2: Composed layout with permanent F-key row
 

@@ -255,6 +255,14 @@ The resolver is wrapped in try/catch for crash safety. If it returns `null`, the
 
 `setTargetElement(el)` sets the target directly, bypassing ID-based resolution. Useful when the target input is not easily addressable by ID (e.g., inside dynamically created web components).
 
+### Active Target and `aria-controls`
+
+`_targetElement` is a private accessor over a backing field. Assigning it is what keeps `aria-controls` on the host in step with the current target, so the auto-show callback, `setTargetElement()`, the auto-target inside `_performOpen()`, the stale-target purge in `_resolveTarget()` and disconnect teardown all stay in sync through one writer.
+
+The attribute sits on the host, not on the shadow root's `.kiosk-keyboard` div, because IDREFs do not resolve across a shadow boundary. For the same reason the id published is not always the target's own: since the resolution chain above reaches inputs nested up to three shadow levels deep, `_ariaControlsId()` walks back up through shadow hosts to the nearest ancestor that shares the host's tree scope - normally the component named in `controls`. A target outside that scope, or one with no `id`, leaves the attribute off rather than writing a dangling IDREF.
+
+Resolving a target is not the same as setting one. `_resolveTarget()` looks up a single-entry `controls` list on every keystroke and returns the input without storing it, so a keyboard that types through `controls` alone - never focused, never opened while docked - has no active target and therefore no `aria-controls`. The UI5 twin does auto-target here: `ControlsDelegationController.sync()` runs from `onAfterRendering` and from `setControls()`, and adopts a single resolved control through `setActiveTarget()` - so a kiosk keyboard publishes `aria-controls` from `controls` alone, at render time, without focus or docking.
+
 ### Text Editing
 
 Insertion and backspace run as a **platform edit** when the target holds focus: the range is selected and `document.execCommand("insertText" | "delete")` performs it, so the browser applies `maxlength` and records the edit on its own undo stack, making Ctrl+Z work. The cluster to delete is still resolved in JS beforehand (`graphemeLengthBefore`), because the engines disagree on what one grapheme cluster is. When the target is not focused, or `execCommand` is unavailable or declines, the value is assigned instead and `maxlength` is applied in JS.
@@ -631,19 +639,20 @@ All built-in layouts and middleware are bundled with the component (direct impor
 
 ## Differences from the UI5 Control Variant (`kiosk-keyboard`)
 
-| Aspect            | UI5 Control (`kiosk-keyboard`)                                       | Web Component (`kiosk-keyboard-webc`)                            |
-| ----------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Base class        | `sap/ui/core/Control`                                                | `UI5Element` (extends `HTMLElement`)                             |
-| Rendering         | `apiVersion: 4` renderer object                                      | JSX template with `jsxRenderer`                                  |
-| Shadow DOM        | No (UI5 light DOM)                                                   | Yes (native shadow DOM)                                          |
-| Styling           | LESS with `@sapUi*` parameters                                       | CSS with `--sap*` custom properties                              |
-| Target resolution | UI5 association + `Element.closestTo()`                              | DOM ID + `resolveInputOrTextarea()` (shadow DOM aware)           |
-| Value write       | Platform edit, else `setValue()` / `fireLiveChange()`                | Platform edit, else assignment + synthesized `InputEvent`        |
-| i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook           | UI5 WC `i18nBundle` + custom resolver                            |
-| Grid navigation   | Extracted to `internal/key-grid-navigation.ts` (`KeyGridNavigation`) | Extracted to `core/key-grid-navigation.ts` (`KeyGridNavigation`) |
-| Per-key styling   | `[data-key]` attribute selector in light DOM                         | Bounded per-key `::part()` names (`data-key` is shadow-trapped)  |
-| Tag               | `<kiosk:KioskKeyboard />` (XML)                                      | `<kiosk-keyboard>` (HTML)                                        |
-| Distribution      | UI5 library (preload)                                                | ESM with subpath imports                                         |
+| Aspect            | UI5 Control (`kiosk-keyboard`)                                       | Web Component (`kiosk-keyboard-webc`)                                                      |
+| ----------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Base class        | `sap/ui/core/Control`                                                | `UI5Element` (extends `HTMLElement`)                                                       |
+| Rendering         | `apiVersion: 4` renderer object                                      | JSX template with `jsxRenderer`                                                            |
+| Shadow DOM        | No (UI5 light DOM)                                                   | Yes (native shadow DOM)                                                                    |
+| Styling           | LESS with `@sapUi*` parameters                                       | CSS with `--sap*` custom properties                                                        |
+| Target resolution | UI5 association + `Element.closestTo()`                              | DOM ID + `resolveInputOrTextarea()` (shadow DOM aware)                                     |
+| `aria-controls`   | Published from `controls` at render time, via `setActiveTarget()`    | Published only once a target is actually active (focus, `setTargetElement()`, docked open) |
+| Value write       | Platform edit, else `setValue()` / `fireLiveChange()`                | Platform edit, else assignment + synthesized `InputEvent`                                  |
+| i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook           | UI5 WC `i18nBundle` + custom resolver                                                      |
+| Grid navigation   | Extracted to `internal/key-grid-navigation.ts` (`KeyGridNavigation`) | Extracted to `core/key-grid-navigation.ts` (`KeyGridNavigation`)                           |
+| Per-key styling   | `[data-key]` attribute selector in light DOM                         | Bounded per-key `::part()` names (`data-key` is shadow-trapped)                            |
+| Tag               | `<kiosk:KioskKeyboard />` (XML)                                      | `<kiosk-keyboard>` (HTML)                                                                  |
+| Distribution      | UI5 library (preload)                                                | ESM with subpath imports                                                                   |
 
 ## Edge Cases
 
