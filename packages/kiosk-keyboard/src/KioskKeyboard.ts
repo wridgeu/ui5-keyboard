@@ -1842,6 +1842,7 @@ export default class KioskKeyboard extends Control {
           const el = this._keyboardPressedKeyEl ?? this._pressedKeyEl;
           return el ? keyPositionOf(el) : null;
         },
+        _getHighlightedKey: () => this._physicalKeyHighlight.getHighlightedKey(),
         _getResolvedLayout: () => this._getResolvedLayout(),
         _getLayoutLang: () => this._getLayoutLang(),
         _getKeyLabel: (key) => getKeyLabel(key, this._isShiftActive(), this._isCapsLock()),

@@ -2108,6 +2108,60 @@ QUnit.test("A keycap held by a pointer stays pressed across a re-render", async 
   kb.destroy();
 });
 
+QUnit.test("A physically held Shift stays highlighted across the re-render it causes", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift", shiftKey: true, bubbles: true }));
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyHighlight), "Precondition: the mirror lights up");
+
+  // Syncing the shift state off the hardware key invalidates the control, so the
+  // keycap is repainted while that same key is still down.
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Precondition: the physical Shift re-rendered the keyboard");
+
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyHighlight), "The mirror survives the re-render");
+
+  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "Shift", bubbles: true }));
+  await waitForRender();
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyHighlight), "The release clears the mirror");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Switching target while a physical key is held clears the mirror", async (assert) => {
+  const first = new Input({ value: "" });
+  const second = new Input({ value: "" });
+  first.placeAt("qunit-fixture");
+  second.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [first.getId(), second.getId()] });
+  await placeAndWait(kb);
+
+  const firstDom = first.getFocusDomRef() as HTMLElement;
+  firstDom.focus();
+  firstDom.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift", shiftKey: true, bubbles: true }));
+  await waitForRender();
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyHighlight), "Precondition: the mirror is lit");
+
+  // The keyup lands on the old target, so the switch is the only thing left to
+  // clear the mirror.
+  (second.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyHighlight), "The target switch clears the mirror");
+
+  first.destroy();
+  second.destroy();
+  kb.destroy();
+});
+
 /**
  * Hold `key` on `el`: the initial keydown, then the auto-repeat keydowns the OS
  * sends while the key stays down.
