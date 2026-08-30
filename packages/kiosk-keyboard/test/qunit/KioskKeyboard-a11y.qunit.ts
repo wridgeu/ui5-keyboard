@@ -256,6 +256,30 @@ QUnit.test("Open and close announcements are spoken in turn, not collapsed", asy
   kb.destroy();
 });
 
+QUnit.test("Two keyboards on one page share the live region's cadence", async (assert) => {
+  const first = new KioskKeyboard({ docked: true });
+  const second = new KioskKeyboard();
+  await placeAndWait(first);
+  await placeAndWait(second);
+
+  // The region is page-global, so an earlier test's identical text would otherwise
+  // stand in for the one this test is checking for.
+  resetAnnouncements();
+
+  // Both land in the same task, from different controls. A per-instance cadence would
+  // let the second write straight over the first, and the first would never be spoken.
+  first.show();
+  second["_shiftState"].syncFromPhysical(true, false);
+
+  assert.strictEqual(announcedText(), "Virtual keyboard opened", "the first keyboard's announcement holds the region");
+
+  await waitForAnnouncement();
+  assert.strictEqual(announcedText(), "Shift on", "the second keyboard's follows once the first has been read");
+
+  first.destroy();
+  second.destroy();
+});
+
 QUnit.test("Live region stays silent for a requested layout switch", async (assert) => {
   // Cleared before the keyboard exists, so first paint is inside what is asserted on.
   resetAnnouncements();

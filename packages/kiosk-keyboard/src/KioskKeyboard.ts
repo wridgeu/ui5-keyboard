@@ -166,8 +166,6 @@ export default class KioskKeyboard extends Control {
   private _variantPopup!: VariantPopupBehavior;
   /** Owns which layout is active, who asked for it, and the width tier's announcement. */
   private _layoutState!: LayoutState;
-  /** Owns the ARIA live-region announcement queue and its drain timer. */
-  private _announcements!: AnnouncementQueue;
   /** The shift/caps pair the last announcement described, so only transitions speak. */
   private _announcedShifted!: boolean;
   private _announcedCapsLock!: boolean;
@@ -629,6 +627,29 @@ export default class KioskKeyboard extends Control {
   /** All living KioskKeyboard instances - used by auto-show to skip inputs already targeted by another keyboard. */
   private static readonly _instances = new Set<KioskKeyboard>();
 
+  /**
+   * Paces every instance's writes to the ARIA live region and holds the drain timer.
+   *
+   * Static because the node it protects is page-global: `InvisibleMessage` owns one
+   * span for the whole document, so a per-instance cadence would let two keyboards
+   * write over each other. Torn down with the last instance, so no timer outlives it.
+   */
+  private static readonly _announcements = new AnnouncementQueue({
+    // Page-scoped like the node: a backlog is worth reading out while any keyboard is
+    // still on screen, and dropped once none is.
+    isConnected: () => {
+      for (const instance of KioskKeyboard._instances) {
+        if (instance.getDomRef() !== null) return true;
+      }
+      return false;
+    },
+    // `announce` clears the node before it writes, so a repeat of the text already
+    // standing there is still read out.
+    setLiveRegionText: (text) => {
+      InvisibleMessage.getInstance().announce(text, InvisibleMessageMode.Polite);
+    },
+  });
+
   /** Global target resolver applied to all instances (lowest priority). */
   private static _globalTargetResolver: TargetResolverFn | null = null;
 
@@ -868,10 +889,6 @@ export default class KioskKeyboard extends Control {
     KioskKeyboard._instances.add(this);
     this._announcedShifted = false;
     this._announcedCapsLock = false;
-    this._announcements = new AnnouncementQueue({
-      isConnected: () => this.getDomRef() !== null,
-      setLiveRegionText: (text) => this._setLiveRegionText(text),
-    });
     this._shiftState = new ShiftState(() => this._syncShiftState());
     this._keyGridNav = new KeyGridNavigation(KIOSK_KEYBOARD_DOM);
     // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
@@ -1044,9 +1061,9 @@ export default class KioskKeyboard extends Control {
       iconsClearWarnings();
       clearLabelWarnings();
       KioskKeyboard._globalTargetResolver = null;
+      KioskKeyboard._announcements.teardown();
     }
 
-    this._announcements.teardown();
     this._controlsDelegation.teardown();
     this._physicalKeyHighlight.detach();
     this._responsiveSizing.destroy();
@@ -1806,17 +1823,8 @@ export default class KioskKeyboard extends Control {
    * `close`, the variant popup) change no rendered state, so no render would follow.
    */
   private _announceLiveRegion(text: string): void {
-    this._announcements.announce(text);
-    this._announcements.flush();
-  }
-
-  /**
-   * Speaks one announcement through the framework's shared polite live region in
-   * the static area. `announce` clears the node before it writes, so a repeat of
-   * the text already standing there is still read out.
-   */
-  private _setLiveRegionText(text: string): void {
-    InvisibleMessage.getInstance().announce(text, InvisibleMessageMode.Polite);
+    KioskKeyboard._announcements.announce(text);
+    KioskKeyboard._announcements.flush();
   }
 
   // ── Internal renderer helpers ──
