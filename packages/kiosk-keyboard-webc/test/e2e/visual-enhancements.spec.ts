@@ -1,7 +1,8 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 import {
   openPage,
   keyboardRoot,
+  expectVisualMatch,
   injectShadowStyleOverride,
   removeShadowStyleOverride,
   DISABLE_TEXT_BOX_TRIM,
@@ -26,7 +27,7 @@ test.describe("Fallback: without text-box-trim", () => {
     { id: "kb-glyph-stress", tag: "webc-glyph-stress-no-text-trim" },
   ]) {
     test(tag, async ({ page }) => {
-      await expect(keyboardRoot(page, id)).toHaveScreenshot(`${tag}.png`);
+      await expectVisualMatch(keyboardRoot(page, id), `${tag}.png`);
     });
   }
 });

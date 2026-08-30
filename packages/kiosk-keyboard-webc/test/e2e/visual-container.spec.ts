@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openPage, keyboardRoot } from "./helpers.js";
+import { openPage, keyboardRoot, expectVisualMatch } from "./helpers.js";
 
 // Container-query / constrained-layout visual regression. All targets live on
 // the visual page; some snapshots target the light-DOM wrapper element.
@@ -27,7 +27,10 @@ const cases: Array<["root" | "wrap", string, string]> = [
 
 for (const [kind, id, tag] of cases) {
   test(tag, async ({ page }) => {
+    // A wrapper's box is authored by the fixture page, so it resolves whether or
+    // not the keyboard inside it rendered.
+    if (kind === "wrap") await expect(keyboardRoot(page, id)).toBeVisible();
     const locator = kind === "wrap" ? page.locator(`#${id}`) : keyboardRoot(page, id);
-    await expect(locator).toHaveScreenshot(`${tag}.png`);
+    await expectVisualMatch(locator, `${tag}.png`);
   });
 }

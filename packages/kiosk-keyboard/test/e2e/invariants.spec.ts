@@ -18,13 +18,16 @@ const FIXTURES = ["kb-qwerty", "kb-narrow", "kb-accent-variants", "kb-qwerty-nav
 // ancestor. The block half of the target-size floor never lifts, so these are
 // the fixtures where it can push the last row past `overflow: hidden`.
 // Addressed by container id, which for the ancestor cases is the wrapper the
-// keyboard is placed into (see test/e2e/visual/init.js).
+// keyboard is placed into (see test/e2e/visual/init.js). The caps sit on both
+// sides of the tier thresholds: below them a `--cqShort`/`--cqTiny` shrink takes
+// the rows in, above them no tier applies and the rows must fit as authored.
 const HEIGHT_CAPPED_FIXTURES = [
   "kb-height-constrained",
   "kb-height-tiny",
   "kb-ancestor-constrained-wrap",
   "kb-ancestor-tiny-wrap",
   "kb-narrow-short",
+  "kb-container-fixed",
 ];
 
 /** WCAG 2.5.8 (AA) target size, less a sub-pixel rounding allowance. */

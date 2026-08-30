@@ -31,7 +31,9 @@ Use [GitHub Issues](https://github.com/wridgeu/ui5-keyboard/issues) to report bu
    npm run check
    ```
 
-   This runs formatting, linting, UI5 linting, typechecking, all tests, smoke checks, and the e2e device matrix.
+   This runs formatting, linting, UI5 linting, typechecking, all tests, smoke checks, the e2e device matrix, and the FLP lifecycle suite.
+
+   The device-matrix half (`test:e2e:all-devices:sequential`) compares the committed visual baselines, so it fails on any OS other than the one they were generated on - see [End-to-end & visual tests](#end-to-end--visual-tests) below. CI compares none of them.
 
 4. Open a PR against `main`.
 

@@ -45,15 +45,11 @@ for (const id of LAYOUTS) {
   });
 }
 
-// Phone emulation renders the docked-open and Spanish-shifted states
-// non-deterministically (sub-pixel jitter beyond a sane diff tolerance). Those
-// two tags are covered on desktop + tablet instead.
 const PHONES = ["phone-sm", "phone-md", "phone-lg"];
 
 // Shifted layouts: activate shift via the key, then snapshot.
 for (const id of ["kb-ja-kana", "kb-ko-hangul", "kb-qwerty-es"]) {
-  test(`${id}-shifted`, async ({ page }, testInfo) => {
-    test.skip(id === "kb-qwerty-es" && PHONES.includes(testInfo.project.name), "unstable under phone emulation");
+  test(`${id}-shifted`, async ({ page }) => {
     await key(page, id, "{shift}").click();
     await expect(key(page, id, "{shift}")).toHaveAttribute("aria-pressed", "true");
     await expectKeyboardVisualMatch(page, id, `${id}-shifted.png`, SOFT);
@@ -86,6 +82,9 @@ test.describe("Interactive States", () => {
   });
 
   test("kb-docked", async ({ page }, testInfo) => {
+    // The docked render jitters beyond the diff tolerance on a phone profile
+    // under matrix load, though it is stable run-for-run in isolation. Covered
+    // on desktop + tablet instead.
     test.skip(PHONES.includes(testInfo.project.name), "docked render unstable under phone emulation");
     // Open via the UI5 element API: a DOM click on the toggle hangs under
     // Chrome mobile emulation (pointer: coarse).

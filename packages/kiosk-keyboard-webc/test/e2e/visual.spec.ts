@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   openPage,
   keyboardRoot,
+  expectVisualMatch,
   key,
   isHoverCapable,
   isCoarsePointer,
@@ -55,7 +56,7 @@ test.describe("Visual Regression", () => {
     { id: "kb-qwerty-es", tag: "webc-qwerty-es" },
   ]) {
     test(tag, async ({ page }) => {
-      await expect(keyboardRoot(page, id)).toHaveScreenshot(`${tag}.png`);
+      await expectVisualMatch(keyboardRoot(page, id), `${tag}.png`);
     });
   }
 
@@ -66,7 +67,7 @@ test.describe("Visual Regression", () => {
   ]) {
     test(tag, async ({ page }) => {
       await activateShift(page, id);
-      await expect(keyboardRoot(page, id)).toHaveScreenshot(`${tag}.png`);
+      await expectVisualMatch(keyboardRoot(page, id), `${tag}.png`);
       await resetShift(page, id);
     });
   }
@@ -76,12 +77,12 @@ test.describe("Interactive States", () => {
   test("webc-key-hovered", async ({ page }) => {
     test.skip(!(await isHoverCapable(page)), "no hover support on this device profile");
     await key(page, "kb-qwerty", "f").hover();
-    await expect(keyboardRoot(page, "kb-qwerty")).toHaveScreenshot("webc-key-hovered.png");
+    await expectVisualMatch(keyboardRoot(page, "kb-qwerty"), "webc-key-hovered.png");
   });
 
   test("webc-qwerty-shifted", async ({ page }) => {
     await activateShift(page, "kb-qwerty");
-    await expect(keyboardRoot(page, "kb-qwerty")).toHaveScreenshot("webc-qwerty-shifted.png");
+    await expectVisualMatch(keyboardRoot(page, "kb-qwerty"), "webc-qwerty-shifted.png");
     await resetShift(page, "kb-qwerty");
   });
 
@@ -91,7 +92,7 @@ test.describe("Interactive States", () => {
     const state = await waitForDockedOpen(page, "kb-docked");
     expect(state.open).toBe(true);
     expect(state.hiddenClass).toBe(false);
-    await expect(keyboardRoot(page, "kb-docked")).toHaveScreenshot("webc-docked-open.png");
+    await expectVisualMatch(keyboardRoot(page, "kb-docked"), "webc-docked-open.png");
     await page.evaluate(() => (document.getElementById("kb-docked") as HTMLElement & { close(): void }).close());
   });
 
@@ -99,7 +100,7 @@ test.describe("Interactive States", () => {
     test.skip(await isCoarsePointer(page), "docked auto-stays-closed on coarse pointers");
     await page.evaluate(() => (document.getElementById("kb-docked-disabled") as HTMLElement & { show(): void }).show());
     await waitForDockedShown(page, "kb-docked-disabled");
-    await expect(keyboardRoot(page, "kb-docked-disabled")).toHaveScreenshot("webc-docked-disabled.png");
+    await expectVisualMatch(keyboardRoot(page, "kb-docked-disabled"), "webc-docked-disabled.png");
     await page.evaluate(() =>
       (document.getElementById("kb-docked-disabled") as HTMLElement & { close(): void }).close(),
     );

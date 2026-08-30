@@ -1,6 +1,6 @@
 import { test, expect, type Locator } from "@playwright/test";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
-import { openPage, keyboardRoot, key } from "./helpers.js";
+import { openPage, keyboardRoot, key, expectVisualMatch } from "./helpers.js";
 
 // Accessibility media-query visual regression. Media must be emulated before
 // navigation so the component renders in the target mode from the start.
@@ -17,7 +17,7 @@ test.afterEach(async ({ page }) => {
 test("webc-qwerty-forced-colors", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
   await openPage(page, "/test/pages/visual.html");
-  await expect(keyboardRoot(page, "kb-qwerty")).toHaveScreenshot("webc-qwerty-forced-colors.png");
+  await expectVisualMatch(keyboardRoot(page, "kb-qwerty"), "webc-qwerty-forced-colors.png");
 });
 
 // The variant-hint ::after paints only under `accent-variants`, so it needs its
@@ -25,7 +25,7 @@ test("webc-qwerty-forced-colors", async ({ page }) => {
 test("webc-accent-variants-forced-colors", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
   await openPage(page, "/test/pages/visual.html");
-  await expect(keyboardRoot(page, "kb-accent-variants")).toHaveScreenshot("webc-accent-variants-forced-colors.png");
+  await expectVisualMatch(keyboardRoot(page, "kb-accent-variants"), "webc-accent-variants-forced-colors.png");
 });
 
 // The active/highlight arm inverts the hint to HighlightText so it stays

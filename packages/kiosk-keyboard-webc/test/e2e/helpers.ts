@@ -1,4 +1,4 @@
-import { type Page, type Locator } from "@playwright/test";
+import { expect, type Page, type Locator } from "@playwright/test";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 
 /**
@@ -136,6 +136,18 @@ export function isHoverCapable(page: Page): Promise<boolean> {
 }
 
 // ── Visual helpers ──
+
+/**
+ * Compare an element against its committed visual baseline.
+ *
+ * The wait is the render gate for the `--ignore-snapshots` CI run, where
+ * `toHaveScreenshot` returns without ever resolving the locator. Where pixels
+ * are compared the capture waits for visibility and settles web fonts itself.
+ */
+export async function expectVisualMatch(locator: Locator, name: string): Promise<void> {
+  await expect(locator).toBeVisible();
+  await expect(locator).toHaveScreenshot(name);
+}
 
 /** Set `dir`/`lang` on <html>, which is what `:dir(rtl)` resolves against, then wait for reflow. */
 export async function setDocumentDirection(page: Page, dir: "ltr" | "rtl"): Promise<void> {
