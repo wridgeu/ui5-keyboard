@@ -926,3 +926,77 @@ QUnit.test("Binding keyboardType turns autoType off, so detection never reaches 
     kb.destroy();
   }
 });
+
+QUnit.test("Dropping the active target from controls while open restores its authored inputmode", async (assert) => {
+  const input1 = new Input();
+  const input2 = new Input();
+  const input3 = new Input();
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+  input3.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    mobileKeyboard: MobileKeyboard.Custom,
+    controls: [input1.getId()],
+  });
+  await placeAndWait(kb);
+
+  const dom1 = input1.getFocusDomRef() as HTMLInputElement;
+  dom1.setAttribute("inputmode", "email");
+
+  kb.show();
+  assert.strictEqual(dom1.getAttribute("inputmode"), "none", "input1 is the auto-target and is suppressed");
+
+  // Two ids on purpose: with one, the sole-control auto-target branch immediately
+  // re-targets and suppress() would restore input1 on its own. Two leaves the
+  // target cleared, the state on which the explicit restore is the only one that runs.
+  kb.setControls([input2.getId(), input3.getId()]);
+
+  assert.strictEqual(kb._getActiveTargetId(), "", "the dropped target is cleared, not replaced");
+  assert.strictEqual(dom1.getAttribute("inputmode"), "email", "the dropped target's authored inputmode is restored");
+
+  input1.destroy();
+  input2.destroy();
+  input3.destroy();
+  kb.destroy();
+});
+
+QUnit.test(
+  "Flipping mobileKeyboard to Native mid-session restores the suppressed target on the next switch",
+  async (assert) => {
+    const input1 = new Input();
+    const input2 = new Input();
+    input1.placeAt("qunit-fixture");
+    input2.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({
+      docked: true,
+      mobileKeyboard: MobileKeyboard.Custom,
+    });
+    await placeAndWait(kb);
+
+    const dom1 = input1.getFocusDomRef() as HTMLInputElement;
+    const dom2 = input2.getFocusDomRef() as HTMLInputElement;
+    dom1.setAttribute("inputmode", "email");
+    dom2.setAttribute("inputmode", "tel");
+
+    kb._setActiveTarget(input1);
+    kb.show();
+    assert.strictEqual(dom1.getAttribute("inputmode"), "none", "input1 suppressed while Custom");
+
+    kb.setMobileKeyboard(MobileKeyboard.Native);
+    kb._setActiveTarget(input2);
+
+    assert.strictEqual(
+      dom1.getAttribute("inputmode"),
+      "email",
+      "input1 is un-suppressed even though suppress() defers to native",
+    );
+    assert.strictEqual(dom2.getAttribute("inputmode"), "tel", "input2 is not suppressed under Native");
+
+    input1.destroy();
+    input2.destroy();
+    kb.destroy();
+  },
+);
