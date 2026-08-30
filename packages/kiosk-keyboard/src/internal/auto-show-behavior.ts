@@ -109,9 +109,12 @@ export default class AutoShowBehavior extends BaseObject {
     // inputmode="none" on the new target to suppress its native keyboard, which
     // masks an authored numeric/decimal/tel value. The already-active target
     // carries that mask from its previous focus, so a refocus is not detectable
-    // at all and keeps the type it already has.
-    const targetChanged = this._host._getActiveTargetId() !== ui5Control.getId();
-    const detected = targetChanged ? detectKbType(ui5Control, this._host._getEffectiveResolver()) : null;
+    // at all and keeps the type it already has. Suppression is gated on the
+    // keyboard being open, so while it is closed no target carries the mask and
+    // one claimed ahead of the first focus - a single `controls` entry - is
+    // still read from its authored markup.
+    const detectable = this._host._getActiveTargetId() !== ui5Control.getId() || !this._host.isOpen();
+    const detected = detectable ? detectKbType(ui5Control, this._host._getEffectiveResolver()) : null;
 
     this._host._setActiveTarget(ui5Control);
 

@@ -235,6 +235,38 @@ QUnit.test("autoType keeps the detected type when focus returns from a keycap", 
   kb.destroy();
 });
 
+QUnit.test("autoType detects a single controls entry claimed before the first focus", async (assert) => {
+  const imInput = new Input();
+  imInput.placeAt("qunit-fixture");
+  await nextUIUpdate();
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    autoType: true,
+    mobileKeyboard: MobileKeyboard.Custom,
+    controls: [imInput.getId()],
+  });
+  await placeAndWait(kb);
+
+  const imDom = imInput.getFocusDomRef() as HTMLElement;
+  imDom.setAttribute("inputmode", "numeric");
+
+  // A lone `controls` entry is auto-targeted on render, so the input is already
+  // the active target before anything focuses it. A closed keyboard suppresses
+  // nothing, so the authored inputmode is still there to be read.
+  assert.strictEqual(kb._getActiveTargetId(), imInput.getId(), "Precondition: claimed before the first focus");
+  assert.notOk(kb.isOpen(), "Precondition: the keyboard is still closed");
+
+  imDom.focus();
+  await nextUIUpdate();
+
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "the authored inputmode is read on the first focus");
+
+  imInput.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Explicit setKeyboardType disables autoType", async (assert) => {
   const numInput = new Input({ type: "Number" });
   numInput.placeAt("qunit-fixture");
