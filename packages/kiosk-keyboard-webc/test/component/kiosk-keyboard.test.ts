@@ -11,8 +11,6 @@ import {
 } from "../helpers/fixtures.js";
 import { captureConsole } from "../helpers/console.js";
 
-// The live region and its queue are page-global; clear both so an earlier test's
-// text cannot stand in for this one's.
 beforeEach(resetAnnouncements);
 
 /** Wait for UI5Element async render cycle. */

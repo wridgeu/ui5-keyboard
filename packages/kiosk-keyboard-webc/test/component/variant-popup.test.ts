@@ -7,8 +7,6 @@ import { announcedText, resetAnnouncements, requireKey, setupWithLayout } from "
 import { getText, setI18nResolver } from "../../src/core/i18n.js";
 import { LATIN_DIACRITIC_VARIANTS } from "../../src/core/latin-variants.js";
 
-// The live region and its queue are page-global; clear both so an earlier test's
-// text cannot stand in for this one's.
 beforeEach(resetAnnouncements);
 
 const DOM = KioskKeyboard.DOM;

@@ -5,10 +5,8 @@ import type { CanonicalModifier } from "../types";
 /**
  * Detect the current platform.
  *
- * Reads the framework's own detection (`sap/ui/Device`), which resolves the OS from
- * `navigator.userAgentData` where the browser offers it and falls back to the
- * user-agent string otherwise. iOS counts as Mac here: what the platform decides is
- * whether `"Mod"` means Command or Ctrl, and an iPad keyboard carries Command.
+ * iOS counts as Mac: what the platform decides is whether `"Mod"` means Command or
+ * Ctrl, and an iPad keyboard carries Command.
  *
  * @since 0.1.0
  */

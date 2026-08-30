@@ -5,8 +5,6 @@ import type CustomLayout from "../../src/CustomLayout.js";
 import type { LayoutChangeEventDetail, LayoutDefinition } from "../../src/types.js";
 import { announcedText, customLayout, resetAnnouncements, readDataKeys, requireKey } from "../helpers/fixtures.js";
 
-// The live region and its queue are page-global; clear both so an earlier test's
-// text cannot stand in for this one's.
 beforeEach(resetAnnouncements);
 
 // The default threshold is 22rem, so 320px is narrow and 600px is not on any
