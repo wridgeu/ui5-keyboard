@@ -35,7 +35,7 @@
  * rendered text.
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
@@ -128,23 +128,20 @@ function collectLineKeys(line, site, found) {
  * Every key a package's `src/` asks for by literal. `src/generated/` is skipped: it is
  * build output, rebuilt from the bundle itself.
  *
- * @param {string} dir directory to walk
+ * @param {string} dir directory to walk, recursively
  * @param {string} pkg package name, for the reported path
  * @param {Map<string, string>} found key -> first call site
  * @returns {Map<string, string>} the same map
  */
 function collectRequestedKeys(dir, pkg, found = new Map()) {
-  for (const name of readdirSync(dir)) {
-    const file = path.join(dir, name);
-    if (statSync(file).isDirectory()) {
-      if (name !== "generated") collectRequestedKeys(file, pkg, found);
-      continue;
-    }
-    if (!name.endsWith(".ts") || name.endsWith(".d.ts")) continue;
+  for (const entry of readdirSync(dir, { recursive: true, withFileTypes: true })) {
+    if (entry.isDirectory() || !entry.name.endsWith(".ts") || entry.name.endsWith(".d.ts")) continue;
+    const file = path.join(entry.parentPath, entry.name);
     const relative = path
       .relative(path.join(repoRoot, "packages", pkg), file)
       .split(path.sep)
       .join("/");
+    if (relative.startsWith("src/generated/")) continue;
     readFileSync(file, "utf8")
       .split("\n")
       .forEach((line, index) => collectLineKeys(line, `packages/${pkg}/${relative}:${index + 1}`, found));

@@ -74,7 +74,7 @@ const KEY_PARITY = {
     // Shadow-DOM only: the aria-hidden host, numpad/numeric host variants, the
     // in-shadow variant popup host, and the live region - kiosk announces through
     // the framework's shared one in the static area and owns no node of its own.
-    webcOnly: ["rootHidden", "rootNumpad", "rootNumeric", "liveRegion", "variantPopupHost"],
+    webcOnly: ["rootHidden", "rootNumpad", "rootNumeric", "variantPopupHost"],
   },
   selectors: {
     core: [

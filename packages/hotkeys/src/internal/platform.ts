@@ -1,43 +1,18 @@
+import Device from "sap/ui/Device";
 import { Platform } from "../library";
 import type { CanonicalModifier } from "../types";
-
-interface NavigatorUAData {
-  platform: string;
-}
 
 /**
  * Detect the current platform.
  *
- * Detection order:
- * 1. `navigator.userAgentData.platform` (modern Chromium API)
- * 2. `navigator.platform` (legacy, widely supported)
- * 3. `navigator.userAgent` (fallback)
+ * iOS counts as Mac: what the platform decides is whether `"Mod"` means Command or
+ * Ctrl, and an iPad keyboard carries Command.
  *
  * @since 0.1.0
  */
 export function detectPlatform(): Platform {
-  // Modern API (Chromium-based browsers)
-  // SAFETY: lib.dom declares no `userAgentData`, so the intersection only adds it as an
-  // optional property of the same `navigator`. Nothing is claimed about it being present:
-  // the read is guarded below, and every non-Chromium browser takes the legacy path.
-  const uaData = (navigator as Navigator & { userAgentData?: NavigatorUAData }).userAgentData;
-  if (uaData?.platform) {
-    return resolvePlatformString(uaData.platform.toLowerCase());
-  }
-
-  // Legacy API
-  const platform = navigator.platform.toLowerCase();
-  if (platform) {
-    return resolvePlatformString(platform);
-  }
-
-  // User-Agent fallback
-  return resolvePlatformString(navigator.userAgent.toLowerCase());
-}
-
-function resolvePlatformString(value: string): Platform {
-  if (/mac|iphone|ipad/.test(value)) return Platform.Mac;
-  if (/\bwin/.test(value)) return Platform.Windows;
+  if (Device.os.macintosh || Device.os.ios) return Platform.Mac;
+  if (Device.os.windows) return Platform.Windows;
   return Platform.Linux;
 }
 

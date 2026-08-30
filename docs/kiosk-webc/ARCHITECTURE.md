@@ -166,7 +166,6 @@ Internal reactive properties (no HTML attribute, trigger re-render):
 - `_currentLayout`: currently active layout name
 - `_shifted`: whether shift is active
 - `_capsLock`: whether caps lock is active
-- `_liveRegionText`: ARIA live-region announcement text
 - `_variantPopup`: open accent-variant popup state (`null` when closed)
 
 ### Slots
@@ -296,6 +295,8 @@ Caps Lock    false    true       true
 **A veto does not change the spending set** (#241). The latch is consumed to _produce_ the payload: `key-press` already carries `char: "A"` by the time a consumer sees it, so what `preventDefault()` cancels is the insertion, not the spend. Both twins follow this rule and spend on the same set of keys (#240).
 
 **Where in the tick the spend happens is immaterial.** `_onKeyClick` and `_insertVariant` both spend at the end of their branch; `_performBackspaceRepeatDelete` is the one site that spends up front, because every branch below it spends and taking the decision once reads clearer than repeating it. Nothing downstream of the fire reads the latch - the payload is resolved before the event is dispatched - and what `autoRelease()` triggers, a repaint and a live-region announcement, does not depend on the insertion having run.
+
+**Where announcements land**: `@ui5/webcomponents-base`'s `InvisibleMessage`, one polite and one assertive span inside `<ui5-announcement-area>` at the top of the light DOM. The component renders no region of its own: a live region inside a shadow root is not reliably announced, and JAWS + Firefox ignores one entirely. `announce` empties the span before each write, so a repeat of the text already standing there still reads as a change, and clears it three seconds later. The queue that paces those writes (`AnnouncementQueue`) is a static on the class for the same reason the span is page-global: two keyboards on one page share it, so a per-instance cadence would let them write over each other. It is torn down with the last instance, so no drain timer outlives the component.
 
 **Announcements**: `_syncShiftState()` queues one live-region text per transition: `ARIA_CAPS_LOCK_ON`, `ARIA_CAPS_LOCK_OFF`, `ARIA_SHIFT_ON`, `ARIA_SHIFT_OFF`. Caps Lock is settled before Shift because `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift release.
 

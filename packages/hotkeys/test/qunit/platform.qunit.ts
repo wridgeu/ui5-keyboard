@@ -1,5 +1,8 @@
 import { resolveModifier, detectPlatform } from "ui5/hotkeys/platform";
 import { Platform } from "ui5/hotkeys/library";
+import Device from "sap/ui/Device";
+
+const sandbox = sinon.createSandbox();
 
 QUnit.module("platform - resolveModifier");
 
@@ -32,4 +35,37 @@ QUnit.test("Returns the same result on repeated calls", (assert) => {
   const first = detectPlatform();
   const second = detectPlatform();
   assert.strictEqual(first, second, "Detection is deterministic");
+});
+
+QUnit.module("platform - detectPlatform mapping", {
+  afterEach() {
+    sandbox.restore();
+  },
+});
+
+/** Stand in for the framework's OS detection, which reads the real user agent. */
+function stubOs(os: Partial<typeof Device.os>): void {
+  sandbox.stub(Device, "os").value({ macintosh: false, ios: false, windows: false, linux: false, ...os });
+}
+
+QUnit.test("macOS resolves to Mac, so Mod means Command", (assert) => {
+  stubOs({ macintosh: true });
+  assert.strictEqual(detectPlatform(), Platform.Mac);
+});
+
+QUnit.test("iOS resolves to Mac: an iPad keyboard carries Command, not Ctrl", (assert) => {
+  stubOs({ ios: true });
+  assert.strictEqual(detectPlatform(), Platform.Mac);
+});
+
+QUnit.test("Windows resolves to Windows", (assert) => {
+  stubOs({ windows: true });
+  assert.strictEqual(detectPlatform(), Platform.Windows);
+});
+
+QUnit.test("Anything else falls through to Linux", (assert) => {
+  stubOs({ linux: true });
+  assert.strictEqual(detectPlatform(), Platform.Linux);
+  stubOs({ android: true } as Partial<typeof Device.os>);
+  assert.strictEqual(detectPlatform(), Platform.Linux, "an unlisted OS takes the same fallback");
 });

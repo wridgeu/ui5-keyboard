@@ -23,12 +23,6 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
 
   return (
     <>
-      {/* Live region sits outside the aria-hidden root so docked-but-hidden
-          announcements (e.g. caps-lock on while closing) are not dropped by
-          assistive tech. CSS visually hides it via the sr-only pattern. */}
-      <span class={KIOSK_KEYBOARD_DOM.classes.liveRegion} role="status" aria-live="polite" aria-atomic="true">
-        {this._liveRegionText}
-      </span>
       <div
         class={{
           [KIOSK_KEYBOARD_DOM.classes.root]: true,

@@ -3,9 +3,11 @@ import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import type Popover from "@ui5/webcomponents/dist/Popover.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type { LayoutDefinition } from "../../src/types.js";
-import { requireKey, setupWithLayout } from "../helpers/fixtures.js";
+import { announcedText, resetAnnouncements, requireKey, setupWithLayout } from "../helpers/fixtures.js";
 import { getText, setI18nResolver } from "../../src/core/i18n.js";
 import { LATIN_DIACRITIC_VARIANTS } from "../../src/core/latin-variants.js";
+
+beforeEach(resetAnnouncements);
 
 const DOM = KioskKeyboard.DOM;
 
@@ -93,10 +95,6 @@ function rightClick(el: HTMLElement): void {
   );
   el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, composed: true, button: 2, buttons: 2 }));
   el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, composed: true }));
-}
-
-function liveRegionText(kb: KioskKeyboard): string {
-  return kb.shadowRoot!.querySelector<HTMLElement>(`.${DOM.classes.liveRegion}`)?.textContent?.trim() ?? "";
 }
 
 /** Wait out the asynchronous re-anchor: the popover is anchored to `key`. */
@@ -458,7 +456,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     await holdOpen(requireKey(kb, "a"));
 
     expect(optionGlyphs(kb), "precondition: exactly one variant is offered").to.deep.equal(["ā"]);
-    expect(liveRegionText(kb), "the count trails the noun, so no locale needs a plural form").to.equal(
+    expect(announcedText().trim(), "the count trails the noun, so no locale needs a plural form").to.equal(
       "Variants for a: 1",
     );
     pointerUp();
@@ -1078,7 +1076,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(input.value, "the option click committed the variant").to.equal("ä");
     // Positive, not merely "not the dismissal": an empty region satisfies the exclusion
     // too, so a `_writeLiveRegion` that wrote nothing at all would pass.
-    expect(liveRegionText(kb), "the open announcement still stands, undisturbed by the commit").to.equal(
+    expect(announcedText().trim(), "the open announcement still stands, undisturbed by the commit").to.equal(
       getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "3").replace("{1}", "a"),
     );
     pointerUp();
@@ -1093,7 +1091,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     await renderFinished();
 
     expect(input.value, "Escape committed nothing").to.equal("");
-    expect(liveRegionText(kb), "a real dismissal is still announced").to.equal(
+    expect(announcedText().trim(), "a real dismissal is still announced").to.equal(
       getText("ARIA_VARIANTS_CLOSED", "Variants closed"),
     );
   });

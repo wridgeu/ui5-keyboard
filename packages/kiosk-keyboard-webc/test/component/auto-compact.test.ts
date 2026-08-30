@@ -3,7 +3,9 @@ import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type CustomLayout from "../../src/CustomLayout.js";
 import type { LayoutChangeEventDetail, LayoutDefinition } from "../../src/types.js";
-import { customLayout, readDataKeys, requireKey } from "../helpers/fixtures.js";
+import { announcedText, customLayout, resetAnnouncements, readDataKeys, requireKey } from "../helpers/fixtures.js";
+
+beforeEach(resetAnnouncements);
 
 // The default threshold is 22rem, so 320px is narrow and 600px is not on any
 // root font-size this suite runs at.
@@ -204,8 +206,8 @@ describe("kiosk-keyboard - autoCompact", () => {
   });
 
   it("announces which way the width moved the layout, in both directions", async () => {
-    const { el, resize } = await mount(WIDE_PX, { layout: "ja-kana", "auto-compact": "" });
-    const announced = () => el.shadowRoot!.querySelector('[role="status"]')!.textContent ?? "";
+    const { resize } = await mount(WIDE_PX, { layout: "ja-kana", "auto-compact": "" });
+    const announced = () => announcedText();
     expect(announced(), "a keyboard with room to spare announces nothing").to.equal("");
 
     await resize(NARROW_PX);
@@ -242,8 +244,8 @@ describe("kiosk-keyboard - autoCompact", () => {
   });
 
   it("names no layout, so the announcement carries no untranslated identifier", async () => {
-    const { el, resize } = await mount(WIDE_PX, { layout: "ja-kana", "auto-compact": "" });
-    const announced = () => el.shadowRoot!.querySelector('[role="status"]')!.textContent ?? "";
+    const { resize } = await mount(WIDE_PX, { layout: "ja-kana", "auto-compact": "" });
+    const announced = () => announcedText();
 
     // The user never chose the layout a width picks and never sees its name, and the
     // name would sit untranslated inside a translated sentence.
@@ -262,7 +264,7 @@ describe("kiosk-keyboard - autoCompact", () => {
 
     // A switch the user asked for is its own feedback, and it moves focus onto
     // the key it followed, which announces itself.
-    expect(el.shadowRoot!.querySelector('[role="status"]')!.textContent ?? "").to.equal("");
+    expect(announcedText()).to.equal("");
   });
 
   it("does not tier while a keyboardType constraint pins the surface, and re-tiers when it is lifted", async () => {
