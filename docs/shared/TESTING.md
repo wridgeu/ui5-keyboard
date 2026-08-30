@@ -84,7 +84,7 @@ Within `playwright.config.ts`, projects share a single `webServer` and differ on
 
 On CI the device projects narrow to `invariants.spec.ts` (`CI_DEVICE_SPECS` in both configs), since the rest of their matrix captures nothing there; the non-pixel assertions those specs carry still run through the desktop project, which keeps the full spec list. Both configs throw when `invariants.spec.ts` no longer exists, since a project whose `testMatch` selects nothing still exits 0. Locally every project runs every spec and compares pixels.
 
-The webc fixtures are viewport-relative or `max-width` wrappers and run on every profile ungated. The kiosk container fixtures are pinned to a fixed width, so `visual-container.spec.ts` skips them below 420px (620px for `kb-wide`), which is why they have no `phone-sm` or `phone-md` baseline.
+The webc fixtures are viewport-relative or `max-width` wrappers and run on every profile ungated. The kiosk container fixtures are pinned to a fixed width, so `visual-container.spec.ts` skips them below 420px and `kb-wide` below 620px - which is why the container fixtures have no `phone-sm`/`phone-md` baseline and `kb-wide` has one only on `desktop` and `tablet`.
 
 Baselines are committed, one directory per Playwright project (via `snapshotPathTemplate: "{testDir}/__baselines__/{projectName}/{arg}{ext}"`):
 

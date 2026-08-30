@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { openPage, keyboardRoot, expectVisualMatch } from "./helpers.js";
 
 // Container-query / constrained-layout visual regression. All targets live on
@@ -27,11 +27,9 @@ const cases: Array<["root" | "wrap", string, string]> = [
 
 for (const [kind, id, tag] of cases) {
   test(tag, async ({ page }) => {
-    if (kind === "wrap") {
-      // The wrapper's box is authored by the fixture page, so it resolves
-      // whether or not the keyboard inside rendered. Gate on that keyboard.
-      await keyboardRoot(page, id.replace(/-wrap$/, "")).waitFor({ state: "visible" });
-    }
+    // A wrapper's box is authored by the fixture page, so it resolves whether or
+    // not the keyboard inside rendered. Gate on the keyboard either way.
+    await expect(keyboardRoot(page, id)).toBeVisible();
     const locator = kind === "wrap" ? page.locator(`#${id}`) : keyboardRoot(page, id);
     await expectVisualMatch(locator, `${tag}.png`);
   });
