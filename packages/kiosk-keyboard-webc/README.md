@@ -22,7 +22,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 - **SAP theming**: Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
 - **UI5 app integration**: consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
 - **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana (plus a narrow-width compact form), Arabic, Korean Hangul, Spanish, Numeric, Numpad, Special, F-keys, Navigation. Composite variants (e.g., QWERTY + F-key row) are trivial to compose from building block rows.
-- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`, `ko` → `ko-hangul`, `es` → `qwerty-es`). Slot a `<kiosk-keyboard-custom-layout name="ja-kana" locales="ja">` into an element to switch the Japanese default to kana input for that instance.
+- **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`, `ko` → `ko-hangul`, `es` → `qwerty-es`). Slot a `<kiosk-keyboard-custom-layout slot="customLayouts" name="ja-kana" locales="ja">` into an element to switch the Japanese default to kana input for that instance.
 - **Shift / Caps Lock**: single-click for one-shot shift, double-click for caps lock
 - **Docked mode**: fixed-position keyboard at bottom of viewport with slide animation
 - **Auto-show**: opens/closes automatically when target inputs receive/lose focus
@@ -745,7 +745,7 @@ When `f-key-mode="Native"`, the component dispatches a synthetic `keydown` event
 To work around this limitation, the component has built-in action handlers for exactly two keys:
 
 - **F5**: calls `location.reload()`
-- **F11**: toggles fullscreen via `document.requestFullscreen()` / `document.exitFullscreen()`
+- **F11**: toggles fullscreen via `document.documentElement.requestFullscreen()` / `document.exitFullscreen()`
 
 All other F-keys (F1-F4, F6-F10, F12) dispatch the synthetic `keydown` to the target input but have no built-in browser action beyond what the app handles.
 
@@ -1023,7 +1023,7 @@ This behavior is driven by a CSS `@container` query on individual keys (`contain
 
 ### Accessibility
 
-- **Link to the target.** The host carries `aria-controls` naming the element the keyboard types into, following auto-show focus, `controls` and `setTargetElement()`. IDREFs do not cross a shadow boundary, so when the resolved input sits inside another component's shadow root the attribute names that component - the element `controls` names - rather than the inner input. A target outside the host's tree scope, or one carrying no `id`, leaves the attribute off rather than writing an id nothing resolves.
+- **Link to the target.** The host carries `aria-controls` naming the element the keyboard types into, whenever it has an _active_ target - one set by auto-show focus, by `setTargetElement()`, or by the auto-target a docked `show()` performs. A keyboard that only resolves its target from `controls` on each keystroke, without ever focusing it, has no active target and so carries no `aria-controls`. IDREFs do not cross a shadow boundary, so when the resolved input sits inside another component's shadow root the attribute names that component - the element `controls` names - rather than the inner input. A target outside the host's tree scope, or one carrying no `id`, leaves the attribute off rather than writing an id nothing resolves.
 - **Dual keys (icon + label visible):** The visible text provides the accessible name. No `aria-label` is set (WCAG 2.5.3 Label in Name).
 - **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
 - **Icons** always have `aria-hidden="true"`. They are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.
@@ -1091,7 +1091,7 @@ kb.setTargetResolver(null);
 
 ## Internationalization (i18n)
 
-The keyboard ships with English, German, Japanese, and Arabic translations for all ARIA labels, role descriptions, and screen reader announcements. The built-in UI5 Web Components i18n infrastructure loads the correct locale bundle automatically based on `navigator.language`.
+The keyboard ships with English, German, Japanese, and Arabic translations for all ARIA labels, role descriptions, and screen reader announcements. The built-in UI5 Web Components i18n infrastructure loads the correct locale bundle automatically: the configured UI5 Web Components language first, with the browser locale as the fallback.
 
 Visible key text (e.g. "q", "123", "Fn") is driven by layout definitions, not i18n. The i18n system controls both visible labels for special keys (Shift, Enter, Backspace, Space), `aria-label` for icon-only keys (where `label=""`), the keyboard's `aria-label`, `aria-roledescription`, and live region announcements (shift/caps lock state changes, keyboard open/close, accent-variant popup open/close).
 
@@ -1440,6 +1440,7 @@ src/
 │   ├── keyboard-type-detector.ts  # Auto-detect numpad vs full
 │   ├── layout-registry.ts    # Layout storage + locale mapping
 │   └── shift-state.ts        # Shift / Caps Lock state machine
+├── middleware/                # Composition middleware (kana-dakuten, hangul-compose)
 ├── layouts/                   # Built-in layout definitions
 │   ├── default-layout.ts     # Default layout name constant
 │   ├── qwerty.ts, qwertz-de.ts, ja-romaji.ts, ja-kana.ts, ja-kana-compact.ts, arabic.ts, ko-hangul.ts, qwerty-es.ts, numeric.ts, special.ts, numpad.ts

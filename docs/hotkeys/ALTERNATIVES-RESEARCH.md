@@ -18,7 +18,7 @@ Compared with a production hand-rolled ShortcutHandler and UI5's built-in `Comma
 
 | Aspect               | CommandExecution           | ui5-lib-hotkeys                        |
 | -------------------- | -------------------------- | -------------------------------------- |
-| Focus requirement    | Required (won't fix)       | Not needed (document capture)          |
+| Focus requirement    | Required (won't fix)       | Not needed (window capture)            |
 | Key repeat guard     | None                       | `ignoreRepeat: true` (default)         |
 | Scope management     | DOM focus traversal        | LIFO scope stack + two-pass matching   |
 | Dynamic registration | Impossible (manifest only) | Runtime `register()`                   |
@@ -44,7 +44,7 @@ Compared with a production hand-rolled ShortcutHandler and UI5's built-in `Comma
 
 The library works in both standalone and FLP because:
 
-- Document-level capture phase listener, independent of UI5's focus system
+- Window-level capture phase listener, independent of UI5's focus system
 - No manifest.json coupling for shortcuts
 - Lazy `sap.m` loading, no hard dependency
 - Scope stack is manual, not tied to FLP shell
@@ -53,7 +53,7 @@ FLP-reserved and browser shortcuts are tracked in the `BROWSER_SHORTCUTS` and `S
 
 ## References
 
-- [UI5 CommandExecution focus issue #2788](https://github.com/SAP/openui5/issues/2788)
+- [UI5 CommandExecution focus issue #2788](https://github.com/UI5/openui5/issues/2788)
 - [Fiori Elements keyboard shortcuts](https://ui5.sap.com/sdk/docs/topics/0cd318c83ec5473d9a091c1782d03c21.html)
 - [FLP keyboard shortcuts](https://help.sap.com/docs/btp/sap-fiori-launchpad-for-sap-btp/keyboard-shortcuts-5823b11296014b819d98fb108b4bc1c4)
 - [TanStack Hotkeys](https://github.com/TanStack/hotkeys)

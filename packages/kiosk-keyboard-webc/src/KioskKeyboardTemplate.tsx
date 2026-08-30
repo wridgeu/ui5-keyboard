@@ -18,7 +18,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
   const variantPopup = this._variantPopup;
   // Language of the keycaps, when the layout writes its keys in a script other
   // than the UI language (WCAG 2.2 SC 3.1.2 Language of Parts). Resolved once per
-  // render and applied per label span below, never to the root or the live region.
+  // render and applied per label span below, never to the root.
   const layoutLang = this._getLayoutLang();
 
   return (

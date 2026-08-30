@@ -165,7 +165,7 @@ UI5's official mechanism for application-level keyboard shortcuts, declared in t
 
 **CommandExecution requires focus on a tabbable element.** The shortcut listener is registered by `ShortcutHelper` on the nearest `UIArea` root; if no tabbable element within that UIArea has focus, the shortcut is NOT intercepted and the browser's default action fires.
 
-From [GitHub Issue #2788](https://github.com/SAP/openui5/issues/2788):
+From [GitHub Issue #2788](https://github.com/UI5/openui5/issues/2788):
 
 > "We can not provide a stable non-confusing implementation of focus-free shortcuts."
 
@@ -293,5 +293,5 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 
 ### GitHub Issues
 
-- [CommandExecution focus limitation (#2788)](https://github.com/SAP/openui5/issues/2788)
-- [Commands/shortcuts documentation (#20)](https://github.com/SAP/openui5-docs/issues/20)
+- [CommandExecution focus limitation (#2788)](https://github.com/UI5/openui5/issues/2788)
+- [Commands/shortcuts documentation (#20)](https://github.com/UI5/docs/issues/20)

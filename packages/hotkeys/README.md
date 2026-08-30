@@ -24,13 +24,18 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 
 - [Features](#features)
 - [Installation](#installation)
+  - [1. Installed package + UI5 Tooling (default)](#1-installed-package--ui5-tooling-default)
+  - [2. Source package + UI5 Tooling transpilation](#2-source-package--ui5-tooling-transpilation)
+  - [3. Static middleware escape hatch](#3-static-middleware-escape-hatch)
 - [Quick Start](#quick-start)
+- [API Stability](#api-stability)
 - [HotkeyManager](#hotkeymanager)
   - [Registration](#registration)
   - [Registration Options](#registration-options)
   - [Registration Handle](#registration-handle)
   - [Registration Group](#registration-group)
     - [Groups and Lifecycle](#groups-and-lifecycle)
+    - [Reducing Boilerplate with a Controller Extension](#reducing-boilerplate-with-a-controller-extension)
     - [Scope Stacking](#scope-stacking)
     - [Popup Overlay Pattern](#popup-overlay-pattern)
     - [Router Integration (Group-Level)](#router-integration-group-level)
@@ -48,8 +53,10 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 - [Library Enums & Constants](#library-enums--constants)
   - [ConflictBehavior Examples](#conflictbehavior-examples)
 - [Type-safe Hotkey Strings](#type-safe-hotkey-strings)
+- [Further Reading](#further-reading)
 - [Troubleshooting](#troubleshooting)
 - [When NOT to Use This Library](#when-not-to-use-this-library)
+- [License](#license)
 
 ## Features
 
@@ -809,8 +816,12 @@ recorder.start();
 // Manual stop (no callbacks fired)
 recorder.stop();
 
+// Stop and fire onCancel - what Escape does internally
+recorder.cancel();
+
 // Clean up when done
 recorder.destroy();
+// recorder.isDestroyed === true
 ```
 
 > [!IMPORTANT]

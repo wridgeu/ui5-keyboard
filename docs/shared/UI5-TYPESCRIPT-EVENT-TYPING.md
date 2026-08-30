@@ -27,7 +27,7 @@ generic is a disguised type assertion.
 
 ## Why It Is a Disguised Type Assertion
 
-Looking at the actual `sap/ui/base/Event` type definition (OpenUI5 1.144.0):
+Looking at the actual `sap/ui/base/Event` type definition (OpenUI5 1.136.18, the pinned version):
 
 ```ts
 class Event<
