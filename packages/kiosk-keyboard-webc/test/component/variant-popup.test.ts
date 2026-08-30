@@ -3,9 +3,13 @@ import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import type Popover from "@ui5/webcomponents/dist/Popover.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type { LayoutDefinition } from "../../src/types.js";
-import { requireKey, setupWithLayout } from "../helpers/fixtures.js";
+import { announcedText, resetAnnouncements, requireKey, setupWithLayout } from "../helpers/fixtures.js";
 import { getText, setI18nResolver } from "../../src/core/i18n.js";
 import { LATIN_DIACRITIC_VARIANTS } from "../../src/core/latin-variants.js";
+
+// The live region and its queue are page-global; clear both so an earlier test's
+// text cannot stand in for this one's.
+beforeEach(resetAnnouncements);
 
 const DOM = KioskKeyboard.DOM;
 
@@ -95,8 +99,8 @@ function rightClick(el: HTMLElement): void {
   el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, composed: true }));
 }
 
-function liveRegionText(kb: KioskKeyboard): string {
-  return kb.shadowRoot!.querySelector<HTMLElement>(`.${DOM.classes.liveRegion}`)?.textContent?.trim() ?? "";
+function liveRegionText(_kb: KioskKeyboard): string {
+  return announcedText().trim();
 }
 
 /** Wait out the asynchronous re-anchor: the popover is anchored to `key`. */

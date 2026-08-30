@@ -96,7 +96,6 @@ export const KIOSK_KEYBOARD_DOM = Object.freeze({
     keyLabelMulti: "kiosk-key__label--multi",
     keyIcon: "kiosk-key__icon",
     keyDual: "kiosk-key--dual",
-    liveRegion: "kiosk-keyboard__live-region",
     variantPopupHost: "kiosk-keyboard__variant-popup-host",
     variantPopup: "kiosk-keyboard__variant-popup",
   }),

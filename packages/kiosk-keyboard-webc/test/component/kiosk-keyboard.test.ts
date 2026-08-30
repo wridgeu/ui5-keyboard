@@ -2,8 +2,18 @@ import { fixture, html, expect, oneEvent, waitUntil } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import numericLayout from "../../src/layouts/numeric.js";
-import { customLayout, queryKey } from "../helpers/fixtures.js";
+import {
+  announcedText,
+  customLayout,
+  politeAnnouncementRegion,
+  resetAnnouncements,
+  queryKey,
+} from "../helpers/fixtures.js";
 import { captureConsole } from "../helpers/console.js";
+
+// The live region and its queue are page-global; clear both so an earlier test's
+// text cannot stand in for this one's.
+beforeEach(resetAnnouncements);
 
 /** Wait for UI5Element async render cycle. */
 const nextRender = renderFinished;
@@ -2027,18 +2037,15 @@ describe("kiosk-keyboard", () => {
 
     it("has a live region outside the aria-hidden root so docked-but-hidden announcements aren't suppressed by AT", async () => {
       // The live region must be a sibling of the aria-hidden root group, not a
-      // descendant: when the docked keyboard is hidden, `aria-hidden="true"` on
-      // the root would otherwise drop a queued caps-lock/shift announcement from
-      // the accessibility tree. A JSX fragment keeps it outside the root.
+      // descendant: when the docked keyboard is hidden, `aria-hidden="true"` on the
+      // root would otherwise drop a queued caps-lock/shift announcement from the
+      // accessibility tree. The region lives in the light DOM, so it cannot be.
       const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>`);
       await nextRender();
-      const shadow = el.shadowRoot!;
-      const region = shadow.querySelector('[role="status"][aria-live="polite"]');
-      const rootGroup = shadow.querySelector('[role="group"]');
-      expect(region, "live region present").to.not.be.null;
-      expect(rootGroup, "root group present").to.not.be.null;
-      expect(rootGroup!.contains(region), "live region must NOT be a descendant of the aria-hidden root group").to.be
-        .false;
+      const region = politeAnnouncementRegion();
+      expect(region, "the framework's polite region is in the page").to.not.be.null;
+      expect(el.shadowRoot!.querySelector("[aria-live]"), "no live region inside the shadow root").to.be.null;
+      expect(el.contains(region), "the region is not inside the keyboard element at all").to.be.false;
     });
 
     it("marks the docked-hidden root inert so its tabbable key is not exposed inside an aria-hidden subtree", async () => {
@@ -2054,29 +2061,47 @@ describe("kiosk-keyboard", () => {
     });
 
     it("live region content updates announce shift-on", async () => {
-      // The structural test above proves the region escapes the aria-hidden
-      // root; this proves it actually receives announcement text, catching a
-      // broken announcement pipeline (e.g. _liveRegionText never set).
+      // The structural test above proves the region is reachable; this proves it
+      // actually receives announcement text, catching a broken pipeline between the
+      // key press and the framework announcer.
       const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
       await nextRender();
       queryKey(el, "{shift}")!.click();
       // The component throttles announcements; wait long enough for at least one to land.
       await new Promise((r) => setTimeout(r, 60));
-      const region = el.shadowRoot!.querySelector('[role="status"][aria-live="polite"]') as HTMLElement;
-      expect(region.textContent ?? "", "shift-on announcement appears in live region").to.equal("Shift on");
+      expect(announcedText(), "shift-on announcement appears in live region").to.equal("Shift on");
+    });
+
+    it("paces two keyboards on one page against the region they share", async () => {
+      // Both announcements land in the same task, from different elements. A
+      // per-instance cadence would let the second write straight over the first,
+      // and the first would never be spoken.
+      const first = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty" docked></kiosk-keyboard>`);
+      const second = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+      await nextRender();
+
+      first.open = true;
+      queryKey(second, "{shift}")!.click();
+      // Both are queued in the same task; the drain runs from `onAfterRendering`.
+      await nextRender();
+
+      expect(announcedText(), "the first element's announcement holds the region").to.equal("Virtual keyboard opened");
+
+      await new Promise((r) => setTimeout(r, 200));
+      expect(announcedText(), "the second element's follows a beat later").to.equal("Shift on");
     });
 
     it("re-announces a text the region is already holding", async () => {
-      // `_liveRegionText` is reactive, so a re-announcement of the text already standing
-      // in the region is dropped by the change guard and never reaches the DOM at all.
       // The queue is the seam because no public gesture raises the same text twice in a
       // row. Whether the EMPTYING specifically is what makes a screen reader speak again
       // is not observable here - a same-value `textContent` write replaces the text node
       // either way - so this asserts the reachable half: that the repeat reaches the DOM.
-      const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
+      // The fixture is what boots the framework's announcement area into the page.
+      await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
       await nextRender();
-      const queue = (el as unknown as { _announcements: { announce(t: string): void; flush(): void } })._announcements;
-      const region = el.shadowRoot!.querySelector('[role="status"][aria-live="polite"]')!;
+      const queue = (KioskKeyboard as unknown as { _announcements: { announce(t: string): void; flush(): void } })
+        ._announcements;
+      const region = politeAnnouncementRegion()!;
 
       const say = async (text: string) => {
         queue.announce(text);
@@ -2115,8 +2140,7 @@ describe("kiosk-keyboard", () => {
       shift().click();
       // Let the throttled announcement queue fully drain (120ms per entry).
       await new Promise((r) => setTimeout(r, 400));
-      const region = el.shadowRoot!.querySelector('[role="status"][aria-live="polite"]') as HTMLElement;
-      expect(region.textContent ?? "", "Caps Lock release announces caps-lock-off").to.equal("Caps Lock off");
+      expect(announcedText(), "Caps Lock release announces caps-lock-off").to.equal("Caps Lock off");
     });
 
     it("follows the focused key to its new seat across a layout switch", async () => {

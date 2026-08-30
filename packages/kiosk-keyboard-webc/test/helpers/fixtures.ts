@@ -89,3 +89,59 @@ export async function setupWithLayout(
   await renderFinished();
   return { kb, input, custom };
 }
+
+/**
+ * The framework's page-level polite live region, the node every announcement lands in.
+ *
+ * `@ui5/webcomponents-base` keeps one pair of spans in `<ui5-announcement-area>` at the
+ * top of the light DOM, so it is reached from `document`, not from a shadow root.
+ */
+export function politeAnnouncementRegion(): HTMLElement | null {
+  return document.querySelector<HTMLElement>("ui5-announcement-area .ui5-invisiblemessage-polite");
+}
+
+/**
+ * The most recent announcement, or `""` when none was raised since the last reset.
+ *
+ * The standing node wins over the recording: it is written synchronously, while the
+ * recorder runs a microtask later and would lag a read taken in the announcement's own
+ * task. The recording covers the case the node cannot - `InvisibleMessage` empties its
+ * span three seconds after a write, and that span is shared by the whole page, so a
+ * timer armed by an earlier test can wipe an identical text this one just wrote.
+ */
+export function announcedText(): string {
+  armRecorder();
+  const standing = politeAnnouncementRegion()?.textContent ?? "";
+  return standing || (announcements.at(-1) ?? "");
+}
+
+/**
+ * Empty the shared live region, drop anything the queue is still holding, and forget
+ * what was recorded.
+ *
+ * Both are page-global: the span is one pair for the whole document and the queue is a
+ * static on the class, so without this an earlier test's text stands in for the one
+ * under assertion, and its unspent gap delays the next write.
+ */
+export function resetAnnouncements(): void {
+  KioskKeyboard["_announcements"].teardown();
+  announcements.length = 0;
+  const region = politeAnnouncementRegion();
+  if (region) region.textContent = "";
+  armRecorder();
+}
+
+const announcements: string[] = [];
+let recorder: MutationObserver | null = null;
+
+/** Start recording live-region writes, once the framework has put the span in the page. */
+function armRecorder(): void {
+  if (recorder) return;
+  const node = politeAnnouncementRegion();
+  if (!node) return;
+  recorder = new MutationObserver(() => {
+    const text = node.textContent ?? "";
+    if (text) announcements.push(text);
+  });
+  recorder.observe(node, { childList: true, characterData: true, subtree: true });
+}

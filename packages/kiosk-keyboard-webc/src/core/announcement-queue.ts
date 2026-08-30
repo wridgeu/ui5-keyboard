@@ -16,6 +16,11 @@ interface AnnouncementQueueHost {
  * milliseconds apart and in separate event handlers, so no caller can combine them
  * into one string.
  *
+ * Losing the first is prescribed rather than a quirk: both twins announce through a
+ * region their framework marks `aria-atomic`, and the ARIA Screen Reader Implementors
+ * Guide has assistive tech remove an earlier queued event for an atomic region instead
+ * of speaking both.
+ *
  * The gap is kept between writes rather than between drains, so a lone announcement
  * still reaches the live region in the task that raised it and only one treading on
  * another's heels waits. A pending timer IS the record of a gap not yet spent: while

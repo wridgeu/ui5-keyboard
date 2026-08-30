@@ -4,8 +4,17 @@ import KioskKeyboard from "../../src/KioskKeyboard.js";
 import navRow from "../../src/layouts/nav-row.js";
 import qwerty from "../../src/layouts/qwerty.js";
 import type { KeyDefinition, LayoutDefinition } from "../../src/types.js";
-import { customLayout, requireKey as queryKey } from "../helpers/fixtures.js";
+import {
+  customLayout,
+  politeAnnouncementRegion,
+  resetAnnouncements,
+  requireKey as queryKey,
+} from "../helpers/fixtures.js";
 import { captureConsole } from "../helpers/console.js";
+
+// The live region and its queue are page-global; clear both so an earlier test's
+// text cannot stand in for this one's.
+beforeEach(resetAnnouncements);
 
 const nextRender = renderFinished;
 const DOM = KioskKeyboard.DOM;
@@ -550,7 +559,7 @@ describe("icon + label rendering", () => {
     expect(keyEl.hasAttribute("lang"), "the key element stays in the UI language").to.be.false;
     const root = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.root)!;
     expect(root.hasAttribute("lang"), "the keyboard group stays in the UI language").to.be.false;
-    const liveRegion = el.shadowRoot!.querySelector<HTMLElement>(`.${DOM.classes.liveRegion}`)!;
+    const liveRegion = politeAnnouncementRegion()!;
     expect(liveRegion.hasAttribute("lang"), "the live region stays in the UI language").to.be.false;
   });
 

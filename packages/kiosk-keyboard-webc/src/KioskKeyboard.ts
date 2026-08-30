@@ -13,6 +13,8 @@ import property from "@ui5/webcomponents-base/dist/decorators/property.js";
 import event from "@ui5/webcomponents-base/dist/decorators/event-strict.js";
 import jsxRenderer from "@ui5/webcomponents-base/dist/renderer/JsxRenderer.js";
 import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
+import announce from "@ui5/webcomponents-base/dist/util/InvisibleMessage.js";
+import InvisibleMessageMode from "@ui5/webcomponents-base/dist/types/InvisibleMessageMode.js";
 import type { ChangeInfo } from "@ui5/webcomponents-base/dist/UI5Element.js";
 import type { PropertyValue } from "@ui5/webcomponents-base/dist/UI5ElementMetadata.js";
 
@@ -644,9 +646,6 @@ class KioskKeyboard extends UI5Element {
   @property({ type: Boolean, noAttribute: true })
   _capsLock = false;
 
-  @property({ noAttribute: true })
-  _liveRegionText = "";
-
   /**
    * Open accent-variant popup state, or `null` when closed. Assigning a new
    * object opens/refreshes the popup (rAF-batched re-render renders the
@@ -688,7 +687,7 @@ class KioskKeyboard extends UI5Element {
     focusAnchor: () => this._focusAnchor(),
     reseatFocusAnchor: (anchor) => this._reseatFocusAnchor(anchor),
     reapplyAutoCompact: () => this._autoCompact.reapply(),
-    announce: (text) => this._announcements.announce(text),
+    announce: (text) => KioskKeyboard._announcements.announce(text),
   });
   private _keyboardTypeSource: KeyboardTypeSource = "unset";
   private _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
@@ -702,10 +701,28 @@ class KioskKeyboard extends UI5Element {
   private _restoreKeyFocus = false;
   /** Caps the disarmed-variants diagnostic at one emission per element. */
   private _warnedDisarmedVariants = false;
-  /** Owns the ARIA live-region announcement queue and its drain timer. */
-  private readonly _announcements = new AnnouncementQueue({
-    isConnected: () => this.isConnected,
-    setLiveRegionText: (text) => this._writeLiveRegion(text),
+  /**
+   * Paces every instance's writes to the ARIA live region and holds the drain timer.
+   *
+   * Static because the node it protects is page-global: `InvisibleMessage` keeps one
+   * pair of spans in `<ui5-announcement-area>` for the whole document, so a
+   * per-instance cadence would let two keyboards write over each other. Torn down with
+   * the last instance, so no timer outlives it.
+   */
+  private static readonly _announcements = new AnnouncementQueue({
+    // Page-scoped like the span: a backlog is worth reading out while any keyboard is
+    // still connected, and dropped once none is.
+    isConnected: () => {
+      for (const instance of KioskKeyboard._instances) {
+        if (instance.isConnected) return true;
+      }
+      return false;
+    },
+    // `announce` empties the span before it writes, so a repeat of the text already
+    // standing there is still read out.
+    setLiveRegionText: (text) => {
+      announce(text, InvisibleMessageMode.Polite);
+    },
   });
 
   // ── Inputmode suppression (ref-counted, shared across instances) ──
@@ -830,10 +847,10 @@ class KioskKeyboard extends UI5Element {
     },
     insertVariant: (glyph) => this._insertVariant(glyph),
     announce: (text) => {
-      this._announcements.announce(text);
+      KioskKeyboard._announcements.announce(text);
     },
     announceDismiss: () => {
-      this._announcements.announce(getText("ARIA_VARIANTS_CLOSED", "Variants closed"));
+      KioskKeyboard._announcements.announce(getText("ARIA_VARIANTS_CLOSED", "Variants closed"));
     },
     focusKey: (pos) => {
       this.shadowRoot
@@ -986,6 +1003,7 @@ class KioskKeyboard extends UI5Element {
       this._middleware = null;
     }
     KioskKeyboard._instances.delete(this);
+    if (KioskKeyboard._instances.size === 0) KioskKeyboard._announcements.teardown();
     this._autoShow.teardown();
     this._physicalKeyHighlight.teardown();
     this._responsiveSizing.teardown();
@@ -997,7 +1015,6 @@ class KioskKeyboard extends UI5Element {
     this._variantPopup = null;
     this._hostAbort?.abort();
     this._hostAbort = null;
-    this._announcements.teardown();
     // Fire after-close before disconnecting so direct listeners still see it.
     // Cannot use `this.open = false` here - isConnected is already false,
     // so the setter skips side effects. Handle cleanup manually.
@@ -1017,27 +1034,10 @@ class KioskKeyboard extends UI5Element {
     this._restoreKeyFocus = false;
   }
 
-  /**
-   * Writes one announcement to the live region, emptying the node first.
-   *
-   * The property write keeps the next render in step; the direct write is what carries
-   * a REPEAT into the DOM, since `_liveRegionText` is reactive and its change guard
-   * drops a re-announcement of the text already standing there. Emptying first follows
-   * `sap/ui/core/InvisibleMessage`: assistive tech reads a live region on a text
-   * change, and a same-value write is not one.
-   */
-  private _writeLiveRegion(text: string): void {
-    this._liveRegionText = text;
-    const node = this.shadowRoot?.querySelector(`.${KIOSK_KEYBOARD_DOM.classes.liveRegion}`);
-    if (!node) return;
-    node.textContent = "";
-    node.textContent = text;
-  }
-
   override onAfterRendering(): void {
     // Announce pending live region text (from show/close/shift). Queue is
     // drained sequentially with a small gap so AT clients pick up each entry.
-    this._announcements.flush();
+    KioskKeyboard._announcements.flush();
 
     // A layout change re-seats the roving tab stop by key value
     // (see _reseatFocusAnchor), which can move it off the element the browser
@@ -1175,7 +1175,7 @@ class KioskKeyboard extends UI5Element {
       }
     }
     this._inputModeSuppression.suppress();
-    this._announcements.announce(getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened"));
+    KioskKeyboard._announcements.announce(getText("ARIA_KEYBOARD_OPENED", "Virtual keyboard opened"));
     this.fireDecoratorEvent("after-open", { activeElement: this._targetElement });
   }
 
@@ -1183,7 +1183,7 @@ class KioskKeyboard extends UI5Element {
   private _performClose(): void {
     const activeElement = this._targetElement;
     this._inputModeSuppression.restore();
-    this._announcements.announce(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
+    KioskKeyboard._announcements.announce(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
     this.fireDecoratorEvent("after-close", { activeElement });
   }
 
@@ -1890,13 +1890,13 @@ class KioskKeyboard extends UI5Element {
     this._shifted = this._shiftState.isShifted;
     this._capsLock = this._shiftState.isCapsLock;
     if (!wasCapsLock && this._capsLock) {
-      this._announcements.announce(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
+      KioskKeyboard._announcements.announce(getText("ARIA_CAPS_LOCK_ON", "Caps Lock on"));
     } else if (wasCapsLock && !this._capsLock) {
-      this._announcements.announce(getText("ARIA_CAPS_LOCK_OFF", "Caps Lock off"));
+      KioskKeyboard._announcements.announce(getText("ARIA_CAPS_LOCK_OFF", "Caps Lock off"));
     } else if (!wasShifted && this._shifted) {
-      this._announcements.announce(getText("ARIA_SHIFT_ON", "Shift on"));
+      KioskKeyboard._announcements.announce(getText("ARIA_SHIFT_ON", "Shift on"));
     } else if (wasShifted && !this._shifted) {
-      this._announcements.announce(getText("ARIA_SHIFT_OFF", "Shift off"));
+      KioskKeyboard._announcements.announce(getText("ARIA_SHIFT_OFF", "Shift off"));
     }
   }
 
