@@ -303,6 +303,20 @@ describe("middleware integration", () => {
       expect(input.value).toBe("\uAC00\uB098");
     });
 
+    it("refuses the jamo that would commit one preedit and open another past maxlength", () => {
+      const input = document.createElement("input");
+      input.value = "";
+      input.setSelectionRange(0, 0);
+      input.maxLength = 1;
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      m.handleKey("ㄱ", input);
+      expect(input.value, "precondition: ᄀ is a live preedit").toBe("ᄀ");
+
+      expect(m.handleKey("ㄴ", input), "the refused key is swallowed, not passed on").toBe(true);
+      expect(input.value).toBe("ᄀ");
+    });
+
     it("counts the text a new composition replaces as room", () => {
       const input = document.createElement("input");
       input.value = "AB";

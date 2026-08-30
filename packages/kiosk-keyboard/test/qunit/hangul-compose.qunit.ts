@@ -197,6 +197,16 @@ QUnit.test("Composition continues while the field still has room", (assert) => {
   assert.strictEqual(input.value, "가나", "Both syllables fit and compose");
 });
 
+QUnit.test("Jamo that would commit one preedit and open another past maxlength is refused", (assert) => {
+  const m = mw();
+  input.maxLength = 1;
+  m.handleKey("ㄱ", input);
+  assert.strictEqual(input.value, "ᄀ", "Precondition: ᄀ is a live preedit");
+
+  assert.strictEqual(m.handleKey("ㄴ", input), true, "The refused key is swallowed, not passed on");
+  assert.strictEqual(input.value, "ᄀ", "The live preedit is left alone");
+});
+
 QUnit.test("Text a new composition replaces counts as room", (assert) => {
   const m = mw();
   input.value = "AB";

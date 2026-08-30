@@ -116,13 +116,9 @@ function composeSyllable(l: number, v: number, t = 0): string {
  * Whether a new one-unit preedit fits the target's `maxlength`.
  *
  * A preedit is written straight to `target.value`, which `maxlength` does not police, so the
- * limit has to be honoured before the write. Browsers deliberately let a platform IME overrun
- * `maxlength` while composing, because a phonetic buffer converts down to fewer characters than
- * it holds; this middleware's preedit is always exactly one code unit and commits as that same
- * unit, so an overrun here is never converted down, only dropped at the commit. Refusing the key
- * keeps the state machine, the DOM and the committed value in step.
- *
- * The selection is credited because opening a preedit replaces it.
+ * limit has to be honoured before the write. The selection counts as room because opening a
+ * preedit replaces it. Why this refuses the key where a platform IME is allowed to overrun:
+ * `docs/specs/2026-08-11-native-text-insertion-design.md` §3.5.
  */
 function hasRoomForPreedit(el: HTMLInputElement | HTMLTextAreaElement): boolean {
   if (el.maxLength < 0) return true;
@@ -164,6 +160,21 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
     curV = 0;
     curT = 0;
     target = null;
+  }
+
+  /**
+   * Commit whatever preedit is live and open a fresh one on `lIdx`. A jamo that
+   * `maxlength` has no room for is dropped instead, leaving the live preedit alone.
+   */
+  function openPreedit(el: HTMLInputElement | HTMLTextAreaElement, lIdx: number): void {
+    if (!hasRoomForPreedit(el)) return;
+    commitPreedit(el);
+    resetInternal();
+    startComposition(compState, el);
+    updateComposition(compState, el, jamoL(lIdx));
+    phase = "L";
+    curL = lIdx;
+    target = el;
   }
 
   function commitPreedit(el: HTMLInputElement | HTMLTextAreaElement): string | null {
@@ -225,12 +236,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
 
       if (phase === "empty") {
         if (lIdx !== undefined) {
-          if (!hasRoomForPreedit(el)) return true;
-          startComposition(compState, el);
-          updateComposition(compState, el, jamoL(lIdx));
-          phase = "L";
-          curL = lIdx;
-          target = el;
+          openPreedit(el, lIdx);
           return true;
         }
         if (vIdx !== undefined) {
@@ -248,14 +254,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           return true;
         }
         if (lIdx !== undefined) {
-          if (!hasRoomForPreedit(el)) return true;
-          commitPreedit(el);
-          resetInternal();
-          startComposition(compState, el);
-          updateComposition(compState, el, jamoL(lIdx));
-          phase = "L";
-          curL = lIdx;
-          target = el;
+          openPreedit(el, lIdx);
           return true;
         }
       }
@@ -276,14 +275,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           return true;
         }
         if (lIdx !== undefined) {
-          if (!hasRoomForPreedit(el)) return true;
-          commitPreedit(el);
-          resetInternal();
-          startComposition(compState, el);
-          updateComposition(compState, el, jamoL(lIdx));
-          phase = "L";
-          curL = lIdx;
-          target = el;
+          openPreedit(el, lIdx);
           return true;
         }
       }
@@ -307,14 +299,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           }
         }
         if (lIdx !== undefined) {
-          if (!hasRoomForPreedit(el)) return true;
-          commitPreedit(el);
-          resetInternal();
-          startComposition(compState, el);
-          updateComposition(compState, el, jamoL(lIdx));
-          phase = "L";
-          curL = lIdx;
-          target = el;
+          openPreedit(el, lIdx);
           return true;
         }
       }
