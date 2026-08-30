@@ -117,6 +117,16 @@ QUnit.test("commit flushes preedit to target", (assert) => {
   assert.strictEqual(input.value, "\uAC00", "Value preserved after commit");
 });
 
+QUnit.test("commit reports the composed syllable as compositionend data", (assert) => {
+  const m = mw();
+  const seen: string[] = [];
+  input.addEventListener("compositionend", (e) => seen.push((e as CompositionEvent).data ?? ""));
+  m.handleKey("\u3131", input); // ㄱ
+  m.handleKey("\u314F", input); // ㅏ -> 가
+  m.commit();
+  assert.deepEqual(seen, ["\uAC00"], "compositionend fires once, carrying the committed syllable");
+});
+
 QUnit.test("reset clears state without committing content", (assert) => {
   const m = mw();
   m.handleKey("\u3131", input); // ㄱ

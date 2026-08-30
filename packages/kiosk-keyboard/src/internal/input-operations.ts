@@ -201,16 +201,17 @@ export function insertText(
  * edit: the preedit range is spliced out of the raw DOM and re-inserted through
  * {@link insertText}, so UI5's `setValue` / `liveChange` pipeline observes the
  * committed text. This is the sync step {@link endComposition} documents as the
- * caller's contract.
+ * caller's contract. `compositionend` fires ahead of the splice, so its `data`
+ * carries the composed text.
  *
  * Returns the committed text, empty when the preedit was.
  */
 export function commitComposition(state: CompositionState, dom: HTMLInputElement | HTMLTextAreaElement): string {
   const start = state.preeditStart;
-  const text = dom.value.slice(start, start + state.preeditLength);
-  dom.value = dom.value.slice(0, start) + dom.value.slice(start + state.preeditLength);
-  state.preeditLength = 0;
+  const end = start + state.preeditLength;
+  const text = dom.value.slice(start, end);
   endComposition(state, dom);
+  dom.value = dom.value.slice(0, start) + dom.value.slice(end);
   if (text) {
     insertText(dom, text, [start, start]);
   }
