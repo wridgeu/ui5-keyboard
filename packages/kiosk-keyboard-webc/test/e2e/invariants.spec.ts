@@ -77,11 +77,16 @@ type Geometry = {
   remPx: number;
   /** Content-box inline size, which is what a `@container` size query resolves against. */
   containerWidth: number;
-  /** Border-box edges of the keyboard root, where `:host { overflow: hidden }` clips. */
+  /** Border-box inline edges of the keyboard root, which the host width caps. */
   left: number;
   right: number;
-  top: number;
-  bottom: number;
+  /**
+   * Block edges of the host's padding box, where `:host { overflow: hidden }`
+   * clips. The root carries no height cap and grows to fit its rows, so it is
+   * the host that a row too tall for its tier is cut off by.
+   */
+  clipTop: number;
+  clipBottom: number;
   keys: KeyBox[];
 };
 
@@ -92,17 +97,20 @@ async function readGeometry(page: Page, hostId: string): Promise<Geometry> {
   return page.evaluate(
     async ({ id, rootSel, keySel, keyAttr }) => {
       await document.fonts.ready;
-      const shadow = document.getElementById(id)!.shadowRoot!;
+      const host = document.getElementById(id)!;
+      const shadow = host.shadowRoot!;
       const root = shadow.querySelector(rootSel) as HTMLElement;
       const rootBox = root.getBoundingClientRect();
       const rootStyle = getComputedStyle(root);
+      const hostBox = host.getBoundingClientRect();
+      const hostStyle = getComputedStyle(host);
       return {
         remPx: parseFloat(getComputedStyle(document.documentElement).fontSize),
         containerWidth: root.clientWidth - parseFloat(rootStyle.paddingLeft) - parseFloat(rootStyle.paddingRight),
         left: rootBox.left,
         right: rootBox.right,
-        top: rootBox.top,
-        bottom: rootBox.bottom,
+        clipTop: hostBox.top + parseFloat(hostStyle.borderTopWidth),
+        clipBottom: hostBox.bottom - parseFloat(hostStyle.borderBottomWidth),
         keys: [...root.querySelectorAll(keySel)].map((k) => {
           const box = k.getBoundingClientRect();
           // Retargets to the host from `document`, so hit test inside the shadow tree.
@@ -188,8 +196,10 @@ test("keys stay inside the keyboard box", async ({ page }) => {
     for (const key of geometry.keys) {
       expect(key.left, `${id} "${key.key}" overflows the leading edge`).toBeGreaterThanOrEqual(geometry.left - EPSILON);
       expect(key.right, `${id} "${key.key}" overflows the trailing edge`).toBeLessThanOrEqual(geometry.right + EPSILON);
-      expect(key.top, `${id} "${key.key}" overflows the top edge`).toBeGreaterThanOrEqual(geometry.top - EPSILON);
-      expect(key.bottom, `${id} "${key.key}" overflows the bottom edge`).toBeLessThanOrEqual(geometry.bottom + EPSILON);
+      expect(key.top, `${id} "${key.key}" overflows the top edge`).toBeGreaterThanOrEqual(geometry.clipTop - EPSILON);
+      expect(key.bottom, `${id} "${key.key}" overflows the bottom edge`).toBeLessThanOrEqual(
+        geometry.clipBottom + EPSILON,
+      );
     }
   }
 });
