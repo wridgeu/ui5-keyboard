@@ -4,7 +4,6 @@ import {
   startComposition,
   updateComposition,
   endComposition,
-  isComposing,
 } from "../../src/core/composition-utils.js";
 
 /**
@@ -33,7 +32,7 @@ export function createSeedComposeMiddleware(seed: string): () => CompositionMidd
     return {
       handleKey(key: string, el: HTMLInputElement | HTMLTextAreaElement): boolean {
         if (key === seed) {
-          if (!isComposing(state)) {
+          if (!state.composing) {
             startComposition(state, el);
             buffer = "";
             target = el;
@@ -42,7 +41,7 @@ export function createSeedComposeMiddleware(seed: string): () => CompositionMidd
           render(el);
           return true;
         }
-        if (isComposing(state)) {
+        if (state.composing) {
           if (key.length === 1) {
             buffer += key;
             render(el);
@@ -57,7 +56,7 @@ export function createSeedComposeMiddleware(seed: string): () => CompositionMidd
       },
 
       commit(): string | null {
-        if (isComposing(state) && target) endComposition(state, target);
+        if (state.composing && target) endComposition(state, target);
         const text = buffer;
         buffer = "";
         target = null;
@@ -65,7 +64,7 @@ export function createSeedComposeMiddleware(seed: string): () => CompositionMidd
       },
 
       reset(): void {
-        if (isComposing(state) && target) {
+        if (state.composing && target) {
           updateComposition(state, target, "");
           endComposition(state, target);
         }

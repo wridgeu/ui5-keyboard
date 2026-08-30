@@ -59,8 +59,3 @@ export function endComposition(state: CompositionState, target: HTMLInputElement
   state.preeditStart = 0;
   state.preeditLength = 0;
 }
-
-/** Returns whether a composition is currently active. */
-export function isComposing(state: CompositionState): boolean {
-  return state.composing;
-}

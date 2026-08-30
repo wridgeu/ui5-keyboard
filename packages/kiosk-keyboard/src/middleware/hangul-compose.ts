@@ -5,7 +5,6 @@ import {
   startComposition,
   updateComposition,
   endComposition,
-  isComposing,
 } from "../internal/composition-utils";
 import { commitComposition, insertText } from "../internal/input-operations";
 
@@ -149,7 +148,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
   }
 
   function commitPreedit(el: HTMLInputElement | HTMLTextAreaElement): string | null {
-    if (!isComposing(compState)) return null;
+    if (!compState.composing) return null;
     // How the preedit reaches the host is the one framework-specific step in
     // this middleware, so it lives in the input-operations adapter.
     return commitComposition(compState, el) || null;
@@ -161,7 +160,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
       if (el.readOnly || el.disabled) return false;
 
       if (key === "{backspace}") {
-        if (!isComposing(compState)) return false;
+        if (!compState.composing) return false;
         if (phase === "LVT") {
           phase = "LV";
           curT = 0;
@@ -186,7 +185,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
       }
 
       if (key.length !== 1) {
-        if (isComposing(compState)) {
+        if (compState.composing) {
           commitPreedit(el);
           resetInternal();
         }
@@ -198,7 +197,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
       const vIdx = COMPAT_TO_V.get(code);
 
       if (lIdx === undefined && vIdx === undefined) {
-        if (isComposing(compState)) {
+        if (compState.composing) {
           commitPreedit(el);
           resetInternal();
         }
@@ -300,7 +299,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
     },
 
     commit(): string | null {
-      if (!isComposing(compState) || !target) {
+      if (!compState.composing || !target) {
         resetInternal();
         return null;
       }
@@ -310,7 +309,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
     },
 
     reset(): void {
-      if (isComposing(compState) && target) {
+      if (compState.composing && target) {
         updateComposition(compState, target, "");
         endComposition(compState, target);
       }
