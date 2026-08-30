@@ -83,8 +83,8 @@ test.describe("Interactive States", () => {
 
   test("kb-docked", async ({ page }, testInfo) => {
     // The docked render jitters beyond the diff tolerance on a phone profile
-    // once the matrix runs it under load: it passes run-for-run in isolation
-    // and fails from the full matrix. Covered on desktop + tablet instead.
+    // under matrix load, though it is stable run-for-run in isolation. Covered
+    // on desktop + tablet instead.
     test.skip(PHONES.includes(testInfo.project.name), "docked render unstable under phone emulation");
     // Open via the UI5 element API: a DOM click on the toggle hangs under
     // Chrome mobile emulation (pointer: coarse).

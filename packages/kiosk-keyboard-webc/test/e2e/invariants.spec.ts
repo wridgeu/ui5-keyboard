@@ -82,8 +82,8 @@ type Geometry = {
   right: number;
   /**
    * Block edges of the host's padding box, where `:host { overflow: hidden }`
-   * clips. The root carries no height cap and grows to fit its rows, so it is
-   * the host that a row too tall for its tier is cut off by.
+   * clips. The root carries no height cap and grows to fit its rows, so a row
+   * too tall for its tier is cut off by the host rather than by the root.
    */
   clipTop: number;
   clipBottom: number;

@@ -141,9 +141,8 @@ export function isHoverCapable(page: Page): Promise<boolean> {
  * Compare an element against its committed visual baseline.
  *
  * The wait is the render gate for the `--ignore-snapshots` CI run, where
- * `toHaveScreenshot` returns without ever resolving the locator. It is
- * redundant wherever pixels are compared, since the capture waits for
- * visibility and settles web fonts itself.
+ * `toHaveScreenshot` returns without ever resolving the locator. Where pixels
+ * are compared the capture waits for visibility and settles web fonts itself.
  */
 export async function expectVisualMatch(locator: Locator, name: string): Promise<void> {
   await expect(locator).toBeVisible();

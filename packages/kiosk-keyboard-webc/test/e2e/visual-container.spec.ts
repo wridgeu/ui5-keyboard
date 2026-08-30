@@ -28,8 +28,8 @@ const cases: Array<["root" | "wrap", string, string]> = [
 for (const [kind, id, tag] of cases) {
   test(tag, async ({ page }) => {
     // A wrapper's box is authored by the fixture page, so it resolves whether or
-    // not the keyboard inside rendered. Gate on the keyboard either way.
-    await expect(keyboardRoot(page, id)).toBeVisible();
+    // not the keyboard inside it rendered.
+    if (kind === "wrap") await expect(keyboardRoot(page, id)).toBeVisible();
     const locator = kind === "wrap" ? page.locator(`#${id}`) : keyboardRoot(page, id);
     await expectVisualMatch(locator, `${tag}.png`);
   });
