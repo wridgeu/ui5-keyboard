@@ -1,5 +1,6 @@
 import Element from "sap/ui/core/Element";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract";
+import { keyPositionOf, type KeyPosition } from "./dom";
 import { NativeDispatchableKeyNames } from "../library";
 import type { ShiftState } from "./shift-state";
 
@@ -48,6 +49,7 @@ export default class PhysicalKeyHighlight {
     onkeyup: (event: DelegatedKeyboardEvent) => void;
   };
   private _targetId: string | null = null;
+  private _highlightedKey: KeyPosition | null = null;
 
   constructor(
     private readonly _host: PhysicalKeyHighlightHost,
@@ -67,6 +69,9 @@ export default class PhysicalKeyHighlight {
 
   /** Detach the highlight delegate from the current target (if any). */
   detach(): void {
+    // A key still down when the target changes never delivers its keyup here,
+    // so the highlight is dropped now rather than left for a later render to paint.
+    this._clearHighlight();
     if (!this._targetId) return;
     const prev = Element.getElementById(this._targetId);
     if (prev) prev.removeEventDelegate(this._delegation);
@@ -93,12 +98,7 @@ export default class PhysicalKeyHighlight {
     if (!dom) return;
 
     if (!add) {
-      // Clear all highlights on any keyup. When Shift releases before the
-      // character key, keyup reports the unshifted value (e.g. "2" not "@"),
-      // so a targeted removal would miss the shifted key's highlight.
-      dom
-        .querySelectorAll<HTMLElement>(`.${KIOSK_KEYBOARD_DOM.classes.keyHighlight}`)
-        .forEach((el) => el.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyHighlight));
+      this._clearHighlight();
       return;
     }
 
@@ -107,6 +107,27 @@ export default class PhysicalKeyHighlight {
       dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByValue(mapped ?? key)) ??
       (key.length === 1 ? dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByValue(key.toLowerCase())) : null) ??
       dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByShiftValue(key));
-    el?.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyHighlight, add);
+    if (el) {
+      el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyHighlight);
+      this._highlightedKey = keyPositionOf(el);
+    }
+  }
+
+  /**
+   * Drop every highlight. When Shift releases before the character key, keyup
+   * reports the unshifted value (e.g. "2" not "@"), so a targeted removal would
+   * miss the shifted key's highlight.
+   */
+  private _clearHighlight(): void {
+    this._host
+      .getDomRef()
+      ?.querySelectorAll<HTMLElement>(`.${KIOSK_KEYBOARD_DOM.classes.keyHighlight}`)
+      .forEach((el) => el.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyHighlight));
+    this._highlightedKey = null;
+  }
+
+  /** The grid position of the key the physical keyboard currently holds down. */
+  getHighlightedKey(): KeyPosition | null {
+    return this._highlightedKey;
   }
 }

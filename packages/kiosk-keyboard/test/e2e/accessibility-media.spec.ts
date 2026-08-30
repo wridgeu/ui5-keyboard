@@ -118,3 +118,46 @@ test("kb-caps-lock-indicator-survives-focus-in-forced-colors", async ({ page }) 
   expect(focused.outline, "focus draws the focus outline").not.toBe("none");
   expect(focused.border, "the latch signal survives focus").toBe(latched.border);
 });
+
+// A mouse press lands under the pointer, so `:hover` and the pressed arm match the
+// same key at once and tie on specificity, leaving source order to decide the fill.
+// Both keys are covered because the tie repeats at two specificities: `--action` at
+// (0,2,0), the latched-Shift pair at (0,3,0). The hover-versus-press assertion is
+// what keeps the second one honest - a theme painting the two fills alike would
+// satisfy it with the cascade broken.
+test("kb-press-outranks-hover-under-a-pointer", async ({ page }) => {
+  await openPage(page);
+  test.skip(!(await page.evaluate(() => matchMedia("(hover: hover)").matches)), "no hover on this device profile");
+
+  // Both arms transition `background` over 100ms, so a read taken in the same
+  // task still reports the outgoing fill.
+  const background = (k: Locator) =>
+    k.evaluate(async (el) => {
+      await Promise.allSettled(el.getAnimations().map((a) => a.finished));
+      return getComputedStyle(el).backgroundColor;
+    });
+  const setPressed = (k: Locator, on: boolean) =>
+    k.evaluate((el, arg) => el.classList.toggle(arg.cls, arg.on), { cls: DOM.classes.keyPressed, on });
+
+  for (const { dataKey, latched } of [
+    { dataKey: "{enter}", latched: [] as string[] },
+    { dataKey: "{shift}", latched: [DOM.classes.keyShiftActive] },
+  ]) {
+    const target = key(page, "kb-qwerty", dataKey);
+    await target.evaluate((el, cls) => el.classList.add(...cls), latched);
+
+    await page.mouse.move(0, 0);
+    await setPressed(target, true);
+    const pressedOnly = await background(target);
+
+    await setPressed(target, false);
+    await target.hover();
+    const hoverOnly = await background(target);
+
+    await setPressed(target, true);
+    const hoveredAndPressed = await background(target);
+
+    expect(hoverOnly, `${dataKey} paints a hover fill distinct from its press fill`).not.toBe(pressedOnly);
+    expect(hoveredAndPressed, `${dataKey} keeps its press fill under the pointer`).toBe(pressedOnly);
+  }
+});

@@ -275,6 +275,73 @@ describe("middleware integration", () => {
 
       expect(input.value).toBe("\uD55C\uAD6D");
     });
+
+    it("refuses the jamo that would open a preedit past maxlength", () => {
+      const input = document.createElement("input");
+      input.value = "";
+      input.setSelectionRange(0, 0);
+      input.maxLength = 1;
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      // \uAC04 fills the field; the following \u314F would steal the \u3134 into a second syllable.
+      for (const key of ["\u3131", "\u314F", "\u3134"]) m.handleKey(key, input);
+      expect(input.value, "precondition: \uAC04 is a live preedit").toBe("\uAC04");
+
+      expect(m.handleKey("\u314F", input), "the refused key is swallowed, not passed on").toBe(true);
+      expect(input.value).toBe("\uAC04");
+    });
+
+    it("keeps composing while the field still has room", () => {
+      const input = document.createElement("input");
+      input.value = "";
+      input.setSelectionRange(0, 0);
+      input.maxLength = 2;
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      for (const key of ["\u3131", "\u314F", "\u3134", "\u314F"]) m.handleKey(key, input);
+
+      expect(input.value).toBe("\uAC00\uB098");
+    });
+
+    it("refuses the jamo that would commit one preedit and open another past maxlength", () => {
+      const input = document.createElement("input");
+      input.value = "";
+      input.setSelectionRange(0, 0);
+      input.maxLength = 1;
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      m.handleKey("ㄱ", input);
+      expect(input.value, "precondition: ᄀ is a live preedit").toBe("ᄀ");
+
+      expect(m.handleKey("ㄴ", input), "the refused key is swallowed, not passed on").toBe(true);
+      expect(input.value).toBe("ᄀ");
+    });
+
+    it("counts the text a new composition replaces as room", () => {
+      const input = document.createElement("input");
+      input.value = "AB";
+      input.setSelectionRange(0, 2);
+      input.maxLength = 2;
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      m.handleKey("\u3131", input);
+
+      expect(input.value).toBe("\u1100");
+    });
+  });
+
+  describe("hangul compose replaces the selection", () => {
+    it("removes the selected text instead of composing beside it", () => {
+      const input = document.createElement("input");
+      input.value = "ABCD";
+      input.setSelectionRange(1, 3);
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      m.handleKey("\u3131", input);
+      m.handleKey("\u314F", input);
+
+      expect(input.value).toBe("A\uAC00D");
+    });
   });
 
   describe("kana dakuten respects readOnly/disabled", () => {

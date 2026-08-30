@@ -285,6 +285,46 @@
     justify-content: center;
   }
 
+  /* Hover affordances apply only where a hovering primary pointer exists.
+     Gating the declarations keeps a tap on a touch device from leaving the
+     key painted in its hover colors.
+
+     Declared ahead of the interactive arms below: a mouse press lands under the
+     pointer, and each arm ties its `:hover` counterpart on specificity, so only
+     source order keeps the press feedback visible. These rules set `background`
+     alone, so a hover that won the tie would leave the pressed `color` painted
+     over the hover fill, which on `.ui5KioskKey--action` is the same emphasized
+     colour and erases the label. */
+
+  @media (hover: hover) {
+    .ui5KioskKey:hover {
+      background: @sapUiButtonHoverBackground;
+      border-color: @sapUiButtonHoverBorderColor;
+      transform: translateY(-1px);
+      box-shadow: var(--_ui5KioskKeyboard-keyShadowHover);
+      transition:
+        background 0.1s ease,
+        box-shadow 0.1s ease,
+        transform 0.05s ease;
+    }
+
+    .ui5KioskKey--modifier:hover {
+      background: @sapUiButtonLiteHoverBackground;
+      border-color: @sapUiButtonLiteHoverBorderColor;
+      box-shadow: var(--_ui5KioskKeyboard-modifierShadowHover);
+    }
+
+    .ui5KioskKey--action:hover {
+      background: @sapUiButtonEmphasizedHoverBackground;
+      border-color: @sapUiButtonEmphasizedHoverBorderColor;
+    }
+
+    .ui5KioskKey.ui5KioskKey--shiftActive:hover {
+      background: @sapUiButtonEmphasizedHoverBackground;
+      border-color: @sapUiButtonEmphasizedHoverBorderColor;
+    }
+  }
+
   /* Key */
 
   .ui5KioskKey {
@@ -787,39 +827,6 @@
      order. */
   .ui5KioskKey[data-has-variants]:dir(rtl)::after {
     clip-path: polygon(0 0, 100% 0, 0 100%);
-  }
-
-  /* Hover affordances apply only where a hovering primary pointer exists.
-     Gating the declarations keeps a tap on a touch device from leaving the
-     key painted in its hover colors. */
-
-  @media (hover: hover) {
-    .ui5KioskKey:hover {
-      background: @sapUiButtonHoverBackground;
-      border-color: @sapUiButtonHoverBorderColor;
-      transform: translateY(-1px);
-      box-shadow: var(--_ui5KioskKeyboard-keyShadowHover);
-      transition:
-        background 0.1s ease,
-        box-shadow 0.1s ease,
-        transform 0.05s ease;
-    }
-
-    .ui5KioskKey--modifier:hover {
-      background: @sapUiButtonLiteHoverBackground;
-      border-color: @sapUiButtonLiteHoverBorderColor;
-      box-shadow: var(--_ui5KioskKeyboard-modifierShadowHover);
-    }
-
-    .ui5KioskKey--action:hover {
-      background: @sapUiButtonEmphasizedHoverBackground;
-      border-color: @sapUiButtonEmphasizedHoverBorderColor;
-    }
-
-    .ui5KioskKey.ui5KioskKey--shiftActive:hover {
-      background: @sapUiButtonEmphasizedHoverBackground;
-      border-color: @sapUiButtonEmphasizedHoverBorderColor;
-    }
   }
 
   /* Accessibility */

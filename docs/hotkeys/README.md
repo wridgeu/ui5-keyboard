@@ -13,7 +13,7 @@
 - [HotkeyManager Instance Lifecycle](./history/HOTKEYS-INSTANCE-LIFECYCLE.md)
 - [Centralized EventDispatcher & Suspend Guard](./history/HOTKEY-MANAGER-SUSPEND-GUARD.md)
 
-## [Proposals](./proposals/)
+## Proposals
 
 No active proposals.
 

@@ -12,6 +12,7 @@ export type RendererInternalApi = {
   _isShiftActive(): boolean;
   _isCapsLock(): boolean;
   _getPressedKey(): KeyPosition | null;
+  _getHighlightedKey(): KeyPosition | null;
   _getResolvedLayout(): LayoutDefinition;
   _getLayoutLang(): string | undefined;
   _getKeyLabel(key: KeyDefinition): string;

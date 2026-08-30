@@ -17,6 +17,13 @@ export function createCompositionState(): CompositionState {
  */
 export function startComposition(state: CompositionState, target: HTMLInputElement | HTMLTextAreaElement): void {
   const pos = target.selectionStart ?? target.value.length;
+  const end = target.selectionEnd ?? pos;
+  // A composition replaces the selection, the way a typed character does. The preedit is written
+  // at `pos` and {@link updateComposition} derives its range from `pos` alone, so without this
+  // the selected text survives beside the preedit instead of under it.
+  if (end > pos) {
+    target.value = target.value.slice(0, pos) + target.value.slice(end);
+  }
   state.composing = true;
   state.preeditStart = pos;
   state.preeditLength = 0;
@@ -58,9 +65,4 @@ export function endComposition(state: CompositionState, target: HTMLInputElement
   state.composing = false;
   state.preeditStart = 0;
   state.preeditLength = 0;
-}
-
-/** Returns whether a composition is currently active. */
-export function isComposing(state: CompositionState): boolean {
-  return state.composing;
 }

@@ -5,7 +5,6 @@ import {
   startComposition,
   updateComposition,
   endComposition,
-  isComposing,
 } from "../core/composition-utils.js";
 import { commitComposition, insertText } from "../core/input-operations.js";
 
@@ -114,6 +113,21 @@ function composeSyllable(l: number, v: number, t = 0): string {
 }
 
 /**
+ * Whether a new one-unit preedit fits the target's `maxlength`.
+ *
+ * A preedit is written straight to `target.value`, which `maxlength` does not police, so the
+ * limit has to be honoured before the write. The selection counts as room because opening a
+ * preedit replaces it. Why this refuses the key where a platform IME is allowed to overrun:
+ * `docs/specs/2026-08-11-native-text-insertion-design.md` §3.5.
+ */
+function hasRoomForPreedit(el: HTMLInputElement | HTMLTextAreaElement): boolean {
+  if (el.maxLength < 0) return true;
+  const start = el.selectionStart ?? el.value.length;
+  const end = el.selectionEnd ?? start;
+  return el.value.length - (end - start) < el.maxLength;
+}
+
+/**
  * Hangul syllable composition phase.
  *
  * A syllable block is built from up to three components defined by the
@@ -148,8 +162,23 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
     target = null;
   }
 
+  /**
+   * Commit whatever preedit is live and open a fresh one on `lIdx`. A jamo that
+   * `maxlength` has no room for is dropped instead, leaving the live preedit alone.
+   */
+  function openPreedit(el: HTMLInputElement | HTMLTextAreaElement, lIdx: number): void {
+    if (!hasRoomForPreedit(el)) return;
+    commitPreedit(el);
+    resetInternal();
+    startComposition(compState, el);
+    updateComposition(compState, el, jamoL(lIdx));
+    phase = "L";
+    curL = lIdx;
+    target = el;
+  }
+
   function commitPreedit(el: HTMLInputElement | HTMLTextAreaElement): string | null {
-    if (!isComposing(compState)) return null;
+    if (!compState.composing) return null;
     // How the preedit reaches the host is the one framework-specific step in
     // this middleware, so it lives in the input-operations adapter.
     return commitComposition(compState, el) || null;
@@ -161,7 +190,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
       if (el.readOnly || el.disabled) return false;
 
       if (key === "{backspace}") {
-        if (!isComposing(compState)) return false;
+        if (!compState.composing) return false;
         if (phase === "LVT") {
           phase = "LV";
           curT = 0;
@@ -186,7 +215,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
       }
 
       if (key.length !== 1) {
-        if (isComposing(compState)) {
+        if (compState.composing) {
           commitPreedit(el);
           resetInternal();
         }
@@ -198,7 +227,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
       const vIdx = COMPAT_TO_V.get(code);
 
       if (lIdx === undefined && vIdx === undefined) {
-        if (isComposing(compState)) {
+        if (compState.composing) {
           commitPreedit(el);
           resetInternal();
         }
@@ -207,11 +236,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
 
       if (phase === "empty") {
         if (lIdx !== undefined) {
-          startComposition(compState, el);
-          updateComposition(compState, el, jamoL(lIdx));
-          phase = "L";
-          curL = lIdx;
-          target = el;
+          openPreedit(el, lIdx);
           return true;
         }
         if (vIdx !== undefined) {
@@ -229,13 +254,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           return true;
         }
         if (lIdx !== undefined) {
-          commitPreedit(el);
-          resetInternal();
-          startComposition(compState, el);
-          updateComposition(compState, el, jamoL(lIdx));
-          phase = "L";
-          curL = lIdx;
-          target = el;
+          openPreedit(el, lIdx);
           return true;
         }
       }
@@ -256,13 +275,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           return true;
         }
         if (lIdx !== undefined) {
-          commitPreedit(el);
-          resetInternal();
-          startComposition(compState, el);
-          updateComposition(compState, el, jamoL(lIdx));
-          phase = "L";
-          curL = lIdx;
-          target = el;
+          openPreedit(el, lIdx);
           return true;
         }
       }
@@ -272,6 +285,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           // T-stealing: decompose LVT -> LV, use stolen T as leading consonant of new syllable
           const stolenL = T_TO_L.get(curT);
           if (stolenL !== undefined) {
+            if (!hasRoomForPreedit(el)) return true;
             updateComposition(compState, el, composeSyllable(curL, curV));
             commitPreedit(el);
             resetInternal();
@@ -285,13 +299,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           }
         }
         if (lIdx !== undefined) {
-          commitPreedit(el);
-          resetInternal();
-          startComposition(compState, el);
-          updateComposition(compState, el, jamoL(lIdx));
-          phase = "L";
-          curL = lIdx;
-          target = el;
+          openPreedit(el, lIdx);
           return true;
         }
       }
@@ -300,7 +308,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
     },
 
     commit(): string | null {
-      if (!isComposing(compState) || !target) {
+      if (!compState.composing || !target) {
         resetInternal();
         return null;
       }
@@ -310,7 +318,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
     },
 
     reset(): void {
-      if (isComposing(compState) && target) {
+      if (compState.composing && target) {
         updateComposition(compState, target, "");
         endComposition(compState, target);
       }

@@ -117,6 +117,16 @@ QUnit.test("commit flushes preedit to target", (assert) => {
   assert.strictEqual(input.value, "\uAC00", "Value preserved after commit");
 });
 
+QUnit.test("commit reports the composed syllable as compositionend data", (assert) => {
+  const m = mw();
+  const seen: string[] = [];
+  input.addEventListener("compositionend", (e) => seen.push((e as CompositionEvent).data ?? ""));
+  m.handleKey("\u3131", input); // ㄱ
+  m.handleKey("\u314F", input); // ㅏ -> 가
+  m.commit();
+  assert.deepEqual(seen, ["\uAC00"], "compositionend fires once, carrying the committed syllable");
+});
+
 QUnit.test("reset clears state without committing content", (assert) => {
   const m = mw();
   m.handleKey("\u3131", input); // ㄱ
@@ -167,6 +177,52 @@ QUnit.test("Disabled target declines the key and leaves the value untouched", (a
   const consumed = m.handleKey("\u314E", input); // ㅎ
   assert.strictEqual(consumed, false, "Key declined on a disabled target");
   assert.strictEqual(input.value, "ab", "No preedit written");
+});
+
+QUnit.test("Jamo that would open a preedit past maxlength is refused", (assert) => {
+  const m = mw();
+  input.maxLength = 1;
+  // 간 fills the field; the following ㅏ would steal the ㄴ into a second syllable.
+  for (const key of ["ㄱ", "ㅏ", "ㄴ"]) m.handleKey(key, input);
+  assert.strictEqual(input.value, "간", "Precondition: 간 is a live preedit");
+
+  assert.strictEqual(m.handleKey("ㅏ", input), true, "The refused key is swallowed, not passed on");
+  assert.strictEqual(input.value, "간", "Preedit never exceeds maxlength");
+});
+
+QUnit.test("Composition continues while the field still has room", (assert) => {
+  const m = mw();
+  input.maxLength = 2;
+  for (const key of ["ㄱ", "ㅏ", "ㄴ", "ㅏ"]) m.handleKey(key, input);
+  assert.strictEqual(input.value, "가나", "Both syllables fit and compose");
+});
+
+QUnit.test("Jamo that would commit one preedit and open another past maxlength is refused", (assert) => {
+  const m = mw();
+  input.maxLength = 1;
+  m.handleKey("ㄱ", input);
+  assert.strictEqual(input.value, "ᄀ", "Precondition: ᄀ is a live preedit");
+
+  assert.strictEqual(m.handleKey("ㄴ", input), true, "The refused key is swallowed, not passed on");
+  assert.strictEqual(input.value, "ᄀ", "The live preedit is left alone");
+});
+
+QUnit.test("Text a new composition replaces counts as room", (assert) => {
+  const m = mw();
+  input.value = "AB";
+  input.setSelectionRange(0, 2);
+  input.maxLength = 2;
+  m.handleKey("ㄱ", input);
+  assert.strictEqual(input.value, "ᄀ", "The replaced selection frees the room the preedit needs");
+});
+
+QUnit.test("Composition replaces the selected text instead of composing beside it", (assert) => {
+  const m = mw();
+  input.value = "ABCD";
+  input.setSelectionRange(1, 3);
+  m.handleKey("ㄱ", input);
+  m.handleKey("ㅏ", input);
+  assert.strictEqual(input.value, "A가D", "The selection is replaced, as a typed character would");
 });
 
 QUnit.test("Backspace declined on a target that turned read-only mid-composition", (assert) => {

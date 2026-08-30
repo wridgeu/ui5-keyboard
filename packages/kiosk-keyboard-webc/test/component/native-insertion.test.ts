@@ -161,10 +161,11 @@ describe("native text insertion", () => {
     });
   }
 
-  // The committed syllable is inserted through the platform, so `maxlength` is
-  // the browser's: the preedit that overran it while composing does not survive
-  // the commit.
-  it("enforces maxlength on the committed syllable", async () => {
+  // `maxlength` is honoured before the preedit is written, so the fourth jamo - which would
+  // steal the trailing consonant into a second syllable the field has no room for - is refused
+  // and the composing syllable survives whole. The commit still goes through the platform,
+  // which is what keeps the trailing "x" out.
+  it("enforces maxlength on the composing syllable", async () => {
     const { kb, input } = await setupWithLayout(HANGUL_LAYOUT, { middleware: createHangulComposeMiddleware });
     input.maxLength = 1;
     focusAtEnd(input);
@@ -172,7 +173,7 @@ describe("native text insertion", () => {
     for (const jamo of ["\u3131", "\u314F", "\u3134", "\u314F"]) requireKey(kb, jamo).click(); // ㄱ ㅏ ㄴ ㅏ
     requireKey(kb, "x").click();
 
-    expect(input.value, "the saturated field keeps the one syllable it has room for").to.equal("\uAC00");
+    expect(input.value, "the saturated field keeps the whole syllable it has room for").to.equal("\uAC04");
   });
 
   // execCommand acts on whatever is focused. With the target unfocused the
