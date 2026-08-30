@@ -106,13 +106,11 @@ export default class AutoShowBehavior extends BaseObject {
 
     // Detection reads the target's authored metadata, so it runs before
     // _setActiveTarget: while the keyboard is open that call writes
-    // inputmode="none" on the new target to suppress its native keyboard, which
-    // masks an authored numeric/decimal/tel value. The already-active target
-    // carries that mask from its previous focus, so a refocus is not detectable
-    // at all and keeps the type it already has. Suppression is gated on the
-    // keyboard being open, so while it is closed no target carries the mask and
-    // one claimed ahead of the first focus - a single `controls` entry - is
-    // still read from its authored markup.
+    // inputmode="none" on the new target, masking an authored numeric/decimal/tel
+    // value. The already-active target carries that mask from its previous focus,
+    // so a refocus is not detectable and keeps the type it has. While the keyboard
+    // is closed nothing carries the mask, so a target claimed ahead of its first
+    // focus - a single `controls` entry - is still read from its authored markup.
     const detectable = this._host._getActiveTargetId() !== ui5Control.getId() || !this._host.isOpen();
     const detected = detectable ? detectKbType(ui5Control, this._host._getEffectiveResolver()) : null;
 
@@ -129,9 +127,9 @@ export default class AutoShowBehavior extends BaseObject {
       const previous = this._host.getKeyboardType();
       // Only (re)apply detection when the type actually changes. Re-running on
       // every focusin (e.g. moving between two plain text inputs) would call
-      // _setKeyboardTypeSource, which resets the user-driven
-      // {layout:*} override (LayoutState source -> "external") and reverts a
-      // layout the user explicitly chose. Mirrors the webc focusin guard
+      // _setKeyboardTypeSource, which resets the user-driven {layout:*} override
+      // (LayoutState source -> "external") and reverts a layout the user
+      // explicitly chose. Mirrors the webc focusin guard
       // (`if (detected !== this.keyboardType)`).
       if (detected !== previous) {
         this._host._setKeyboardTypeSource(`auto:${detected}`);

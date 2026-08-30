@@ -528,8 +528,6 @@
     border-color: var(--sapButton_Emphasized_Active_BorderColor, #0053b8);
   }
 
-  /* The emphasized fill needs the contrast ring, the same trade `--action`
-     makes for the same background. */
   &:focus-visible {
     outline-color: var(--sapContent_ContrastFocusColor, #fff);
   }

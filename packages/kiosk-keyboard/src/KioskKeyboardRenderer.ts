@@ -155,9 +155,9 @@ const KioskKeyboardRenderer = {
 
     rm.openStart("div", keyElementId(oControl.getId(), ri, ci));
     this.addKeyClasses(rm, oControl, key, icon, label);
-    // The keycap currently held down, by pointer or by keyboard activation. The
-    // renderer owns the class so a press whose own key invalidates the control
-    // keeps its feedback across the patch that repaints the keycap.
+    // Re-emit the pressed class for the keycap currently held down, by pointer or
+    // by keyboard activation: a press whose own key invalidates the control keeps
+    // its feedback across the patch that repaints the keycap.
     const pressed = _getPressedKey();
     if (pressed?.row === ri && pressed.col === ci) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyPressed);

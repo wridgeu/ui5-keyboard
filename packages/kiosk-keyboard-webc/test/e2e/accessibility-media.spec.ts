@@ -174,7 +174,7 @@ test("webc-latched-shift-draws-the-contrast-focus-ring", async ({ page }) => {
   const action = await focusAndRead(key(page, "kb-qwerty", "{enter}"));
   const plain = await focusAndRead(key(page, "kb-qwerty", "z"));
 
-  expect(resting, "the resting key draws no outline").toBe("none");
+  expect(resting, "the latched Shift draws no outline at rest").toBe("none");
   expect(shift.style, "focus draws the focus outline").not.toBe("none");
   expect(action.color, "the contrast and default focus colours differ in the loaded theme").not.toBe(plain.color);
   expect(shift.color, "a focused latched Shift draws the contrast ring").toBe(action.color);

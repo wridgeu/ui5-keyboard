@@ -14,7 +14,9 @@ const DECOY_VALUE = "decoy";
 
 // Jamo enough to compose 가 and then steal its ㄴ into a second syllable,
 // plus a non-jamo key whose press commits the live preedit.
-const HANGUL_LAYOUT: LayoutDefinition = [[{ value: "ㄱ" }, { value: "ㅏ" }, { value: "ㄴ" }, { value: "x" }]];
+const HANGUL_LAYOUT: LayoutDefinition = [
+  [{ value: "\u3131" }, { value: "\u314F" }, { value: "\u3134" }, { value: "x" }], // ㄱ ㅏ ㄴ
+];
 
 interface Setup {
   kb: KioskKeyboard;
@@ -167,10 +169,10 @@ describe("native text insertion", () => {
     input.maxLength = 1;
     focusAtEnd(input);
 
-    for (const jamo of ["ㄱ", "ㅏ", "ㄴ", "ㅏ"]) requireKey(kb, jamo).click();
+    for (const jamo of ["\u3131", "\u314F", "\u3134", "\u314F"]) requireKey(kb, jamo).click(); // ㄱ ㅏ ㄴ ㅏ
     requireKey(kb, "x").click();
 
-    expect(input.value, "the saturated field keeps the one syllable it has room for").to.equal("가");
+    expect(input.value, "the saturated field keeps the one syllable it has room for").to.equal("\uAC00");
   });
 
   // execCommand acts on whatever is focused. With the target unfocused the
