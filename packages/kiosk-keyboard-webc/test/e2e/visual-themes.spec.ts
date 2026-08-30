@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { openPage, keyboardRoot } from "./helpers.js";
+import { test, type Page } from "@playwright/test";
+import { openPage, keyboardRoot, expectVisualMatch } from "./helpers.js";
 
 // Per-theme visual regression on the dedicated theme page (qwerty + numpad).
 
@@ -38,11 +38,11 @@ test.describe("Theme Visual Regression", () => {
       });
 
       test(`webc-qwerty-${theme}`, async ({ page }) => {
-        await expect(keyboardRoot(page, "kb-qwerty")).toHaveScreenshot(`webc-qwerty-${theme}.png`);
+        await expectVisualMatch(keyboardRoot(page, "kb-qwerty"), `webc-qwerty-${theme}.png`);
       });
 
       test(`webc-numpad-${theme}`, async ({ page }) => {
-        await expect(keyboardRoot(page, "kb-numpad")).toHaveScreenshot(`webc-numpad-${theme}.png`);
+        await expectVisualMatch(keyboardRoot(page, "kb-numpad"), `webc-numpad-${theme}.png`);
       });
     });
   }

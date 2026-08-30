@@ -49,14 +49,14 @@ wrapper.remove(); // ← fixtureCleanup will fail
 
 ## Visual Regression Tests
 
-Visual tests use Playwright's built-in `toHaveScreenshot()` assertion. Baselines are tied to the Chromium build bundled with `@playwright/test` (pinned at the repo root); bumping that version can shift rendering, so regenerate ALL baselines across both packages when it changes.
+Visual tests use Playwright's built-in `toHaveScreenshot()` assertion, and the pixel comparison happens locally only. Baselines are committed without a platform suffix and are generated on Windows, so a baseline is valid only for the OS that produced it. CI compares none of them: `test:e2e:ci` passes `--ignore-snapshots`, so the visual specs run there as render smoke tests and the device projects are gated on `invariants.spec.ts` alone. Baselines are also tied to the Chromium build bundled with `@playwright/test` (pinned at the repo root); bumping that version can shift rendering, so regenerate ALL baselines across both packages when it changes.
 
 ### How it works
 
 The pipeline is whatever Playwright does for `expect(locator).toHaveScreenshot()`:
 
 1. **Capture**: the two packages differ here.
-   - **webc** screenshots **the element** via `expect(locator).toHaveScreenshot()`. Element screenshots are captured in full even when the element is larger than the viewport, so there is no viewport-clipping problem and **no section isolation is needed**.
+   - **webc** routes every capture through `expectVisualMatch` (`test/e2e/helpers.ts`), which resolves the locator and settles web fonts before `expect(locator).toHaveScreenshot()`. It screenshots **the element**, and element screenshots are captured in full even when the element is larger than the viewport, so there is no viewport-clipping problem and **no section isolation is needed**.
    - **kiosk** routes every in-flow assertion through `expectKeyboardVisualMatch` -> `expectVisualMatch` (`test/e2e/helpers.ts`), which measures a document-coordinate clip and calls `expect(page).toHaveScreenshot(name, { fullPage: true, clip })`. Its fixture page pins fixtures to 320/400/600px and so overflows horizontally, which (per #204) breaks the viewport-relative box an element screenshot uses once mobile emulation inflates the layout viewport or RTL moves the scroll origin. The `position: fixed` docked case has no document box and stays on element capture.
 2. **Compare**: The capture is compared against the committed baseline under `test/e2e/__baselines__/<project>/`. On mismatch the test fails and Playwright writes `actual`, `expected`, and `diff` PNGs into `test-results/`.
 3. **Report**: `playwright show-report` opens the HTML report with the three images side by side for every failed snapshot.
@@ -82,9 +82,9 @@ Within `playwright.config.ts`, projects share a single `webServer` and differ on
 - The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores `flp-lifecycle` and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
 - The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs; the behavioral specs (kiosk: autotype, focus, i18n, inputmode, interop; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
 
-On CI the device projects narrow further, to `invariants.spec.ts` alone (`CI_DEVICE_SPECS` in both configs): CI passes `--ignore-snapshots`, under which the rest of their matrix captures nothing, and the non-pixel assertions those specs carry still run through the desktop project. Both configs throw when that spec no longer exists, since a project whose `testMatch` selects nothing still exits 0. Locally every project runs every spec and compares pixels.
+On CI the device projects narrow to `invariants.spec.ts` (`CI_DEVICE_SPECS` in both configs), since the rest of their matrix captures nothing there; the non-pixel assertions those specs carry still run through the desktop project, which keeps the full spec list. Both configs throw when `invariants.spec.ts` no longer exists, since a project whose `testMatch` selects nothing still exits 0. Locally every project runs every spec and compares pixels.
 
-Both capture paths take the element in full regardless of viewport, so the fixed-width container fixtures run on every profile without per-viewport gating.
+The webc fixtures are viewport-relative or `max-width` wrappers and run on every profile ungated. The kiosk container fixtures are pinned to a fixed width, so `visual-container.spec.ts` skips them below 420px (620px for `kb-wide`), which is why they have no `phone-sm` or `phone-md` baseline.
 
 Baselines are committed, one directory per Playwright project (via `snapshotPathTemplate: "{testDir}/__baselines__/{projectName}/{arg}{ext}"`):
 

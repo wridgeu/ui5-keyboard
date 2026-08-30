@@ -26,7 +26,9 @@ const AUTO_COMPACT_THRESHOLD_PX = 352;
 
 // Fixtures spanning the row-density and icon-rendering range of the visual page.
 // kb-narrow and kb-numpad cap their own width, so they sit below the container
-// tier on every project while the full-width fixtures cross it.
+// tier on every project while the full-width fixtures cross it;
+// kb-height-padded-host caps its height and takes its own padding and border out
+// of both budgets, so what fits it is what the tier controller measured.
 const HOSTS = [
   "kb-qwerty",
   "kb-accent-variants",
@@ -39,6 +41,7 @@ const HOSTS = [
   "kb-narrow",
   "kb-icon-label-variations",
   "kb-qwerty-nav-compact",
+  "kb-height-padded-host",
 ];
 
 // Fixtures whose host caps the keyboard's height, directly or through an

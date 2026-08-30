@@ -1,5 +1,5 @@
-import { test, expect } from "@playwright/test";
-import { openPage, keyboardRoot, setDocumentDirection } from "./helpers.js";
+import { test } from "@playwright/test";
+import { openPage, keyboardRoot, expectVisualMatch, setDocumentDirection } from "./helpers.js";
 
 // Right-to-left visual regression. Direction is reset after each test.
 
@@ -22,6 +22,6 @@ for (const { id, tag } of [
   { id: "kb-accent-variants", tag: "webc-accent-variants-rtl" },
 ]) {
   test(tag, async ({ page }) => {
-    await expect(keyboardRoot(page, id)).toHaveScreenshot(`${tag}.png`);
+    await expectVisualMatch(keyboardRoot(page, id), `${tag}.png`);
   });
 }

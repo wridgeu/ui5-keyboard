@@ -2036,6 +2036,8 @@ npm run test:e2e:report
 # NOTE: Visual baselines are tied to the Chromium build bundled with
 # @playwright/test (pinned at the repo root). Bumping that version can shift
 # rendering; regenerate ALL visual baselines across all packages when it changes.
+# They also carry no platform suffix: a baseline is only valid for the OS it was
+# generated on, and CI compares none of them.
 
 # Type check
 npm run typecheck
