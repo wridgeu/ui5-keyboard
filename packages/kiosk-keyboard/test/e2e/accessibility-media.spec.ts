@@ -119,14 +119,12 @@ test("kb-caps-lock-indicator-survives-focus-in-forced-colors", async ({ page }) 
   expect(focused.border, "the latch signal survives focus").toBe(latched.border);
 });
 
-// A mouse press always lands under the pointer, so `:hover` and the pressed arms
-// match the same key at once and tie on specificity - `.ui5KioskKey--action:hover`
-// against `.ui5KioskKey--action:active` at (0,2,0), the latched-Shift pair at
-// (0,3,0). Only source order can keep the press feedback visible. The hover arms
-// declare `background` alone, so a hover that outranks the press leaves the
-// pressed `color` painted over the hover fill, and on `--action` those two
-// resolve to the same emphasized colour: an Enter with no readable label under
-// every mouse press.
+// A mouse press lands under the pointer, so `:hover` and the pressed arm match the
+// same key at once and tie on specificity, leaving source order to decide the fill.
+// Both keys are covered because the tie repeats at two specificities: `--action` at
+// (0,2,0), the latched-Shift pair at (0,3,0). The hover-versus-press assertion is
+// what keeps the second one honest - a theme painting the two fills alike would
+// satisfy it with the cascade broken.
 test("kb-press-outranks-hover-under-a-pointer", async ({ page }) => {
   await openPage(page);
   test.skip(!(await page.evaluate(() => matchMedia("(hover: hover)").matches)), "no hover on this device profile");

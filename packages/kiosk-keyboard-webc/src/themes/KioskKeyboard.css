@@ -541,8 +541,8 @@
    must not blink out under transient press feedback. */
 .kiosk-key.kiosk-key--shift-active.kiosk-key--caps-lock {
   box-shadow: 0 0 0 2px var(--sapButton_Emphasized_Background, #0070f2);
-  /* Only animate the ring: the shorthand resets every other transition property
-     to its initial value, so background and colour snap. */
+  /* Only animate the ring: naming it alone also drops the press arms' background
+     transition from a latched key. */
   transition: box-shadow 0.1s ease;
 }
 
