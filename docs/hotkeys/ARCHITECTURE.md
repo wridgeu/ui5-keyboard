@@ -331,11 +331,11 @@ packages/hotkeys/
     KeyStateTracker.ts   Held-key state tracking
     HotkeyRecorder.ts    Keyboard shortcut recorder
     types.ts             All interfaces and type definitions
-    validate.ts          Validation + browser/SAP blocklists (stable consumer import)
-    constants.ts         Alias maps, display symbols, normalization (stable consumer import)
-    parse.ts             Hotkey string parsing (stable consumer import)
-    match.ts             KeyboardEvent matching (stable consumer import)
-    platform.ts          Platform detection and Mod resolution (stable consumer import)
+    validate.ts          Validation + browser/SAP blocklists (non-stable re-export)
+    constants.ts         Alias maps, display symbols, normalization (non-stable re-export)
+    parse.ts             Hotkey string parsing (non-stable re-export)
+    match.ts             KeyboardEvent matching (non-stable re-export)
+    platform.ts          Platform detection and Mod resolution (non-stable re-export)
     format.ts            Display formatting helper (stable consumer import)
     internal/
       types.ts             Internal type definitions

@@ -175,7 +175,7 @@ Monorepo using npm workspaces. Requires Node >= 24 and npm >= 11.10.0 for develo
 
 ```bash
 npm install                 # Install all workspaces
-npm run build               # Build library dist/ artifacts (required before starting the demo app)
+npm run build               # Build all library dist/ artifacts
 ```
 
 ### Dev Servers

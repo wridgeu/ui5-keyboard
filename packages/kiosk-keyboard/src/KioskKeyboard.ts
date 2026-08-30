@@ -414,7 +414,9 @@ export default class KioskKeyboard extends Control {
       /**
        * Controls how virtual F-key taps are handled.
        *
-       * - `"Virtual"` (default): fire `keyPress` only. The app decides what to do.
+       * - `"Virtual"` (default): fire `keyPress` and run the built-in caret
+       *   navigation for arrow, `Home`/`End` and `PageUp`/`PageDown` keys, but
+       *   dispatch no native `keydown` and run no native browser action.
        * - `"Native"`: dispatch a synthetic `keydown` for standard
        *   function/navigation keys (`F1`-`F12`, arrows, `Home`/`End`,
        *   `PageUp`/`PageDown`) to the current target element (or document

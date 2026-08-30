@@ -7,7 +7,7 @@ This document describes the internal architecture, design decisions, and edge ca
 ```
 KioskKeyboard.ts          Web component class (state, event delegation, target input integration,
                           locale detection, auto-type, mobile keyboard suppression) and
-                          all built-in layout imports. Re-exports public types.
+                          Re-exports public types.
 KioskKeyboardTemplate.tsx JSX template: Preact-based, UI5 WC jsxRenderer
 CustomLayout.ts           <kiosk-keyboard-custom-layout> element carrying one layout's rows,
                           locales, keycap language, role, compact counterpart, suppressed
@@ -21,14 +21,15 @@ bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all b
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, FKeyMode,
                           LayoutRole, LayoutFacet, SpecialKeyValue, KeyWidth, KeyType,
                           event detail types
-jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>
+jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>, <ui5-button>, <ui5-popover>
 core/
   dom-utils.ts            Key grid coordinates + element IDs, per-key ::part() names, input/textarea resolver (shadow DOM aware)
   dom-contract.ts         Zero-dependency single source of truth for CSS classes, data attributes, selectors, part names
   shift-state.ts          Shift/Caps Lock state machine
   grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
   key-token.ts            Classifies a key's data-key value into its token kind (shift/backspace/enter/layout/fkey/unknown/char)
-  layout-registry.ts      Layout registration/reset + locale-based layout resolution
+  layout-registry.ts      Layout registration/reset + locale-based layout resolution;
+                          imports and seals all built-in layouts
   layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins, resolved per attribute against the folded custom layouts
   custom-layout-fold.ts   Folds the customLayouts slot into the per-facet lookup maps the resolution paths read, plus the diagnostics it reports
   layout-fold-cache.ts    LayoutFoldCache: caches that fold against the slotted elements and their revisions, and dedupes its diagnostics
@@ -125,7 +126,7 @@ Events are declared with `@event` from `event-strict.js`:
 
 ### TypeScript Configuration
 
-The framework requires specific compiler flags (`experimentalDecorators`, `useDefineForClassFields`, the JSX runtime pair, `strictPropertyInitialization`). See [TypeScript Decorator Setup](./TYPESCRIPT-DECORATOR-SETUP.md) for the flags and why each is needed.
+The framework requires specific compiler flags (`experimentalDecorators`, `useDefineForClassFields`, the JSX runtime pair). See [TypeScript Decorator Setup](./TYPESCRIPT-DECORATOR-SETUP.md) for the flags and why each is needed.
 
 ## Component Architecture
 
@@ -198,7 +199,8 @@ click / touchend
   |     {shift}         -> toggle shift state machine, fire key-press
   |     {backspace}     -> fire key-press, handle backspace on target
   |     {enter}         -> fire key-press, insert newline (textarea) / fire change (input)
-  |     {layout:name}   -> switch layout, fire layout-change (only if it changed)
+  |     {layout:name}   -> fire key-press (cancelable; a veto skips the switch),
+  |                        switch layout, fire layout-change (only if it changed)
   |     {fkey:name}     -> handle function/navigation key
   |     {token}         -> unrecognized: fire key-press, warn, no-op (no literal insertion)
   |     (character)     -> resolve shift value, fire key-press, insert text
@@ -252,6 +254,14 @@ The resolver is wrapped in try/catch for crash safety. If it returns `null`, the
 ### Programmatic Target
 
 `setTargetElement(el)` sets the target directly, bypassing ID-based resolution. Useful when the target input is not easily addressable by ID (e.g., inside dynamically created web components).
+
+### Active Target and `aria-controls`
+
+`_targetElement` is a private accessor over a backing field. Assigning it is what keeps `aria-controls` on the host in step with the current target, so the auto-show callback, `setTargetElement()`, the auto-target inside `_performOpen()`, the stale-target purge in `_resolveTarget()` and disconnect teardown all stay in sync through one writer.
+
+The attribute sits on the host, not on the shadow root's `.kiosk-keyboard` div, because IDREFs do not resolve across a shadow boundary. For the same reason the id published is not always the target's own: since the resolution chain above reaches inputs nested up to three shadow levels deep, `_ariaControlsId()` walks back up through shadow hosts to the nearest ancestor that shares the host's tree scope - normally the component named in `controls`. A target outside that scope, or one with no `id`, leaves the attribute off rather than writing a dangling IDREF.
+
+Resolving a target is not the same as setting one. `_resolveTarget()` looks up a single-entry `controls` list on every keystroke and returns the input without storing it, so a keyboard that types through `controls` alone - never focused, never opened while docked - has no active target and therefore no `aria-controls`. The UI5 twin does auto-target here: `ControlsDelegationController.sync()` runs from `onAfterRendering` and from `setControls()`, and adopts a single resolved control through `setActiveTarget()` - so a kiosk keyboard publishes `aria-controls` from `controls` alone, at render time, without focus or docking.
 
 ### Text Editing
 
@@ -402,7 +412,7 @@ Auto-show uses document-level `focusin`/`focusout` listeners in capture phase.
 
 ### Multi-Instance Isolation
 
-A static `_participants` set on `AutoShowController` (`core/auto-show-controller.ts`) tracks the controllers of all live keyboards; each joins via `register()` and leaves via `unregister()`. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any other participant already claims that input, gated by `_isAutoShowParticipationActive()` so an instance with auto-show off never blocks one that has it on. If so, auto-show bails out. A claim is either the peer's live active target or any id on its comma-separated `controls` list - every id on the list, since the active target is only set once one of them takes focus.
+A static `_participants` set on `AutoShowController` (`core/auto-show-controller.ts`) tracks the controllers of all live keyboards; each joins via `register()` and leaves via `unregister()`. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any other participant already claims that input, gated by `_isAutoShowParticipationActive()`, which excludes instances that are disabled, disconnected, rendering no client rects, or docked-and-closed, so a hidden or inactive keyboard never blocks a live one. If so, auto-show bails out. A claim is either the peer's live active target or any id on its comma-separated `controls` list - every id on the list, since the active target is only set once one of them takes focus.
 
 `KioskKeyboard._instances` is a separate static set, and serves only as the guard for queued i18n re-renders.
 
@@ -629,19 +639,20 @@ All built-in layouts and middleware are bundled with the component (direct impor
 
 ## Differences from the UI5 Control Variant (`kiosk-keyboard`)
 
-| Aspect            | UI5 Control (`kiosk-keyboard`)                                       | Web Component (`kiosk-keyboard-webc`)                            |
-| ----------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Base class        | `sap/ui/core/Control`                                                | `UI5Element` (extends `HTMLElement`)                             |
-| Rendering         | `apiVersion: 4` renderer object                                      | JSX template with `jsxRenderer`                                  |
-| Shadow DOM        | No (UI5 light DOM)                                                   | Yes (native shadow DOM)                                          |
-| Styling           | LESS with `@sapUi*` parameters                                       | CSS with `--sap*` custom properties                              |
-| Target resolution | UI5 association + `Element.closestTo()`                              | DOM ID + `resolveInputOrTextarea()` (shadow DOM aware)           |
-| Value write       | Platform edit, else `setValue()` / `fireLiveChange()`                | Platform edit, else assignment + synthesized `InputEvent`        |
-| i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook           | UI5 WC `i18nBundle` + custom resolver                            |
-| Grid navigation   | Extracted to `internal/key-grid-navigation.ts` (`KeyGridNavigation`) | Extracted to `core/key-grid-navigation.ts` (`KeyGridNavigation`) |
-| Per-key styling   | `[data-key]` attribute selector in light DOM                         | Bounded per-key `::part()` names (`data-key` is shadow-trapped)  |
-| Tag               | `<kiosk:KioskKeyboard />` (XML)                                      | `<kiosk-keyboard>` (HTML)                                        |
-| Distribution      | UI5 library (preload)                                                | ESM with subpath imports                                         |
+| Aspect            | UI5 Control (`kiosk-keyboard`)                                       | Web Component (`kiosk-keyboard-webc`)                                                      |
+| ----------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Base class        | `sap/ui/core/Control`                                                | `UI5Element` (extends `HTMLElement`)                                                       |
+| Rendering         | `apiVersion: 4` renderer object                                      | JSX template with `jsxRenderer`                                                            |
+| Shadow DOM        | No (UI5 light DOM)                                                   | Yes (native shadow DOM)                                                                    |
+| Styling           | LESS with `@sapUi*` parameters                                       | CSS with `--sap*` custom properties                                                        |
+| Target resolution | UI5 association + `Element.closestTo()`                              | DOM ID + `resolveInputOrTextarea()` (shadow DOM aware)                                     |
+| `aria-controls`   | Published from `controls` at render time, via `setActiveTarget()`    | Published only once a target is actually active (focus, `setTargetElement()`, docked open) |
+| Value write       | Platform edit, else `setValue()` / `fireLiveChange()`                | Platform edit, else assignment + synthesized `InputEvent`                                  |
+| i18n              | UI5 `ResourceBundle` + enhancement bundles + override hook           | UI5 WC `i18nBundle` + custom resolver                                                      |
+| Grid navigation   | Extracted to `internal/key-grid-navigation.ts` (`KeyGridNavigation`) | Extracted to `core/key-grid-navigation.ts` (`KeyGridNavigation`)                           |
+| Per-key styling   | `[data-key]` attribute selector in light DOM                         | Bounded per-key `::part()` names (`data-key` is shadow-trapped)                            |
+| Tag               | `<kiosk:KioskKeyboard />` (XML)                                      | `<kiosk-keyboard>` (HTML)                                                                  |
+| Distribution      | UI5 library (preload)                                                | ESM with subpath imports                                                                   |
 
 ## Edge Cases
 

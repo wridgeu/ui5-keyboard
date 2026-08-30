@@ -195,7 +195,7 @@ Each package keeps its own minimal `test/e2e/helpers.ts`. There is no shared cro
 
 | Helper                                                 | Package | Purpose                                                                                                                  |
 | ------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `openPage(page, path?)`                                | both    | Navigate to a test page and wait for the keyboard root to attach                                                         |
+| `openPage(page, path)`                                 | both    | Navigate to a test page and wait for the keyboard root to attach; the path is optional in kiosk, required in webc        |
 | `keyboardRoot(page, id)`                               | both    | `Locator` for the keyboard root (light DOM for kiosk; the host for webc)                                                 |
 | `key(page, id, dataKey)`                               | both    | `Locator` for a specific key                                                                                             |
 | `setDocumentDirection(page, dir)`                      | both    | Set `dir`/`lang` for RTL snapshots                                                                                       |

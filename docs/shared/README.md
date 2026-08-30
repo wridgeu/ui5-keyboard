@@ -9,4 +9,4 @@
 
 ## Notes
 
-- Files under [`images/`](./images/) contain theme screenshots and regeneration instructions.
+- Files under [`images/`](./images/) contain the key-type comparison images shared by both package READMEs, plus regeneration instructions.

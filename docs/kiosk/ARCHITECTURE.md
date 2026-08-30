@@ -8,7 +8,7 @@ This document describes the internal architecture, design decisions, and edge ca
 
 The library uses `Lib.init()` with `apiVersion: 2` and declares dependencies on both `sap.ui.core` and `sap.m`. Unlike the hotkeys library, this library **requires CSS** (`noLibraryCSS: false`), which is the hard blocker that forced it into a separate library from `ui5.hotkeys`.
 
-The `sap.m` dependency is required because the control uses `sap.ui.core.Element.closestTo()` for resolving DOM elements to UI5 controls, and the target inputs are typically `sap.m.Input` or `sap.m.TextArea`.
+The `sap.m` dependency comes from the accent-variant popup: `KioskKeyboard.ts` imports `sap/m/Popover` and `sap/m/library`, and `internal/variant-popup-behavior.ts` imports `sap/m/FlexBox`, `sap/m/Button` and `sap/m/library`. Those runtime imports are what force `dependencies: ["sap.ui.core", "sap.m"]` in `library.ts`, the `.library` descriptor and the manifest. Target inputs are _typically_ `sap.m` controls but no control type is a hard dependency - `Element.closestTo()` is a static of `sap/ui/core/Element` and needs no `sap.m`.
 
 ### Class Hierarchy
 
@@ -16,8 +16,8 @@ The `sap.m` dependency is required because the control uses `sap.ui.core.Element
 
 - ManagedObject metadata (properties, associations, events)
 - Renderer integration
-- Lifecycle hooks (`init`, `onAfterRendering`, `exit`)
-- UI5 event delegation (`ontouchstart`, `ontouchend`, `ontouchcancel`, `onsapselect`, `onsapselectmodifiers`, `onkeyup`, `onfocusout`)
+- Lifecycle hooks (`init`, `onBeforeRendering`, `onAfterRendering`, `exit`)
+- UI5 event delegation (`ontouchstart`, `ontouchend`, `ontouchcancel`, `oncontextmenu`, `onsapselect`, `onsapselectmodifiers`, `onkeyup`, `onfocusout`)
 
 Because `Control` extends `ManagedObject`, the class field initializer trap applies. Private fields are declared with definite assignment (`!`) and initialized in `init()`:
 
@@ -109,9 +109,15 @@ _setActiveTarget(newInput)
   3. _nativeKbSuppression.restore()  - restore old target's inputmode (if keyboard is open)
   4. resetForTargetSwitch()         - reset cursor state
   5. setAssociation(newInput)       - update the association
+  5a. on a real switch only         - reset shift/caps, commit any in-progress
+                                      composition, drop a user {layout:*} override
   6. _physicalKeyHighlight.attach() - attach to new target
+  6a. sync aria-controls            - written to the DOM, since setAssociation
+                                      suppressed the re-render
   7. _nativeKbSuppression.suppress() - suppress new target's inputmode (if keyboard is open)
   8. fireDeferredChange()          - fire "change" on the OLD target (captured in step 1)
+  9. fireActiveControlChange()      - on a real switch, and only if the association
+                                      still holds the id this call set
 ```
 
 **Re-entrant flow**: when the deferred `change` handler focuses another input:
@@ -146,7 +152,7 @@ _setActiveTarget(inputB)        - target was inputA
 Final state: target = inputC, delegation on inputC, suppression on inputC ✓
 ```
 
-The key insight: all state transitions (steps 2-7) complete **before** the change event fires (step 8). So when the inner call starts, it sees fully settled state and can cleanly transition from inputB to inputC. The outer call has no more state work after step 8.
+The key insight: all state transitions (steps 2-7) complete **before** the change event fires (step 8). So when the inner call starts, it sees fully settled state and can cleanly transition from inputB to inputC. The outer call's only remaining work is the deduped `activeControlChange` in step 9, which it skips when the inner call already announced the final target.
 
 **Why the change event must be deferred**: if it fired eagerly at step 1, the inner call would set up inputC, then the outer call would resume at step 2 and tear down inputC's delegation, restore inputC's suppression, and overwrite the association to inputB.
 
@@ -272,17 +278,19 @@ When no explicit `layout` is provided in the constructor settings, the keyboard 
 The UI5 ManagedObject constructor flow is: `init()` → `applySettings(mSettings)`. The control overrides `applySettings` in two phases: `customLayouts` is applied in a pass of its own, then everything else, with the locale layout injected when no explicit `layout` key is present:
 
 ```ts
-override applySettings(mSettings: Record<string, unknown>, oScope?: object): this {
+override applySettings(mSettings: $KioskKeyboardSettings, oScope?: object): this {
   // Destructure rather than `delete`: the caller's settings object is never mutated.
   const { customLayouts, ...rest } = mSettings ?? {};
   if (customLayouts !== undefined) {
-    const first: Record<string, unknown> = { customLayouts };
+    // Held in a typed binding rather than passed as a literal: `applySettings` takes
+    // `$ManagedObjectSettings`, against which a literal is excess-property checked.
+    const first: $KioskKeyboardSettings = { customLayouts };
     super.applySettings(first, oScope);
   }
   const fold = this._foldCache.get();
   // `layout` first so the locale default is the first setting applied; the spread
   // overwrites its value, not its position, when the caller named a layout.
-  const second: Record<string, unknown> = {
+  const second: $KioskKeyboardSettings = {
     layout: registryGetLocaleLayout(fold.localeLayouts, fold.layouts),
     ...rest,
   };
@@ -461,14 +469,15 @@ The instance isolation and `controls` filter checks run inside `_resolveClaimabl
 ```
 focusout event
   |
-  +-- Guard: docked, open, and enabled check
+  +-- Guard: docked and open check (deliberately not enabled/visible - see Integration Points)
   +-- Read relatedTarget (element receiving focus)
-  |     Check: is relatedTarget inside the keyboard?   -> don't close
-  |     Check: would this keyboard claim relatedTarget? -> don't close
-  |     Otherwise                                       -> close()
+  |     Check: is relatedTarget inside the keyboard?         -> don't close
+  |     Check: would this keyboard claim relatedTarget?      -> don't close
+  |     Check: is relatedTarget inside the variant popover?  -> don't close
+  |     Otherwise -> defer one frame, re-check document.activeElement, then close()
 ```
 
-The `relatedTarget` property of the `FocusEvent` identifies the element receiving focus synchronously in the common path. When `relatedTarget` is `null` (seen in some browser/shadow-DOM transitions), the implementation schedules a one-tick deferred check against `document.activeElement` before closing. This preserves flicker-free behavior while handling null-relatedTarget transitions safely.
+The close decision is always deferred to the next animation frame. `relatedTarget` drives only the three synchronous keep-open fast paths above; once none of them matches, the handler schedules a `requestAnimationFrame` callback that re-runs the same three checks against `document.activeElement` and closes only if all fail. A null `relatedTarget` therefore needs no special case: the deferred re-check covers it.
 
 The "would this keyboard claim" check uses `_wouldClaimInput()`, which consults `_isTargetOfOther()`. If the new target input belongs to a different keyboard, the docked keyboard closes rather than staying open for an input it should not control.
 
@@ -534,7 +543,7 @@ Rows are never wrapped or reordered at a breakpoint. Arrow-key grid navigation m
 
 One width behavior is not CSS: the opt-in `autoCompact` tier. `AutoCompactBehavior` (`internal/auto-compact-behavior.ts`) observes the root's border-box inline size and swaps to a layout's compact counterpart through `LayoutState.applyTier`. A container query can restyle a row but cannot re-seat its keys, and grid navigation runs on the resolved layout, so the narrow arrangement has to be a real layout swap. No observer is allocated while `autoCompact` is off.
 
-**Height responsiveness** uses JS (a native `ResizeObserver`) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds `clientHeight`; both are untransformed layout pixels, so an ancestor `transform: scale()` does not shift the breakpoints and the root border is excluded). The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
+**Height responsiveness** uses JS (a native `ResizeObserver`) to detect when the root element is externally height-constrained (i.e., `scrollHeight` exceeds `clientHeight`; both are untransformed layout pixels, so an ancestor `transform: scale()` does not shift the breakpoints, and the root border cancels out of that comparison). The tier itself is chosen against the granted border box - `clientHeight` plus the root border - so a thick root border does move the 16rem/12rem boundaries. The root element sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained. Consumers can override all three with any class selector. When constrained, the component applies classes on the root element:
 
 - `ui5KioskKeyboard--cqShort` (height <= 16rem): Reduces key height to `2.25rem`, gap to `0.25rem`, padding to `0.5rem`.
 - `ui5KioskKeyboard--cqTiny` (height <= 12rem): Further reduces key height to `1.75rem`, gap to `0.125rem`, padding to `0.25rem`.

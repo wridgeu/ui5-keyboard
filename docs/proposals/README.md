@@ -16,4 +16,4 @@ The following proposals were superseded or rejected:
 
 - **Layout Tree-Shaking** (split entry points for WebC): superseded. The main entry now includes all built-in layouts. Subpath imports remain for the bundle, `CustomLayout`, layouts, middleware, variants and Assets - see [Subpath Imports (WebC)](../GLOSSARY.md#subpath-imports-webc) in the Glossary.
 
-When a proposal is implemented, deferred, or rejected, update its status line and move it to a more appropriate long-term location if needed.
+When a proposal is implemented or rejected, delete the doc and record it in the lists above; the code and the closing PR are the source of truth. Every other status keeps its status line and stays here.

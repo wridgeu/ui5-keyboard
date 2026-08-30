@@ -19,7 +19,7 @@ state, where no event signals the absence of the change) can opt out with an inl
 
 Rule scoping is configured via `overrides` in `.oxlintrc.json`:
 
-- `no-hard-wait`: `packages/*/test/e2e/**/*.ts`
+- `no-hard-wait`: `packages/*/test/e2e/**/*.{ts,js}`
 
 Adding a new rule: export a new rule object from the plugin and add a corresponding override entry in `.oxlintrc.json`.
 

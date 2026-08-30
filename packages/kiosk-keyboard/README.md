@@ -462,7 +462,7 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 | `autoType`        | `boolean`                  | `false`     | Auto-switch between Full/Numpad based on focused input type. Requires `autoShow`.                                                                                                                                                                               |
 | `autoCompact`     | `boolean`                  | `false`     | Swap the resolved layout for its compact counterpart while the keyboard is too narrow to seat its rows, and back when the room returns. Of the built-ins only `ja-kana` declares a counterpart; a custom layout names its own with `compact`.                   |
 | `mobileKeyboard`  | `ui5.kiosk.MobileKeyboard` | `"Auto"`    | Native keyboard behavior: `Auto` (device-aware), `Custom` (suppress), `Native` (defer).                                                                                                                                                                         |
-| `fKeyMode`        | `ui5.kiosk.FKeyMode`       | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress`), `Native` (dispatch synthetic keydown + native actions), `None` (event only, no native action).                                                                                                                     |
+| `fKeyMode`        | `ui5.kiosk.FKeyMode`       | `"Virtual"` | F-key handling: `Virtual` (emit `keyPress` + built-in caret navigation), `Native` (adds a synthetic keydown + native actions), `None` (event only, no navigation, no native action).                                                                            |
 | `accentVariants`  | `boolean`                  | `false`     | Overlay the built-in Latin-diacritics table so any Latin base key of the resolved layout exposes a long-press / right-click accent-variant popup. The five non-Latin built-ins are excluded by default. See [Accent variants](#accent-variants-german-umlauts). |
 | `controls`        | `ui5.kiosk.ControlID[]`    | `[]`        | Input control IDs for targeting. Supports single or multiple inputs. See [controls](#controls).                                                                                                                                                                 |
 | `defaultVariants` | `VariantTable \| null`     | `null`      | Long-press variants applied under **every** layout, merged per base letter beneath anything a `customLayouts` entry declares. Effective only with `accentVariants`. See [Accent variants](#accent-variants-german-umlauts).                                     |
@@ -825,7 +825,7 @@ SAP GUI transactions rely heavily on function keys (F1 Help, F3 Back, F4 Value H
 
 ### Approach 1: Fn button on base layouts
 
-The `qwerty` and `qwertz-de` layouts include an **Fn** button on the bottom row. Tapping it switches to the standalone `fkeys` layout (F1-F12 + ABC to return). This is the default, no configuration needed.
+Every built-in base layout except `ja-romaji` includes an **Fn** button on the bottom row, as does the secondary `nav` layout. Tapping it switches to the standalone `fkeys` layout (F1-F12 + ABC to return). This is the default, no configuration needed. `ja-romaji` omits it by Japanese IME convention, which claims that key position for the Romaji/Kana toggle; switch to `ja-kana` to reach the F-keys.
 
 ### Approach 2: Composed layout with permanent F-key row
 
@@ -928,7 +928,7 @@ Set `fKeyMode="Native"` to opt into browser-style F-key handling.
 To work around this limitation, the component has built-in action handlers for exactly two keys:
 
 - **F5**: calls `location.reload()` (unless `keyPress` is cancelled with `preventDefault()`)
-- **F11**: toggles fullscreen via `document.requestFullscreen()` / `document.exitFullscreen()` (unless cancelled)
+- **F11**: toggles fullscreen via `document.documentElement.requestFullscreen()` / `document.exitFullscreen()` (unless cancelled)
 
 All other F-keys (F1-F4, F6-F10, F12) dispatch the synthetic `keydown` to the target input but have no built-in browser action. The `keyPress` event is where the consuming app handles those keys.
 

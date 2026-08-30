@@ -187,6 +187,6 @@ Key sources from the research pass (full set in the research task output):
 - MDN, `aria-disabled`: `[aria-disabled="true"]` is the one ARIA-driven styling case it endorses. https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-disabled
 - OpenUI5 `ToggleButtonRenderer`: emits `aria-pressed` and keeps `sapMToggleBtnPressed`. https://github.com/SAP/openui5/blob/master/src/sap.m/src/sap/m/ToggleButtonRenderer.js
 - MDN, `:state()` and `ElementInternals.states`: Baseline 2024, host and custom-element only. https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Selectors/:state
-- BEM naming (kebab-only canon). https://getbem.com/naming/ SUIT (camelCase segments). https://github.com/suitcss/suit/blob/master/doc/naming-conventions.md
+- BEM naming (kebab-only canon). https://en.bem.info/methodology/naming-convention/ SUIT (camelCase segments). https://github.com/suitcss/suit/blob/master/doc/naming-conventions.md
 - Node TypeScript type-stripping (default in Node 24). https://nodejs.org/api/typescript.html
 - In-repo precedent: `tools/check-twin-drift.mjs`, the `.gen.d.ts` `generate && git diff --exit-code` gate, and #105's stated preference for a normalized-diff guardrail over extraction.
