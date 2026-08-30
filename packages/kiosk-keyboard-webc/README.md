@@ -1023,6 +1023,7 @@ This behavior is driven by a CSS `@container` query on individual keys (`contain
 
 ### Accessibility
 
+- **Link to the target.** The host carries `aria-controls` naming the element the keyboard types into, following auto-show focus, `controls` and `setTargetElement()`. IDREFs do not cross a shadow boundary, so when the resolved input sits inside another component's shadow root the attribute names that component - the element `controls` names - rather than the inner input. A target outside the host's tree scope, or one carrying no `id`, leaves the attribute off rather than writing an id nothing resolves.
 - **Dual keys (icon + label visible):** The visible text provides the accessible name. No `aria-label` is set (WCAG 2.5.3 Label in Name).
 - **Icon-only keys (`label: ""`):** The renderer sets `aria-label` from i18n for built-in special keys, or falls back to `value` for custom keys.
 - **Icons** always have `aria-hidden="true"`. They are decorative when a label is present, and the `aria-label` handles accessibility when the label is suppressed.

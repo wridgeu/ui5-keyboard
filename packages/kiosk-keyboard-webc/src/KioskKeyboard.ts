@@ -690,7 +690,7 @@ class KioskKeyboard extends UI5Element {
     announce: (text) => KioskKeyboard._announcements.announce(text),
   });
   private _keyboardTypeSource: KeyboardTypeSource = "unset";
-  private _targetElement: HTMLInputElement | HTMLTextAreaElement | null = null;
+  private _targetElementValue: HTMLInputElement | HTMLTextAreaElement | null = null;
   private _targetSource: TargetSource = "explicit";
   private _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
   /** Accessed by the JSX template for highlight class binding - not private. */
@@ -1902,6 +1902,46 @@ class KioskKeyboard extends UI5Element {
 
   private _autoReleaseShift(): void {
     this._shiftState.autoRelease();
+  }
+
+  /**
+   * The element that receives typed characters. Assigning it keeps the host's
+   * `aria-controls` pointed at the current target, so every write site - the
+   * auto-show callback, `setTargetElement`, the auto-target in `_performOpen`,
+   * the stale-target purge and disconnect teardown - stays in sync through the
+   * one accessor rather than a sync call each could forget.
+   */
+  private get _targetElement(): HTMLInputElement | HTMLTextAreaElement | null {
+    return this._targetElementValue;
+  }
+
+  private set _targetElement(el: HTMLInputElement | HTMLTextAreaElement | null) {
+    this._targetElementValue = el;
+    const id = this._ariaControlsId(el);
+    if (id) {
+      this.setAttribute("aria-controls", id);
+    } else {
+      this.removeAttribute("aria-controls");
+    }
+  }
+
+  /**
+   * The id an `aria-controls` on the host can actually resolve, or `""` when
+   * there is none. IDREFs do not cross a shadow boundary, and a target is
+   * routinely a native input inside another component's shadow root
+   * (`resolveInputOrTextarea` recurses three levels), so the id worth
+   * publishing belongs to the nearest ancestor sharing the host's tree scope -
+   * the component named in `controls`, which is also what the UI5 twin points
+   * at. A target outside that scope, or one with no id, yields no attribute.
+   */
+  private _ariaControlsId(el: HTMLElement | null): string {
+    const scope = this.getRootNode();
+    let node: Node | null = el;
+    while (node && node.getRootNode() !== scope) {
+      const root = node.getRootNode();
+      node = root instanceof ShadowRoot ? root.host : null;
+    }
+    return node instanceof Element ? node.id : "";
   }
 
   private _resolveTarget(): HTMLInputElement | HTMLTextAreaElement | null {

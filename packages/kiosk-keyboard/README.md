@@ -1617,6 +1617,7 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 ## Accessibility
 
 - The keyboard root has `role="group"` with a configurable `aria-label` and `aria-roledescription="keyboard"`
+- The keyboard root carries `aria-controls` naming the id of the control it is currently typing into, and drops the attribute when no target is active
 - Each key has `role="button"` with an accessible name from visible text (when icon+label are both present) or `aria-label` (for icon-only keys where `label=""`)
 - The Shift key has `aria-pressed` reflecting its toggle state
 - Arrow keys navigate between virtual keys via roving tabindex; Home/End jump to the first/last key in the current row, Ctrl+Home/Ctrl+End to the first/last key of the whole grid
