@@ -96,10 +96,11 @@ test("no keycap other than heh is reshaped by the feature settings", async ({ pa
   ).toEqual([]);
 });
 
-test("keycap labels keep the language tag the shaping fix works around", async ({ page }) => {
-  const shadow = page.locator("#kb-arabic");
-  await expect(shadow.locator(`[${DOM.attributes.key}="${HEH}"] .${DOM.classes.keyLabel}`)).toHaveAttribute(
-    "lang",
-    "ar",
-  );
+// Both shape tests above need a resolved font that carries the `isol` lookup;
+// this one fails anywhere, and is what stops the upper bound from holding
+// vacuously - with the rule gone its two probes both run `normal`.
+test("keycap labels carry the language tag and the feature setting the shaping fix needs", async ({ page }) => {
+  const label = page.locator(`#kb-arabic [${DOM.attributes.key}="${HEH}"] .${DOM.classes.keyLabel}`);
+  await expect(label).toHaveAttribute("lang", "ar");
+  await expect(label).toHaveCSS("font-feature-settings", '"isol" 0');
 });

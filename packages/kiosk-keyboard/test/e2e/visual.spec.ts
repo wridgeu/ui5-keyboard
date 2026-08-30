@@ -5,9 +5,11 @@ import { openPage, keyboardRoot, key, expectKeyboardVisualMatch, CLOSED_CLASS } 
 // gated at runtime; shift/docked are activated through the public API.
 
 const CLOSED = new RegExp(CLOSED_CLASS);
-// Interactive/shifted states render with minor sub-pixel variance under device
-// emulation. A small pixel tolerance lets them stabilize while staying tight
-// enough to still catch a real one-key change.
+// Interactive/shifted states miss their baseline by far more than a sub-pixel:
+// `kb-ko-hangul-shifted` settles up to 916 pixels off on desktop. Absorbing that
+// costs the glyph scale, since a one-keycap change measures 62 pixels there and
+// 45 on phone-sm - so a snapshot taking SOFT gates layout-scale change, not the
+// wrong glyph on a key.
 const SOFT = { maxDiffPixelRatio: 0.003 };
 
 test.beforeEach(async ({ page }) => {

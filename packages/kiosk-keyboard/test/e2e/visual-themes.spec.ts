@@ -1,4 +1,4 @@
-import { test, type Page } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { openPage, expectKeyboardVisualMatch } from "./helpers.js";
 
 // Per-theme visual regression (desktop + device matrix). The theme is set via a
@@ -17,6 +17,11 @@ const THEME_BACKGROUNDS = {
 
 async function openWithTheme(page: Page, theme: ThemeId): Promise<void> {
   await openPage(page, `${THEMES_PAGE}?sap-ui-theme=${theme}`);
+  // A parameter that stopped taking effect would leave every describe on the
+  // bootstrap default, and only the pixels would say so - which CI does not
+  // compare. ThemeManager writes the applied theme as a `sapUiTheme-<id>` class
+  // on <html> (`theming/ThemeManager.js` applyTheme).
+  await expect(page.locator("html")).toHaveClass(new RegExp(`\\bsapUiTheme-${theme}\\b`));
   await page.evaluate((bg) => {
     document.body.style.background = bg;
     for (const el of document.querySelectorAll<HTMLElement>(".keyboard-container")) {

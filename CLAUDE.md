@@ -81,6 +81,7 @@ A green suite can lie: a test asserts nothing, the runner reports success while 
 - Clear each hypothesis only after you have SEEN the suite go red for it, then revert: flip one assertion (is it live?), corrupt one committed baseline (does the visual test compare?), inject one failing assertion (does the exit code propagate?), point the runner at a bogus path (does it pass empty?).
 - Code review and agent audits are corroboration, not proof. Confirm empirically.
 - Watch for: vacuous assertions, skips that fire on all targets, snapshot tolerances large enough to mask a one-element change, and runners that pass while running zero tests.
+- **CI compares no pixels, so a visual spec is not coverage there.** `test:e2e:ci` passes `--ignore-snapshots` and both `playwright.config.ts` files narrow the device projects to `invariants.spec.ts` when `CI` is set, so the committed baselines gate local runs on the OS that wrote them (Windows; the filenames carry no platform suffix) and nothing else. On CI a visual spec is a render smoke test plus whatever non-pixel assertions it carries - so when a visual spec is the only home for a behaviour, give it an assertion that runs without pixels (#281). Locally the pixels do not close the gap either wherever a snapshot takes the `SOFT` tolerance, which absorbs a baseline miss an order of magnitude above a one-keycap change (`visual.spec.ts`).
 
 ## 8. Every assertion must be able to fail
 
