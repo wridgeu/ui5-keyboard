@@ -196,12 +196,17 @@ test.describe("accessibility", () => {
     expect(accessible).toBe(true);
   });
 
-  test("has a live region", async ({ page }) => {
-    const hasLiveRegion = await page.evaluate(
-      () =>
-        document.getElementById("kb-qwerty")?.shadowRoot?.querySelector('[role="status"][aria-live="polite"]') !== null,
-    );
-    expect(hasLiveRegion).toBe(true);
+  test("announces through the framework's light-DOM live region, not a shadow one", async ({ page }) => {
+    const regions = await page.evaluate(() => ({
+      // A live region inside a shadow root is not reliably announced, so the
+      // component owns none and writes into the framework's page-level span.
+      // `-1` when the element or its shadow root is missing, so a broken fixture
+      // fails here instead of passing as "no region found".
+      inShadow: document.getElementById("kb-qwerty")?.shadowRoot?.querySelectorAll("[aria-live]").length ?? -1,
+      inLightDom: document.querySelectorAll("ui5-announcement-area .ui5-invisiblemessage-polite").length,
+    }));
+    expect(regions.inShadow).toBe(0);
+    expect(regions.inLightDom).toBe(1);
   });
 
   test("one key has tabindex=0 (roving tabindex)", async ({ page }) => {
