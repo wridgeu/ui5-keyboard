@@ -1,10 +1,11 @@
 /**
  * Parameters of the `liveChange` and `change` events the keyboard fires on its
- * target: the value the target holds after the edit.
+ * target: the value the target holds after the edit. `liveChange` carries it
+ * under `newValue` as well, the name `sap.m.SearchField` declares it by.
  *
  * @internal
  */
-export type TargetValueEventParameters = { value: string };
+export type TargetValueEventParameters = { value: string; newValue?: string };
 
 /**
  * Minimal UI5 Element contract used by keyboard input operations.

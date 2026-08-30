@@ -515,6 +515,22 @@
     background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
     border-color: var(--sapButton_Emphasized_Hover_BorderColor, #0064d9);
   }
+
+  /* Ties `--modifier`'s own interactive arms at (0,2,0) and wins on source
+     order, as the hover arm above does: a latched Shift keeps its emphasized
+     look through press and physical-key highlight instead of flattening to the
+     Lite active fill. */
+  &:active,
+  &.kiosk-key--pressed,
+  &.kiosk-key--highlight {
+    background: var(--sapButton_Emphasized_Active_Background, #0053b8);
+    color: var(--sapButton_Emphasized_Active_TextColor, #fff);
+    border-color: var(--sapButton_Emphasized_Active_BorderColor, #0053b8);
+  }
+
+  &:focus-visible {
+    outline-color: var(--sapContent_ContrastFocusColor, #fff);
+  }
 }
 
 /* Variant: Caps Lock indicator.

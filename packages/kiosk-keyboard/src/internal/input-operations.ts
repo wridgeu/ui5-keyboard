@@ -349,10 +349,13 @@ function writeTargetValue(element: TargetElement, newValue: string, dom: HTMLInp
 
 /**
  * Fires a `liveChange` event on the given UI5 element, if it supports one.
+ *
+ * Carries the value under both names sap.m declares it by: `sap.m.Input` takes
+ * `value`, `sap.m.SearchField` only `newValue`; `sap.m.InputBase` sends both.
  */
 function fireTargetLiveChange(element: TargetElement, value: string): void {
   if (element.getMetadata().hasEvent("liveChange")) {
-    element.fireEvent("liveChange", { value });
+    element.fireEvent("liveChange", { value, newValue: value });
   }
 }
 

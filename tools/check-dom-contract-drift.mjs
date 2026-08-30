@@ -68,17 +68,9 @@ const KEY_PARITY = {
       "variantPopup",
     ],
     // Light-DOM only: no shadow host, a static-area popover, an explicit closed
-    // state, the JS-driven height-responsive classes, and the pressed/anchor
-    // state classes.
-    kioskOnly: [
-      "rootClosed",
-      "rootCqShort",
-      "rootCqTiny",
-      "keyPressed",
-      "keyVariantAnchor",
-      "variantPopover",
-      "variantOption",
-    ],
+    // state, the JS-driven height-responsive classes, and the variant-anchor
+    // state class.
+    kioskOnly: ["rootClosed", "rootCqShort", "rootCqTiny", "keyVariantAnchor", "variantPopover", "variantOption"],
     // Shadow-DOM only: the aria-hidden host, numpad/numeric host variants, the
     // in-shadow variant popup host, and the live region - kiosk announces through
     // the framework's shared one in the static area and owns no node of its own.
@@ -128,6 +120,27 @@ function checkKeyParity(group, spec) {
       errors.push(
         `${group}: webc key "${k}" is unclassified. Add it to CORE (and give it a kiosk twin) or to webc PLATFORM_ONLY with a reason in tools/check-dom-contract-drift.mjs.`,
       );
+    }
+  }
+  // A PLATFORM_ONLY entry whose asymmetry is gone - the key became symmetric, or
+  // it no longer exists at all - would otherwise rot into a permanent hole in
+  // the unclassified check above.
+  /** @type {[string, string[], string[], string[]][]} */
+  const platformOnly = [
+    ["kiosk", kioskKeys, webcKeys, spec.kioskOnly],
+    ["webc", webcKeys, kioskKeys, spec.webcOnly],
+  ];
+  for (const [label, ownKeys, otherKeys, only] of platformOnly) {
+    for (const k of only) {
+      if (!ownKeys.includes(k)) {
+        errors.push(
+          `${group}: ${label}Only "${k}" no longer exists in the ${label} contract; drop it from tools/check-dom-contract-drift.mjs.`,
+        );
+      } else if (otherKeys.includes(k)) {
+        errors.push(
+          `${group}: ${label}Only "${k}" now exists in both twins. Move it to CORE in tools/check-dom-contract-drift.mjs so the pair is compared.`,
+        );
+      }
     }
   }
 }

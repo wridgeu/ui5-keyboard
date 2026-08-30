@@ -148,3 +148,36 @@ QUnit.test("Bare vowel inserts directly without composition", (assert) => {
   assert.strictEqual(consumed, true, "Vowel key consumed");
   assert.strictEqual(input.value, "\u314F", "Bare vowel inserted as-is");
 });
+
+QUnit.test("Read-only target declines the key and leaves the value untouched", (assert) => {
+  const m = mw();
+  input.value = "ab";
+  input.setSelectionRange(2, 2);
+  input.readOnly = true;
+  const consumed = m.handleKey("\u314E", input); // ㅎ
+  assert.strictEqual(consumed, false, "Key declined on a read-only target");
+  assert.strictEqual(input.value, "ab", "No preedit written");
+});
+
+QUnit.test("Disabled target declines the key and leaves the value untouched", (assert) => {
+  const m = mw();
+  input.value = "ab";
+  input.setSelectionRange(2, 2);
+  input.disabled = true;
+  const consumed = m.handleKey("\u314E", input); // ㅎ
+  assert.strictEqual(consumed, false, "Key declined on a disabled target");
+  assert.strictEqual(input.value, "ab", "No preedit written");
+});
+
+QUnit.test("Backspace declined on a target that turned read-only mid-composition", (assert) => {
+  const m = mw();
+  input.value = "ab";
+  input.setSelectionRange(2, 2);
+  m.handleKey("\u314E", input); // ㅎ
+  m.handleKey("\u314F", input); // ㅏ -> 하
+  assert.strictEqual(input.value, "ab\uD558", "Precondition: 하 is a live preedit");
+
+  input.readOnly = true;
+  assert.strictEqual(m.handleKey("{backspace}", input), false, "Backspace declined");
+  assert.strictEqual(input.value, "ab\uD558", "Preedit left intact");
+});

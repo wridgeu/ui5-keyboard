@@ -8,6 +8,7 @@ import JSONModel from "sap/ui/model/json/JSONModel";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
   createFakeKeyElement,
+  getFirstKeyElement,
   getKeyElements,
   getRowKeyValues,
   placeAndWait,
@@ -151,6 +152,118 @@ QUnit.test("autoType switches back from Numpad to Full when focus moves", async 
 
   numInput.destroy();
   textInput.destroy();
+  kb.destroy();
+});
+
+QUnit.test("autoType detects an inputmode-only target refocused while the keyboard is open", async (assert) => {
+  // Both inputs keep the default Text type, so inputmode is the only Numpad signal.
+  const imInput = new Input();
+  const textInput = new Input();
+  imInput.placeAt("qunit-fixture");
+  textInput.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    autoType: true,
+    // Pin the custom keyboard so suppression arms on every device profile.
+    mobileKeyboard: MobileKeyboard.Custom,
+  });
+  await placeAndWait(kb);
+
+  const imDom = imInput.getFocusDomRef() as HTMLElement;
+  const textDom = textInput.getFocusDomRef() as HTMLElement;
+  imDom.setAttribute("inputmode", "numeric");
+
+  imDom.focus();
+  await nextUIUpdate();
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "inputmode=numeric detected on the focus that opens the keyboard");
+
+  textDom.focus();
+  await nextUIUpdate();
+  assert.strictEqual(kb.getKeyboardType(), "Full", "plain text target detected as Full");
+  assert.strictEqual(
+    textDom.getAttribute("inputmode"),
+    "none",
+    "the new target is suppressed while the keyboard is open",
+  );
+  assert.strictEqual(
+    imDom.getAttribute("inputmode"),
+    "numeric",
+    "the old target's authored inputmode is restored when focus leaves it",
+  );
+
+  imDom.focus();
+  await nextUIUpdate();
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "inputmode=numeric detected again on a later focus");
+
+  imInput.destroy();
+  textInput.destroy();
+  kb.destroy();
+});
+
+QUnit.test("autoType keeps the detected type when focus returns from a keycap", async (assert) => {
+  const imInput = new Input();
+  imInput.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    autoType: true,
+    mobileKeyboard: MobileKeyboard.Custom,
+  });
+  await placeAndWait(kb);
+
+  const imDom = imInput.getFocusDomRef() as HTMLElement;
+  imDom.setAttribute("inputmode", "numeric");
+
+  imDom.focus();
+  await nextUIUpdate();
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "inputmode=numeric detected on the focus that opens the keyboard");
+  assert.strictEqual(imDom.getAttribute("inputmode"), "none", "the target is suppressed while the keyboard is open");
+
+  // Focus into the keyboard and back. Neither hop retargets, so the input is
+  // refocused still carrying the suppression written when it was claimed.
+  getFirstKeyElement(kb).focus();
+  await nextUIUpdate();
+  imDom.focus();
+  await nextUIUpdate();
+
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "a refocus of the active target does not re-detect");
+
+  imInput.destroy();
+  kb.destroy();
+});
+
+QUnit.test("autoType detects a single controls entry claimed before the first focus", async (assert) => {
+  const imInput = new Input();
+  imInput.placeAt("qunit-fixture");
+  await nextUIUpdate();
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    autoShow: true,
+    autoType: true,
+    mobileKeyboard: MobileKeyboard.Custom,
+    controls: [imInput.getId()],
+  });
+  await placeAndWait(kb);
+
+  const imDom = imInput.getFocusDomRef() as HTMLElement;
+  imDom.setAttribute("inputmode", "numeric");
+
+  // A lone `controls` entry is auto-targeted on render, so the input is already
+  // the active target before anything focuses it. A closed keyboard suppresses
+  // nothing, so the authored inputmode is still there to be read.
+  assert.strictEqual(kb._getActiveTargetId(), imInput.getId(), "Precondition: claimed before the first focus");
+  assert.notOk(kb.isOpen(), "Precondition: the keyboard is still closed");
+
+  imDom.focus();
+  await nextUIUpdate();
+
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "the authored inputmode is read on the first focus");
+
+  imInput.destroy();
   kb.destroy();
 });
 

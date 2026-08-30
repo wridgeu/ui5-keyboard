@@ -146,15 +146,26 @@ export function insertText(
 }
 
 /**
- * Ends an active composition and returns its preedit text. The component writes
- * the target's value directly, so the preedit already IS the committed text and
- * the range needs no splice-and-reinsert.
+ * Ends an active composition and re-applies its preedit text as a real edit: the
+ * preedit range is spliced out of the raw value and re-inserted through
+ * {@link insertText}, so the committed text passes the read-only/disabled guard,
+ * honours `maxlength` and joins the browser's undo stack. `compositionend` fires
+ * ahead of the splice, so its `data` carries the composed text.
+ *
+ * A refused target keeps the splice and loses the insert, which leaves the field
+ * at its pre-composition value rather than at a half-written preedit.
  *
  * Returns the committed text, empty when the preedit was.
  */
 export function commitComposition(state: CompositionState, dom: HTMLInputElement | HTMLTextAreaElement): string {
-  const text = dom.value.slice(state.preeditStart, state.preeditStart + state.preeditLength);
+  const start = state.preeditStart;
+  const end = start + state.preeditLength;
+  const text = dom.value.slice(start, end);
   endComposition(state, dom);
+  dom.value = dom.value.slice(0, start) + dom.value.slice(end);
+  if (text) {
+    insertText(dom, text, [start, start]);
+  }
   return text;
 }
 

@@ -195,6 +195,85 @@ describe("middleware integration", () => {
       expect(text).toBe("\uAC00");
       expect(input.value).toBe("\uAC00");
       expect(compositionEndSpy).toHaveBeenCalled();
+      const endData = compositionEndSpy.mock.calls[0]?.[0]?.data;
+      expect(endData).toBe("\uAC00");
+    });
+  });
+
+  describe("hangul compose respects readOnly/disabled", () => {
+    it("returns false and does not modify value when input is readOnly", () => {
+      const input = document.createElement("input");
+      input.value = "ab";
+      input.setSelectionRange(2, 2);
+      input.readOnly = true;
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      const consumed = m.handleKey("\u314e", input);
+      expect(consumed).toBe(false);
+      expect(input.value).toBe("ab");
+    });
+
+    it("returns false and does not modify value when input is disabled", () => {
+      const input = document.createElement("input");
+      input.value = "ab";
+      input.setSelectionRange(2, 2);
+      input.disabled = true;
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      const consumed = m.handleKey("\u314e", input);
+      expect(consumed).toBe(false);
+      expect(input.value).toBe("ab");
+    });
+
+    it("declines backspace on a target that turned read-only mid-composition", () => {
+      const input = document.createElement("input");
+      input.value = "ab";
+      input.setSelectionRange(2, 2);
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      m.handleKey("\u314e", input);
+      m.handleKey("\u314f", input);
+      // Precondition: 하 is a live preedit
+      expect(input.value).toBe("ab\uD558");
+
+      input.readOnly = true;
+      expect(m.handleKey("{backspace}", input)).toBe(false);
+      expect(input.value).toBe("ab\uD558");
+    });
+
+    it("commit() on a target that turned read-only restores the pre-composition value", () => {
+      const input = document.createElement("input");
+      input.value = "ab";
+      input.setSelectionRange(2, 2);
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      m.handleKey("\u314e", input);
+      m.handleKey("\u314f", input);
+      // Precondition: 하 is a live preedit
+      expect(input.value).toBe("ab\uD558");
+
+      input.readOnly = true;
+      m.commit();
+
+      expect(input.value).toBe("ab");
+    });
+  });
+
+  describe("hangul compose honours maxlength", () => {
+    it("applies the target's maxlength at commit", () => {
+      const input = document.createElement("input");
+      input.value = "";
+      input.setSelectionRange(0, 0);
+      input.maxLength = 2;
+
+      const m = getMiddlewareFactory("ko-hangul")!();
+      // 한국마: three syllables typed into a field with room for two
+      for (const key of ["\u314e", "\u314f", "\u3134", "\u3131", "\u315c", "\u3131", "\u3141", "\u314f"]) {
+        m.handleKey(key, input);
+      }
+      m.commit();
+
+      expect(input.value).toBe("\uD55C\uAD6D");
     });
   });
 

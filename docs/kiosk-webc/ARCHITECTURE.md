@@ -378,6 +378,8 @@ When `autoType` is enabled and the keyboard auto-shows for a focused input, `det
 
 A `_keyboardTypeSource` tag (`"unset" | "explicit" | "auto:VALUE"`) tracks who last set `keyboardType`. Explicit values disable auto-detection; auto-detected values encode which type was detected so the `onInvalidation` handler can distinguish consumer-driven changes from auto-detection round-trips.
 
+Detection is also skipped for a refocus of the already-active target while the keyboard is open: that element carries the `inputmode="none"` suppression written on its previous focus, which masks an authored `numeric`/`decimal`/`tel`, so it keeps the type it already has. While the keyboard is closed nothing carries the mask, so a target set before the first focus is still read from its authored markup.
+
 ## Docked Mode
 
 When `docked` is set, the keyboard uses `position: fixed` anchored to the viewport bottom.

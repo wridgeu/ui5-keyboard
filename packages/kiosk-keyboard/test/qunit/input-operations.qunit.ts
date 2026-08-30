@@ -11,6 +11,7 @@ import Control from "sap/ui/core/Control";
 import UI5Element from "sap/ui/core/Element";
 import type UI5Event from "sap/ui/base/Event";
 import Input from "sap/m/Input";
+import SearchField from "sap/m/SearchField";
 import TextArea from "sap/m/TextArea";
 import type RenderManager from "sap/ui/core/RenderManager";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
@@ -881,6 +882,27 @@ QUnit.test("Undo reverts the DOM value; the value property keeps the pre-undo te
     "hello!",
     "Property stays at the pre-undo text - sap.m.Input writes it from oninput only under valueLiveUpdate",
   );
+});
+
+// ──────────────────────────────────────────────
+// insertText - liveChange parameters on the fallback
+// ──────────────────────────────────────────────
+
+QUnit.module("input-operations - fallback liveChange parameters", renderedControlHooks);
+
+QUnit.test("Carries the value under both names sap.m declares liveChange by", async (assert) => {
+  // sap.m.SearchField declares liveChange with `newValue` alone, sap.m.Input with `value`.
+  // Left unfocused, so the platform edit is skipped and the module raises liveChange itself -
+  // the only path on which the synthetic parameters reach a handler.
+  const ctrl = await renderControl(new SearchField({ value: "ab" }));
+  const params: Record<string, unknown>[] = [];
+  ctrl.attachEvent("liveChange", (event: UI5Event<{ value: string; newValue: string }>) => {
+    params.push({ value: event.getParameter("value"), newValue: event.getParameter("newValue") });
+  });
+
+  insertText(ctrl.getFocusDomRef() as HTMLInputElement, "X", [2, 2]);
+
+  assert.deepEqual(params, [{ value: "abX", newValue: "abX" }], "liveChange carries both parameter names");
 });
 
 // ──────────────────────────────────────────────

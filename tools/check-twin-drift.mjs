@@ -70,6 +70,12 @@
  *   that stops at the grid ends), but kiosk is a UI5 addDelegate driven by
  *   pseudo-events and DOM traversal while webc reads raw keydown against the
  *   resolved layout, so the two are behavior-aligned but not byte-identical).
+ * - internal/variant-popup-behavior.ts <-> core/variant-popup-controller.ts:
+ *   the same press-and-hold accent-variant gesture, but the twins own the popup
+ *   differently: kiosk reads the control-owned sap/m/Popover out of its hidden
+ *   _variantPopover aggregation and opens it in the static area, while webc
+ *   drives reactive popup state its template renders into a ui5-popover in its
+ *   own shadow root.
  * - internal/controls-delegation-controller.ts: kiosk-only. The `controls`
  *   focus-delegation/auto-target reconciliation has no webc counterpart; webc
  *   resolves its single `controls` id lazily in AutoShowController instead.

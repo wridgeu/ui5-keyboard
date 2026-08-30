@@ -335,12 +335,17 @@ Because UI5's `applySettings()` calls custom setters, `{ keyboardType: "Numpad" 
 In `AutoShowBehavior._onDocumentFocusIn`, after resolving the UI5 control and before `show()`:
 
 ```ts
+const detectable = this._host._getActiveTargetId() !== ui5Control.getId() || !this._host.isOpen();
+const detected = detectable ? detectKbType(ui5Control, this._host._getEffectiveResolver()) : null;
+
+this._host._setActiveTarget(ui5Control);
+
 if (
+  detected !== null &&
   this._host.getAutoType() &&
   this._host._getKeyboardTypeSource() !== "explicit" &&
   this._host._getActiveTargetId() === ui5Control.getId()
 ) {
-  const detected = detectKbType(ui5Control, this._host._getEffectiveResolver());
   const previous = this._host.getKeyboardType();
   if (detected !== previous) {
     this._host._setKeyboardTypeSource(`auto:${detected}`);
@@ -350,7 +355,7 @@ if (
 }
 ```
 
-The behavior reaches the control through host accessors, never its private fields. Two guards matter: the active-target check drops a detection that a re-entrant deferred change handler has already superseded, and the `detected !== previous` check keeps a repeat focusin (refocusing the same input to reposition the caret) from re-running the setter. `_setKeyboardTypeSource()` does more than tag the origin - it also clears the user layout override, ends any composition, and reapplies the `autoCompact` tier - so re-running it would revert a layout the user explicitly picked.
+The behavior reaches the control through host accessors, never its private fields. Detection reads the target's authored metadata, so it runs before `_setActiveTarget()` - while the keyboard is open that call writes `inputmode="none"` on the new target and masks an authored `numeric`/`decimal`/`tel`. Three guards matter: the `detectable` check skips a refocus of the already-active input, which carries that mask from its previous focus, and admits every target while the keyboard is closed and nothing is masked; the active-target check drops a detection that a re-entrant deferred change handler has already superseded; and the `detected !== previous` check keeps a focus move between two inputs of the same kind from re-running the setter. `_setKeyboardTypeSource()` does more than tag the origin - it also clears the user layout override, ends any composition, and reapplies the `autoCompact` tier - so re-running it would revert a layout the user explicitly picked.
 
 When the user tabs from a Number input to a Text input, `AutoShowBehavior._onDocumentFocusIn` fires again, detects `"Full"`, and switches back.
 
@@ -443,8 +448,9 @@ focusin event
   |     - Is this input owned by another KioskKeyboard instance?
   |     - Is controls set and the control NOT in the list?
   |     No to any  -> ignore (null)
-  |     Yes to all -> set as target input
-  |                   auto-detect keyboard type (if autoType enabled)
+  |     Yes to all -> detect keyboard type from the input's authored metadata
+  |                   set as target input
+  |                   apply the detected type (if autoType enabled)
   |                   show()
 ```
 

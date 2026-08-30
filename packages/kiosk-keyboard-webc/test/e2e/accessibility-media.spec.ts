@@ -118,3 +118,64 @@ test("webc-caps-lock-indicator-survives-focus-in-forced-colors", async ({ page }
   expect(focused.outline, "focus draws the focus outline").not.toBe("none");
   expect(focused.border, "the latch signal survives focus").toBe(latched.border);
 });
+
+// A latched Shift carries the emphasized fill, so its transient states have to
+// come from the emphasized tokens too. Every shipped SAP theme resolves the
+// emphasized, Lite and plain active backgrounds to one colour, so the arm is
+// asserted through the token a consumer would theme: an injected value reaches a
+// pressed latched Shift only if that key reads the emphasized active arm.
+const INJECTED_EMPHASIZED_ACTIVE = "rgb(1, 2, 3)";
+
+test("webc-latched-shift-presses-on-the-emphasized-active-token", async ({ page }) => {
+  await openPage(page, "/test/pages/visual.html");
+  await page.locator("#kb-qwerty").evaluate((host: HTMLElement, value) => {
+    host.style.setProperty("--sapButton_Emphasized_Active_Background", value);
+  }, INJECTED_EMPHASIZED_ACTIVE);
+
+  // The base key transitions `background` over 100ms, so a read taken in the
+  // same task still reports the resting fill.
+  const pressAndRead = (k: Locator, classes: string[]) =>
+    k.evaluate(async (el, cls) => {
+      el.classList.add(...cls);
+      await Promise.allSettled(el.getAnimations().map((a) => a.finished));
+      return getComputedStyle(el).backgroundColor;
+    }, classes);
+
+  const action = await pressAndRead(key(page, "kb-qwerty", "{enter}"), [DOM.classes.keyPressed]);
+  const plain = await pressAndRead(key(page, "kb-qwerty", "z"), [DOM.classes.keyPressed]);
+  const shift = await pressAndRead(key(page, "kb-qwerty", "{shift}"), [
+    DOM.classes.keyShiftActive,
+    DOM.classes.keyPressed,
+  ]);
+
+  expect(action, "the injected token crosses the shadow boundary into the emphasized arm").toBe(
+    INJECTED_EMPHASIZED_ACTIVE,
+  );
+  expect(plain, "a plain key presses on its own active token").not.toBe(INJECTED_EMPHASIZED_ACTIVE);
+  expect(shift, "a pressed latched Shift presses on the emphasized active token").toBe(INJECTED_EMPHASIZED_ACTIVE);
+});
+
+// The emphasized fill leaves too little contrast for the default focus colour,
+// which is why `--action` swaps in the contrast one on the same background.
+test("webc-latched-shift-draws-the-contrast-focus-ring", async ({ page }) => {
+  await openPage(page, "/test/pages/visual.html");
+  const shiftKey = key(page, "kb-qwerty", "{shift}");
+  await shiftKey.evaluate((el, cls) => el.classList.add(cls), DOM.classes.keyShiftActive);
+
+  const focusAndRead = (k: Locator) =>
+    k.evaluate((el: HTMLElement) => {
+      el.focus();
+      const computed = getComputedStyle(el);
+      return { style: computed.outlineStyle, color: computed.outlineColor };
+    });
+
+  const resting = await shiftKey.evaluate((el) => getComputedStyle(el).outlineStyle);
+  const shift = await focusAndRead(shiftKey);
+  const action = await focusAndRead(key(page, "kb-qwerty", "{enter}"));
+  const plain = await focusAndRead(key(page, "kb-qwerty", "z"));
+
+  expect(resting, "the latched Shift draws no outline at rest").toBe("none");
+  expect(shift.style, "focus draws the focus outline").not.toBe("none");
+  expect(action.color, "the contrast and default focus colours differ in the loaded theme").not.toBe(plain.color);
+  expect(shift.color, "a focused latched Shift draws the contrast ring").toBe(action.color);
+});

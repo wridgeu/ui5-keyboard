@@ -60,6 +60,12 @@ export async function initI18n(): Promise<void> {
  * ```
  */
 export function setI18nResolver(fn: I18nResolver | null): void {
+  // Rejecting at the setter names the mistake once. Storing a non-function instead surfaces it as
+  // one "i18n resolver threw" warning per key, at every label resolution.
+  if (fn !== null && typeof fn !== "function") {
+    console.warn("[kiosk-keyboard] setI18nResolver: argument must be a function or null.");
+    return;
+  }
   _resolver = fn;
 }
 

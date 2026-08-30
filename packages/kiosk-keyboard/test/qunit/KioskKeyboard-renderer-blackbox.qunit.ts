@@ -73,6 +73,33 @@ QUnit.test("Shift cycle: off → shift → caps → off (DOM state)", async (ass
   kb.destroy();
 });
 
+// The renderer writes `--shiftActive` on the `{shift}` key's value, so a custom
+// layout that declares no `type` latches like any other. The fill has to follow,
+// or the key announces a state it does not paint.
+QUnit.test("Latched {shift} without a declared type paints the emphasized fill", async (assert) => {
+  const layout: LayoutDefinition = [[{ value: "a" }, { value: "{shift}" }, { value: "{enter}", type: "action" }]];
+  const kb = new KioskKeyboard({
+    layout: "bb-shift-untyped",
+    customLayouts: [new CustomLayout({ name: "bb-shift-untyped", rows: layout })],
+  });
+  await placeAndWait(kb);
+
+  const bg = (keyValue: string) => getComputedStyle(getRequiredKeyElement(kb, keyValue)).backgroundColor;
+
+  // Without this the whole test passes vacuously under a runner that serves no
+  // theme: every key reports the same transparent fill.
+  assert.notStrictEqual(bg("a"), bg("{enter}"), "the plain and emphasized fills differ in the loaded theme");
+  assert.strictEqual(bg("{shift}"), bg("a"), "unlatched, the untyped shift paints the plain fill");
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+
+  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "the latch class lands without a declared type");
+  assert.strictEqual(bg("{shift}"), bg("{enter}"), "latched, the untyped shift paints the emphasized fill");
+
+  kb.destroy();
+});
+
 // ──────────────────────────────────────────────
 // 1b. Shift feedback latency KPIs
 // ──────────────────────────────────────────────
