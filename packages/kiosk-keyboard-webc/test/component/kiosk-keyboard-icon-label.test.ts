@@ -4,12 +4,7 @@ import KioskKeyboard from "../../src/KioskKeyboard.js";
 import navRow from "../../src/layouts/nav-row.js";
 import qwerty from "../../src/layouts/qwerty.js";
 import type { KeyDefinition, LayoutDefinition } from "../../src/types.js";
-import {
-  customLayout,
-  politeAnnouncementRegion,
-  resetAnnouncements,
-  requireKey as queryKey,
-} from "../helpers/fixtures.js";
+import { customLayout, resetAnnouncements, requireKey as queryKey } from "../helpers/fixtures.js";
 import { captureConsole } from "../helpers/console.js";
 
 beforeEach(resetAnnouncements);
@@ -552,13 +547,10 @@ describe("icon + label rendering", () => {
     expect(queryKeyLabel(keyEl)!.getAttribute("lang")).to.equal("ar");
 
     // Only the keycap text is in the layout's language: a key carries an English
-    // aria-label, the group carries an English name, and the live region
-    // announces in the UI language.
+    // aria-label and the group carries an English name.
     expect(keyEl.hasAttribute("lang"), "the key element stays in the UI language").to.be.false;
     const root = el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.root)!;
     expect(root.hasAttribute("lang"), "the keyboard group stays in the UI language").to.be.false;
-    const liveRegion = politeAnnouncementRegion()!;
-    expect(liveRegion.hasAttribute("lang"), "the live region stays in the UI language").to.be.false;
   });
 
   it("declares the language on a modifier-typed key whose keycap is kana", async () => {

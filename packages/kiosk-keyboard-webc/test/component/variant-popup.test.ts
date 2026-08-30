@@ -97,10 +97,6 @@ function rightClick(el: HTMLElement): void {
   el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, composed: true }));
 }
 
-function liveRegionText(_kb: KioskKeyboard): string {
-  return announcedText().trim();
-}
-
 /** Wait out the asynchronous re-anchor: the popover is anchored to `key`. */
 async function waitForAnchor(kb: KioskKeyboard, key: HTMLElement): Promise<void> {
   await waitUntil(() => popoverEl(kb)?.opener === key, "the popover re-anchors to the second key");
@@ -460,7 +456,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     await holdOpen(requireKey(kb, "a"));
 
     expect(optionGlyphs(kb), "precondition: exactly one variant is offered").to.deep.equal(["ā"]);
-    expect(liveRegionText(kb), "the count trails the noun, so no locale needs a plural form").to.equal(
+    expect(announcedText().trim(), "the count trails the noun, so no locale needs a plural form").to.equal(
       "Variants for a: 1",
     );
     pointerUp();
@@ -1080,7 +1076,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(input.value, "the option click committed the variant").to.equal("ä");
     // Positive, not merely "not the dismissal": an empty region satisfies the exclusion
     // too, so a `_writeLiveRegion` that wrote nothing at all would pass.
-    expect(liveRegionText(kb), "the open announcement still stands, undisturbed by the commit").to.equal(
+    expect(announcedText().trim(), "the open announcement still stands, undisturbed by the commit").to.equal(
       getText("ARIA_VARIANTS_OPENED", "Variants for {1}: {0}").replace("{0}", "3").replace("{1}", "a"),
     );
     pointerUp();
@@ -1095,7 +1091,7 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     await renderFinished();
 
     expect(input.value, "Escape committed nothing").to.equal("");
-    expect(liveRegionText(kb), "a real dismissal is still announced").to.equal(
+    expect(announcedText().trim(), "a real dismissal is still announced").to.equal(
       getText("ARIA_VARIANTS_CLOSED", "Variants closed"),
     );
   });

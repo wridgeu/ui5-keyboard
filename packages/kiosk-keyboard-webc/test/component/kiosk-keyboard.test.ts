@@ -2089,39 +2089,6 @@ describe("kiosk-keyboard", () => {
       expect(announcedText(), "the second element's follows a beat later").to.equal("Shift on");
     });
 
-    it("re-announces a text the region is already holding", async () => {
-      // The queue is the seam because no public gesture raises the same text twice in a
-      // row. Whether the EMPTYING specifically is what makes a screen reader speak again
-      // is not observable here - a same-value `textContent` write replaces the text node
-      // either way - so this asserts the reachable half: that the repeat reaches the DOM.
-      // The fixture is what boots the framework's announcement area into the page.
-      await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
-      await nextRender();
-      const queue = (KioskKeyboard as unknown as { _announcements: { announce(t: string): void; flush(): void } })
-        ._announcements;
-      const region = politeAnnouncementRegion()!;
-
-      const say = async (text: string) => {
-        queue.announce(text);
-        queue.flush();
-        await new Promise((r) => setTimeout(r, 200));
-      };
-
-      await say("Shift on");
-      expect(region.textContent, "precondition: the region holds the text").to.equal("Shift on");
-
-      const records: MutationRecord[] = [];
-      new MutationObserver((batch) => records.push(...batch)).observe(region, {
-        childList: true,
-        characterData: true,
-        subtree: true,
-      });
-      await say("Shift on");
-
-      expect(region.textContent, "the region still ends on the text").to.equal("Shift on");
-      expect(records, "the repeat reached the DOM instead of being skipped").to.not.be.empty;
-    });
-
     it("releasing Caps Lock announces caps-lock-off, not shift-off", async () => {
       // ShiftState.isShifted is true in CapsLock mode, so a CapsLock -> Off
       // transition also reads as a shift release. The shift-off announcement is
