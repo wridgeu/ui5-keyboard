@@ -179,6 +179,42 @@ QUnit.test("Disabled target declines the key and leaves the value untouched", (a
   assert.strictEqual(input.value, "ab", "No preedit written");
 });
 
+QUnit.test("Jamo that would open a preedit past maxlength is refused", (assert) => {
+  const m = mw();
+  input.maxLength = 1;
+  // 간 fills the field; the following ㅏ would steal the ㄴ into a second syllable.
+  for (const key of ["ㄱ", "ㅏ", "ㄴ"]) m.handleKey(key, input);
+  assert.strictEqual(input.value, "간", "Precondition: 간 is a live preedit");
+
+  assert.strictEqual(m.handleKey("ㅏ", input), true, "The refused key is swallowed, not passed on");
+  assert.strictEqual(input.value, "간", "Preedit never exceeds maxlength");
+});
+
+QUnit.test("Composition continues while the field still has room", (assert) => {
+  const m = mw();
+  input.maxLength = 2;
+  for (const key of ["ㄱ", "ㅏ", "ㄴ", "ㅏ"]) m.handleKey(key, input);
+  assert.strictEqual(input.value, "가나", "Both syllables fit and compose");
+});
+
+QUnit.test("Text a new composition replaces counts as room", (assert) => {
+  const m = mw();
+  input.value = "AB";
+  input.setSelectionRange(0, 2);
+  input.maxLength = 2;
+  m.handleKey("ㄱ", input);
+  assert.strictEqual(input.value, "ᄀ", "The replaced selection frees the room the preedit needs");
+});
+
+QUnit.test("Composition replaces the selected text instead of composing beside it", (assert) => {
+  const m = mw();
+  input.value = "ABCD";
+  input.setSelectionRange(1, 3);
+  m.handleKey("ㄱ", input);
+  m.handleKey("ㅏ", input);
+  assert.strictEqual(input.value, "A가D", "The selection is replaced, as a typed character would");
+});
+
 QUnit.test("Backspace declined on a target that turned read-only mid-composition", (assert) => {
   const m = mw();
   input.value = "ab";

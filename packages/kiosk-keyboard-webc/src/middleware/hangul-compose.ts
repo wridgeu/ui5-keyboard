@@ -113,6 +113,25 @@ function composeSyllable(l: number, v: number, t = 0): string {
 }
 
 /**
+ * Whether a new one-unit preedit fits the target's `maxlength`.
+ *
+ * A preedit is written straight to `target.value`, which `maxlength` does not police, so the
+ * limit has to be honoured before the write. Browsers deliberately let a platform IME overrun
+ * `maxlength` while composing, because a phonetic buffer converts down to fewer characters than
+ * it holds; this middleware's preedit is always exactly one code unit and commits as that same
+ * unit, so an overrun here is never converted down, only dropped at the commit. Refusing the key
+ * keeps the state machine, the DOM and the committed value in step.
+ *
+ * The selection is credited because opening a preedit replaces it.
+ */
+function hasRoomForPreedit(el: HTMLInputElement | HTMLTextAreaElement): boolean {
+  if (el.maxLength < 0) return true;
+  const start = el.selectionStart ?? el.value.length;
+  const end = el.selectionEnd ?? start;
+  return el.value.length - (end - start) < el.maxLength;
+}
+
+/**
  * Hangul syllable composition phase.
  *
  * A syllable block is built from up to three components defined by the
@@ -206,6 +225,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
 
       if (phase === "empty") {
         if (lIdx !== undefined) {
+          if (!hasRoomForPreedit(el)) return true;
           startComposition(compState, el);
           updateComposition(compState, el, jamoL(lIdx));
           phase = "L";
@@ -228,6 +248,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           return true;
         }
         if (lIdx !== undefined) {
+          if (!hasRoomForPreedit(el)) return true;
           commitPreedit(el);
           resetInternal();
           startComposition(compState, el);
@@ -255,6 +276,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           return true;
         }
         if (lIdx !== undefined) {
+          if (!hasRoomForPreedit(el)) return true;
           commitPreedit(el);
           resetInternal();
           startComposition(compState, el);
@@ -271,6 +293,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           // T-stealing: decompose LVT -> LV, use stolen T as leading consonant of new syllable
           const stolenL = T_TO_L.get(curT);
           if (stolenL !== undefined) {
+            if (!hasRoomForPreedit(el)) return true;
             updateComposition(compState, el, composeSyllable(curL, curV));
             commitPreedit(el);
             resetInternal();
@@ -284,6 +307,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
           }
         }
         if (lIdx !== undefined) {
+          if (!hasRoomForPreedit(el)) return true;
           commitPreedit(el);
           resetInternal();
           startComposition(compState, el);
