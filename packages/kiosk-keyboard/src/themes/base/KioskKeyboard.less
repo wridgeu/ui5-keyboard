@@ -289,12 +289,12 @@
      Gating the declarations keeps a tap on a touch device from leaving the
      key painted in its hover colors.
 
-     Declared ahead of the interactive arms below rather than beside them: a
-     mouse press lands under the pointer, and each arm ties its `:hover`
-     counterpart on specificity, so only source order keeps the press feedback
-     visible. These rules set `background` alone, so winning the tie would leave
-     the pressed `color` painted over the hover fill -- on `--action` the same
-     emphasized colour, which erases the label. */
+     Declared ahead of the interactive arms below: a mouse press lands under the
+     pointer, and each arm ties its `:hover` counterpart on specificity, so only
+     source order keeps the press feedback visible. These rules set `background`
+     alone, so a hover that won the tie would leave the pressed `color` painted
+     over the hover fill, which on `.ui5KioskKey--action` is the same emphasized
+     colour and erases the label. */
 
   @media (hover: hover) {
     .ui5KioskKey:hover {
