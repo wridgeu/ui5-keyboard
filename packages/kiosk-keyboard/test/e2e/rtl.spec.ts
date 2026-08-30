@@ -1,7 +1,11 @@
-import { test } from "@playwright/test";
-import { openPage, expectKeyboardVisualMatch, setDocumentDirection } from "./helpers.js";
+import { test, expect } from "@playwright/test";
+import { openPage, keyboardRoot, expectKeyboardVisualMatch, setDocumentDirection } from "./helpers.js";
 
 // Right-to-left visual regression (desktop + device matrix).
+//
+// CI runs with --ignore-snapshots, so the mirroring itself is asserted rather than
+// only captured: the direction the rows lay out along is what every baseline here
+// is a picture of, and it is the one part of that picture a computed style can see.
 
 test.beforeEach(async ({ page }) => {
   await openPage(page);
@@ -18,6 +22,7 @@ for (const { id, tag } of [
   { id: "kb-accent-variants", tag: "kb-accent-variants-rtl" },
 ]) {
   test(tag, async ({ page }) => {
+    await expect(keyboardRoot(page, id), `${id} did not inherit the document direction`).toHaveCSS("direction", "rtl");
     await expectKeyboardVisualMatch(page, id, `${tag}.png`);
   });
 }
