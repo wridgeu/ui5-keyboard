@@ -154,10 +154,12 @@ describe("kiosk-keyboard - custom layouts", () => {
   });
 
   it("custom layouts do not pollute the global registry", async () => {
-    await mount({ layout: "instance-only" }, customLayout({ name: "instance-only", rows: layoutA }));
+    const el = await mount({ layout: "instance-only" }, customLayout({ name: "instance-only", rows: layoutA }));
 
-    const builtinNames = KioskKeyboard.getRegisteredLayoutNames();
-    expect(builtinNames).to.not.include("instance-only");
+    // The instance really resolved the name, so the exclusion below has something
+    // to exclude; without this it reads no differently from `not.include("banana")`.
+    expect(readDataKeys(el), "the instance resolves the name it declared").to.deep.equal([["ax", "bx"]]);
+    expect(KioskKeyboard.getRegisteredLayoutNames()).to.not.include("instance-only");
   });
 
   it("mixed-case layout names resolve through lowercase lookup", async () => {

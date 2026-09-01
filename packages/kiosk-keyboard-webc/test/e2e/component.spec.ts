@@ -250,6 +250,10 @@ test.describe("row classification (data-row-kind)", () => {
         r.getAttribute("data-row-kind"),
       ),
     );
+    // `every` on an empty list is true, and `waitForKeys` gates on keys rather than
+    // on rows, so the count is what stops a selector that matches nothing from
+    // reading as "nothing was classified".
+    expect(kinds.length, "qwerty rendered no rows").toBeGreaterThan(0);
     expect(kinds.every((k) => k === null)).toBe(true);
   });
 });

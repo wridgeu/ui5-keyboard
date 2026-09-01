@@ -121,49 +121,15 @@ describe("kiosk-keyboard", () => {
     });
   });
 
-  // ── Property reflection ──
+  // ── Attribute-driven re-render ──
 
-  describe("property reflection", () => {
-    it("reflects layout attribute to property", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwertz-de"></kiosk-keyboard> `);
-      expect(el.layout).to.equal("qwertz-de");
-    });
+  // Attribute-to-property reflection itself belongs to `@ui5/webcomponents-base`'s
+  // `@property` decorator, so asserting the round trip tests the framework rather
+  // than this component. Every declared property is instead driven through its
+  // attribute by the behavioural tests that follow, which cover the same plumbing
+  // and additionally pin what the value does.
 
-    it("reflects keyboard-type attribute to property", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard keyboard-type="Numpad"></kiosk-keyboard> `);
-      expect(el.keyboardType).to.equal("Numpad");
-    });
-
-    it("reflects docked boolean attribute", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard docked></kiosk-keyboard> `);
-      expect(el.docked).to.be.true;
-    });
-
-    it("reflects auto-show boolean attribute", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard auto-show></kiosk-keyboard> `);
-      expect(el.autoShow).to.be.true;
-    });
-
-    it("reflects auto-type boolean attribute", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard auto-type></kiosk-keyboard> `);
-      expect(el.autoType).to.be.true;
-    });
-
-    it("reflects disabled attribute to property", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard disabled></kiosk-keyboard> `);
-      expect(el.disabled).to.be.true;
-    });
-
-    it("reflects controls attribute", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard controls="my-input"></kiosk-keyboard> `);
-      expect(el.controls).to.equal("my-input");
-    });
-
-    it("stores controls as string property", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard controls="a, b, c"></kiosk-keyboard> `);
-      expect(el.controls).to.equal("a, b, c");
-    });
-
+  describe("attribute-driven re-render", () => {
     it("re-renders when attribute changes", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
@@ -1768,22 +1734,27 @@ describe("kiosk-keyboard", () => {
       expect(detail.key).to.equal("ArrowUp");
     });
 
-    it("prevents default on key-press to suppress F-key action", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="fkeys"></kiosk-keyboard> `);
+    it("preventDefault on key-press suppresses the F-key's virtual action", async () => {
+      // The suppression is what is asserted, not that the listener ran: a flag the
+      // test's own handler sets is true whatever production does with the veto.
+      const container = await fixture(html`
+        <div>
+          <input id="fkey-veto-target" type="text" value="hello" />
+          <kiosk-keyboard layout="nav" controls="fkey-veto-target"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#fkey-veto-target")!;
+      input.setSelectionRange(2, 2);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
       await nextRender();
-      let prevented = false;
-      el.addEventListener(
-        "key-press",
-        (e: Event) => {
-          e.preventDefault();
-          prevented = true;
-        },
-        { once: true },
-      );
 
-      const f5Key = queryKey(el, "{fkey:F5}")!;
-      f5Key.click();
-      expect(prevented).to.be.true;
+      const arrowRight = queryKey(kb, "{fkey:ArrowRight}")!;
+      arrowRight.click();
+      expect(input.selectionStart, "precondition: an unvetoed nav key moves the caret").to.equal(3);
+
+      kb.addEventListener("key-press", (e: Event) => e.preventDefault(), { once: true });
+      arrowRight.click();
+      expect(input.selectionStart, "the vetoed nav key leaves the caret where it was").to.equal(3);
     });
 
     it("fKeyMode=None suppresses all action", async () => {
@@ -1907,11 +1878,6 @@ describe("kiosk-keyboard", () => {
       arrowRight.click();
       // Cursor should not have moved because native keydown was canceled
       expect(input.selectionStart).to.equal(2);
-    });
-
-    it("reflects f-key-mode attribute to property", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard f-key-mode="Native"></kiosk-keyboard> `);
-      expect(el.fKeyMode).to.equal("Native");
     });
 
     // `{shift}` and `{fkey:F1}` sit on one surface on purpose. Routing through
@@ -2613,16 +2579,9 @@ describe("kiosk-keyboard", () => {
     });
   });
 
-  // ── Additional property reflection ──
+  // ── accessibleName ──
 
-  describe("additional property reflection", () => {
-    it("reflects accessible-name attribute to property", async () => {
-      const el = await fixture<KioskKeyboard>(html`
-        <kiosk-keyboard accessible-name="My Custom Keyboard"></kiosk-keyboard>
-      `);
-      expect(el.accessibleName).to.equal("My Custom Keyboard");
-    });
-
+  describe("accessibleName", () => {
     it("accessibleName renders as aria-label on the root group", async () => {
       const el = await fixture<KioskKeyboard>(html`
         <kiosk-keyboard layout="qwerty" accessible-name="Custom Label"></kiosk-keyboard>
@@ -2651,11 +2610,6 @@ describe("kiosk-keyboard", () => {
       expect(label.length).to.be.greaterThan(0);
       // Default English text is "Virtual Keyboard"
       expect(label).to.equal("Virtual Keyboard");
-    });
-
-    it("reflects mobile-keyboard attribute to property", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard mobile-keyboard="Native"></kiosk-keyboard> `);
-      expect(el.mobileKeyboard).to.equal("Native");
     });
   });
 
@@ -3378,7 +3332,11 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       await waitForResponsiveSync();
 
-      // At 260px with default 16rem threshold (256px), no cq-short expected.
+      // The premise, asserted rather than assumed: 260px clears the default 16rem
+      // (256px) threshold, so without it the tier below would apply at this height
+      // anyway and the override would be proving nothing.
+      expect(hasCqTier(el, DOM.cqTierValues.short), "260px clears the default 16rem threshold").to.be.false;
+
       // Override short threshold to 18rem (288px) so 260px triggers cq-short.
       el.style.setProperty("--kiosk-keyboard-cq-short-threshold", "18rem");
       el.refreshResponsiveState();

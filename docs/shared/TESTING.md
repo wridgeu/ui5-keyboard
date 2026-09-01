@@ -171,15 +171,15 @@ npm run test:e2e:tablet:update -w packages/kiosk-keyboard-webc
 
 ### Mismatch threshold
 
-The default is pixel-perfect. Determinism comes from the pinned bundled Chromium plus `animations: "disabled"` and `caret: "hide"`. Where sub-pixel anti-aliasing makes an interactive snapshot jitter (e.g. shifted/active key states under device emulation), a per-assertion tolerance is applied instead of relaxing the global bar:
+The default is pixel-perfect. Determinism comes from the pinned bundled Chromium plus `animations: "disabled"` and `caret: "hide"`. The interactive and shifted kiosk snapshots do not reproduce their baseline to the pixel, and take a per-assertion tolerance instead of relaxing the global bar (`SOFT` in `visual.spec.ts`; webc uses none):
 
 ```ts
 const SOFT = { maxDiffPixelRatio: 0.003 };
 // kiosk, through the clip helper (VisualMatchOptions = screenshot options minus fullPage/clip)
 await expectKeyboardVisualMatch(page, "kb-shift", "kb-shift-active.png", SOFT);
-// webc, element capture
-await expect(keyboardRoot(page, "kb-shift")).toHaveScreenshot("kb-shift-active.png", SOFT);
 ```
+
+The tolerance is wide because the miss is: `kb-ko-hangul-shifted` settles up to 916 pixels off its baseline on desktop, where a one-keycap glyph change measures 62 (45 on phone-sm). No budget covers both, so a snapshot carrying `SOFT` gates layout-scale change and not the wrong glyph on a key.
 
 A few snapshots are too unstable under phone emulation to be meaningful (e.g. the docked render and the Spanish shifted layout) and are skipped on the phone projects via `test.skip(...)` with a reason, rather than carried as flaky baselines. Hover snapshots `test.skip` on profiles without `(hover: hover)`.
 

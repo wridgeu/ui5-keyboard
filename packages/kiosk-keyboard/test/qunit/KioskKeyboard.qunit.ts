@@ -676,6 +676,10 @@ QUnit.test("controls auto-target does not trigger re-render", async (assert) => 
  * The `AbortSignal` a listener was registered with, or `undefined` when the call
  * carried none. Detachment runs through `signal.abort()`, so a listener whose signal
  * never aborts is a leaked listener.
+ *
+ * Callers assert the armed state as `strictEqual(..., false)` rather than `notOk`:
+ * `undefined?.aborted` is `undefined`, which `notOk` accepts, so a listener that was
+ * never attached at all would satisfy an assertion claiming it is live.
  */
 function signalOf(call: sinon.SinonSpyCall | undefined): AbortSignal | undefined {
   const signal: unknown = call?.args[2]?.signal;
@@ -696,8 +700,8 @@ QUnit.test("exit() cleans up auto-show listeners", async (assert) => {
 
   const focusInSignal = signalOf(addSpy.getCalls().find((c) => c.args[0] === "focusin"));
   const focusOutSignal = signalOf(addSpy.getCalls().find((c) => c.args[0] === "focusout"));
-  assert.notOk(focusInSignal?.aborted, "setAutoShow(true) attaches a live document focusin listener");
-  assert.notOk(focusOutSignal?.aborted, "setAutoShow(true) attaches a live document focusout listener");
+  assert.strictEqual(focusInSignal?.aborted, false, "setAutoShow(true) attaches a live document focusin listener");
+  assert.strictEqual(focusOutSignal?.aborted, false, "setAutoShow(true) attaches a live document focusout listener");
 
   kb.destroy();
   addSpy.restore();
@@ -721,7 +725,7 @@ QUnit.test("exit() removes escape key listener", async (assert) => {
     .getCalls()
     .find((c) => c.args[0] === "keydown" && (c.args[2] as AddEventListenerOptions | undefined)?.capture === true);
   const escapeSignal = signalOf(escapeCall);
-  assert.notOk(escapeSignal?.aborted, "show() attaches a live capturing document keydown listener");
+  assert.strictEqual(escapeSignal?.aborted, false, "show() attaches a live capturing document keydown listener");
 
   kb.destroy();
   addSpy.restore();
@@ -2311,7 +2315,7 @@ QUnit.test("Window blur safety listener is detached on touchend", async (assert)
   kb.ontouchstart(start);
 
   const blurSignal = signalOf(addSpy.getCalls().find((c) => c.args[0] === "blur"));
-  assert.notOk(blurSignal?.aborted, "touchstart attaches a live window blur safety listener");
+  assert.strictEqual(blurSignal?.aborted, false, "touchstart attaches a live window blur safety listener");
 
   const end = new Event("touchend", { bubbles: true });
   Object.defineProperty(end, "target", { value: qKey, writable: false });

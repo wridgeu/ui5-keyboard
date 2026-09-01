@@ -2,6 +2,14 @@ import { test } from "@playwright/test";
 import { openPage, keyboardRoot, expectVisualMatch, setDocumentDirection } from "./helpers.js";
 
 // Right-to-left visual regression. Direction is reset after each test.
+//
+// The captures are the whole assertion, so CI's --ignore-snapshots leaves these
+// checking nothing. No computed style on the root closes that gap: `direction`
+// reaches it by inheritance from the document `dir` the helper sets, so a bare
+// <div> on the page reports `rtl` just as well, and asserting it would hold for
+// every implementation. The RTL that is production's is asserted in the component
+// suite: the mirrored corner hint in variant-popup.test.ts, arrow polarity there
+// and in key-grid-navigation.test.ts.
 
 test.beforeEach(async ({ page }) => {
   await openPage(page, "/test/pages/visual.html");

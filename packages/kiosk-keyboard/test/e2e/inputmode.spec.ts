@@ -22,7 +22,10 @@ test("Native: keeps inputmode and does not open the keyboard", async ({ page }) 
   // oxlint-disable-next-line test-guardrails/no-hard-wait -- no event signals the absence of an open
   await page.waitForTimeout(400);
   await expect(keyboardRoot(page, "kb-native")).toHaveClass(CLOSED);
-  await expect(page.locator("#input-native input")).not.toHaveAttribute("inputmode", "none");
+  // `sap.m.Input` authors no inputmode, so the untouched state is the attribute's
+  // absence. `not.toHaveAttribute("inputmode", "none")` would also accept a
+  // suppression that wrote some other value.
+  await expect(page.locator("#input-native input")).not.toHaveAttribute("inputmode");
 });
 
 test("Auto (desktop): suppresses inputmode and opens the keyboard", async ({ page }) => {
@@ -38,5 +41,7 @@ test("restores the original inputmode when the keyboard closes", async ({ page }
 
   await page.locator("#blur-target").click();
   await expect(keyboardRoot(page, "kb-custom")).toHaveClass(CLOSED);
-  await expect(page.locator("#input-custom input")).not.toHaveAttribute("inputmode", "none");
+  // The original is the attribute's absence, so restoring means removing it: an
+  // "anything but none" assertion would pass on a restore that wrote a wrong value.
+  await expect(page.locator("#input-custom input")).not.toHaveAttribute("inputmode");
 });

@@ -761,6 +761,24 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(getComputedStyle(aKey, "::after").display, "the hint is painted").to.equal("block");
   });
 
+  it("mirrors the corner hint for RTL scoped to the element, not just the document", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    const aKey = requireKey(kb, "a");
+    const ltrClip = getComputedStyle(aKey, "::after").clipPath;
+
+    // `dir` on the host rather than on <html>: a host page may scope RTL to one
+    // region, and the clip-path has to follow the direction the keys render in.
+    // Its coordinates are physical and do not flip with `direction` on their own.
+    kb.setAttribute("dir", "rtl");
+    await renderFinished();
+
+    expect(getComputedStyle(aKey).direction, "the keys render RTL under the scoped dir").to.equal("rtl");
+    expect(
+      getComputedStyle(aKey, "::after").clipPath,
+      "the folded corner is mirrored, so it still points into the key",
+    ).to.not.equal(ltrClip);
+  });
+
   it("keeps the corner hint painted on a narrow key", async () => {
     const { kb } = await setupWithLayout([
       [
