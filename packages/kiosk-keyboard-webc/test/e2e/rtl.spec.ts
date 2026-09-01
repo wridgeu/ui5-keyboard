@@ -1,11 +1,15 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 import { openPage, keyboardRoot, expectVisualMatch, setDocumentDirection } from "./helpers.js";
 
 // Right-to-left visual regression. Direction is reset after each test.
 //
-// CI runs with --ignore-snapshots, so the mirroring itself is asserted rather than
-// only captured: the direction the rows lay out along is what every baseline here
-// is a picture of, and it is the one part of that picture a computed style can see.
+// The captures are the whole assertion, so CI's --ignore-snapshots leaves these
+// checking nothing. No computed style on the root closes that gap: `direction`
+// reaches it by inheritance from the document `dir` the helper sets, so a bare
+// <div> on the page reports `rtl` just as well, and asserting it would hold for
+// every implementation. The RTL that is production's is asserted in the component
+// suite: the mirrored corner hint in variant-popup.test.ts, arrow polarity there
+// and in key-grid-navigation.test.ts.
 
 test.beforeEach(async ({ page }) => {
   await openPage(page, "/test/pages/visual.html");
@@ -26,7 +30,6 @@ for (const { id, tag } of [
   { id: "kb-accent-variants", tag: "webc-accent-variants-rtl" },
 ]) {
   test(tag, async ({ page }) => {
-    await expect(keyboardRoot(page, id), `${id} did not inherit the document direction`).toHaveCSS("direction", "rtl");
     await expectVisualMatch(keyboardRoot(page, id), `${tag}.png`);
   });
 }
