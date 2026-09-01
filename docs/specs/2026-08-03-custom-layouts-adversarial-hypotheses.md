@@ -1,7 +1,8 @@
 # `customLayouts` (#216): adversarial hypotheses
 
 - Date: 2026-08-03
-- Design under test: `docs/specs/2026-08-03-issue-216-custom-layouts-design.md`
+- Design under test: the `customLayouts` aggregation and the `CustomLayout` element shipped for
+  [#216](https://github.com/wridgeu/ui5-keyboard/issues/216)
 - Suites under test: `latin-variants.{qunit,test}.ts`, the new `custom-layout-fold.{qunit,test}.ts`,
   `custom-layouts.qunit.ts` / `custom-layouts.test.ts` (rewritten from `instance-overrides.*`),
   `customLayouts-xml.qunit.ts`, `custom-layouts-first-paint.test.ts`,
