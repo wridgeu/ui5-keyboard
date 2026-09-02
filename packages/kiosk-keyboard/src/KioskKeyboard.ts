@@ -977,7 +977,7 @@ export default class KioskKeyboard extends Control {
       getFKeyMode: () => this.getFKeyMode(),
       getTargetFocusDomRef: () => this._getTargetElement()?.getFocusDomRef() ?? null,
       getEffectiveResolver: () => this._getEffectiveResolver(),
-      handleNavigationKey: (fkeyName) => this._targetSession.handleNavigationKey(fkeyName),
+      handleNavigationKey: (fkeyName, extend) => this._targetSession.handleNavigationKey(fkeyName, extend),
     });
 
     // Detect locale-appropriate default layout. This runs before

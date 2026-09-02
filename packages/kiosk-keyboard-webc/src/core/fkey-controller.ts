@@ -108,7 +108,7 @@ export class FKeyController {
     if (nativeAllowed) {
       const target = this._host.resolveTarget();
       if (target) {
-        handleNavigation(target, fkeyName);
+        handleNavigation(target, fkeyName, undefined, shiftKey);
       }
     }
   }

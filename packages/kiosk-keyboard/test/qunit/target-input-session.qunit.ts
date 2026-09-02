@@ -348,6 +348,19 @@ QUnit.test("No-op when target element is null", (assert) => {
   assert.ok(true, "No error thrown when target is null");
 });
 
+QUnit.test("An extending call stores a non-collapsed range on the DOM", (assert) => {
+  const input = makeInput("abcde");
+  const mock = makeMockElement(input);
+  const session = new TargetInputSession(() => mock);
+
+  // A fresh session on an unfocused input seeds its cursor at end-of-value.
+  session.handleNavigationKey("ArrowLeft", true);
+
+  assert.strictEqual(input.selectionStart, 4, "Selection starts one grapheme back");
+  assert.strictEqual(input.selectionEnd, 5, "Anchor stays at end-of-value");
+  assert.strictEqual(input.selectionDirection, "backward", "Focus is at the start");
+});
+
 // ──────────────────────────────────────────────────
 // fireChangeIfDirty
 // ──────────────────────────────────────────────────

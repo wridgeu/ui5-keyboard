@@ -472,7 +472,7 @@ When a target input is set, keydown/keyup listeners on the input highlight the c
 
 F-keys use the `{fkey:name}` value format. Behavior depends on `fKeyMode`:
 
-- **Virtual** (default): Fires `key-press` event with fkey detail. Built-in actions for cursor movement keys (ArrowLeft/Right moves caret).
+- **Virtual** (default): Fires `key-press` event with fkey detail. Built-in actions for cursor movement keys (ArrowLeft/Right moves caret). With Shift active the navigation keys extend the selection instead: the focus end moves and the anchor is kept, the anchor being the browser's `selectionDirection` rather than stored state.
 - **Native**: Dispatches a real `KeyboardEvent("keydown")` on the target input. Built-in browser actions for F5 (reload) and F11 (fullscreen).
 - **None**: Silent no-op.
 
