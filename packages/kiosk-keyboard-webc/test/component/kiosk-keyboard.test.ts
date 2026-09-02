@@ -3066,6 +3066,52 @@ describe("kiosk-keyboard", () => {
     });
   });
 
+  // ── Auto-show inputmode suppression ──
+
+  describe("auto-show inputmode suppression", () => {
+    it("show() on an auto-show keyboard restores the auto-targeted input's inputmode after close()", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="autoshow-suppress-input" type="text" />
+          <kiosk-keyboard layout="qwerty" docked auto-show controls="autoshow-suppress-input"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#autoshow-suppress-input")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      // A focus() on the already-focused element fires no focusin, so the
+      // re-entrant auto-show path the assertion covers would never run.
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      kb.show();
+      await nextRender();
+      expect(input.getAttribute("inputmode")).to.equal("none", "auto-targeted input is suppressed while open");
+
+      kb.close();
+      await nextRender();
+      expect(input.getAttribute("inputmode")).to.equal(null, "auto-targeted input is restored after close");
+    });
+
+    it("open pre-set in markup with auto-show restores inputmode after close()", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="preopen-suppress-input" type="text" />
+          <kiosk-keyboard layout="qwerty" docked auto-show controls="preopen-suppress-input" open></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#preopen-suppress-input")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      expect(input.getAttribute("inputmode")).to.equal("none", "auto-targeted input is suppressed while open");
+
+      kb.close();
+      await nextRender();
+      expect(input.getAttribute("inputmode")).to.equal(null, "auto-targeted input is restored after close");
+    });
+  });
+
   // ── setTargetElement reconciliation ──
 
   describe("setTargetElement reconciliation", () => {
