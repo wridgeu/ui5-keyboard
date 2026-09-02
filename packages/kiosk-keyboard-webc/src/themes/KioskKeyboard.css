@@ -268,6 +268,12 @@
   border-radius: var(--_kiosk-keyboard-border-radius) var(--_kiosk-keyboard-border-radius) 0 0;
   border-bottom: none;
   box-shadow: var(--_kiosk-keyboard-docked-shadow);
+  /* The box is pinned to the bottom viewport edge, so the last key row would sit
+     under a home indicator or a gesture-navigation bar. Physical, to pair with
+     the physical `bottom`, `translateY` and inset. Reads the private alias so the
+     tier and density padding overrides stay in force. `env()` is `0px` unless the
+     host page opts into `viewport-fit=cover`. */
+  padding-bottom: calc(var(--_kiosk-keyboard-padding) + env(safe-area-inset-bottom, 0px));
   transform: translateY(0);
   transition:
     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),

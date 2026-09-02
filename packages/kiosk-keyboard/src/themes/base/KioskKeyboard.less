@@ -241,6 +241,13 @@
       border-radius: var(--_ui5KioskKeyboard-borderRadius) var(--_ui5KioskKeyboard-borderRadius) 0 0;
       border-bottom: none;
       box-shadow: var(--_ui5KioskKeyboard-dockedShadow);
+      /* The box is pinned to the bottom viewport edge, so the last key row would
+         sit under a home indicator or a gesture-navigation bar. Physical, to pair
+         with the physical `bottom`, `translateY` and inset. Reads the private
+         alias so the tier and density padding overrides stay in force. `env()` is
+         `0px` unless the host page opts into `viewport-fit=cover`. Escaped: the
+         vendored LESS 1.6.3 throws on an unescaped `calc(var() + env())`. */
+      padding-bottom: ~"calc(var(--_ui5KioskKeyboard-padding) + env(safe-area-inset-bottom, 0px))";
       transform: translateY(0);
       transition:
         transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),

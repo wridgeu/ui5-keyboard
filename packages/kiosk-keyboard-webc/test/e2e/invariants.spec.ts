@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { key, openPage, setDocumentDirection } from "./helpers.js";
+import { key, keyboardRoot, openPage, setDocumentDirection } from "./helpers.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 
 // Structural invariants of the rendered keyboard, measured rather than
@@ -509,4 +509,24 @@ test("a highlighted key keeps its press fill under a non-hovering primary pointe
     expect(hoverOnly, `${dataKey} paints no hover fill under a non-hovering primary pointer`).toBe(resting);
     expect(hoveredAndHighlighted, `${dataKey} keeps its highlight fill under the pointer`).toBe(highlightOnly);
   }
+});
+
+// A docked keyboard is pinned to the bottom viewport edge, where a home
+// indicator or a gesture-navigation bar can sit over its last key row. The
+// safe-area inset is `0px` unless the host page opts into `viewport-fit=cover`,
+// so the padding is read against a CDP-emulated inset. The docked root is laid
+// out while closed, so no `show()` is needed.
+test("the docked keyboard pads its bottom edge by the safe-area inset", async ({ page }) => {
+  const root = keyboardRoot(page, "kb-docked");
+  const paddingBottom = () => root.evaluate((el) => parseFloat(getComputedStyle(el).paddingBottom));
+  const before = await paddingBottom();
+
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { bottom: 34, bottomMax: 34 } });
+  await expect.poll(paddingBottom).toBe(before + 34);
+
+  // Harness pin, not coverage: shows the override (and not a stray reflow) moved
+  // the value. No production change can flip it.
+  await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: {} });
+  await expect.poll(paddingBottom).toBe(before);
 });
