@@ -440,6 +440,10 @@ class KioskKeyboard extends UI5Element {
   /**
    * The keyboard type variant to display.
    *
+   * Setting it to a value other than `"Full"` - as an attribute, before
+   * connection, or programmatically - disables auto-type detection until
+   * `resetKeyboardType()` is called.
+   *
    * @default "Full"
    * @public
    * @since 0.1.0
@@ -959,6 +963,26 @@ class KioskKeyboard extends UI5Element {
   }
 
   // ── Lifecycle ──
+
+  override onBeforeRendering(): void {
+    if (this._rendered) return;
+    // The framework suppresses invalidation until the first render completes,
+    // so attributes the parser applied and properties set before connection
+    // never reach onInvalidation. Their initial values are normalised here,
+    // ahead of the first paint: a plain assignment updates the state silently
+    // and updateAttributes() reflects the clamped value.
+    if (isInvalidEnumValue("keyboardType", this.keyboardType, VALID_KEYBOARD_TYPES)) {
+      this.keyboardType = "Full";
+    } else if (this.keyboardType !== "Full") {
+      this._keyboardTypeSource = "explicit";
+    }
+    if (isInvalidEnumValue("fKeyMode", this.fKeyMode, VALID_FKEY_MODES)) {
+      this.fKeyMode = "Virtual";
+    }
+    if (isInvalidEnumValue("mobileKeyboard", this.mobileKeyboard, VALID_MOBILE_KEYBOARDS)) {
+      this.mobileKeyboard = "Auto";
+    }
+  }
 
   override onEnterDOM(): void {
     KioskKeyboard._instances.add(this);
