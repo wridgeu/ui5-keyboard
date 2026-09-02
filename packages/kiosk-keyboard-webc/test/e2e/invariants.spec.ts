@@ -1,5 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import { openPage, setDocumentDirection } from "./helpers.js";
+import { test, expect, type Locator, type Page } from "@playwright/test";
+import { key, openPage, setDocumentDirection } from "./helpers.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 
 // Structural invariants of the rendered keyboard, measured rather than
@@ -464,4 +464,49 @@ test("the compact nav row mirrors with the document direction", async ({ page })
     navKey(ltr, "ArrowRight").left,
   );
   expect(left.left, "the horizontal arrow pair does not mirror in RTL").toBeGreaterThan(right.left);
+});
+
+// Hover affordances are gated on a hovering primary pointer, so a secondary
+// pointer hovering a touch-primary device must not repaint a key. Each assertion
+// guards a different production line: `hoverOnly === resting` guards the
+// `@media (hover: hover)` gate on the four hover arms, and
+// `hoveredAndHighlighted === highlightOnly` guards the absence of a later
+// `(hover: none)` undo block, which re-declares `background` at the same
+// specificity after the press arms and so wins the tie the source order settles.
+// Both keys are covered because the emphasized press fill is what the undo block
+// reverts; a base key paints white either way in sap_horizon.
+test("a highlighted key keeps its press fill under a non-hovering primary pointer", async ({ page }) => {
+  test.skip(!(await page.evaluate(() => matchMedia("(hover: none)").matches)), "primary pointer hovers here");
+
+  // The highlight arm transitions background over 0.1s; read after it settles.
+  const background = (k: Locator) =>
+    k.evaluate(async (el) => {
+      await Promise.allSettled(el.getAnimations().map((a) => a.finished));
+      return getComputedStyle(el).backgroundColor;
+    });
+  const setHighlight = (k: Locator, on: boolean) =>
+    k.evaluate((el, arg) => el.classList.toggle(arg.cls, arg.on), { cls: DOM.classes.keyHighlight, on });
+
+  for (const { dataKey, latched } of [
+    { dataKey: "{enter}", latched: [] as string[] },
+    { dataKey: "{shift}", latched: [DOM.classes.keyShiftActive] },
+  ]) {
+    const target = key(page, "kb-qwerty", dataKey);
+    await target.evaluate((el, cls) => el.classList.add(...cls), latched);
+
+    await page.mouse.move(0, 0);
+    const resting = await background(target);
+    await setHighlight(target, true);
+    const highlightOnly = await background(target);
+
+    await setHighlight(target, false);
+    await target.hover();
+    const hoverOnly = await background(target);
+    await setHighlight(target, true);
+    const hoveredAndHighlighted = await background(target);
+
+    expect(highlightOnly, `${dataKey} paints a highlight fill distinct from its resting fill`).not.toBe(resting);
+    expect(hoverOnly, `${dataKey} paints no hover fill under a non-hovering primary pointer`).toBe(resting);
+    expect(hoveredAndHighlighted, `${dataKey} keeps its highlight fill under the pointer`).toBe(highlightOnly);
+  }
 });

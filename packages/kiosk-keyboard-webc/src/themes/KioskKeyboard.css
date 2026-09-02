@@ -380,15 +380,25 @@
      (e.g. layout switches) apply instantly instead of animating from the
      old styling. */
 
-  &:hover {
-    background: var(--sapButton_Hover_Background, #eaecee);
-    border-color: var(--sapButton_Hover_BorderColor, #0064d9);
-    transform: translateY(-1px);
-    box-shadow: var(--_kiosk-keyboard-key-shadow-hover);
-    transition:
-      background 0.1s ease,
-      box-shadow 0.1s ease,
-      transform 0.05s ease;
+  /* Hover affordances apply only where a hovering primary pointer exists.
+     Gating the declarations keeps a hovering secondary pointer on a touch device
+     from leaving the key painted in its hover colors.
+
+     Declared ahead of the interactive arms below: a mouse press lands under the
+     pointer, and each arm ties its `:hover` counterpart on specificity, so only
+     source order keeps the press feedback visible. */
+
+  @media (hover: hover) {
+    &:hover {
+      background: var(--sapButton_Hover_Background, #eaecee);
+      border-color: var(--sapButton_Hover_BorderColor, #0064d9);
+      transform: translateY(-1px);
+      box-shadow: var(--_kiosk-keyboard-key-shadow-hover);
+      transition:
+        background 0.1s ease,
+        box-shadow 0.1s ease,
+        transform 0.05s ease;
+    }
   }
 
   &:active,
@@ -457,10 +467,12 @@
     calc(var(--kiosk-keyboard-key-font-size) * var(--kiosk-keyboard-modifier-font-scale))
   );
 
-  &:hover {
-    background: var(--sapButton_Lite_Hover_Background, #eaecee);
-    border-color: var(--sapButton_Lite_Hover_BorderColor, #0064d9);
-    box-shadow: var(--_kiosk-keyboard-modifier-shadow-hover);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--sapButton_Lite_Hover_Background, #eaecee);
+      border-color: var(--sapButton_Lite_Hover_BorderColor, #0064d9);
+      box-shadow: var(--_kiosk-keyboard-modifier-shadow-hover);
+    }
   }
 
   &:active,
@@ -483,9 +495,11 @@
   );
   font-weight: bold;
 
-  &:hover {
-    background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
-    border-color: var(--sapButton_Emphasized_Hover_BorderColor, #0064d9);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
+      border-color: var(--sapButton_Emphasized_Hover_BorderColor, #0064d9);
+    }
   }
 
   &:active,
@@ -507,9 +521,11 @@
   color: var(--sapButton_Emphasized_TextColor, #fff);
   border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Emphasized_BorderColor, #0070f2));
 
-  &:hover {
-    background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
-    border-color: var(--sapButton_Emphasized_Hover_BorderColor, #0064d9);
+  @media (hover: hover) {
+    &:hover {
+      background: var(--sapButton_Emphasized_Hover_Background, #0064d9);
+      border-color: var(--sapButton_Emphasized_Hover_BorderColor, #0064d9);
+    }
   }
 
   /* Ties `--modifier`'s own interactive arms at (0,2,0) and wins on source
@@ -532,9 +548,8 @@
 /* Variant: Caps Lock indicator.
 
    The ring is the only signal that the mode is latched, and `:hover` and
-   `:focus-visible` both declare box-shadow on `.kiosk-key` at (0,2,0) -- with the
-   `@media (hover: none)` block re-declaring hover later still -- so it is written
-   at (0,3,0) to outrank them. `--shift-active` is always present alongside
+   `:focus-visible` both declare box-shadow on `.kiosk-key` at (0,2,0), so it is
+   written at (0,3,0) to outrank them. `--shift-active` is always present alongside
    `--caps-lock` (isCapsLock implies isShifted) and the base class is
    unconditional, so the compound matches every latched key. Outranking the
    `:active`/`--highlight` flattening is deliberate too: a latched mode indicator
@@ -635,27 +650,6 @@
   .kiosk-key.kiosk-key--shift-active.kiosk-key--caps-lock {
     border-color: HighlightText;
     border-width: 2px;
-  }
-}
-
-@media (hover: none) {
-  .kiosk-key:hover {
-    background: var(--sapButton_Background, #fff);
-    border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_BorderColor, #bfbfbf));
-    transform: none;
-    box-shadow: var(--_kiosk-keyboard-key-shadow);
-  }
-
-  .kiosk-key--modifier:hover {
-    background: var(--sapButton_Lite_Background, transparent);
-    border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Lite_BorderColor, transparent));
-    box-shadow: var(--_kiosk-keyboard-modifier-shadow);
-  }
-
-  .kiosk-key--action:hover,
-  .kiosk-key--shift-active:hover {
-    background: var(--sapButton_Emphasized_Background, #0070f2);
-    border-color: var(--kiosk-keyboard-key-border-color, var(--sapButton_Emphasized_BorderColor, #0070f2));
   }
 }
 

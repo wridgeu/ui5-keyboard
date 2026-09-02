@@ -49,11 +49,10 @@ test("webc-accent-variants-forced-colors-highlight", async ({ page }) => {
 
 // The Caps Lock ring is the only signal that the mode is latched, so it has to
 // outrank the transient interaction states painted on the same key: `:hover` and
-// `:focus-visible` both declare `box-shadow` on `.kiosk-key` at (0,2,0) and the
-// `@media (hover: none)` block re-declares hover later still, all of which a lone
-// `--caps-lock` class loses to. Polled rather than read once: the ring declares
-// `transition: box-shadow 0.1s ease`, so an immediate read returns the
-// pre-transition value.
+// `:focus-visible` both declare `box-shadow` on `.kiosk-key` at (0,2,0), both of
+// which a lone `--caps-lock` class loses to. Polled rather than read once: the
+// ring declares `transition: box-shadow 0.1s ease`, so an immediate read returns
+// the pre-transition value.
 const CAPS_RING = /0px 0px 0px 2px/;
 
 const latchCapsLock = (shiftKey: Locator) =>
