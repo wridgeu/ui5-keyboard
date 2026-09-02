@@ -410,4 +410,122 @@ describe("handleNavigation", () => {
     handleNavigation(el, "ArrowRight");
     expect(fired).toBe(false);
   });
+
+  it("extending ArrowLeft twice then ArrowRight keeps the anchor", () => {
+    const input = mockInput("hello", 5);
+
+    let pos = handleNavigation(input, "ArrowLeft", undefined, true);
+    expect(pos).toEqual([4, 5]);
+
+    pos = handleNavigation(input, "ArrowLeft", pos ?? undefined, true);
+    expect(pos).toEqual([3, 5]);
+    expect(input.selectionStart).toBe(3);
+    expect(input.selectionEnd).toBe(5);
+    expect(input.selectionDirection).toBe("backward");
+
+    pos = handleNavigation(input, "ArrowRight", pos ?? undefined, true);
+    expect(pos).toEqual([4, 5]);
+    expect(input.selectionStart).toBe(4);
+    expect(input.selectionEnd).toBe(5);
+    expect(input.selectionDirection).toBe("backward");
+  });
+
+  it("extending ArrowLeft from a collapsed caret selects backward", () => {
+    const input = mockInput("hello", 5);
+    const pos = handleNavigation(input, "ArrowLeft", undefined, true);
+
+    expect(pos).toEqual([4, 5]);
+    expect(input.selectionStart).toBe(4);
+    expect(input.selectionEnd).toBe(5);
+    expect(input.selectionDirection).toBe("backward");
+  });
+
+  it("extending ArrowRight from a collapsed caret selects forward", () => {
+    const input = mockInput("hello", 0);
+    const pos = handleNavigation(input, "ArrowRight", undefined, true);
+
+    expect(pos).toEqual([0, 1]);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(1);
+    expect(input.selectionDirection).toBe("forward");
+  });
+
+  it("extending Home and PageUp select back to the start", () => {
+    const home = mockInput("hello", 3);
+    expect(handleNavigation(home, "Home", undefined, true)).toEqual([0, 3]);
+    expect(home.selectionStart).toBe(0);
+    expect(home.selectionEnd).toBe(3);
+    expect(home.selectionDirection).toBe("backward");
+
+    const pageUp = mockInput("hello", 3);
+    expect(handleNavigation(pageUp, "PageUp", undefined, true)).toEqual([0, 3]);
+    expect(pageUp.selectionDirection).toBe("backward");
+  });
+
+  it("extending End and PageDown select forward to the end", () => {
+    const end = mockInput("hello", 3);
+    expect(handleNavigation(end, "End", undefined, true)).toEqual([3, 5]);
+    expect(end.selectionStart).toBe(3);
+    expect(end.selectionEnd).toBe(5);
+    expect(end.selectionDirection).toBe("forward");
+
+    const pageDown = mockInput("hello", 3);
+    expect(handleNavigation(pageDown, "PageDown", undefined, true)).toEqual([3, 5]);
+    expect(pageDown.selectionDirection).toBe("forward");
+  });
+
+  it("a plain ArrowLeft after an extension collapses the selection", () => {
+    const input = mockInput("hello", 3, 5);
+    input.setSelectionRange(3, 5, "backward");
+
+    const pos = handleNavigation(input, "ArrowLeft");
+
+    expect(pos).toEqual([3, 3]);
+    expect(input.selectionStart).toBe(3);
+    expect(input.selectionEnd).toBe(3);
+  });
+
+  it("extending reads the anchor from the DOM, not from the supplied tuple", () => {
+    const input = mockInput("hello", 3, 5);
+    input.setSelectionRange(3, 5, "backward");
+
+    const pos = handleNavigation(input, "ArrowLeft", [3, 5], true);
+
+    expect(pos).toEqual([2, 5]);
+    expect(input.selectionStart).toBe(2);
+    expect(input.selectionEnd).toBe(5);
+    expect(input.selectionDirection).toBe("backward");
+  });
+
+  it("extending ArrowUp and ArrowDown move by line and keep the anchor", () => {
+    const up = document.createElement("textarea");
+    up.value = "abc\ndefgh\nij";
+    up.setSelectionRange(6, 6); // line 2 col 2
+    expect(handleNavigation(up, "ArrowUp", undefined, true)).toEqual([2, 6]);
+    expect(up.selectionStart).toBe(2);
+    expect(up.selectionEnd).toBe(6);
+    expect(up.selectionDirection).toBe("backward");
+
+    const down = document.createElement("textarea");
+    down.value = "abc\ndefgh\nij";
+    down.setSelectionRange(2, 2); // line 1 col 2
+    expect(handleNavigation(down, "ArrowDown", undefined, true)).toEqual([2, 6]);
+    expect(down.selectionStart).toBe(2);
+    expect(down.selectionEnd).toBe(6);
+    expect(down.selectionDirection).toBe("forward");
+  });
+
+  it("extending back onto the anchor collapses, then extends the other way", () => {
+    const input = mockInput("hello!", 4, 5);
+    input.setSelectionRange(4, 5, "backward");
+
+    let pos = handleNavigation(input, "ArrowRight", undefined, true);
+    expect(pos).toEqual([5, 5]);
+    expect(input.selectionStart).toBe(5);
+    expect(input.selectionEnd).toBe(5);
+
+    pos = handleNavigation(input, "ArrowRight", pos ?? undefined, true);
+    expect(pos).toEqual([5, 6]);
+    expect(input.selectionDirection).toBe("forward");
+  });
 });

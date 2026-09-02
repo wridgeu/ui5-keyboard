@@ -596,6 +596,126 @@ QUnit.test("ArrowUp with caret at 0 and leading newline stays at 0", (assert) =>
   assert.deepEqual(result, [0, 0], "Stays at position 0");
 });
 
+// ── Shift-extend ──
+
+QUnit.test("Extending ArrowLeft twice then ArrowRight keeps the anchor", (assert) => {
+  const input = makeInput("hello", [5, 5]);
+
+  let result = handleNavigation(input, "ArrowLeft", [5, 5], true);
+  assert.deepEqual(result, [4, 5], "First extension covers one grapheme");
+
+  result = handleNavigation(input, "ArrowLeft", result ?? undefined, true);
+  assert.deepEqual(result, [3, 5], "Second extension grows the selection");
+  assert.strictEqual(input.selectionStart, 3, "DOM start at 3");
+  assert.strictEqual(input.selectionEnd, 5, "DOM end at 5");
+  assert.strictEqual(input.selectionDirection, "backward", "Focus at the start");
+
+  result = handleNavigation(input, "ArrowRight", result ?? undefined, true);
+  assert.deepEqual(result, [4, 5], "Reversing shrinks from the focus end");
+  assert.strictEqual(input.selectionStart, 4, "DOM start back at 4");
+  assert.strictEqual(input.selectionEnd, 5, "DOM end still at 5");
+  assert.strictEqual(input.selectionDirection, "backward", "Anchor still at the end");
+});
+
+QUnit.test("Extending ArrowLeft from a collapsed caret selects backward", (assert) => {
+  const input = makeInput("hello", [5, 5]);
+  const result = handleNavigation(input, "ArrowLeft", [5, 5], true);
+
+  assert.deepEqual(result, [4, 5], "One grapheme selected");
+  assert.strictEqual(input.selectionStart, 4, "DOM start at 4");
+  assert.strictEqual(input.selectionEnd, 5, "DOM end at 5");
+  assert.strictEqual(input.selectionDirection, "backward", "Focus at the start");
+});
+
+QUnit.test("Extending ArrowRight from a collapsed caret selects forward", (assert) => {
+  const input = makeInput("hello", [0, 0]);
+  const result = handleNavigation(input, "ArrowRight", [0, 0], true);
+
+  assert.deepEqual(result, [0, 1], "One grapheme selected");
+  assert.strictEqual(input.selectionStart, 0, "DOM start at 0");
+  assert.strictEqual(input.selectionEnd, 1, "DOM end at 1");
+  assert.strictEqual(input.selectionDirection, "forward", "Focus at the end");
+});
+
+QUnit.test("Extending Home and PageUp select back to the start", (assert) => {
+  const home = makeInput("hello", [3, 3]);
+  assert.deepEqual(handleNavigation(home, "Home", [3, 3], true), [0, 3], "Home extends to 0");
+  assert.strictEqual(home.selectionStart, 0, "Home DOM start at 0");
+  assert.strictEqual(home.selectionEnd, 3, "Home DOM end at 3");
+  assert.strictEqual(home.selectionDirection, "backward", "Home focus at the start");
+
+  const pageUp = makeInput("hello", [3, 3]);
+  assert.deepEqual(handleNavigation(pageUp, "PageUp", [3, 3], true), [0, 3], "PageUp extends to 0");
+  assert.strictEqual(pageUp.selectionDirection, "backward", "PageUp focus at the start");
+});
+
+QUnit.test("Extending End and PageDown select forward to the end", (assert) => {
+  const end = makeInput("hello", [3, 3]);
+  assert.deepEqual(handleNavigation(end, "End", [3, 3], true), [3, 5], "End extends to 5");
+  assert.strictEqual(end.selectionStart, 3, "End DOM start at 3");
+  assert.strictEqual(end.selectionEnd, 5, "End DOM end at 5");
+  assert.strictEqual(end.selectionDirection, "forward", "End focus at the end");
+
+  const pageDown = makeInput("hello", [3, 3]);
+  assert.deepEqual(handleNavigation(pageDown, "PageDown", [3, 3], true), [3, 5], "PageDown extends to 5");
+  assert.strictEqual(pageDown.selectionDirection, "forward", "PageDown focus at the end");
+});
+
+QUnit.test("A plain ArrowLeft after an extension collapses the selection", (assert) => {
+  const input = makeInput("hello", [3, 5]);
+  input.setSelectionRange(3, 5, "backward");
+
+  const result = handleNavigation(input, "ArrowLeft", [3, 5]);
+
+  assert.deepEqual(result, [3, 3], "Collapsed to the selection start");
+  assert.strictEqual(input.selectionStart, 3, "DOM start at 3");
+  assert.strictEqual(input.selectionEnd, 3, "DOM end at 3");
+});
+
+QUnit.test("Extending reads the anchor from the DOM, not from the supplied tuple", (assert) => {
+  const input = makeInput("hello", [3, 5]);
+  input.setSelectionRange(3, 5, "backward");
+
+  const result = handleNavigation(input, "ArrowLeft", [3, 5], true);
+
+  assert.deepEqual(result, [2, 5], "Moved the start, not the end");
+  assert.strictEqual(input.selectionStart, 2, "DOM start at 2");
+  assert.strictEqual(input.selectionEnd, 5, "DOM end still at 5");
+  assert.strictEqual(input.selectionDirection, "backward", "Anchor still at the end");
+});
+
+QUnit.test("Extending ArrowUp and ArrowDown move by line and keep the anchor", (assert) => {
+  const up = makeTextarea("abc\ndefgh\nij", [6, 6]); // line 2 col 2
+  const upResult = handleNavigation(up, "ArrowUp", [6, 6], true);
+
+  assert.deepEqual(upResult, [2, 6], "ArrowUp extends up to line 1 col 2");
+  assert.strictEqual(up.selectionStart, 2, "ArrowUp DOM start at 2");
+  assert.strictEqual(up.selectionEnd, 6, "ArrowUp DOM end at 6");
+  assert.strictEqual(up.selectionDirection, "backward", "Focus above the anchor");
+
+  const down = makeTextarea("abc\ndefgh\nij", [2, 2]); // line 1 col 2
+  const downResult = handleNavigation(down, "ArrowDown", [2, 2], true);
+
+  assert.deepEqual(downResult, [2, 6], "ArrowDown extends down to line 2 col 2");
+  assert.strictEqual(down.selectionStart, 2, "ArrowDown DOM start at 2");
+  assert.strictEqual(down.selectionEnd, 6, "ArrowDown DOM end at 6");
+  assert.strictEqual(down.selectionDirection, "forward", "Focus below the anchor");
+});
+
+QUnit.test("Extending back onto the anchor collapses, then extends the other way", (assert) => {
+  const input = makeInput("hello!", [4, 5]);
+  input.setSelectionRange(4, 5, "backward");
+
+  let result = handleNavigation(input, "ArrowRight", [4, 5], true);
+  assert.deepEqual(result, [5, 5], "Collapsed onto the anchor");
+  assert.strictEqual(input.selectionStart, 5, "DOM start at 5");
+  assert.strictEqual(input.selectionEnd, 5, "DOM end at 5");
+
+  result = handleNavigation(input, "ArrowRight", result ?? undefined, true);
+  assert.deepEqual(result, [5, 6], "Next extension grows forward from the anchor");
+  assert.strictEqual(input.selectionDirection, "forward", "Focus at the end");
+});
+
 // ──────────────────────────────────────────────
 // Target value write (through insertText)
 // ──────────────────────────────────────────────
