@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { key, keyboardRoot, openPage, setDocumentDirection } from "./helpers.js";
+import { isHoverCapable, key, keyboardRoot, openPage, setDocumentDirection } from "./helpers.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 
 // Structural invariants of the rendered keyboard, measured rather than
@@ -476,7 +476,7 @@ test("the compact nav row mirrors with the document direction", async ({ page })
 // Both keys are covered because the emphasized press fill is what the undo block
 // reverts; a base key paints white either way in sap_horizon.
 test("a highlighted key keeps its press fill under a non-hovering primary pointer", async ({ page }) => {
-  test.skip(!(await page.evaluate(() => matchMedia("(hover: none)").matches)), "primary pointer hovers here");
+  test.skip(await isHoverCapable(page), "primary pointer hovers here");
 
   // The highlight arm transitions background over 0.1s; read after it settles.
   const background = (k: Locator) =>

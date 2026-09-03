@@ -386,14 +386,13 @@
      (e.g. layout switches) apply instantly instead of animating from the
      old styling. */
 
-  /* Hover affordances apply only where a hovering primary pointer exists.
-     Gating the declarations keeps a hovering secondary pointer on a touch device
-     from leaving the key painted in its hover colors.
+  /* Gating the declarations on a hovering primary pointer keeps a hovering
+     secondary pointer on a touch device from leaving the key painted in its
+     hover colors.
 
      Declared ahead of the interactive arms below: a mouse press lands under the
      pointer, and each arm ties its `:hover` counterpart on specificity, so only
      source order keeps the press feedback visible. */
-
   @media (hover: hover) {
     &:hover {
       background: var(--sapButton_Hover_Background, #eaecee);
