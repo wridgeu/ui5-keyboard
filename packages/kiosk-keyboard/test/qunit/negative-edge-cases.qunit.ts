@@ -118,14 +118,13 @@ QUnit.test("Target switch resets shift regardless of current layout", async (ass
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
 
-  // Switch target while on numeric layout: shift must reset
+  // Switch target while on numeric layout: shift must reset, and the user pick
+  // is dropped for the base layout, whose shift key makes the reset observable
   input2.focus();
   await waitForRender();
 
-  // Switch back to base layout to observe that shift was cleared
-  tapKey(kb, "{layout:base}");
-  await waitForRender();
-  assert.notOk(isShiftActive(kb), "Shift reset when target switches (verified after returning to base layout)");
+  assert.strictEqual(kb.getLayout(), "qwerty", "Target switch returned the dropped pick to the base layout");
+  assert.notOk(isShiftActive(kb), "Shift reset when target switches (verified on the base layout it returned to)");
   assert.notOk(isCapsLock(kb), "Caps lock also reset when target switches");
 
   input1.destroy();

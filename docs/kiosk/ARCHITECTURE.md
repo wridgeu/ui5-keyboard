@@ -238,7 +238,7 @@ getSource()     keyboardType    Resolved layout
 "external"      "Full"          layouts[layout]   (property-driven, default: qwerty)
 ```
 
-The source is held by `LayoutState` (`internal/layout-state.ts`) and read via `getSource()`; `clearUserOverride()` drops a user pick back to `"external"` on a target switch and on every `keyboardType` change.
+The source is held by `LayoutState` (`internal/layout-state.ts`) and read via `getSource()`; `clearUserOverride()` drops a user pick, source back to `"external"` and layout back to the tracked base, on a target switch and on every `keyboardType` change, so a lifted constraint lands on the base, not on the pick.
 
 `keyboardType` acts as a constraint when the source is `"external"`; a user-driven pick overrides it.
 

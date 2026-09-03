@@ -491,6 +491,7 @@ QUnit.test("autoType switch to a different same-type input drops a user {layout:
     "7",
     "Switching to a different input drops the user override and re-engages the numpad constraint (row 0 '7')",
   );
+  assert.strictEqual(kb.getLayout(), "qwerty", "the dropped pick returned the layout property to the base");
 
   numA.destroy();
   numB.destroy();

@@ -694,6 +694,30 @@ describe("kiosk-keyboard", () => {
       expect(queryKey(el, "{shift}")!.getAttribute("aria-pressed"), "the surface swap cleared it").to.equal("false");
     });
 
+    it("returns a user {layout:*} pick to the base on a keyboardType round trip", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+      const changes: string[] = [];
+      el.addEventListener("layout-change", (e) => {
+        changes.push((e as CustomEvent<{ layout: string }>).detail.layout);
+      });
+
+      queryKey(el, "{layout:numeric}")!.click();
+      await nextRender();
+      expect(queryKey(el, "q"), "precondition: the user pick landed").to.be.null;
+
+      el.keyboardType = "Numpad";
+      await nextRender();
+      expect(el.effectiveLayout, "the constraint pins the numpad surface").to.equal("numpad");
+      expect(queryKey(el, "7"), "the numpad surface renders").to.not.be.null;
+
+      el.keyboardType = "Full";
+      await nextRender();
+      expect(el.effectiveLayout, "the lifted constraint lands on the base").to.equal("qwerty");
+      expect(queryKey(el, "q"), "the base surface renders").to.not.be.null;
+      expect(changes).to.deep.equal(["numeric", "qwerty"]);
+    });
+
     // The latch is consumed to *produce* the payload - `key-press` already
     // carries `char: "A"` by the time a consumer sees it. What a veto cancels is
     // the insertion, not the spend. Vetoing to route insertion yourself is a

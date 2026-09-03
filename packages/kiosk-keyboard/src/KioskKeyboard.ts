@@ -1322,9 +1322,10 @@ export default class KioskKeyboard extends Control {
       this._dropComposition("commit");
     }
 
-    // A real target switch is a new editing context: drop a user-driven
-    // `{layout:X}` override so the new target re-resolves under its keyboardType.
-    // A same-input refocus (caret reposition) keeps it.
+    // A real target switch is a new editing context: it drops a user-driven
+    // `{layout:X}` pick and returns to the base layout, so the new target starts
+    // on the base under its keyboardType. A same-input refocus (caret
+    // reposition) keeps the pick.
     if (isRealSwitch && this._layoutState.getSource() === "user") {
       this._layoutState.clearUserOverride();
       this.invalidate();

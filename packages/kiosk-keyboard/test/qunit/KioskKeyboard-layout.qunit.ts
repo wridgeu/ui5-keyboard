@@ -389,7 +389,7 @@ QUnit.test(
 
     const events: string[] = [];
     kb.attachEvent("layoutChange", (e: { getParameter(name: string): string }) => {
-      events.push(e.getParameter("layout"));
+      events.push(e.getParameter("layout") ?? "");
     });
 
     const switchToNumeric = createFakeKeyElement("{layout:numeric}", "fake-numeric");
@@ -493,6 +493,34 @@ QUnit.test("Programmatic setKeyboardType resets a user-driven layout switch", as
   kb.destroy();
 });
 
+QUnit.test("setKeyboardType round trip (Numpad -> Full) returns a user pick to the base", async (assert) => {
+  // Numpad drops the pick and returns the layout property to the base under the
+  // constraint; Full lifts the constraint and lands on that base, not on the pick.
+  // Row 0 of qwerty starts with "1" just as numeric does, so "q" tells them apart.
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+  const events: string[] = [];
+  kb.attachLayoutChange((e) => {
+    events.push(e.getParameter("layout") ?? "");
+  });
+
+  simulateTap(kb, createFakeKeyElement("{layout:numeric}", "fake-numeric"));
+  await waitForRender();
+  assert.notOk(getKeyElement(kb, "q"), "precondition: the user pick landed (no q on numeric)");
+
+  kb.setKeyboardType(KeyboardType.Numpad);
+  await waitForRender();
+  assert.strictEqual(getRowKeyValues(kb, 0)[0], "7", "Numpad constraint pins the numpad surface (row 0 '7')");
+
+  kb.setKeyboardType(KeyboardType.Full);
+  await waitForRender();
+  assert.strictEqual(kb.getLayout(), "qwerty", "The lifted constraint lands on the base layout");
+  assert.ok(getKeyElement(kb, "q"), "The base surface renders");
+  assert.deepEqual(events, ["numeric", "qwerty"], "One layoutChange for the pick, one for its drop");
+
+  kb.destroy();
+});
+
 QUnit.test("resetKeyboardType round-trip lets the next keyboardType re-engage its constraint", async (assert) => {
   // End-to-end guard for the user-override → reset → re-constrain flow. A user
   // {layout:numeric} tap sets _layoutSource="user"; both setKeyboardType and
@@ -512,10 +540,10 @@ QUnit.test("resetKeyboardType round-trip lets the next keyboardType re-engage it
 
   kb.resetKeyboardType();
   await waitForRender();
-  // Type returns to Full; the `layout` property stays "numeric" (kiosk mutates
-  // it on a user tap, unlike webc's separate _currentLayout), so the Full
-  // surface is numeric here regardless of _layoutSource.
+  // Type returns to Full and the cleared pick returns the layout property to the
+  // base, so the Full surface is the base again.
   assert.strictEqual(kb.getKeyboardType(), KeyboardType.Full, "Type reset to Full");
+  assert.strictEqual(kb.getLayout(), "qwerty", "The cleared pick returned the layout property to the base");
 
   // A subsequent keyboardType engages its constraint cleanly: the numpad surface
   // (row 0 starts at "7") is not shadowed by the earlier user override.
@@ -570,7 +598,7 @@ QUnit.test("Programmatic setLayout fires layoutChange when the layout actually c
 
   const events: string[] = [];
   kb.attachEvent("layoutChange", (e: { getParameter(name: string): string }) => {
-    events.push(e.getParameter("layout"));
+    events.push(e.getParameter("layout") ?? "");
   });
 
   kb.setLayout("numeric");
