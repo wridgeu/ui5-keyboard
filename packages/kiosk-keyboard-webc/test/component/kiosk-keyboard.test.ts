@@ -2904,6 +2904,39 @@ describe("kiosk-keyboard", () => {
       expect(detail.autoDetected).to.be.true;
     });
 
+    it("an explicit keyboardType set inside the reset's keyboard-type-change handler claims the property", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="reset-handler-input" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="reset-handler-input"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const input = container.querySelector<HTMLInputElement>("#reset-handler-input")!;
+      await nextRender();
+
+      kb.keyboardType = "Numpad";
+      await nextRender();
+      expect(kb.keyboardType, "precondition: an explicit type").to.equal("Numpad");
+
+      kb.addEventListener(
+        "keyboard-type-change",
+        () => {
+          kb.keyboardType = "Numeric";
+        },
+        { once: true },
+      );
+      kb.resetKeyboardType();
+      await nextRender();
+      expect(kb.keyboardType, "precondition: the handler's type took effect").to.equal("Numeric");
+
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+      expect(kb.open, "precondition: auto-show ran on the focused input").to.be.true;
+      expect(kb.keyboardType, "the in-handler explicit type survives auto-type detection").to.equal("Numeric");
+    });
+
     it("an authored keyboard-type locks auto-type until resetKeyboardType()", async () => {
       const container = await fixture(html`
         <div>

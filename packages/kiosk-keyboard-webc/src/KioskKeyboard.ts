@@ -1275,13 +1275,14 @@ class KioskKeyboard extends UI5Element {
    */
   resetKeyboardType(): void {
     // The marker keeps the setter from claiming the property; `onInvalidation` folds it
-    // to "unset" and reports the change as not auto-detected. The trailing assignment
-    // covers the paths that never reach `onInvalidation`: an unchanged value, for which
-    // the framework skips the setter, and a pre-render call, for which invalidation is
-    // suppressed.
+    // to "unset" and reports the change as not auto-detected. The trailing clear covers
+    // the paths that never reach `onInvalidation`: an unchanged value, for which the
+    // framework skips the setter, and a pre-render call, for which invalidation is
+    // suppressed. It runs only while the marker survived, so a type claimed from inside
+    // the event handler stands.
     this._keyboardTypeSource = "reset";
     this.keyboardType = "Full";
-    this._keyboardTypeSource = "unset";
+    if (this._keyboardTypeSource === "reset") this._keyboardTypeSource = "unset";
   }
 
   /**
