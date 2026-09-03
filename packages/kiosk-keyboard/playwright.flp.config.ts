@@ -3,11 +3,12 @@ import path from "node:path";
 import { CHROMIUM_ARGS, DESKTOP_VIEWPORT, ui5ServeWebServer } from "./playwright.shared.js";
 
 /**
- * Separate Playwright config for the FLP (Fiori launchpad) lifecycle e2e. It
- * uses a different server than the visual/behavioral specs: the demo app served
- * with the FLP sandbox (ui5-flp.yaml / preview-middleware) on port 8083.
+ * Separate Playwright config for the FLP (Fiori launchpad) e2e specs
+ * (test/e2e/flp-*.spec.ts). It uses a different server than the
+ * visual/behavioral specs: the demo app served with the FLP sandbox
+ * (ui5-flp.yaml / preview-middleware) on port 8083.
  *
- * The FLP test drives the sandbox through DOM selectors and the ushell
+ * The FLP specs drive the sandbox through DOM selectors and the ushell
  * `window.hasher`, so no UI5 control-bridge or framework-stability plugin is
  * needed. Run with: npm run test:e2e:flp.
  */
