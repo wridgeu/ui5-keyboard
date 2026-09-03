@@ -2637,6 +2637,78 @@ describe("kiosk-keyboard", () => {
       expect(el.keyboardType, "clamped").to.equal("Full");
       expect(fired, "keyboard-type-change events").to.equal(0);
     });
+
+    it("an invalid keyboardType set while the type is Full fires no keyboard-type-change and keeps auto-type available", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="clamp-noop-num" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="clamp-noop-num"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const numberInput = container.querySelector<HTMLInputElement>("#clamp-noop-num")!;
+      await nextRender();
+      expect(kb.keyboardType, "precondition: the default type").to.equal("Full");
+
+      let fired = 0;
+      kb.addEventListener("keyboard-type-change", () => {
+        fired++;
+      });
+      await captureConsole("warn", async () => {
+        setInvalidValue(kb, "keyboardType", "bogus");
+        await nextRender();
+      });
+      expect(kb.keyboardType, "clamped").to.equal("Full");
+      expect(fired, "keyboard-type-change events").to.equal(0);
+
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      numberInput.focus();
+      numberInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const { detail } = await typeChangeEvent;
+      expect(detail.keyboardType).to.equal("Numpad");
+      expect(detail.autoDetected).to.be.true;
+    });
+
+    it("an invalid keyboardType set after an explicit type releases the lock", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="clamp-release-num" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="clamp-release-num"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const numberInput = container.querySelector<HTMLInputElement>("#clamp-release-num")!;
+      await nextRender();
+
+      kb.keyboardType = "Numpad";
+      await nextRender();
+      expect(kb.keyboardType, "precondition: an explicit type locks auto-type").to.equal("Numpad");
+
+      await captureConsole("warn", async () => {
+        setInvalidValue(kb, "keyboardType", "bogus");
+        await nextRender();
+      });
+      expect(kb.keyboardType, "clamped to the default").to.equal("Full");
+
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      numberInput.focus();
+      numberInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const { detail } = await typeChangeEvent;
+      expect(detail.keyboardType).to.equal("Numpad");
+      expect(detail.autoDetected).to.be.true;
+    });
+
+    it("a post-render invalid mobile-keyboard reflects the default attribute", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      await captureConsole("warn", async () => {
+        setInvalidValue(el, "mobileKeyboard", "native");
+        await nextRender();
+      });
+      expect(el.mobileKeyboard, "clamped").to.equal("Auto");
+      expect(el.getAttribute("mobile-keyboard"), "reflected attribute").to.equal("Auto");
+    });
   });
 
   // ── accessibleName ──

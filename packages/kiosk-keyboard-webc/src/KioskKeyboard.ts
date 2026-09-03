@@ -449,7 +449,25 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   @property()
-  keyboardType: `${KeyboardType}` = "Full";
+  set keyboardType(value: `${KeyboardType}`) {
+    // An explicit value claims the property and holds auto-type detection off until
+    // `resetKeyboardType()`. A value `_setKeyboardTypeInternal` pre-tagged `auto:<value>`
+    // is a detection result and does not claim it; an invalid one falls back to the
+    // default without claiming it.
+    if (isInvalidEnumValue("keyboardType", value, VALID_KEYBOARD_TYPES)) {
+      this._keyboardTypeSource = "unset";
+      this._keyboardTypeValue = "Full";
+      return;
+    }
+    if (this._keyboardTypeSource !== `auto:${value}`) {
+      this._keyboardTypeSource = "explicit";
+    }
+    this._keyboardTypeValue = value;
+  }
+
+  get keyboardType(): `${KeyboardType}` {
+    return this._keyboardTypeValue;
+  }
 
   /**
    * Whether the keyboard renders in docked mode (fixed to the bottom of the viewport).
@@ -540,7 +558,13 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   @property()
-  mobileKeyboard: `${MobileKeyboard}` = "Auto";
+  set mobileKeyboard(value: `${MobileKeyboard}`) {
+    this._mobileKeyboardValue = isInvalidEnumValue("mobileKeyboard", value, VALID_MOBILE_KEYBOARDS) ? "Auto" : value;
+  }
+
+  get mobileKeyboard(): `${MobileKeyboard}` {
+    return this._mobileKeyboardValue;
+  }
 
   /**
    * Controls how function key presses are handled.
@@ -550,7 +574,13 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   @property()
-  fKeyMode: `${FKeyMode}` = "Virtual";
+  set fKeyMode(value: `${FKeyMode}`) {
+    this._fKeyModeValue = isInvalidEnumValue("fKeyMode", value, VALID_FKEY_MODES) ? "Virtual" : value;
+  }
+
+  get fKeyMode(): `${FKeyMode}` {
+    return this._fKeyModeValue;
+  }
 
   /**
    * Whether to fill the built-in Latin-diacritics table onto the resolved
@@ -693,7 +723,10 @@ class KioskKeyboard extends UI5Element {
     reapplyAutoCompact: () => this._autoCompact.reapply(),
     announce: (text) => KioskKeyboard._announcements.announce(text),
   });
+  private _keyboardTypeValue: `${KeyboardType}` = "Full";
   private _keyboardTypeSource: KeyboardTypeSource = "unset";
+  private _mobileKeyboardValue: `${MobileKeyboard}` = "Auto";
+  private _fKeyModeValue: `${FKeyMode}` = "Virtual";
   private _targetElementValue: HTMLInputElement | HTMLTextAreaElement | null = null;
   private _targetSource: TargetSource = "explicit";
   private _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
@@ -705,7 +738,6 @@ class KioskKeyboard extends UI5Element {
   private _restoreKeyFocus = false;
   /** Caps the disarmed-variants diagnostic at one emission per element. */
   private _warnedDisarmedVariants = false;
-  private _initialValuesNormalised = false;
   /**
    * Paces every instance's writes to the ARIA live region and holds the drain timer.
    *
@@ -965,27 +997,6 @@ class KioskKeyboard extends UI5Element {
 
   // ── Lifecycle ──
 
-  override onBeforeRendering(): void {
-    if (this._initialValuesNormalised) return;
-    this._initialValuesNormalised = true;
-    // The framework suppresses invalidation until the first render completes,
-    // so attributes the parser applied and properties set before connection
-    // never reach onInvalidation. Their initial values are normalised here,
-    // ahead of the first paint: a plain assignment updates the state silently
-    // and updateAttributes() reflects the clamped value.
-    if (isInvalidEnumValue("keyboardType", this.keyboardType, VALID_KEYBOARD_TYPES)) {
-      this.keyboardType = "Full";
-    } else if (this.keyboardType !== "Full") {
-      this._keyboardTypeSource = "explicit";
-    }
-    if (isInvalidEnumValue("fKeyMode", this.fKeyMode, VALID_FKEY_MODES)) {
-      this.fKeyMode = "Virtual";
-    }
-    if (isInvalidEnumValue("mobileKeyboard", this.mobileKeyboard, VALID_MOBILE_KEYBOARDS)) {
-      this.mobileKeyboard = "Auto";
-    }
-  }
-
   override onEnterDOM(): void {
     KioskKeyboard._instances.add(this);
     this._autoShow.register();
@@ -1103,14 +1114,11 @@ class KioskKeyboard extends UI5Element {
       this._layoutState.applyAttribute(this.layout);
     }
     if (name === "keyboardType") {
-      if (isInvalidEnumValue("keyboardType", this.keyboardType, VALID_KEYBOARD_TYPES)) {
-        // Use _setKeyboardTypeInternal so the re-entrant onInvalidation
-        // sees an "auto:" source and does not lock out future auto-detection.
-        this._setKeyboardTypeInternal("Full");
-        return;
-      }
+      // Invalidation follows the raw incoming value, so a value the setter clamped
+      // back onto the current type is not a change.
+      if (this.keyboardType === changeInfo.oldValue) return;
       const autoDetected = this._keyboardTypeSource === `auto:${this.keyboardType}`;
-      this._keyboardTypeSource = autoDetected ? "unset" : "explicit";
+      if (autoDetected) this._keyboardTypeSource = "unset";
       // Reset user layout switch and shift state - a keyboardType change implies a new layout context
       this._layoutState.clearUserOverride();
       this._shiftState.reset();
@@ -1129,17 +1137,6 @@ class KioskKeyboard extends UI5Element {
       // A constraint pins the rendered surface and suppresses the tier, so lifting one
       // re-opens the tier question for the layout that surfaces from under it.
       this._autoCompact.reapply();
-    }
-    if (name === "fKeyMode" && isInvalidEnumValue("fKeyMode", this.fKeyMode, VALID_FKEY_MODES)) {
-      this.fKeyMode = "Virtual";
-      return;
-    }
-    if (
-      name === "mobileKeyboard" &&
-      isInvalidEnumValue("mobileKeyboard", this.mobileKeyboard, VALID_MOBILE_KEYBOARDS)
-    ) {
-      this.mobileKeyboard = "Auto";
-      return;
     }
     if (name === "docked" || name === "autoShow") {
       this._autoShow.sync();
