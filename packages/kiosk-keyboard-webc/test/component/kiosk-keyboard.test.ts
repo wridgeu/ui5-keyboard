@@ -9,7 +9,7 @@ import {
   resetAnnouncements,
   queryKey,
 } from "../helpers/fixtures.js";
-import { captureConsole } from "../helpers/console.js";
+import { captureConsole, withCapturedWarnings } from "../helpers/console.js";
 
 beforeEach(resetAnnouncements);
 
@@ -2605,17 +2605,16 @@ describe("kiosk-keyboard", () => {
         },
       ];
       for (const { markup, property, attribute, expectedDefault } of cases) {
-        let el!: KioskKeyboard;
-        const warnings = await captureConsole("warn", async () => {
-          el = await fixture<KioskKeyboard>(markup);
+        await withCapturedWarnings(async (warnings) => {
+          const el = await fixture<KioskKeyboard>(markup);
           await nextRender();
+          expect(el[property], `${property} property`).to.equal(expectedDefault);
+          expect(el.getAttribute(attribute), `${attribute} attribute`).to.equal(expectedDefault);
+          expect(
+            warnings.filter((message) => message.includes(`Invalid ${property}`)),
+            `${property} warning`,
+          ).to.have.lengthOf(1);
         });
-        expect(el[property], `${property} property`).to.equal(expectedDefault);
-        expect(el.getAttribute(attribute), `${attribute} attribute`).to.equal(expectedDefault);
-        expect(
-          warnings.filter((message) => message.includes(`Invalid ${property}`)),
-          `${property} warning`,
-        ).to.have.lengthOf(1);
       }
     });
 
@@ -3235,7 +3234,7 @@ describe("kiosk-keyboard", () => {
 
       // A focus() on the already-focused element fires no focusin, so the
       // re-entrant auto-show path the assertion covers would never run.
-      (document.activeElement as HTMLElement | null)?.blur();
+      input.blur();
 
       kb.show();
       await nextRender();
