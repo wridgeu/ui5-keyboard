@@ -235,18 +235,10 @@ export function handleNavigation(
   let newPos: number | null = null;
   switch (key) {
     case "ArrowLeft":
-      newPos = extend
-        ? Math.max(0, focus - graphemeLengthBefore(value, focus))
-        : start !== end
-          ? start
-          : Math.max(0, start - graphemeLengthBefore(value, start));
+      newPos = !extend && start !== end ? start : Math.max(0, focus - graphemeLengthBefore(value, focus));
       break;
     case "ArrowRight":
-      newPos = extend
-        ? Math.min(len, focus + graphemeLengthAfter(value, focus))
-        : start !== end
-          ? end
-          : Math.min(len, end + graphemeLengthAfter(value, end));
+      newPos = !extend && start !== end ? end : Math.min(len, focus + graphemeLengthAfter(value, focus));
       break;
     case "Home":
     case "PageUp":

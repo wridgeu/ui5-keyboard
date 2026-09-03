@@ -346,7 +346,7 @@ QUnit.test("Caps Lock extends the selection continuously", async (assert) => {
   const dom = input.getFocusDomRef() as HTMLInputElement;
   dom.setSelectionRange(5, 5);
 
-  const nowStub = freezeDoubleClickWindow();
+  const clock = freezeDoubleClickWindow();
   try {
     tapKey(kb, "{shift}");
     tapKey(kb, "{shift}");
@@ -358,7 +358,7 @@ QUnit.test("Caps Lock extends the selection continuously", async (assert) => {
     tapKey(kb, "{fkey:ArrowLeft}");
     await waitForRender();
   } finally {
-    nowStub.restore();
+    clock.restore();
   }
 
   assert.strictEqual(dom.selectionStart, 3, "Two presses extended by two graphemes");
