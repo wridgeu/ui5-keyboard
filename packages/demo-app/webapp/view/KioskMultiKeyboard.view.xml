@@ -65,7 +65,7 @@
             <Panel headerText="Shared Target Ref-Count Visualization" class="sapUiSmallMarginTop">
                 <VBox class="sapUiSmallMargin">
                     <Text
-                        text="Both hidden keyboards below target the same input. Open A + Open B, then close only A: inputmode must stay 'none'. Close B last: inputmode must restore to 'email'."
+                        text="Both docked keyboards below target the same input. Open A + Open B, then close only A: inputmode must stay 'none'. Close B last: inputmode must restore to 'email'."
                         wrapping="true" />
 
                     <Label text="Shared Input" labelFor="sharedInput" class="sapUiSmallMarginTop" />
@@ -126,14 +126,12 @@
                     id="sharedKeyboardA"
                     docked="true"
                     mobileKeyboard="Custom"
-                    controls="sharedInput"
-                    visible="false" />
+                    controls="sharedInput" />
                 <kiosk:KioskKeyboard
                     id="sharedKeyboardB"
                     docked="true"
                     mobileKeyboard="Custom"
-                    controls="sharedInput"
-                    visible="false" />
+                    controls="sharedInput" />
             </Panel>
 
             <kiosk:KioskKeyboard

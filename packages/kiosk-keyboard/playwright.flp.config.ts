@@ -17,7 +17,7 @@ const __dirname = import.meta.dirname;
 
 export default defineConfig({
   testDir: "./test/e2e",
-  testMatch: "flp-lifecycle.spec.ts",
+  testMatch: /flp-.*\.spec\.ts/,
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
