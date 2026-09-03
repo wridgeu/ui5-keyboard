@@ -705,6 +705,7 @@ class KioskKeyboard extends UI5Element {
   private _restoreKeyFocus = false;
   /** Caps the disarmed-variants diagnostic at one emission per element. */
   private _warnedDisarmedVariants = false;
+  private _initialValuesNormalised = false;
   /**
    * Paces every instance's writes to the ARIA live region and holds the drain timer.
    *
@@ -965,7 +966,8 @@ class KioskKeyboard extends UI5Element {
   // ── Lifecycle ──
 
   override onBeforeRendering(): void {
-    if (this._rendered) return;
+    if (this._initialValuesNormalised) return;
+    this._initialValuesNormalised = true;
     // The framework suppresses invalidation until the first render completes,
     // so attributes the parser applied and properties set before connection
     // never reach onInvalidation. Their initial values are normalised here,
