@@ -2816,6 +2816,94 @@ describe("kiosk-keyboard", () => {
       expect(detail.autoDetected).to.be.true;
     });
 
+    it("resetKeyboardType() from an explicit type fires keyboard-type-change with autoDetected false", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="reset-flag-input" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="reset-flag-input"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const input = container.querySelector<HTMLInputElement>("#reset-flag-input")!;
+      await nextRender();
+
+      kb.keyboardType = "Numpad";
+      await nextRender();
+      expect(kb.keyboardType, "precondition: an explicit type").to.equal("Numpad");
+
+      const resetEvent = oneEvent(kb, "keyboard-type-change");
+      kb.resetKeyboardType();
+      const { detail } = await resetEvent;
+      expect(detail).to.deep.equal({
+        keyboardType: "Full",
+        previousKeyboardType: "Numpad",
+        autoDetected: false,
+      });
+      await nextRender();
+
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const detected = (await typeChangeEvent).detail;
+      expect(detected.keyboardType, "the reset re-enabled detection").to.equal("Numpad");
+      expect(detected.autoDetected).to.be.true;
+    });
+
+    it("an explicit keyboardType set after resetKeyboardType() locks auto-type again", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="relock-text" type="text" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="relock-text"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const textInput = container.querySelector<HTMLInputElement>("#relock-text")!;
+      await nextRender();
+
+      kb.keyboardType = "Numpad";
+      await nextRender();
+      kb.resetKeyboardType();
+      await nextRender();
+      expect(kb.keyboardType, "precondition: the reset restored the default").to.equal("Full");
+
+      kb.keyboardType = "Numeric";
+      await nextRender();
+
+      textInput.focus();
+      textInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+      expect(kb.open, "precondition: auto-show ran on the focused input").to.be.true;
+      expect(kb.keyboardType, "the post-reset explicit type survives auto-type detection").to.equal("Numeric");
+    });
+
+    it("resetKeyboardType() when the type is already Full fires no keyboard-type-change", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="reset-noop-input" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="reset-noop-input"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const input = container.querySelector<HTMLInputElement>("#reset-noop-input")!;
+      await nextRender();
+      expect(kb.keyboardType, "precondition: the default type").to.equal("Full");
+
+      let fired = 0;
+      kb.addEventListener("keyboard-type-change", () => {
+        fired++;
+      });
+      kb.resetKeyboardType();
+      await nextRender();
+      expect(fired, "keyboard-type-change events").to.equal(0);
+
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const { detail } = await typeChangeEvent;
+      expect(detail.keyboardType).to.equal("Numpad");
+      expect(detail.autoDetected).to.be.true;
+    });
+
     it("an authored keyboard-type locks auto-type until resetKeyboardType()", async () => {
       const container = await fixture(html`
         <div>

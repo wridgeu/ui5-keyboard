@@ -4,8 +4,8 @@ import type { KeyboardType } from "../types.js";
 /** Why the active target was set; drives focusout cleanup policy. */
 type TargetSource = "autoShow" | "explicit";
 
-/** Who last set keyboardType; `auto:VALUE` = auto-detected for VALUE. */
-type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
+/** Who last set keyboardType; `auto:VALUE` = auto-detected for VALUE, `reset` = handed back. */
+type KeyboardTypeSource = "unset" | "explicit" | "reset" | `auto:${string}`;
 
 /**
  * The host keyboard element. Live element/property state (visibility, the

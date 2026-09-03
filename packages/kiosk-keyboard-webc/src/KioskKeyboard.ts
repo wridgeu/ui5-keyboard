@@ -130,8 +130,11 @@ function previousKeyboardTypeOf(oldValue: PropertyValue): `${KeyboardType}` {
 
 // ── Internal provenance types ──
 
-/** Who last set keyboardType. "auto:VALUE" = set by _setKeyboardTypeInternal for VALUE. */
-type KeyboardTypeSource = "unset" | "explicit" | `auto:${string}`;
+/**
+ * Who last set keyboardType. "auto:VALUE" = set by _setKeyboardTypeInternal for VALUE;
+ * "reset" = resetKeyboardType() handing the property back without claiming it.
+ */
+type KeyboardTypeSource = "unset" | "explicit" | "reset" | `auto:${string}`;
 
 /** Why _targetElement was set: drives focusout cleanup policy. */
 type TargetSource = "autoShow" | "explicit";
@@ -220,11 +223,12 @@ const warnedMissingLabels = new Set<string>();
  */
 @event("layout-change", { bubbles: true })
 /**
- * Fired when the keyboard type changes (manual or auto-detected).
+ * Fired when the keyboard type changes - by auto-type detection, an explicit set,
+ * or `resetKeyboardType()`.
  *
  * @param {string} keyboardType - The new keyboard type.
  * @param {string} previousKeyboardType - The previous keyboard type.
- * @param {boolean} autoDetected - Whether the change was auto-detected.
+ * @param {boolean} autoDetected - Whether this change was triggered by auto-type detection.
  * @public
  * @since 0.1.0
  */
@@ -452,14 +456,15 @@ class KioskKeyboard extends UI5Element {
   set keyboardType(value: `${KeyboardType}`) {
     // An explicit value claims the property and holds auto-type detection off until
     // `resetKeyboardType()`. A value `_setKeyboardTypeInternal` pre-tagged `auto:<value>`
-    // is a detection result and does not claim it; an invalid one falls back to the
-    // default without claiming it.
+    // is a detection result and does not claim it, nor does a `resetKeyboardType()` call,
+    // which hands the property back; an invalid one falls back to the default without
+    // claiming it.
     if (isInvalidEnumValue("keyboardType", value, VALID_KEYBOARD_TYPES)) {
       this._keyboardTypeSource = "unset";
       this._keyboardTypeValue = "Full";
       return;
     }
-    if (this._keyboardTypeSource !== `auto:${value}`) {
+    if (this._keyboardTypeSource !== `auto:${value}` && this._keyboardTypeSource !== "reset") {
       this._keyboardTypeSource = "explicit";
     }
     this._keyboardTypeValue = value;
@@ -1118,7 +1123,9 @@ class KioskKeyboard extends UI5Element {
       // back onto the current type is not a change.
       if (this.keyboardType === changeInfo.oldValue) return;
       const autoDetected = this._keyboardTypeSource === `auto:${this.keyboardType}`;
-      if (autoDetected) this._keyboardTypeSource = "unset";
+      // Both an auto tag and the reset marker fold back before the event fires, so a
+      // listener that sets the type synchronously can claim the property.
+      if (this._keyboardTypeSource !== "explicit") this._keyboardTypeSource = "unset";
       // Reset user layout switch and shift state - a keyboardType change implies a new layout context
       this._layoutState.clearUserOverride();
       this._shiftState.reset();
@@ -1267,8 +1274,14 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   resetKeyboardType(): void {
+    // The marker keeps the setter from claiming the property; `onInvalidation` folds it
+    // to "unset" and reports the change as not auto-detected. The trailing assignment
+    // covers the paths that never reach `onInvalidation`: an unchanged value, for which
+    // the framework skips the setter, and a pre-render call, for which invalidation is
+    // suppressed.
+    this._keyboardTypeSource = "reset";
+    this.keyboardType = "Full";
     this._keyboardTypeSource = "unset";
-    this._setKeyboardTypeInternal("Full");
   }
 
   /**
