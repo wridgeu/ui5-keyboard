@@ -5,6 +5,9 @@ import navRow from "../../src/layouts/nav-row.ts";
 import navRowCompact from "../../src/layouts/nav-row-compact.ts";
 import fkeyRow from "../../src/layouts/fkey-row.ts";
 import fkeyRowCompact from "../../src/layouts/fkey-row-compact.ts";
+import "@ui5/webcomponents-icons/dist/home.js";
+import "@ui5/webcomponents-icons/dist/settings.js";
+import "@ui5/webcomponents-icons/dist/delete.js";
 
 // Glyph stress layout: exercises single-glyph rendering with characters
 // that push vertical metrics, horizontal width, and text-box-trim edges.
