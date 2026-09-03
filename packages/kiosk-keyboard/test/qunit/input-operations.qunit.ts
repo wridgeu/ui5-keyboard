@@ -672,7 +672,7 @@ QUnit.test("A plain ArrowLeft after an extension collapses the selection", (asse
   assert.strictEqual(input.selectionEnd, 3, "DOM end at 3");
 });
 
-QUnit.test("Extending reads the anchor from the DOM, not from the supplied tuple", (assert) => {
+QUnit.test("Extending takes the anchor end from selectionDirection and the positions from the tuple", (assert) => {
   const input = makeInput("hello", [3, 5]);
   input.setSelectionRange(3, 5, "backward");
 

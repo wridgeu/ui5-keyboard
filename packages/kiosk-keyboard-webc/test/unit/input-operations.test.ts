@@ -485,7 +485,7 @@ describe("handleNavigation", () => {
     expect(input.selectionEnd).toBe(3);
   });
 
-  it("extending reads the anchor from the DOM, not from the supplied tuple", () => {
+  it("extending takes the anchor end from selectionDirection and the positions from the tuple", () => {
     const input = mockInput("hello", 3, 5);
     input.setSelectionRange(3, 5, "backward");
 
