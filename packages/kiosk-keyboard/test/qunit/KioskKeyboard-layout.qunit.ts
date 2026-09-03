@@ -389,7 +389,7 @@ QUnit.test(
 
     const events: string[] = [];
     kb.attachEvent("layoutChange", (e: { getParameter(name: string): string }) => {
-      events.push(e.getParameter("layout") ?? "");
+      events.push(e.getParameter("layout"));
     });
 
     const switchToNumeric = createFakeKeyElement("{layout:numeric}", "fake-numeric");
@@ -523,13 +523,12 @@ QUnit.test("setKeyboardType round trip (Numpad -> Full) returns a user pick to t
 
 QUnit.test("resetKeyboardType round-trip lets the next keyboardType re-engage its constraint", async (assert) => {
   // End-to-end guard for the user-override → reset → re-constrain flow. A user
-  // {layout:numeric} tap sets _layoutSource="user"; both setKeyboardType and
-  // resetKeyboardType route through _setKeyboardTypeSource, which restores
-  // _layoutSource="external". _layoutSource is private (CLAUDE.md §4), and when
-  // keyboardType is Full the resolved surface ignores it, so resetKeyboardType's
-  // reset has no surface-visible effect on its own; this test verifies the
-  // end-to-end result that a later keyboardType change is not shadowed by the
-  // stale "user" override.
+  // {layout:numeric} tap is a user pick; both setKeyboardType and
+  // resetKeyboardType route through _setKeyboardTypeSource, which drops the pick
+  // and returns the layout property to the base. The source itself is private
+  // (CLAUDE.md §4), so the drop is observed through getLayout() and the rendered
+  // surface, and the end-to-end result is that a later keyboardType change is
+  // not shadowed by a stale pick.
   const kb = new KioskKeyboard();
   kb.setKeyboardType(KeyboardType.Numpad);
   await placeAndWait(kb);
@@ -598,7 +597,7 @@ QUnit.test("Programmatic setLayout fires layoutChange when the layout actually c
 
   const events: string[] = [];
   kb.attachEvent("layoutChange", (e: { getParameter(name: string): string }) => {
-    events.push(e.getParameter("layout") ?? "");
+    events.push(e.getParameter("layout"));
   });
 
   kb.setLayout("numeric");
