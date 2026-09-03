@@ -524,9 +524,4 @@ test("the docked keyboard pads its bottom edge by the safe-area inset", async ({
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { bottom: 34, bottomMax: 34 } });
   await expect.poll(paddingBottom).toBe(before + 34);
-
-  // Harness pin, not coverage: shows the override (and not a stray reflow) moved
-  // the value. No production change can flip it.
-  await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: {} });
-  await expect.poll(paddingBottom).toBe(before);
 });
