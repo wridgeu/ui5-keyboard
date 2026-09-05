@@ -4,15 +4,15 @@ import { EMPTY_FOLD } from "../../src/core/custom-layout-fold.js";
 import type { KeyboardType } from "../../src/types.js";
 
 /** A host over a local layout variable and a keyboardType box, recording every `layout-change`. */
-function createHost() {
+function createHost(attribute = "qwerty", locale = "qwerty") {
   const box = { current: "", keyboardType: "Full" as `${KeyboardType}`, changes: [] as string[] };
   const state = new LayoutState({
     getCurrentLayout: () => box.current,
     setCurrentLayout: (name) => {
       box.current = name;
     },
-    getLayoutAttribute: () => "qwerty",
-    getLocaleLayout: () => "qwerty",
+    getLayoutAttribute: () => attribute,
+    getLocaleLayout: () => locale,
     getKeyboardType: () => box.keyboardType,
     getFold: () => EMPTY_FOLD,
     fireLayoutChange: (p) => {
@@ -61,5 +61,30 @@ describe("LayoutState.clearUserOverride", () => {
     state.clearUserOverride();
     expect(box.current).to.equal("numeric");
     expect(state.resolvedName()).to.equal("numeric");
+  });
+});
+
+describe("LayoutState.seed", () => {
+  it("a secondary `layout` attribute renders but does not become the base", () => {
+    const { box, state } = createHost("fkeys", "qwertz-de");
+    expect(box.current, "the authored secondary layout is the one on screen").to.equal("fkeys");
+
+    state.applyKeySwitch("base");
+    expect(box.current, "{layout:base} lands on the alphabetic locale layout").to.equal("qwertz-de");
+    expect(box.changes, "exactly one change, naming the layout switched to").to.deep.equal(["qwertz-de"]);
+  });
+
+  it("a primary `layout` attribute is the base", () => {
+    const { box, state } = createHost("qwertz-de", "qwerty");
+    state.applyKeySwitch("numeric");
+    state.applyKeySwitch("base");
+    expect(box.current, "{layout:base} returns to the authored layout").to.equal("qwertz-de");
+  });
+
+  it("the first {layout:base} tap on the authored layout announces no change", () => {
+    const { box, state } = createHost("qwertz-de", "qwerty");
+    state.applyKeySwitch("base");
+    expect(box.current, "the surface stays on the authored layout").to.equal("qwertz-de");
+    expect(box.changes, "a non-switch fires nothing").to.deep.equal([]);
   });
 });
