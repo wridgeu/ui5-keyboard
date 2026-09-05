@@ -83,6 +83,11 @@ export class AutoShowController {
   /** Leave the claim registry and cancel any pending deferred close. */
   unregister(): void {
     AutoShowController._participants.delete(this);
+    this.cancelPendingClose();
+  }
+
+  /** Drop the close a focusout deferred to the next frame, if one is pending. */
+  cancelPendingClose(): void {
     if (this._deferredCloseId !== null) {
       cancelAnimationFrame(this._deferredCloseId);
       this._deferredCloseId = null;
@@ -106,10 +111,7 @@ export class AutoShowController {
   teardown(): void {
     this._abort?.abort();
     this._abort = null;
-    if (this._deferredCloseId !== null) {
-      cancelAnimationFrame(this._deferredCloseId);
-      this._deferredCloseId = null;
-    }
+    this.cancelPendingClose();
   }
 
   private _onDocumentFocusIn(e: FocusEvent): void {
@@ -154,10 +156,7 @@ export class AutoShowController {
       }
     }
 
-    if (this._deferredCloseId !== null) {
-      cancelAnimationFrame(this._deferredCloseId);
-      this._deferredCloseId = null;
-    }
+    this.cancelPendingClose();
 
     if (!this._host.open) {
       this._bridge.show();
@@ -176,9 +175,7 @@ export class AutoShowController {
   private _onDocumentFocusOut(_e: FocusEvent): void {
     if (!this._host.autoShow) return;
 
-    if (this._deferredCloseId !== null) {
-      cancelAnimationFrame(this._deferredCloseId);
-    }
+    this.cancelPendingClose();
 
     this._deferredCloseId = requestAnimationFrame(() => {
       this._deferredCloseId = null;

@@ -214,6 +214,34 @@ QUnit.test("autoShow closes when null relatedTarget settles outside claimable in
   kb.destroy();
 });
 
+QUnit.test("show() overrides a deferred close scheduled in the same task", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const outside = document.createElement("button");
+  outside.id = "kb-show-wins-focus-target";
+  document.getElementById("qunit-fixture")!.appendChild(outside);
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.ok(kb.isOpen(), "Keyboard opened for input");
+
+  dispatchNullRelatedFocusOut(input.getFocusDomRef() as HTMLElement);
+  outside.focus();
+  kb.show();
+
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await nextUIUpdate();
+
+  assert.ok(kb.isOpen(), "show() outranks the deferred auto-show close");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("destroy cancels deferred null-relatedTarget close", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");

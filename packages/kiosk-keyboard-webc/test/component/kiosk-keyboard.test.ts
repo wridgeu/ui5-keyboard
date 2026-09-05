@@ -1625,6 +1625,65 @@ describe("kiosk-keyboard", () => {
 
       await waitUntil(() => kb.open, "keyboard should open on focus");
     });
+
+    it("keeps the keyboard open when show() runs in the same task as a focus move away", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="show-wins-input" type="text" />
+          <button id="show-wins-other">other</button>
+          <kiosk-keyboard layout="qwerty" docked auto-show controls="show-wins-input"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#show-wins-input")!;
+      const other = container.querySelector<HTMLButtonElement>("#show-wins-other")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await waitUntil(() => kb.open, "keyboard should open on focus");
+
+      let closed = false;
+      kb.addEventListener("after-close", () => {
+        closed = true;
+      });
+
+      // Focus leaves the claimed input, scheduling the one-frame deferred close.
+      other.focus();
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      kb.show();
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await nextRender();
+
+      expect(kb.open, "show() outranks the deferred auto-show close").to.be.true;
+      expect(closed, "no after-close fires").to.be.false;
+    });
+
+    it("keeps the keyboard open when open=true runs in the same task as a focus move away", async () => {
+      // No `controls`, so the open path resolves no target to refocus: the
+      // deferred close is the only thing that can act on the keyboard.
+      const container = await fixture(html`
+        <div>
+          <button id="open-wins-other">other</button>
+          <kiosk-keyboard layout="qwerty" docked auto-show></kiosk-keyboard>
+        </div>
+      `);
+      const other = container.querySelector<HTMLButtonElement>("#open-wins-other")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+      expect(kb.open, "starts closed").to.be.false;
+
+      // A focus move that lands nowhere claimable schedules the one-frame
+      // deferred close while the keyboard is still closed.
+      other.focus();
+      other.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      kb.open = true;
+
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await nextRender();
+
+      expect(kb.open, "open=true outranks the deferred auto-show close").to.be.true;
+    });
   });
 
   // ── Focus steal prevention ──

@@ -1621,6 +1621,9 @@ export default class KioskKeyboard extends Control {
    */
   show(): this {
     if (!this.getDocked()) return this;
+    // Before the open guard: a deferred auto-show close must not land on an
+    // already-open keyboard that show() was just called on.
+    this._autoShowBehavior.cancelPendingClose();
     if (this._open) return this;
     if (this._nativeKbSuppression.shouldDeferToNative()) return this;
 
