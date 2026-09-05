@@ -79,12 +79,18 @@ export default class LayoutState {
   }
 
   /**
-   * Drops a user-driven `{layout:X}` override, so the resolved layout follows the
-   * constraint context again. Called on a real target switch and on every
-   * `keyboardType` change.
+   * Drops a user-driven `{layout:X}` pick: the source returns to `"external"` and the
+   * `layout` property to the base layout, so the resolved layout follows the
+   * constraint context again and a lifted constraint lands on the base rather than
+   * on the pick. A programmatic or `{layout:base}` layout is left alone. Called on a
+   * real target switch and on every `keyboardType` change.
    */
   clearUserOverride(): void {
+    if (this._source !== "user") return;
+    // Explicit, not left to `_apply`: a pick of a primary layout is already the base,
+    // so the request below is a no-op that would leave the source at "user".
     this._source = "external";
+    this.perform(this._base, "external", "held as the base layout");
   }
 
   /**
