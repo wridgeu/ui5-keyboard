@@ -9,7 +9,7 @@
         </landmarkInfo>
         <content>
             <MessageStrip
-                text="Switch the i18n mode below to see how ARIA labels change. Special keys use icons: their translated text appears as aria-labels (for screen readers) and as visible text on the Space key."
+                text="Switch the i18n mode below to see how the resolved texts change. Special keys pair an icon with their translated text on the keycap: that visible text is the accessible name, and the native tooltip mirrors it."
                 type="Information"
                 showIcon="true"
                 class="sapUiSmallMarginBottom" />

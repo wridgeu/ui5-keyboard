@@ -65,7 +65,7 @@ export const ICON_LABEL_LAYOUT: LayoutDefinition = [
   [
     { value: "home", icon: "sap-icon://home", label: "Home" },
     { value: "settings", icon: "sap-icon://settings", label: "Settings" },
-    { value: "delete", icon: "sap-icon://delete", label: "" },
+    { value: "delete", icon: "sap-icon://delete", label: "", ariaLabel: "Delete" },
     { value: "search", icon: "\u{1F50D}", label: "Search" },
     { value: "globe", icon: "\u{1F310}", label: "Lang" },
   ],
