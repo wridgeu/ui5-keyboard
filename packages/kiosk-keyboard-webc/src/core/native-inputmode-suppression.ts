@@ -9,6 +9,10 @@
  * and only the last `restore()` writes the original value back. The `WeakMap`
  * needs no explicit cleanup; entries are released when the input is GC'd.
  *
+ * An instance holds at most one claim: a repeat `suppress()` on the element it
+ * already holds is idempotent, and suppressing a different element releases the
+ * previous claim first, so a re-entrant open path cannot strand a refcount.
+ *
  * Mirrors the sibling `kiosk-keyboard` package's `native-keyboard-suppression.ts`
  * (the responsibilities and refcount semantics match; only the DOM access differs:
  * the webc resolves a live element, the UI5 twin resolves by control id).
@@ -23,6 +27,12 @@ export class NativeInputModeSuppression {
   suppress(): void {
     const target = this._resolveTarget();
     if (!target) return;
+
+    if (this._suppressedElement === target) {
+      target.setAttribute("inputmode", "none");
+      return;
+    }
+    this.restore();
 
     const existing = NativeInputModeSuppression._suppressions.get(target);
     if (existing) {

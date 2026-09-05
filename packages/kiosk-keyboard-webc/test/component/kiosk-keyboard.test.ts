@@ -9,7 +9,7 @@ import {
   resetAnnouncements,
   queryKey,
 } from "../helpers/fixtures.js";
-import { captureConsole } from "../helpers/console.js";
+import { captureConsole, withCapturedWarnings } from "../helpers/console.js";
 
 beforeEach(resetAnnouncements);
 
@@ -2577,6 +2577,138 @@ describe("kiosk-keyboard", () => {
         expect(el[property]).to.equal(expectedDefault);
       }
     });
+
+    it("clamps invalid enum values authored as attributes before the first render", async () => {
+      const cases: {
+        markup: ReturnType<typeof html>;
+        property: "keyboardType" | "fKeyMode" | "mobileKeyboard";
+        attribute: string;
+        expectedDefault: string;
+      }[] = [
+        {
+          markup: html` <kiosk-keyboard layout="qwerty" keyboard-type="bogus"></kiosk-keyboard> `,
+          property: "keyboardType",
+          attribute: "keyboard-type",
+          expectedDefault: "Full",
+        },
+        {
+          markup: html` <kiosk-keyboard layout="qwerty" f-key-mode="bogus"></kiosk-keyboard> `,
+          property: "fKeyMode",
+          attribute: "f-key-mode",
+          expectedDefault: "Virtual",
+        },
+        {
+          markup: html` <kiosk-keyboard layout="qwerty" mobile-keyboard="native"></kiosk-keyboard> `,
+          property: "mobileKeyboard",
+          attribute: "mobile-keyboard",
+          expectedDefault: "Auto",
+        },
+      ];
+      for (const { markup, property, attribute, expectedDefault } of cases) {
+        await withCapturedWarnings(async (warnings) => {
+          const el = await fixture<KioskKeyboard>(markup);
+          await nextRender();
+          expect(el[property], `${property} property`).to.equal(expectedDefault);
+          expect(el.getAttribute(attribute), `${attribute} attribute`).to.equal(expectedDefault);
+          expect(
+            warnings.filter((message) => message.includes(`Invalid ${property}`)),
+            `${property} warning`,
+          ).to.have.lengthOf(1);
+        });
+      }
+    });
+
+    it("clamping an authored keyboard-type fires no keyboard-type-change on connect", async () => {
+      const container = await fixture(html` <div></div> `);
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.setAttribute("layout", "qwerty");
+      el.setAttribute("keyboard-type", "bogus");
+
+      let fired = 0;
+      el.addEventListener("keyboard-type-change", () => {
+        fired++;
+      });
+
+      await captureConsole("warn", async () => {
+        container.appendChild(el);
+        await nextRender();
+      });
+
+      expect(el.keyboardType, "clamped").to.equal("Full");
+      expect(fired, "keyboard-type-change events").to.equal(0);
+    });
+
+    it("an invalid keyboardType set while the type is Full fires no keyboard-type-change and keeps auto-type available", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="clamp-noop-num" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="clamp-noop-num"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const numberInput = container.querySelector<HTMLInputElement>("#clamp-noop-num")!;
+      await nextRender();
+      expect(kb.keyboardType, "precondition: the default type").to.equal("Full");
+
+      let fired = 0;
+      kb.addEventListener("keyboard-type-change", () => {
+        fired++;
+      });
+      await captureConsole("warn", async () => {
+        setInvalidValue(kb, "keyboardType", "bogus");
+        await nextRender();
+      });
+      expect(kb.keyboardType, "clamped").to.equal("Full");
+      expect(fired, "keyboard-type-change events").to.equal(0);
+
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      numberInput.focus();
+      numberInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const { detail } = await typeChangeEvent;
+      expect(detail.keyboardType).to.equal("Numpad");
+      expect(detail.autoDetected).to.be.true;
+    });
+
+    it("an invalid keyboardType set after an explicit type releases the lock", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="clamp-release-num" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="clamp-release-num"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const numberInput = container.querySelector<HTMLInputElement>("#clamp-release-num")!;
+      await nextRender();
+
+      kb.keyboardType = "Numpad";
+      await nextRender();
+      expect(kb.keyboardType, "precondition: an explicit type locks auto-type").to.equal("Numpad");
+
+      await captureConsole("warn", async () => {
+        setInvalidValue(kb, "keyboardType", "bogus");
+        await nextRender();
+      });
+      expect(kb.keyboardType, "clamped to the default").to.equal("Full");
+
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      numberInput.focus();
+      numberInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const { detail } = await typeChangeEvent;
+      expect(detail.keyboardType).to.equal("Numpad");
+      expect(detail.autoDetected).to.be.true;
+    });
+
+    it("a post-render invalid mobile-keyboard reflects the default attribute", async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
+      await nextRender();
+
+      await captureConsole("warn", async () => {
+        setInvalidValue(el, "mobileKeyboard", "native");
+        await nextRender();
+      });
+      expect(el.mobileKeyboard, "clamped").to.equal("Auto");
+      expect(el.getAttribute("mobile-keyboard"), "reflected attribute").to.equal("Auto");
+    });
   });
 
   // ── accessibleName ──
@@ -2682,6 +2814,219 @@ describe("kiosk-keyboard", () => {
       const { detail } = await typeChangeEvent;
       expect(detail.keyboardType).to.equal("Numpad");
       expect(detail.autoDetected).to.be.true;
+    });
+
+    it("resetKeyboardType() from an explicit type fires keyboard-type-change with autoDetected false", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="reset-flag-input" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="reset-flag-input"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const input = container.querySelector<HTMLInputElement>("#reset-flag-input")!;
+      await nextRender();
+
+      kb.keyboardType = "Numpad";
+      await nextRender();
+      expect(kb.keyboardType, "precondition: an explicit type").to.equal("Numpad");
+
+      const resetEvent = oneEvent(kb, "keyboard-type-change");
+      kb.resetKeyboardType();
+      const { detail } = await resetEvent;
+      expect(detail).to.deep.equal({
+        keyboardType: "Full",
+        previousKeyboardType: "Numpad",
+        autoDetected: false,
+      });
+      await nextRender();
+
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const detected = (await typeChangeEvent).detail;
+      expect(detected.keyboardType, "the reset re-enabled detection").to.equal("Numpad");
+      expect(detected.autoDetected).to.be.true;
+    });
+
+    it("an explicit keyboardType set after resetKeyboardType() locks auto-type again", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="relock-text" type="text" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="relock-text"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const textInput = container.querySelector<HTMLInputElement>("#relock-text")!;
+      await nextRender();
+
+      kb.keyboardType = "Numpad";
+      await nextRender();
+      kb.resetKeyboardType();
+      await nextRender();
+      expect(kb.keyboardType, "precondition: the reset restored the default").to.equal("Full");
+
+      kb.keyboardType = "Numeric";
+      await nextRender();
+
+      textInput.focus();
+      textInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+      expect(kb.open, "precondition: auto-show ran on the focused input").to.be.true;
+      expect(kb.keyboardType, "the post-reset explicit type survives auto-type detection").to.equal("Numeric");
+    });
+
+    it("resetKeyboardType() when the type is already Full fires no keyboard-type-change", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="reset-noop-input" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="reset-noop-input"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const input = container.querySelector<HTMLInputElement>("#reset-noop-input")!;
+      await nextRender();
+      expect(kb.keyboardType, "precondition: the default type").to.equal("Full");
+
+      let fired = 0;
+      kb.addEventListener("keyboard-type-change", () => {
+        fired++;
+      });
+      kb.resetKeyboardType();
+      await nextRender();
+      expect(fired, "keyboard-type-change events").to.equal(0);
+
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const { detail } = await typeChangeEvent;
+      expect(detail.keyboardType).to.equal("Numpad");
+      expect(detail.autoDetected).to.be.true;
+    });
+
+    it("an explicit keyboardType set inside the reset's keyboard-type-change handler claims the property", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="reset-handler-input" type="number" />
+          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="reset-handler-input"></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const input = container.querySelector<HTMLInputElement>("#reset-handler-input")!;
+      await nextRender();
+
+      kb.keyboardType = "Numpad";
+      await nextRender();
+      expect(kb.keyboardType, "precondition: an explicit type").to.equal("Numpad");
+
+      kb.addEventListener(
+        "keyboard-type-change",
+        () => {
+          kb.keyboardType = "Numeric";
+        },
+        { once: true },
+      );
+      kb.resetKeyboardType();
+      await nextRender();
+      expect(kb.keyboardType, "precondition: the handler's type took effect").to.equal("Numeric");
+
+      input.focus();
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+      expect(kb.open, "precondition: auto-show ran on the focused input").to.be.true;
+      expect(kb.keyboardType, "the in-handler explicit type survives auto-type detection").to.equal("Numeric");
+    });
+
+    it("an authored keyboard-type locks auto-type until resetKeyboardType()", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="lock-text" type="text" />
+          <input id="lock-num" type="number" />
+          <kiosk-keyboard
+            layout="qwerty"
+            docked
+            auto-show
+            auto-type
+            keyboard-type="Numpad"
+            controls="lock-text,lock-num"
+          ></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const textInput = container.querySelector<HTMLInputElement>("#lock-text")!;
+      const numberInput = container.querySelector<HTMLInputElement>("#lock-num")!;
+      await nextRender();
+
+      textInput.focus();
+      textInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+      expect(kb.open, "auto-show opened the keyboard").to.be.true;
+      expect(kb.keyboardType, "authored type survives auto-type detection").to.equal("Numpad");
+
+      kb.resetKeyboardType();
+      await nextRender();
+      expect(kb.keyboardType).to.equal("Full");
+
+      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
+      numberInput.focus();
+      numberInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      const { detail } = await typeChangeEvent;
+      expect(detail.keyboardType).to.equal("Numpad");
+      expect(detail.autoDetected).to.be.true;
+    });
+
+    it("a keyboardType assigned before connection locks auto-type", async () => {
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.layout = "qwerty";
+      el.keyboardType = "Numeric";
+      el.docked = true;
+      el.autoShow = true;
+      el.autoType = true;
+      el.controls = "pre-text";
+
+      const container = await fixture(html` <div><input id="pre-text" type="text" />${el}</div> `);
+      const textInput = container.querySelector<HTMLInputElement>("#pre-text")!;
+      await nextRender();
+
+      textInput.focus();
+      textInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+      expect(el.open, "auto-show opened the keyboard").to.be.true;
+      expect(el.keyboardType, "pre-connect type survives auto-type detection").to.equal("Numeric");
+    });
+
+    it("re-attaching an auto-detected keyboard does not lock the detected type", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="reattach-text" type="text" />
+          <input id="reattach-num" type="number" />
+          <kiosk-keyboard
+            layout="qwerty"
+            docked
+            auto-show
+            auto-type
+            controls="reattach-text,reattach-num"
+          ></kiosk-keyboard>
+        </div>
+      `);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      const textInput = container.querySelector<HTMLInputElement>("#reattach-text")!;
+      const numberInput = container.querySelector<HTMLInputElement>("#reattach-num")!;
+      await nextRender();
+
+      numberInput.focus();
+      numberInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+      expect(kb.keyboardType, "auto-detected from the number input").to.equal("Numpad");
+
+      kb.remove();
+      container.appendChild(kb);
+      await nextRender();
+
+      textInput.focus();
+      textInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextRender();
+      expect(kb.keyboardType, "auto-type still detects after re-attach").to.equal("Full");
     });
 
     it("isSecondaryLayout() identifies secondary layouts", async () => {
@@ -3063,6 +3408,52 @@ describe("kiosk-keyboard", () => {
         originalInputMode,
         "inputmode should be restored after close",
       );
+    });
+  });
+
+  // ── Auto-show inputmode suppression ──
+
+  describe("auto-show inputmode suppression", () => {
+    it("show() on an auto-show keyboard restores the auto-targeted input's inputmode after close()", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="autoshow-suppress-input" type="text" />
+          <kiosk-keyboard layout="qwerty" docked auto-show controls="autoshow-suppress-input"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#autoshow-suppress-input")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      // A focus() on the already-focused element fires no focusin, so the
+      // re-entrant auto-show path the assertion covers would never run.
+      input.blur();
+
+      kb.show();
+      await nextRender();
+      expect(input.getAttribute("inputmode")).to.equal("none", "auto-targeted input is suppressed while open");
+
+      kb.close();
+      await nextRender();
+      expect(input.getAttribute("inputmode")).to.equal(null, "auto-targeted input is restored after close");
+    });
+
+    it("open pre-set in markup with auto-show restores inputmode after close()", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="preopen-suppress-input" type="text" />
+          <kiosk-keyboard layout="qwerty" docked auto-show controls="preopen-suppress-input" open></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#preopen-suppress-input")!;
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      expect(input.getAttribute("inputmode")).to.equal("none", "auto-targeted input is suppressed while open");
+
+      kb.close();
+      await nextRender();
+      expect(input.getAttribute("inputmode")).to.equal(null, "auto-targeted input is restored after close");
     });
   });
 

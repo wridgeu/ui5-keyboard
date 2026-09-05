@@ -273,11 +273,13 @@ Either path produces exactly one `input` event per edit: the platform's own on t
 
 ### Inputmode Suppression
 
-When the keyboard opens, it sets `inputmode="none"` on the target input to prevent the native virtual keyboard from appearing. This is ref-counted and shared across instances via a static `Map`:
+When the keyboard opens, it sets `inputmode="none"` on the target input to prevent the native virtual keyboard from appearing. This is ref-counted and shared across instances via a static `WeakMap` keyed on the input element:
 
 - Each `show()` increments the ref count for the target input
 - Each `close()` / `onExitDOM()` decrements it
 - The original `inputmode` is restored only when the last claimant releases
+
+A keyboard holds at most one claim at a time: a repeat suppression by the same instance on the element it already holds is idempotent, and suppressing a different element releases the previous claim first.
 
 This makes suppression safe for multi-keyboard setups targeting the same input.
 
