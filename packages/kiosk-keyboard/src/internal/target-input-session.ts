@@ -73,11 +73,11 @@ export default class TargetInputSession {
     }
   }
 
-  handleNavigationKey(key: string): void {
+  handleNavigationKey(key: string, extend = false): void {
     const dom = this._getTargetDomRef();
     if (!dom) return;
 
-    const pos = opsHandleNavigation(dom, key, this._cursorPos ?? undefined);
+    const pos = opsHandleNavigation(dom, key, this._cursorPos ?? undefined, extend);
     if (!pos) return;
     this._cursorPos = pos;
   }

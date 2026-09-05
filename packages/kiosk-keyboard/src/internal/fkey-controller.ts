@@ -12,8 +12,11 @@ export interface FKeyHost {
   /** Focus DOM ref of the active target, or null when there is none. */
   getTargetFocusDomRef(): Element | null;
   getEffectiveResolver(): TargetResolverFn | null;
-  /** Moves the caret in the target input for a navigation/function key. */
-  handleNavigationKey(fkeyName: string): void;
+  /**
+   * Moves the caret in the target input for a navigation/function key, or
+   * extends the selection from its anchor when `extend` is set.
+   */
+  handleNavigationKey(fkeyName: string, extend: boolean): void;
 }
 
 /**
@@ -89,7 +92,7 @@ export default class FKeyController {
     }
 
     if (nativeAllowed) {
-      this._host.handleNavigationKey(fkeyName);
+      this._host.handleNavigationKey(fkeyName, shiftKey);
     }
   }
 

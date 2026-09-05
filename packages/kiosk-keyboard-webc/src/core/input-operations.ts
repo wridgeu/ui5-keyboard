@@ -213,24 +213,32 @@ export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cur
 }
 
 /**
- * Moves the caret/selection for navigation-like keys without changing value.
+ * Moves the caret for navigation-like keys without changing value. With
+ * `extend`, moves the selection's focus and keeps its anchor instead, the way
+ * Shift+Arrow does on a physical keyboard. The browser records which end is the
+ * anchor as `selectionDirection`: "backward" puts the focus at `selectionStart`;
+ * "forward" and "none" put it at `selectionEnd`.
  */
 export function handleNavigation(
   dom: HTMLInputElement | HTMLTextAreaElement,
   key: string,
   cursor?: CursorPos,
+  extend = false,
 ): CursorPos | null {
   const [start, end] = resolveCursor(dom, cursor);
-  const len = dom.value.length;
+  const value = dom.value;
+  const len = value.length;
+  const backward = dom.selectionDirection === "backward";
+  const focus = backward ? start : end;
+  const anchor = backward ? end : start;
 
   let newPos: number | null = null;
-
   switch (key) {
     case "ArrowLeft":
-      newPos = start !== end ? start : Math.max(0, start - graphemeLengthBefore(dom.value, start));
+      newPos = !extend && start !== end ? start : Math.max(0, focus - graphemeLengthBefore(value, focus));
       break;
     case "ArrowRight":
-      newPos = start !== end ? end : Math.min(len, end + graphemeLengthAfter(dom.value, end));
+      newPos = !extend && start !== end ? end : Math.min(len, focus + graphemeLengthAfter(value, focus));
       break;
     case "Home":
     case "PageUp":
@@ -241,20 +249,24 @@ export function handleNavigation(
       newPos = len;
       break;
     case "ArrowUp":
-      newPos = resolveVerticalCaret(dom.value, start, -1);
+      newPos = resolveVerticalCaret(value, extend ? focus : start, -1);
       break;
     case "ArrowDown":
-      newPos = resolveVerticalCaret(dom.value, end, 1);
+      newPos = resolveVerticalCaret(value, extend ? focus : end, 1);
       break;
     default:
       return null;
   }
 
+  const range: CursorPos = extend ? [Math.min(anchor, newPos), Math.max(anchor, newPos)] : [newPos, newPos];
   try {
-    dom.setSelectionRange(newPos, newPos);
+    if (extend) {
+      dom.setSelectionRange(range[0], range[1], newPos < anchor ? "backward" : "forward");
+    } else {
+      dom.setSelectionRange(newPos, newPos);
+    }
   } catch {
     // May throw on certain input types (e.g. type="number")
   }
-
-  return [newPos, newPos];
+  return range;
 }

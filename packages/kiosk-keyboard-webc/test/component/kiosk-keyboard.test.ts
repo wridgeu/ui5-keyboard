@@ -1908,6 +1908,88 @@ describe("kiosk-keyboard", () => {
         "false",
       );
     });
+
+    it("a latched {shift} extends the selection with {fkey:ArrowLeft}", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="fkey-extend-target" type="text" value="hello" />
+          <kiosk-keyboard layout="nav" controls="fkey-extend-target"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#fkey-extend-target")!;
+      input.setSelectionRange(5, 5);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      queryKey(kb, "{shift}")!.click();
+      await nextRender();
+      expect(queryKey(kb, "{shift}")!.getAttribute("aria-pressed"), "precondition: shift latched").to.equal("true");
+
+      queryKey(kb, "{fkey:ArrowLeft}")!.click();
+      await nextRender();
+
+      expect(input.selectionStart).to.equal(4);
+      expect(input.selectionEnd).to.equal(5);
+      expect(input.selectionDirection).to.equal("backward");
+      expect(queryKey(kb, "{shift}")!.getAttribute("aria-pressed"), "the nav key spends the one-shot shift").to.equal(
+        "false",
+      );
+    });
+
+    it("caps lock extends the selection continuously", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="fkey-caps-target" type="text" value="hello" />
+          <kiosk-keyboard layout="nav" controls="fkey-caps-target"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#fkey-caps-target")!;
+      input.setSelectionRange(5, 5);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      // Both taps in one task, so they land inside the caps-lock double-tap window.
+      const shift = queryKey(kb, "{shift}")!;
+      shift.click();
+      shift.click();
+      await nextRender();
+      expect(queryKey(kb, "{shift}")!.classList.contains(DOM.classes.keyCapsLock), "precondition: caps lock").to.be
+        .true;
+
+      queryKey(kb, "{fkey:ArrowLeft}")!.click();
+      await nextRender();
+      queryKey(kb, "{fkey:ArrowLeft}")!.click();
+      await nextRender();
+
+      expect(input.selectionStart).to.equal(3);
+      expect(input.selectionEnd).to.equal(5);
+      expect(input.selectionDirection).to.equal("backward");
+      expect(queryKey(kb, "{shift}")!.classList.contains(DOM.classes.keyCapsLock), "caps lock outlives the nav keys").to
+        .be.true;
+    });
+
+    it("fKeyMode=None suppresses the selection extension", async () => {
+      const container = await fixture(html`
+        <div>
+          <input id="fkey-none-extend" type="text" value="hello" />
+          <kiosk-keyboard layout="nav" controls="fkey-none-extend" f-key-mode="None"></kiosk-keyboard>
+        </div>
+      `);
+      const input = container.querySelector<HTMLInputElement>("#fkey-none-extend")!;
+      input.setSelectionRange(3, 3);
+      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+      await nextRender();
+
+      queryKey(kb, "{shift}")!.click();
+      await nextRender();
+      expect(queryKey(kb, "{shift}")!.getAttribute("aria-pressed"), "precondition: shift latched").to.equal("true");
+
+      queryKey(kb, "{fkey:ArrowLeft}")!.click();
+      await nextRender();
+
+      expect(input.selectionStart).to.equal(3);
+      expect(input.selectionEnd).to.equal(3);
+    });
   });
 
   // ── Per-instance layout declarations ──

@@ -889,6 +889,8 @@ Navigation keys fire `keyPress` and also perform default caret navigation on the
 
 For single-line inputs, `ArrowUp` and `ArrowDown` do not change the caret.
 
+With Shift active, these keys extend the selection from its anchor instead of moving the caret. Shift is active through the `{shift}` key the `nav` layout carries on its control row, through Caps Lock, or through a physical Shift held over a focused keycap. A one-shot `{shift}` extends by a single press; Caps Lock extends continuously until it is switched off.
+
 If your app handles these keys itself, call `preventDefault()` on `keyPress` to suppress the built-in navigation behavior.
 
 ### Handling F-key presses

@@ -729,11 +729,11 @@ Declaring a variant table while `accent-variants` is off applies nothing, and lo
 
 The `f-key-mode` attribute controls how function key presses are handled:
 
-| Value       | Behavior                                                                                                                                                                                                                                                                |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"Virtual"` | (default) F-key press fires the `key-press` event only. No keyboard event is sent to the target input. Navigation keys move the caret in the target input (`ArrowLeft`/`ArrowRight`, `ArrowUp`/`ArrowDown`, `Home`/`PageUp` to the start, `End`/`PageDown` to the end). |
-| `"Native"`  | F-key press dispatches a synthetic `KeyboardEvent("keydown")` to the target input, then fires `key-press`. The component also provides built-in workarounds for F5 and F11 (see below).                                                                                 |
-| `"None"`    | F-key and navigation presses are ignored (silent no-op); the row is still rendered.                                                                                                                                                                                     |
+| Value       | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"Virtual"` | (default) F-key press fires the `key-press` event only. No keyboard event is sent to the target input. Navigation keys move the caret in the target input (`ArrowLeft`/`ArrowRight`, `ArrowUp`/`ArrowDown`, `Home`/`PageUp` to the start, `End`/`PageDown` to the end). With Shift active they extend the selection from its anchor instead: a one-shot `{shift}` extends by a single press, Caps Lock extends continuously. |
+| `"Native"`  | F-key press dispatches a synthetic `KeyboardEvent("keydown")` to the target input, then fires `key-press`. The component also provides built-in workarounds for F5 and F11 (see below).                                                                                                                                                                                                                                      |
+| `"None"`    | F-key and navigation presses are ignored (silent no-op); the row is still rendered.                                                                                                                                                                                                                                                                                                                                          |
 
 ### Native mode: synthetic keydown events
 
@@ -797,6 +797,7 @@ The default entry (`kiosk-keyboard-webc`) includes all built-in layouts. The pac
 ### Layout Composition
 
 The package ships primary layouts and building block rows (`fkey-row`, `fkey-row-compact`, `nav-row`, `nav-row-compact`).
+The `nav` and `fkeys` layouts each carry a `{shift}` key on their control row: on `nav` it makes the next navigation key extend the selection, on `fkeys` it holds Shift for the next function key.
 Combined layouts (e.g., QWERTY + F-key row) are not built-in - they are trivial
 compositions consumers can build:
 

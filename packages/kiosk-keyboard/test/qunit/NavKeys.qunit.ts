@@ -9,6 +9,7 @@ import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
+  freezeDoubleClickWindow,
   getFirstKeyElement,
   getKeyboardDom,
   getKeyElement,
@@ -16,6 +17,8 @@ import {
   getRequiredKeyElement,
   getRowElements,
   hasKeyClass,
+  isCapsLock,
+  isShiftActive,
   placeAndWait,
   tapKey,
   waitForRender,
@@ -111,6 +114,7 @@ QUnit.test("Standalone nav layout renders expected keys", async (assert) => {
   assert.ok(getKeyElement(kb, "{fkey:End}"), "End rendered");
   assert.ok(getKeyElement(kb, "{fkey:PageUp}"), "PageUp rendered");
   assert.ok(getKeyElement(kb, "{fkey:PageDown}"), "PageDown rendered");
+  assert.ok(getKeyElement(kb, "{shift}"), "{shift} rendered on the control row");
 
   kb.destroy();
 });
@@ -293,6 +297,101 @@ QUnit.test("FKeyMode.None fires keyPress but suppresses built-in caret navigatio
 
   assert.strictEqual(pressedKey, "ArrowLeft", "keyPress still fires the arrow key in FKeyMode.None");
   assert.strictEqual(dom.selectionStart, 3, "Caret stays put because built-in navigation is suppressed");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("A latched {shift} extends the selection with ArrowLeft", async (assert) => {
+  const input = new Input({ value: "55555" });
+  const kb = new KioskKeyboard({ layout: "nav", controls: [input.getId()] });
+  input.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  input.focus();
+  await waitForRender();
+
+  const dom = input.getFocusDomRef() as HTMLInputElement;
+  dom.setSelectionRange(5, 5);
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Precondition: {shift} is latched");
+
+  tapKey(kb, "{fkey:ArrowLeft}");
+  await waitForRender();
+
+  assert.strictEqual(dom.selectionStart, 4, "Selection starts one grapheme back");
+  assert.strictEqual(dom.selectionEnd, 5, "Anchor stays at the caret");
+  assert.strictEqual(dom.selectionDirection, "backward", "Focus is at the start");
+  assert.strictEqual(
+    getRequiredKeyElement(kb, "{shift}").getAttribute("aria-pressed"),
+    "false",
+    "The one-shot latch is spent by the navigation key",
+  );
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Caps Lock extends the selection continuously", async (assert) => {
+  const input = new Input({ value: "55555" });
+  const kb = new KioskKeyboard({ layout: "nav", controls: [input.getId()] });
+  input.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  input.focus();
+  await waitForRender();
+
+  const dom = input.getFocusDomRef() as HTMLInputElement;
+  dom.setSelectionRange(5, 5);
+
+  const clock = freezeDoubleClickWindow();
+  try {
+    tapKey(kb, "{shift}");
+    tapKey(kb, "{shift}");
+    await waitForRender();
+    assert.ok(isCapsLock(kb), "Precondition: Caps Lock is latched");
+
+    tapKey(kb, "{fkey:ArrowLeft}");
+    await waitForRender();
+    tapKey(kb, "{fkey:ArrowLeft}");
+    await waitForRender();
+  } finally {
+    clock.restore();
+  }
+
+  assert.strictEqual(dom.selectionStart, 3, "Two presses extended by two graphemes");
+  assert.strictEqual(dom.selectionEnd, 5, "Anchor stays at the caret");
+  assert.strictEqual(dom.selectionDirection, "backward", "Focus is at the start");
+  assert.ok(isCapsLock(kb), "Caps Lock outlives the navigation keys");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("FKeyMode.None suppresses the selection extension", async (assert) => {
+  const input = new Input({ value: "55555" });
+  const kb = new KioskKeyboard({ layout: "nav", controls: [input.getId()] });
+  kb.setFKeyMode(FKeyMode.None);
+  input.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+
+  input.focus();
+  await waitForRender();
+
+  const dom = input.getFocusDomRef() as HTMLInputElement;
+  dom.setSelectionRange(3, 3);
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Precondition: {shift} is latched");
+
+  tapKey(kb, "{fkey:ArrowLeft}");
+  await waitForRender();
+
+  assert.strictEqual(dom.selectionStart, 3, "Selection start unchanged");
+  assert.strictEqual(dom.selectionEnd, 3, "Selection stays collapsed");
 
   input.destroy();
   kb.destroy();

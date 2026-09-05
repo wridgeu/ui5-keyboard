@@ -4,6 +4,10 @@ import navRow from "./nav-row";
 /**
  * Standalone navigation layout (arrows, Home/End, Page Up/Down).
  *
+ * The `{shift}` key on the control row makes the next navigation key extend the
+ * selection instead of moving the caret: a one-shot latch extends by one press,
+ * Caps Lock extends continuously.
+ *
  * @public
  * @since 0.1.0
  */
@@ -16,6 +20,7 @@ const nav: LayoutDefinition = [
   [...navRow.slice(3, 5), { value: "{enter}", type: "action" }],
   // Row 4: layout controls
   [
+    { value: "{shift}", width: "1.5", type: "modifier" },
     { value: "{layout:base}", label: "ABC", width: "1.5", type: "modifier" },
     {
       value: "{backspace}",
