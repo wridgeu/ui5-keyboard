@@ -157,11 +157,8 @@ export default class KioskI18nExtensibility extends BaseController {
 
     const readKeyLabel = (dataKey: string): string => {
       const el = dom.querySelector(`[data-key="${CSS.escape(dataKey)}"]`);
-      if (!el) return "?";
-      // A key with visible text carries no aria-label (WCAG 2.5.3), so its label
-      // span is the accessible name; icon-only keys carry aria-label instead.
-      const visible = el.querySelector(".ui5KioskKey__label")?.textContent?.trim();
-      return visible || el.getAttribute("aria-label") || "?";
+      // Keys with visible text carry no aria-label (WCAG 2.5.3); only icon-only keys do.
+      return el?.querySelector(".ui5KioskKey__label")?.textContent?.trim() || el?.getAttribute("aria-label") || "?";
     };
 
     this._getViewModel().setData(
