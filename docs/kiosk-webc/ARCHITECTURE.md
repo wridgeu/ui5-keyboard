@@ -589,7 +589,7 @@ The light-DOM kiosk twin needs none of this: `[data-key]` is directly targetable
 
 - `@media (prefers-reduced-motion: reduce)`: disables transitions and transforms
 - `@media (forced-colors: active)`: uses system colors (ButtonText, Highlight, HighlightText)
-- `@media (hover: none)`: disables hover effects on touch-only devices
+- `@media (hover: hover)`: hover affordances apply only where a hovering primary pointer exists
 
 ### Content Density
 

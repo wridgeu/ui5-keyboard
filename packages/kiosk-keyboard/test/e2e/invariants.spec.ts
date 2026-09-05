@@ -364,3 +364,18 @@ test("the compact nav rows mirror with the document direction", async ({ page })
   );
   expect(left.left, "the horizontal arrow pair mirrors in RTL").toBeGreaterThan(right.left);
 });
+
+// A docked keyboard is pinned to the bottom viewport edge, where a home
+// indicator or a gesture-navigation bar can sit over its last key row. The
+// safe-area inset is `0px` unless the host page opts into `viewport-fit=cover`,
+// so the padding is read against a CDP-emulated inset. The docked root is laid
+// out while closed, so no open is needed.
+test("the docked keyboard pads its bottom edge by the safe-area inset", async ({ page }) => {
+  const root = keyboardRoot(page, "kb-docked");
+  const paddingBottom = () => root.evaluate((el) => parseFloat(getComputedStyle(el).paddingBottom));
+  const before = await paddingBottom();
+
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { bottom: 34, bottomMax: 34 } });
+  await expect.poll(paddingBottom).toBe(before + 34);
+});

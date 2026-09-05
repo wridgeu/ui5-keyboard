@@ -255,6 +255,8 @@ The hover effect lifts the key 1px. The active effect presses it down (1px lower
 | Easing                  | `cubic-bezier(0.4, 0, 0.2, 1)` | Material Design "standard" easing curve                                                        |
 | Visibility delay (hide) | 0.3s                           | Matches slide duration so `visibility: hidden` applies after the slide-out animation completes |
 
+Docked mode adds `env(safe-area-inset-bottom)` to its bottom padding, so the last key row clears a home indicator or a gesture-navigation bar. The inset is `0px` unless the host page opts into `viewport-fit=cover`.
+
 ## Space Bar Width
 
 ```css
