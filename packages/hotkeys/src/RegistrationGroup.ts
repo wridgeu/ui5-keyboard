@@ -70,12 +70,14 @@ export default class RegistrationGroup {
    * Enable automatic scope management via a UI5 Router.
    *
    * Attaches a `beforeRouteMatched` listener that resets the scope stack
-   * and pushes the matched route name as the active scope. The listener
-   * is automatically detached when `destroyAll()` is called.
+   * and pushes the matched route name as the active scope, plus a `bypassed`
+   * listener that resets to the global scope so an unmatched hash does not
+   * inherit the previous route's scope. Both listeners are automatically
+   * detached when `destroyAll()` is called.
    *
    * Calling this again silently replaces the previous router.
    *
-   * @param router - A UI5 Router or any object with `attachBeforeRouteMatched` / `detachBeforeRouteMatched`.
+   * @param router - A UI5 Router or any object with `attachBeforeRouteMatched` / `detachBeforeRouteMatched` and `attachBypassed` / `detachBypassed`.
    * @since 0.1.0
    */
   enableRouterIntegration(router: Router): void {
@@ -94,9 +96,15 @@ export default class RegistrationGroup {
       }
     };
 
+    const bypassedHandler = () => {
+      this._manager.resetToGlobalScope();
+    };
+
     router.attachBeforeRouteMatched(handler, this);
+    router.attachBypassed(bypassedHandler, this);
     this._routerCleanup = () => {
       router.detachBeforeRouteMatched(handler, this);
+      router.detachBypassed(bypassedHandler, this);
     };
 
     Log.info("Router integration enabled (via group)", undefined, "ui5.hotkeys.RegistrationGroup");

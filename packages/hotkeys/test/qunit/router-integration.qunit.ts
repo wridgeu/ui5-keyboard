@@ -13,13 +13,18 @@ import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpe
 interface MockRouter {
   attachBeforeRouteMatched: (handler: (...args: any[]) => void, listener: object) => void;
   detachBeforeRouteMatched: (handler: (...args: any[]) => void, listener: object) => void;
+  attachBypassed: (handler: (...args: any[]) => void, listener: object) => void;
+  detachBypassed: (handler: (...args: any[]) => void, listener: object) => void;
   fireRouteMatched: (name: string) => void;
   fireRouteMatchedUndefined: () => void;
+  fireBypassed: () => void;
 }
 
 function createMockRouter(): MockRouter {
   let _handler: ((...args: any[]) => void) | null = null;
   let _listener: object | null = null;
+  let _bypassedHandler: ((...args: any[]) => void) | null = null;
+  let _bypassedListener: object | null = null;
   return {
     attachBeforeRouteMatched(h: (...args: any[]) => void, l: object) {
       _handler = h;
@@ -30,6 +35,21 @@ function createMockRouter(): MockRouter {
         _handler = null;
         _listener = null;
       }
+    },
+    attachBypassed(h: (...args: any[]) => void, l: object) {
+      _bypassedHandler = h;
+      _bypassedListener = l;
+    },
+    detachBypassed(_h: (...args: any[]) => void, l: object) {
+      if (_bypassedListener === l) {
+        _bypassedHandler = null;
+        _bypassedListener = null;
+      }
+    },
+    fireBypassed() {
+      _bypassedHandler?.call(_bypassedListener, {
+        getParameter: (p: string) => (p === "hash" ? "#/bogus" : undefined),
+      });
     },
     fireRouteMatched(name: string) {
       _handler?.call(_listener, {
@@ -197,6 +217,35 @@ QUnit.test("destroyAll detaches router integration", (assert) => {
   group.destroyAll();
   router.fireRouteMatched("detail");
   assert.strictEqual(manager.getActiveScope(), "main", "Scope unchanged after group destroyed");
+});
+
+QUnit.test("Bypassed route resets to global scope", (assert) => {
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
+  const router = createMockRouter();
+  group.enableRouterIntegration(router as unknown as Router);
+
+  router.fireRouteMatched("integration");
+  assert.strictEqual(manager.getActiveScope(), "integration");
+
+  router.fireBypassed();
+  assert.strictEqual(
+    manager.getActiveScope(),
+    GLOBAL_SCOPE,
+    "not-found target carries the global scope, not the previous route's",
+  );
+});
+
+QUnit.test("destroyAll detaches the bypassed listener", (assert) => {
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
+  const router = createMockRouter();
+  group.enableRouterIntegration(router as unknown as Router);
+
+  group.destroyAll();
+  manager.pushScope("manual");
+  router.fireBypassed();
+  assert.strictEqual(manager.getActiveScope(), "manual", "Scope unchanged after group destroyed");
 });
 
 QUnit.test("New group can re-enable router integration after previous group destroyed", (assert) => {

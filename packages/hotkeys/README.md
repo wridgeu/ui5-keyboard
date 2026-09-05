@@ -539,7 +539,7 @@ this._hotkeys.enableRouterIntegration(this.getRouter());
 this.getRouter().initialize();
 ```
 
-When the user navigates between routes, the router handler automatically resets to global scope and pushes the matched route name. Dialog scopes still require manual `pushScope`/`popScope` since they are not route-based.
+When the user navigates between routes, the router handler automatically resets to global scope and pushes the matched route name. When no route matches the hash, the router's `bypassed` event resets to global scope without pushing anything, so the not-found target does not inherit the previous route's scope. Dialog scopes still require manual `pushScope`/`popScope` since they are not route-based.
 
 Calling `enableRouterIntegration()` again (e.g., on Component re-entry in FLP) silently replaces the previous router.
 
