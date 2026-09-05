@@ -123,3 +123,19 @@ test.describe("Interactive States", () => {
     await page.evaluate(() => (document.getElementById("kb-docked-custom") as HTMLElement & { close(): void }).close());
   });
 });
+
+// The icon-label fixture names SAP icons the component does not import for
+// itself; the consumer contract is that the page imports every icon module it
+// names. CI compares no pixels, so the baseline cannot catch a blank keycap.
+test.describe("Icon Resolution", () => {
+  test("resolves every SAP icon the icon-label fixture names", async ({ page }) => {
+    const icons = keyboardRoot(page, "kb-icon-label-variations").locator("ui5-icon");
+    await expect(icons).toHaveCount(6);
+    for (const icon of await icons.all()) {
+      await expect(icon).not.toHaveAttribute("invalid");
+      const box = await icon.boundingBox();
+      expect(box?.width).toBeGreaterThan(0);
+      expect(box?.height).toBeGreaterThan(0);
+    }
+  });
+});
