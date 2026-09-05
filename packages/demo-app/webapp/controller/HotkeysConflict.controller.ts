@@ -101,7 +101,6 @@ export default class HotkeysConflict extends BaseController {
       );
       stateModel.setProperty("/conflictState", "Information");
     } catch (error) {
-      this._clearConflictHandles();
       stateModel.setProperty("/conflictStatus", `Registration failed (${behavior}): ${String(error)}`);
       stateModel.setProperty("/conflictState", "Error");
     }

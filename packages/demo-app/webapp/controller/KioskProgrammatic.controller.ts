@@ -135,6 +135,8 @@ export default class KioskProgrammatic extends BaseController {
       ],
     ];
     this._addCustomLayout(this._getKeyboard(), "pinpad", pinpad);
+    this._addLayoutOption("pinpad");
+
     MessageToast.show("Pinpad layout registered");
   }
 

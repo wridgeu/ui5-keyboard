@@ -8,12 +8,12 @@ import BaseController from "./BaseController";
 
 const MODE_DESCRIPTIONS = {
   default:
-    "Built-in English aria-labels (no customization). Special keys show icons; their text is only exposed to screen readers.",
+    "Built-in English texts (no customization). Special keys show an icon plus their text, and that visible text is the accessible name.",
   french:
-    "French aria-labels applied via setI18nResolver(). Shift -> Maj, Enter -> Entr\u00e9e, Space -> Espace (visible on key).",
+    "French texts applied via setI18nResolver(). Shift -> Maj, Enter -> Entr\u00e9e, Space -> Espace, each visible on its keycap.",
   override:
     'Partial English overrides via resolver. Enter -> "Go", Backspace -> "Delete", keyboard aria-label -> "Touch Keyboard".',
-  hook: 'Programmatic resolver. Uppercases special-key aria-labels (SHIFT, ENTER, etc.) and sets the keyboard aria-label to "Custom Keyboard".',
+  hook: 'Programmatic resolver. Uppercases special-key texts (SHIFT, ENTER, etc.) and sets the keyboard aria-label to "Custom Keyboard".',
 } satisfies Record<string, string>;
 
 const FRENCH_TEXTS = {
@@ -157,7 +157,8 @@ export default class KioskI18nExtensibility extends BaseController {
 
     const readKeyLabel = (dataKey: string): string => {
       const el = dom.querySelector(`[data-key="${CSS.escape(dataKey)}"]`);
-      return el?.getAttribute("aria-label") ?? "?";
+      // Keys with visible text carry no aria-label (WCAG 2.5.3); only icon-only keys do.
+      return el?.querySelector(".ui5KioskKey__label")?.textContent?.trim() || el?.getAttribute("aria-label") || "?";
     };
 
     this._getViewModel().setData(
