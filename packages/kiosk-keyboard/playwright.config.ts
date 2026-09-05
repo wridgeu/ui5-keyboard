@@ -12,7 +12,8 @@ import { CHROMIUM_ARGS, DESKTOP_VIEWPORT, ui5ServeWebServer } from "./playwright
  *
  * The behavioral specs (autotype, focus, i18n, inputmode, interop) are
  * desktop-only; the visual specs run on the desktop + device matrix. The FLP
- * lifecycle spec uses a different server and lives in playwright.flp.config.ts.
+ * specs (flp-*.spec.ts) use a different server and run under
+ * playwright.flp.config.ts.
  *
  * Browser provisioning: `npx playwright install chromium` (`--with-deps` in CI).
  * Visual baselines under test/e2e/__baselines__/<project>/ are committed and
@@ -33,13 +34,13 @@ const deviceProfiles = [
 ];
 
 // Behavioral specs need a desktop interaction context (real focus, typing) and
-// run desktop-only; flp-lifecycle / readme-screenshots run under their own
+// run desktop-only; the flp-* specs / readme-screenshots run under their own
 // configs. Everything else is a visual spec and runs on the device matrix too.
 // A denylist (not an allowlist) keeps the matrix self-maintaining: a new visual
 // spec joins it automatically, while a forgotten new behavioral spec fails
 // loudly on mobile instead of being silently skipped.
 const DESKTOP_ONLY_SPECS = /(autotype|focus|i18n|inputmode|interop)\.spec\.ts$/;
-const SEPARATE_CONFIG_SPECS = /(flp-lifecycle|readme-screenshots)\.spec\.ts$/;
+const SEPARATE_CONFIG_SPECS = /(flp-.*|readme-screenshots)\.spec\.ts$/;
 
 // CI narrows the device profiles to the structural invariants. The rest of their
 // matrix is pixel comparison, and CI passes --ignore-snapshots, under which
@@ -88,7 +89,7 @@ export default defineConfig({
   projects: [
     {
       name: "desktop",
-      // FLP runs under playwright.flp.config.ts; readme-screenshots is generated
+      // The flp-* specs run under playwright.flp.config.ts; readme-screenshots is generated
       // on demand via test:e2e:docs, not part of the regression run.
       testIgnore: SEPARATE_CONFIG_SPECS,
       use: { viewport: DESKTOP_VIEWPORT },
