@@ -8,6 +8,7 @@ import TextArea from "sap/m/TextArea";
 import Popover from "sap/m/Popover";
 import VBox from "sap/m/VBox";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
+import type { LayoutDefinition } from "ui5/kiosk/types";
 import {
   createFakeKeyElement,
   freezeDoubleClickWindow,
@@ -582,6 +583,47 @@ QUnit.test("Backspace with focus on a keycap restores the DOM caret after the ed
 
   assert.strictEqual(inputDom.selectionStart, 10, "DOM selectionStart back at the caret");
   assert.strictEqual(inputDom.selectionEnd, 10, "DOM selectionEnd back at the caret");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// The navigation op reads the DOM's selectionDirection as the anchor, so the
+// restore must carry the direction too, or the next Shift+Arrow extends the wrong end.
+QUnit.test("Shift+Arrow with focus on a keycap restores the selection direction after the edit", async (assert) => {
+  const input = new Input({ value: "hello world" });
+  input.placeAt("qunit-fixture");
+
+  const layout: LayoutDefinition = [[{ value: "{shift}" }, { value: "{fkey:ArrowLeft}" }, { value: "q" }]];
+  const kb = new KioskKeyboard({
+    layout: "test-shift-arrow",
+    controls: [input.getId()],
+    customLayouts: [new CustomLayout({ name: "test-shift-arrow", rows: layout })],
+  });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  inputDom.focus();
+  inputDom.setSelectionRange(11, 11);
+
+  getRequiredKeyElement(kb, "q").focus();
+
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{fkey:ArrowLeft}");
+  assert.strictEqual(inputDom.selectionStart, 10, "Selection extends one grapheme left");
+  assert.strictEqual(inputDom.selectionDirection, "backward", "Anchor stays at the caret");
+
+  inputDom.setSelectionRange(0, 0);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  assert.strictEqual(inputDom.selectionStart, 10, "DOM selectionStart back at the selection");
+  assert.strictEqual(inputDom.selectionEnd, 11, "DOM selectionEnd back at the selection");
+  assert.strictEqual(inputDom.selectionDirection, "backward", "DOM direction back to backward");
+
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{fkey:ArrowLeft}");
+  assert.strictEqual(inputDom.selectionStart, 9, "Second Shift+Left keeps extending from the same anchor");
+  assert.strictEqual(inputDom.selectionEnd, 11, "Anchor unchanged");
 
   input.destroy();
   kb.destroy();

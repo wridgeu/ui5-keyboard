@@ -127,12 +127,15 @@ export default class TargetInputSession {
     this._cursorPos = pos;
     if (document.activeElement === dom) return;
 
+    // The navigation op reads the anchor back from selectionDirection, so it
+    // is restored along with the range.
+    const direction = dom.selectionDirection ?? undefined;
     if (this._cursorSyncFrame !== null) cancelAnimationFrame(this._cursorSyncFrame);
     this._cursorSyncFrame = requestAnimationFrame(() => {
       this._cursorSyncFrame = null;
       if (!dom.isConnected || document.activeElement === dom) return;
       try {
-        dom.setSelectionRange(pos[0], pos[1]);
+        dom.setSelectionRange(pos[0], pos[1], direction);
       } catch {
         // May throw on certain input types (e.g. type="number")
       }
