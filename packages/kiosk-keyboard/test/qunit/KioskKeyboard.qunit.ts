@@ -557,6 +557,36 @@ QUnit.test("Consecutive backspaces delete from the tracked caret", async (assert
   kb.destroy();
 });
 
+// Focus parked on a keycap leaves the target unfocused while the delete runs;
+// the browser then discards the input's selection and the session must restore it.
+QUnit.test("Backspace with focus on a keycap restores the DOM caret after the edit", async (assert) => {
+  const input = new Input({ value: "hello world" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  inputDom.focus();
+  inputDom.setSelectionRange(11, 11);
+
+  getRequiredKeyElement(kb, "q").focus();
+
+  tapKey(kb, "{backspace}");
+  assert.strictEqual(input.getValue(), "hello worl", "Last character deleted");
+
+  // Stands in for the discard, which no synthetic event reproduces; the browser
+  // one is covered by test/e2e/focus.spec.ts.
+  inputDom.setSelectionRange(0, 0);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  assert.strictEqual(inputDom.selectionStart, 10, "DOM selectionStart back at the caret");
+  assert.strictEqual(inputDom.selectionEnd, 10, "DOM selectionEnd back at the caret");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Space key inserts a space character", async (assert) => {
   const input = new Input({ value: "hi" });
   input.placeAt("qunit-fixture");
