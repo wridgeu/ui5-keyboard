@@ -59,11 +59,13 @@ export default class HotkeyMatcher {
       logComponent: LOG_COMPONENT,
     };
 
-    return (
+    const matched =
       this._matchOnPath(eventPath, scopesToCheck, matchOpts) ??
-      this._matchCallbackTargets(pathSet, scopesToCheck, matchOpts) ??
-      this._recordOffPathSkips(pathSet, scopesToCheck, event, skipInfo)
-    );
+      this._matchCallbackTargets(pathSet, scopesToCheck, matchOpts);
+    if (matched) return matched;
+
+    if (skipInfo) this._recordOffPathSkips(pathSet, scopesToCheck, event, skipInfo);
+    return null;
   }
 
   /** Pass 1a: element-target registrations, innermost path node first. */
@@ -129,15 +131,13 @@ export default class HotkeyMatcher {
   /**
    * Skip-reason pass for off-path targets: records TargetMismatch for
    * registrations whose key combo matches but whose target is not in the path.
-   * Matches nothing, so it always yields `null` for the caller's chain.
    */
   private _recordOffPathSkips(
     pathSet: ReadonlySet<EventTarget>,
     scopes: string[],
     event: KeyboardEvent,
-    skipInfo: SkipInfo | null,
-  ): null {
-    if (!skipInfo) return null;
+    skipInfo: SkipInfo,
+  ): void {
     for (const scope of scopes) {
       const bucket = this._index.getBucket(scope);
       if (!bucket) continue;
@@ -154,7 +154,6 @@ export default class HotkeyMatcher {
         }
       }
     }
-    return null;
   }
 
   /**
