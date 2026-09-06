@@ -63,7 +63,7 @@
     },
     {
       "title": "Dialog Integration",
-      "description": "Keyboard behavior with sap.m.Dialog - auto-close and embedded approaches",
+      "description": "Keyboard behavior with sap.m.Dialog - auto-close, embedded and shared docked approaches",
       "route": "kioskDialog"
     },
     {

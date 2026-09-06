@@ -107,6 +107,7 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a themed, accessible virtual ke
 - SAP Horizon theming via LESS variables (all key states use `@sapUiButton*` parameters)
 - Compact and cozy content density support
 - F6 fast navigation group (`data-sap-ui-fastnavgroup`)
+- Docked keyboard usable over a modal `sap.m.Dialog` (stacks above the block layer, exempt from the focus trap)
 - RTL support
 - Reduced motion support (`prefers-reduced-motion`)
 
@@ -1086,6 +1087,18 @@ The docked keyboard uses `position: fixed` with `z-index: var(--ui5KioskKeyboard
 
 With `mobileKeyboard="Auto"` (the default), coarse-pointer devices intentionally defer to the native on-screen keyboard. In that mode, calling `show()` keeps the custom docked keyboard closed. Set `mobileKeyboard="Custom"` to always open the UI5 control regardless of device.
 
+### Over a `sap.m.Dialog`
+
+A docked keyboard stays usable while a modal dialog is open, so one keyboard can serve the page and the dialog's inputs. List the dialog's input (or the dialog) in `controls` alongside the page inputs, or leave `controls` empty; an id that only exists once the dialog is loaded logs a warning and is picked up on the next focus change. Give the dialog `initialFocus` on its input so the first focus lands on a claimable target and the keyboard never closes and reopens in between.
+
+- **Stacking.** A modal takes its z-index from `sap.ui.core.Popup`, a counter `--ui5KioskKeyboard-dockedZIndex` cannot follow. While a block layer is showing, the keyboard takes the next popup z-index whenever it opens or claims an input below the topmost popup, and hands the stylesheet value back when the last modal closes.
+- **Placement.** The raise only works from an ancestor chain without a stacking context. `sap.m.Page` is one (`isolation: isolate; z-index: 0` in every theme), so a docked keyboard inside a Page's `content` paints under the block layer whatever its z-index. Declare it as a sibling of the Page in the view, or `placeAt` a body-level container. Inline keyboards inside the dialog are unaffected.
+- **Focus trap.** The keyboard root carries `data-sap-ui-integration-popup-content` and the accent-variant popover is registered through `Popup.addExternalContent`, so a modal does not pull focus back out of the keycaps or the popover. Pointer typing never moves focus off the input. Tab stays inside the dialog's own tab cycle; the keys are reached by pointer or programmatically.
+- **Escape.** The keyboard's document-level Escape handler runs first and closes the keyboard; the same keystroke still reaches the dialog and closes it. A page input re-focused from the dialog's `afterClose` reopens the keyboard.
+- **Overlap.** A centered dialog on a short viewport can sit behind the keyboard. `Popup.setWithinArea` (global) or the dialog's `contentHeight` are the levers; `sap.m.Dialog` exposes no per-instance `within`.
+
+The Dialog Integration demo shows the page keyboard serving a dialog (Approach C) next to a dialog that closes it (A) and one with its own inline keyboard (B).
+
 ---
 
 ## Auto-Show
@@ -1633,6 +1646,7 @@ When Shift is active, the renderer shows uppercase labels and the Shift key gets
 - Shift held on that keystroke types the key's shifted glyph, so a capital is reachable without first activating `{shift}`. The Shift is transient: it does not latch the on-screen Shift state, so the keycap labels stay as they are. Ctrl, Alt and Meta do not activate a key
 - A key activated from the keyboard shows the same pressed styling a pointer press gives, for as long as the activating key is held
 - The keyboard is an F6 navigation group (`data-sap-ui-fastnavgroup="true"`)
+- The root carries `data-sap-ui-integration-popup-content`, so a modal `sap.ui.core.Popup` does not pull focus back out of the keycaps and an autoclose popover stays open while the keyboard types into its input
 - Disabled state applies `aria-disabled="true"` to both the root and individual keys
 - ARIA live region announces keyboard open/close, Shift and Caps Lock, layout compaction, and accent-variant
   popup open/close to screen readers. The control speaks through `sap.ui.core.InvisibleMessage`, so the region

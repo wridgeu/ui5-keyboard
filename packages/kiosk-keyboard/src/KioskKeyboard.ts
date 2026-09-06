@@ -9,6 +9,8 @@ import InvisibleMessage from "sap/ui/core/InvisibleMessage";
 import type { AccessibilityInfo } from "sap/ui/core/library";
 import { InvisibleMessageMode } from "sap/ui/core/library";
 import Popover from "sap/m/Popover";
+import Popup from "sap/ui/core/Popup";
+import type { Popup$BlockLayerStateChangeEvent } from "sap/ui/core/Popup";
 import { PlacementType } from "sap/m/library";
 import { getLayoutMeta } from "./internal/layout-meta";
 import type { LayoutDefinition, CompositionMiddleware } from "./types";
@@ -176,6 +178,10 @@ export default class KioskKeyboard extends Control {
   private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
   /** Detaches the document Escape listener of the current open period, or `null` while closed. */
   private _escapeAbort!: AbortController | null;
+  /** Whether a modal popup's block layer is showing, tracked from `Popup.blockLayerStateChange`. */
+  private _modalOpen!: boolean;
+  /** The popup-stack z-index the docked keyboard holds above a modal, or `null` while the stylesheet's applies. */
+  private _raisedZIndex!: number | null;
   /** Detaches the window blur safety net for the current press, or `null` between presses. */
   private _pressedBlurAbort!: AbortController | null;
   private _focusClaimService!: FocusClaimService;
@@ -903,6 +909,9 @@ export default class KioskKeyboard extends Control {
     // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
     this.addDelegate(this._keyGridNav, true);
     this._open = false;
+    this._modalOpen = false;
+    this._raisedZIndex = null;
+    Popup.attachBlockLayerStateChange(this._onBlockLayerStateChange, this);
     this._controlsDelegation = new ControlsDelegationController({
       getControls: () => this.getControls(),
       getParent: () => this.getParent(),
@@ -1051,12 +1060,14 @@ export default class KioskKeyboard extends Control {
 
   /** Keeps docked/closed root classes in sync without forcing a re-render. */
   private _syncDockedDomState(): void {
-    const dom = this.getDomRef();
+    const dom = this._rootDomRef();
     if (!dom) return;
 
     const docked = this.getDocked();
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootDocked, docked);
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootClosed, docked && !this._open);
+    // A re-render drops the inline style along with the root classes.
+    if (this._raisedZIndex !== null) dom.style.zIndex = String(this._raisedZIndex);
   }
 
   override exit(): void {
@@ -1073,6 +1084,9 @@ export default class KioskKeyboard extends Control {
       KioskKeyboard._announcements.teardown();
     }
 
+    Popup.detachBlockLayerStateChange(this._onBlockLayerStateChange, this);
+    const variantPopover = this.getAggregation("_variantPopover");
+    if (variantPopover instanceof Popover) Popup.removeExternalContent(`#${CSS.escape(variantPopover.getId())}`);
     this._controlsDelegation.teardown();
     this._physicalKeyHighlight.detach();
     this._responsiveSizing.destroy();
@@ -1631,6 +1645,10 @@ export default class KioskKeyboard extends Control {
     // Before the open guard: a deferred auto-show close must not land on an
     // already-open keyboard that show() was just called on.
     this._autoShowBehavior.cancelPendingClose();
+    // Before the open guard as well: auto-show routes every claim through here,
+    // and a claim from inside a second dialog stacked over the first is what
+    // lifts an already-raised keyboard above that one too.
+    this._raiseAboveModalPopup();
     if (this._open) return this;
     if (this._nativeKbSuppression.shouldDeferToNative()) return this;
 
@@ -1671,6 +1689,35 @@ export default class KioskKeyboard extends Control {
     }
     this.fireAfterClose();
     return this;
+  }
+
+  /**
+   * Stacks the docked keyboard above the topmost modal popup, so it stays usable
+   * over a `sap.m.Dialog` and its block layer. A modal takes `Popup.getNextZIndex()`
+   * for itself and its block layer, a counter the stylesheet's fixed
+   * `--ui5KioskKeyboard-dockedZIndex` cannot follow, so while a block layer shows
+   * the keyboard takes the next value whenever it is not already above the last
+   * one handed out. The value is handed back when the last modal closes.
+   */
+  private _raiseAboveModalPopup(): void {
+    if (!this._modalOpen) return;
+    const dom = this._rootDomRef();
+    if (!dom) return;
+    if (this._raisedZIndex !== null && this._raisedZIndex >= Popup.getLastZIndex()) return;
+    this._raisedZIndex = Popup.getNextZIndex();
+    dom.style.zIndex = String(this._raisedZIndex);
+  }
+
+  /** Fires when the first modal block layer shows and when the last one hides. */
+  private _onBlockLayerStateChange(event: Popup$BlockLayerStateChangeEvent): void {
+    this._modalOpen = event.getParameter("visible") === true;
+    if (this._modalOpen) {
+      if (this._open) this._raiseAboveModalPopup();
+      return;
+    }
+    this._raisedZIndex = null;
+    const dom = this._rootDomRef();
+    if (dom) dom.style.zIndex = "";
   }
 
   /**
@@ -2070,6 +2117,11 @@ export default class KioskKeyboard extends Control {
       // Stable hook the theme uses to size the options to the anchor key and to
       // flatten the framework content frame, scoped to this control's popover.
       popover.addStyleClass(KIOSK_KEYBOARD_DOM.classes.variantPopover);
+      // The popover takes focus when it opens, and it renders into the static
+      // area rather than under the keyboard root, so a modal dialog would pull
+      // focus back out of it: register it as popup content the way the root's
+      // attribute does. Removed again in `exit`.
+      Popup.addExternalContent(`#${CSS.escape(popover.getId())}`);
       this.setAggregation("_variantPopover", popover, true);
     }
     syncStyleClass("sapUiSizeCondensed", this, popover);

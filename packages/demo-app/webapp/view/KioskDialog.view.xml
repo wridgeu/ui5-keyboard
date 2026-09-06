@@ -14,7 +14,7 @@
                         <FlexItemData growFactor="1" baseSize="18rem" />
                     </layoutData>
                     <VBox class="sapUiSmallMargin">
-                        <Text text="Tap the input below to open the docked keyboard. When a dialog opens, the docked keyboard closes because focus leaves the page input." />
+                        <Text text="Tap the input below to open the docked keyboard. Whether it stays open once a dialog opens depends on the approach: it closes for A, because focus leaves the page input, and stays for C, whose dialog input it also targets." />
                         <Label text="Page Input" labelFor="pageInput" class="sapUiSmallMarginTop" />
                         <Input
                             id="pageInput"
@@ -51,18 +51,26 @@
                         press=".onOpenDialogB"
                         class="sapUiSmallMarginTop sapUiSmallMarginBottom" />
                     <Text text="Dialog with its own inline KioskKeyboard targeting the dialog input." />
+                    <Button
+                        text="Approach C: Dialog with Docked Keyboard"
+                        press=".onOpenDialogC"
+                        class="sapUiSmallMarginTop sapUiSmallMarginBottom" />
+                    <Text text="The page's docked keyboard stays open, renders above the dialog, and types into the dialog input. On dialog close, it returns to the page input." />
                 </VBox>
             </Panel>
-
-            <kiosk:KioskKeyboard
-                id="dialogDockedKeyboard"
-                docked="true"
-                autoShow="true"
-                controls="pageInput"
-                keyPress=".onKeyPress"
-                afterOpen=".onDockedAfterOpen"
-                afterClose=".onDockedAfterClose"
-                ariaLabel="Page Keyboard" />
         </content>
     </Page>
+
+    <!-- A sibling of the Page, not its content: sap.m.Page is a stacking context
+         (isolation: isolate), so a docked keyboard inside it could never paint
+         above a dialog's block layer, whatever its z-index. -->
+    <kiosk:KioskKeyboard
+        id="dialogDockedKeyboard"
+        docked="true"
+        autoShow="true"
+        controls="pageInput,dialogCInput"
+        keyPress=".onKeyPress"
+        afterOpen=".onDockedAfterOpen"
+        afterClose=".onDockedAfterClose"
+        ariaLabel="Page Keyboard" />
 </mvc:View>

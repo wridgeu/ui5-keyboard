@@ -7,11 +7,12 @@ import { Scope } from "../constants";
 import BaseController from "./BaseController";
 
 /**
- * Keyboard behavior with sap.m.Dialog - two approaches:
- * A) Dialog without keyboard (docked auto-closes), and
- * B) Dialog with embedded inline keyboard.
+ * Keyboard behavior with sap.m.Dialog - three approaches:
+ * A) Dialog without keyboard (docked auto-closes),
+ * B) Dialog with embedded inline keyboard, and
+ * C) Dialog whose input the page's docked keyboard also targets.
  *
- * Both dialogs are XML fragments loaded once and reused across opens; cleanup
+ * All dialogs are XML fragments loaded once and reused across opens; cleanup
  * and re-focus hang off the dialog's afterClose so ESC and router-driven closes
  * behave identically.
  *
@@ -20,6 +21,7 @@ import BaseController from "./BaseController";
 export default class KioskDialog extends BaseController {
   private _dialogA?: Promise<Dialog>;
   private _dialogB?: Promise<Dialog>;
+  private _dialogC?: Promise<Dialog>;
 
   override onInit(): void {
     const stateModel = this.getStateModel();
@@ -55,6 +57,15 @@ export default class KioskDialog extends BaseController {
       name: "demo.hotkeys.view.fragments.DialogEmbeddedKeyboard",
     }) as Promise<Dialog>;
     void this._dialogB.then((dialog) => dialog.open());
+  }
+
+  onOpenDialogC(): void {
+    // SAFETY: loadFragment resolves to the fragment's single root control, and
+    // DialogDockedKeyboard.fragment.xml declares exactly one, a sap.m.Dialog.
+    this._dialogC ??= this.loadFragment({
+      name: "demo.hotkeys.view.fragments.DialogDockedKeyboard",
+    }) as Promise<Dialog>;
+    void this._dialogC.then((dialog) => dialog.open());
   }
 
   onCloseDialog(event: Button$PressEvent): void {

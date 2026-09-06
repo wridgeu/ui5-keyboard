@@ -91,6 +91,9 @@ sap.ui.define([], () => {
       "KioskKeyboard-docked": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Docked Mode",
       },
+      "KioskKeyboard-dialog": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard over a sap.m.Dialog",
+      },
       "KioskKeyboard-a11y": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Accessibility",
       },

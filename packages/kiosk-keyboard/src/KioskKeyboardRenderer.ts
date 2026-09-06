@@ -90,6 +90,10 @@ const KioskKeyboardRenderer = {
       rm.attr("aria-controls", targetId);
     }
     rm.attr("data-sap-ui-fastnavgroup", "true");
+    // Counts the keyboard as content of every open sap.ui.core.Popup: a modal
+    // dialog does not pull focus back from the keycaps, and an autoclose popover
+    // stays open while its input is typed into. Inert while no popup is open.
+    rm.attr("data-sap-ui-integration-popup-content", "");
   },
 
   /** The row loop: renders each layout row in order. */
