@@ -269,6 +269,41 @@ export function handleBackspace(dom: HTMLInputElement | HTMLTextAreaElement, cur
 }
 
 /**
+ * Where a navigation key puts the caret, or `null` for a key that is not one.
+ * `focus` is the moving end of the selection; without `extend`, a horizontal
+ * arrow over a non-collapsed selection lands on its edge instead of stepping
+ * past it.
+ */
+function caretAfterNavigation(
+  key: string,
+  value: string,
+  start: number,
+  end: number,
+  focus: number,
+  extend: boolean,
+): number | null {
+  const len = value.length;
+  switch (key) {
+    case "ArrowLeft":
+      return !extend && start !== end ? start : Math.max(0, focus - graphemeLengthBefore(value, focus));
+    case "ArrowRight":
+      return !extend && start !== end ? end : Math.min(len, focus + graphemeLengthAfter(value, focus));
+    case "Home":
+    case "PageUp":
+      return 0;
+    case "End":
+    case "PageDown":
+      return len;
+    case "ArrowUp":
+      return resolveVerticalCaret(value, extend ? focus : start, -1);
+    case "ArrowDown":
+      return resolveVerticalCaret(value, extend ? focus : end, 1);
+    default:
+      return null;
+  }
+}
+
+/**
  * Moves the caret for navigation-like keys without changing value. With
  * `extend`, moves the selection's focus and keeps its anchor instead, the way
  * Shift+Arrow does on a physical keyboard. The browser records which end is the
@@ -282,37 +317,12 @@ export function handleNavigation(
   extend = false,
 ): CursorPos | null {
   const [start, end] = resolveCursor(dom, cursor);
-  const value = dom.value;
-  const len = value.length;
   const backward = dom.selectionDirection === "backward";
   const focus = backward ? start : end;
   const anchor = backward ? end : start;
 
-  let newPos: number | null = null;
-  switch (key) {
-    case "ArrowLeft":
-      newPos = !extend && start !== end ? start : Math.max(0, focus - graphemeLengthBefore(value, focus));
-      break;
-    case "ArrowRight":
-      newPos = !extend && start !== end ? end : Math.min(len, focus + graphemeLengthAfter(value, focus));
-      break;
-    case "Home":
-    case "PageUp":
-      newPos = 0;
-      break;
-    case "End":
-    case "PageDown":
-      newPos = len;
-      break;
-    case "ArrowUp":
-      newPos = resolveVerticalCaret(value, extend ? focus : start, -1);
-      break;
-    case "ArrowDown":
-      newPos = resolveVerticalCaret(value, extend ? focus : end, 1);
-      break;
-    default:
-      return null;
-  }
+  const newPos = caretAfterNavigation(key, dom.value, start, end, focus, extend);
+  if (newPos === null) return null;
 
   const range: CursorPos = extend ? [Math.min(anchor, newPos), Math.max(anchor, newPos)] : [newPos, newPos];
   try {

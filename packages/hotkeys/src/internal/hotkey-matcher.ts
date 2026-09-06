@@ -1,7 +1,7 @@
 import Log from "sap/base/Log";
 import { UnhandledReason } from "../library";
 import { GLOBAL_SCOPE } from "./constants";
-import { findMatchInScope } from "./dispatch-core";
+import { findMatchInScope, type FindMatchOptions } from "./dispatch-core";
 import { matchesKeyboardEvent } from "./match";
 import { recordSkip, type SkipInfo } from "./skip-reason";
 import type RegistrationIndex from "./registration-index";
@@ -11,6 +11,9 @@ import type { HotkeyRegistrationInfo } from "../types";
 
 // Internal collaborators log under the public HotkeyManager component.
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
+
+/** The per-event half of `findMatchInScope`'s options; each pass supplies its own registrations. */
+type MatchOptions = Omit<FindMatchOptions, "registrations">;
 
 /**
  * The keydown matching engine. Finds the single winning registration for an
@@ -47,8 +50,25 @@ export default class HotkeyMatcher {
     const eventPath = this._getEventPath(event);
     const pathSet = new Set(eventPath);
     const scopesToCheck = activeScope !== GLOBAL_SCOPE ? [activeScope, GLOBAL_SCOPE] : [GLOBAL_SCOPE];
+    const matchOpts: MatchOptions = {
+      event,
+      isInput,
+      popupOpen,
+      skipInfo,
+      toRegistrationInfo: this._toRegistrationInfo,
+      logComponent: LOG_COMPONENT,
+    };
 
-    for (const scope of scopesToCheck) {
+    return (
+      this._matchOnPath(eventPath, scopesToCheck, matchOpts) ??
+      this._matchCallbackTargets(pathSet, scopesToCheck, matchOpts) ??
+      this._recordOffPathSkips(pathSet, scopesToCheck, event, skipInfo)
+    );
+  }
+
+  /** Pass 1a: element-target registrations, innermost path node first. */
+  private _matchOnPath(eventPath: EventTarget[], scopes: string[], matchOpts: MatchOptions): HotkeyRegistration | null {
+    for (const scope of scopes) {
       const bucket = this._index.getBucket(scope);
       if (!bucket || bucket.targets.size === 0) continue;
 
@@ -57,26 +77,21 @@ export default class HotkeyMatcher {
         const ids = this._index.getTargetRegistrationIds(bucket, node);
         if (!ids || ids.size === 0) continue;
 
-        // Attempt matching against registrations bound to this target
-        const registrations = this._index.getRegistrationsFromIds(ids);
-        const matched = findMatchInScope({
-          event,
-          isInput,
-          popupOpen,
-          registrations,
-          skipInfo,
-          toRegistrationInfo: this._toRegistrationInfo,
-          logComponent: LOG_COMPONENT,
-        });
-
-        if (matched) {
-          return matched;
-        }
+        const matched = findMatchInScope({ ...matchOpts, registrations: this._index.getRegistrationsFromIds(ids) });
+        if (matched) return matched;
       }
     }
+    return null;
+  }
 
-    // Pass 1b: callback-target registrations - resolve lazily and check path.
-    for (const scope of scopesToCheck) {
+  /** Pass 1b: callback-target registrations, resolved lazily and matched only with the target on the path. */
+  private _matchCallbackTargets(
+    pathSet: ReadonlySet<EventTarget>,
+    scopes: string[],
+    matchOpts: MatchOptions,
+  ): HotkeyRegistration | null {
+    const { event, skipInfo } = matchOpts;
+    for (const scope of scopes) {
       const bucket = this._index.getBucket(scope);
       if (!bucket || bucket.callbackTargetIds.size === 0) continue;
 
@@ -97,49 +112,48 @@ export default class HotkeyMatcher {
         }
 
         if (!resolved || !pathSet.has(resolved)) {
-          if (resolved && skipInfo) {
-            // Target resolved but not in path
-            if (matchesKeyboardEvent(event, reg.parsedHotkey)) {
-              recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, this._toRegistrationInfo);
-            }
+          // Target resolved but not in path
+          if (resolved && skipInfo && matchesKeyboardEvent(event, reg.parsedHotkey)) {
+            recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, this._toRegistrationInfo);
           }
           continue;
         }
 
-        const matched = findMatchInScope({
-          event,
-          isInput,
-          popupOpen,
-          registrations: [reg],
-          skipInfo,
-          toRegistrationInfo: this._toRegistrationInfo,
-          logComponent: LOG_COMPONENT,
-        });
+        const matched = findMatchInScope({ ...matchOpts, registrations: [reg] });
         if (matched) return matched;
       }
     }
+    return null;
+  }
 
-    // Skip-reason pass for off-path targets: record TargetMismatch for
-    // registrations whose key combo matches but target is not in the path.
-    if (skipInfo) {
-      for (const scope of scopesToCheck) {
-        const bucket = this._index.getBucket(scope);
-        if (!bucket) continue;
+  /**
+   * Skip-reason pass for off-path targets: records TargetMismatch for
+   * registrations whose key combo matches but whose target is not in the path.
+   * Matches nothing, so it always yields `null` for the caller's chain.
+   */
+  private _recordOffPathSkips(
+    pathSet: ReadonlySet<EventTarget>,
+    scopes: string[],
+    event: KeyboardEvent,
+    skipInfo: SkipInfo | null,
+  ): null {
+    if (!skipInfo) return null;
+    for (const scope of scopes) {
+      const bucket = this._index.getBucket(scope);
+      if (!bucket) continue;
 
-        for (const [targetNode, ids] of bucket.targets) {
-          if (pathSet.has(targetNode)) continue; // Already checked in main pass
-          if (targetNode instanceof Element && !targetNode.isConnected) continue; // Skip detached DOM refs
+      for (const [targetNode, ids] of bucket.targets) {
+        if (pathSet.has(targetNode)) continue; // Already checked in main pass
+        if (targetNode instanceof Element && !targetNode.isConnected) continue; // Skip detached DOM refs
 
-          for (const id of ids) {
-            const reg = this._index.getRegistration(id);
-            if (reg && matchesKeyboardEvent(event, reg.parsedHotkey)) {
-              recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, this._toRegistrationInfo);
-            }
+        for (const id of ids) {
+          const reg = this._index.getRegistration(id);
+          if (reg && matchesKeyboardEvent(event, reg.parsedHotkey)) {
+            recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, this._toRegistrationInfo);
           }
         }
       }
     }
-
     return null;
   }
 

@@ -86,25 +86,7 @@ export default class ControlsDelegationController {
    * renderer output directly.
    */
   sync(): void {
-    const ids = this._host.getControls();
-    const nextByInputId = new Map<string, string>();
-    const prevControlIds = new Set(this._registeredControlById.values());
-    const resolvedControlIds = new Set<string>();
-
-    // Resolve current IDs to canonical control IDs.
-    for (const inputId of ids) {
-      const control = this._findControlById(inputId);
-      if (!control) {
-        this._reportUnresolved(inputId);
-        continue;
-      }
-
-      // Forget the report, so an id that breaks again after resolving is reported again.
-      this._reportedUnresolvedIds.delete(inputId);
-      const controlId = control.getId();
-      nextByInputId.set(inputId, controlId);
-      resolvedControlIds.add(controlId);
-    }
+    const { nextByInputId, resolvedControlIds } = this._resolveControls(this._host.getControls());
 
     // Fast path: if the resolved (inputId → controlId) map and all delegate
     // instances are unchanged, no DOM reconciliation is needed. This skips
@@ -112,31 +94,7 @@ export default class ControlsDelegationController {
     // identical between events.
     if (this._isResolutionUnchanged(nextByInputId)) return;
 
-    // Detach controls no longer referenced or whose instance changed.
-    for (const controlId of prevControlIds) {
-      const prev = this._delegatedInstances.get(controlId);
-      if (!prev) continue;
-      if (resolvedControlIds.has(controlId) && Element.getElementById(controlId) === prev) continue;
-      prev.removeEventDelegate(this._delegate);
-    }
-
-    // Attach controls newly referenced or whose instance changed.
-    for (const controlId of resolvedControlIds) {
-      const control = Element.getElementById(controlId);
-      if (!(control instanceof Control)) continue;
-      if (prevControlIds.has(controlId) && this._delegatedInstances.get(controlId) === control) continue;
-      control.addEventDelegate(this._delegate);
-    }
-
-    // Rebuild instance tracking
-    this._delegatedInstances = new Map();
-    for (const controlId of resolvedControlIds) {
-      const control = Element.getElementById(controlId);
-      if (control instanceof Control) {
-        this._delegatedInstances.set(controlId, control);
-      }
-    }
-
+    this._rebindDelegates(resolvedControlIds);
     this._registeredControlById = nextByInputId;
     this._resolvedControlIds = resolvedControlIds;
 
@@ -148,14 +106,51 @@ export default class ControlsDelegationController {
 
     // Auto-target when exactly one control is resolved and nothing is active yet
     if (resolvedControlIds.size === 1 && !this._host.getActiveTargetId()) {
-      const [onlyId] = resolvedControlIds;
-      if (onlyId) {
-        const control = Element.getElementById(onlyId);
-        if (control instanceof Control) {
-          this._host.setActiveTarget(control);
-        }
-      }
+      const [only] = this._delegatedInstances.values();
+      if (only) this._host.setActiveTarget(only);
     }
+  }
+
+  /** Resolves the `controls` ids to canonical control ids, reporting the ones that resolve to nothing. */
+  private _resolveControls(ids: readonly string[]): {
+    nextByInputId: Map<string, string>;
+    resolvedControlIds: Set<string>;
+  } {
+    const nextByInputId = new Map<string, string>();
+    const resolvedControlIds = new Set<string>();
+    for (const inputId of ids) {
+      const control = this._findControlById(inputId);
+      if (!control) {
+        this._reportUnresolved(inputId);
+        continue;
+      }
+      // Forget the report, so an id that breaks again after resolving is reported again.
+      this._reportedUnresolvedIds.delete(inputId);
+      const controlId = control.getId();
+      nextByInputId.set(inputId, controlId);
+      resolvedControlIds.add(controlId);
+    }
+    return { nextByInputId, resolvedControlIds };
+  }
+
+  /**
+   * Moves the focus delegate off every instance that left `resolvedControlIds`
+   * or was re-created under its id, and onto every instance that joined.
+   */
+  private _rebindDelegates(resolvedControlIds: ReadonlySet<string>): void {
+    const prev = this._delegatedInstances;
+    const next = new Map<string, Control>();
+    for (const controlId of resolvedControlIds) {
+      const control = Element.getElementById(controlId);
+      if (control instanceof Control) next.set(controlId, control);
+    }
+    for (const [controlId, instance] of prev) {
+      if (next.get(controlId) !== instance) instance.removeEventDelegate(this._delegate);
+    }
+    for (const [controlId, control] of next) {
+      if (prev.get(controlId) !== control) control.addEventDelegate(this._delegate);
+    }
+    this._delegatedInstances = next;
   }
 
   teardown(): void {

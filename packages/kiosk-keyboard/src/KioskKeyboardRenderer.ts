@@ -7,7 +7,7 @@ import { classifyRow, keyElementId, type KeyPosition } from "./internal/dom";
 import { parseKeyAction } from "./internal/key-token";
 import { SPECIAL_KEY_ICONS, getKeyIcon, validateKeyIcon } from "./internal/key-icons";
 import { KeyboardType } from "./library";
-import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./internal/grapheme";
+import { glyphScriptOf, isSingleGlyph } from "./internal/grapheme";
 
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 
@@ -337,20 +337,7 @@ const KioskKeyboardRenderer = {
 
     if (isSingleGlyph(label)) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph);
-      // Hangul uses strict \p{Script=Hangul} so shared CJK punctuation
-      // (、。・) falls through to isCJKGlyph(). The else-if chain prevents
-      // double-classification. Indic and Arabic are disjoint by Unicode
-      // definition, so no guards are needed for them.
-      let glyphScript: string | undefined;
-      if (isHangulGlyph(label)) {
-        glyphScript = "hangul";
-      } else if (isCJKGlyph(label)) {
-        glyphScript = "cjk";
-      } else if (isIndicGlyph(label)) {
-        glyphScript = "indic";
-      } else if (isArabicGlyph(label)) {
-        glyphScript = "arabic";
-      }
+      const glyphScript = glyphScriptOf(label);
       if (glyphScript) {
         rm.attr(KIOSK_KEYBOARD_DOM.attributes.glyphScript, glyphScript);
       }

@@ -184,127 +184,144 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
     return commitComposition(compState, el) || null;
   }
 
+  /** Commits the live preedit and returns the machine to `empty`. */
+  function flush(el: HTMLInputElement | HTMLTextAreaElement): void {
+    commitPreedit(el);
+    resetInternal();
+  }
+
+  /** Rewrites the live preedit to `text` and records the phase it now stands in. */
+  function setPreedit(el: HTMLInputElement | HTMLTextAreaElement, text: string, next: Phase): void {
+    phase = next;
+    updateComposition(compState, el, text);
+    target = el;
+  }
+
+  /** Backspace peels one jamo off the preedit; with none live it is the host's to handle. */
+  function handleBackspace(el: HTMLInputElement | HTMLTextAreaElement): boolean {
+    if (!compState.composing) return false;
+    switch (phase) {
+      case "LVT":
+        curT = 0;
+        setPreedit(el, composeSyllable(curL, curV), "LV");
+        return true;
+      case "LV":
+        curV = 0;
+        setPreedit(el, jamoL(curL), "L");
+        return true;
+      case "L":
+        updateComposition(compState, el, "");
+        endComposition(compState, el);
+        resetInternal();
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /** No preedit: a consonant opens one, a lone vowel has nothing to join and is typed as-is. */
+  function onEmpty(el: HTMLInputElement | HTMLTextAreaElement, key: string, lIdx: number | undefined): boolean {
+    if (lIdx !== undefined) openPreedit(el, lIdx);
+    else insertText(el, key);
+    return true;
+  }
+
+  /** Preedit `L`: a vowel completes the syllable, a consonant starts the next one. */
+  function onL(
+    el: HTMLInputElement | HTMLTextAreaElement,
+    lIdx: number | undefined,
+    vIdx: number | undefined,
+  ): boolean {
+    if (vIdx !== undefined) {
+      curV = vIdx;
+      setPreedit(el, composeSyllable(curL, curV), "LV");
+      return true;
+    }
+    if (lIdx !== undefined) {
+      openPreedit(el, lIdx);
+      return true;
+    }
+    return false;
+  }
+
+  /** Preedit `LV`: a final closes the syllable, a vowel commits it and types itself, a consonant starts the next. */
+  function onLV(
+    el: HTMLInputElement | HTMLTextAreaElement,
+    key: string,
+    code: number,
+    lIdx: number | undefined,
+    vIdx: number | undefined,
+  ): boolean {
+    const tIdx = COMPAT_TO_T.get(code);
+    if (tIdx !== undefined) {
+      curT = tIdx;
+      setPreedit(el, composeSyllable(curL, curV, curT), "LVT");
+      return true;
+    }
+    if (vIdx !== undefined) {
+      flush(el);
+      insertText(el, key);
+      return true;
+    }
+    if (lIdx !== undefined) {
+      openPreedit(el, lIdx);
+      return true;
+    }
+    return false;
+  }
+
+  /** Preedit `LVT`: a vowel steals the final as the next syllable's lead, a consonant starts the next. */
+  function onLVT(
+    el: HTMLInputElement | HTMLTextAreaElement,
+    lIdx: number | undefined,
+    vIdx: number | undefined,
+  ): boolean {
+    if (vIdx !== undefined) {
+      // T-stealing: decompose LVT -> LV, use stolen T as leading consonant of new syllable
+      const stolenL = T_TO_L.get(curT);
+      if (stolenL !== undefined) {
+        if (!hasRoomForPreedit(el)) return true;
+        updateComposition(compState, el, composeSyllable(curL, curV));
+        flush(el);
+        startComposition(compState, el);
+        curL = stolenL;
+        curV = vIdx;
+        setPreedit(el, composeSyllable(curL, curV), "LV");
+        return true;
+      }
+    }
+    if (lIdx !== undefined) {
+      openPreedit(el, lIdx);
+      return true;
+    }
+    return false;
+  }
+
   return {
     handleKey(key: string, el: HTMLInputElement | HTMLTextAreaElement): boolean {
       // A refused target takes no edits, and declining hands the key to the host's guarded default branch.
       if (el.readOnly || el.disabled) return false;
+      if (key === "{backspace}") return handleBackspace(el);
 
-      if (key === "{backspace}") {
-        if (!compState.composing) return false;
-        if (phase === "LVT") {
-          phase = "LV";
-          curT = 0;
-          updateComposition(compState, el, composeSyllable(curL, curV));
-          target = el;
-          return true;
-        }
-        if (phase === "LV") {
-          phase = "L";
-          curV = 0;
-          updateComposition(compState, el, jamoL(curL));
-          target = el;
-          return true;
-        }
-        if (phase === "L") {
-          updateComposition(compState, el, "");
-          endComposition(compState, el);
-          resetInternal();
-          return true;
-        }
-        return false;
-      }
-
-      if (key.length !== 1) {
-        if (compState.composing) {
-          commitPreedit(el);
-          resetInternal();
-        }
-        return false;
-      }
-
-      const code = key.charCodeAt(0);
+      const code = key.length === 1 ? key.charCodeAt(0) : -1;
       const lIdx = COMPAT_TO_L.get(code);
       const vIdx = COMPAT_TO_V.get(code);
-
+      // Anything but a compatibility jamo ends the preedit and goes to the host untouched.
       if (lIdx === undefined && vIdx === undefined) {
-        if (compState.composing) {
-          commitPreedit(el);
-          resetInternal();
-        }
+        if (compState.composing) flush(el);
         return false;
       }
 
-      if (phase === "empty") {
-        if (lIdx !== undefined) {
-          openPreedit(el, lIdx);
-          return true;
-        }
-        if (vIdx !== undefined) {
-          insertText(el, key);
-          return true;
-        }
+      switch (phase) {
+        case "empty":
+          return onEmpty(el, key, lIdx);
+        case "L":
+          return onL(el, lIdx, vIdx);
+        case "LV":
+          return onLV(el, key, code, lIdx, vIdx);
+        case "LVT":
+          return onLVT(el, lIdx, vIdx);
       }
-
-      if (phase === "L") {
-        if (vIdx !== undefined) {
-          curV = vIdx;
-          phase = "LV";
-          updateComposition(compState, el, composeSyllable(curL, curV));
-          target = el;
-          return true;
-        }
-        if (lIdx !== undefined) {
-          openPreedit(el, lIdx);
-          return true;
-        }
-      }
-
-      if (phase === "LV") {
-        const tIdx = COMPAT_TO_T.get(code);
-        if (tIdx !== undefined) {
-          curT = tIdx;
-          phase = "LVT";
-          updateComposition(compState, el, composeSyllable(curL, curV, curT));
-          target = el;
-          return true;
-        }
-        if (vIdx !== undefined) {
-          commitPreedit(el);
-          resetInternal();
-          insertText(el, key);
-          return true;
-        }
-        if (lIdx !== undefined) {
-          openPreedit(el, lIdx);
-          return true;
-        }
-      }
-
-      if (phase === "LVT") {
-        if (vIdx !== undefined) {
-          // T-stealing: decompose LVT -> LV, use stolen T as leading consonant of new syllable
-          const stolenL = T_TO_L.get(curT);
-          if (stolenL !== undefined) {
-            if (!hasRoomForPreedit(el)) return true;
-            updateComposition(compState, el, composeSyllable(curL, curV));
-            commitPreedit(el);
-            resetInternal();
-            startComposition(compState, el);
-            curL = stolenL;
-            curV = vIdx;
-            phase = "LV";
-            updateComposition(compState, el, composeSyllable(curL, curV));
-            target = el;
-            return true;
-          }
-        }
-        if (lIdx !== undefined) {
-          openPreedit(el, lIdx);
-          return true;
-        }
-      }
-
-      return false;
     },
 
     commit(): string | null {
