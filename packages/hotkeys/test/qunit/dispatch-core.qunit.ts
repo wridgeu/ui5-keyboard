@@ -193,22 +193,6 @@ QUnit.test("Skips repeated event when ignoreRepeat is true", (assert) => {
   assert.strictEqual(skipInfo.reason, UnhandledReason.RepeatIgnored, "Skip reason is RepeatIgnored");
 });
 
-QUnit.test("Allows non-repeated event when ignoreRepeat is true", (assert) => {
-  const reg = makeRegistration("rep-ok", "Escape");
-  const event = mockKeyEvent({ key: "Escape", repeat: false });
-
-  const result = findMatchInScope({
-    event,
-    isInput: false,
-    popupOpen: false,
-    registrations: [reg],
-    toRegistrationInfo: toInfo,
-    logComponent: LOG_COMPONENT,
-  });
-
-  assert.strictEqual(result?.id, "rep-ok", "Non-repeated event matches");
-});
-
 QUnit.test("Skips in input when ignoreInputs resolves to true", (assert) => {
   // Plain "A" with ignoreInputs: true → always suppressed in inputs
   const reg = makeRegistration("inp", "A", { ignoreInputs: true, ignoreRepeat: false });

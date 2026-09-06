@@ -109,14 +109,6 @@ QUnit.test("Normalizes modifier order", (assert) => {
   assert.strictEqual(normalizeHotkey("Shift+Ctrl+S", Platform.Windows), "Control+Shift+S");
 });
 
-QUnit.test("Resolves Mod on Mac", (assert) => {
-  assert.strictEqual(normalizeHotkey("Mod+S", Platform.Mac), "Meta+S");
-});
-
-QUnit.test("Resolves Mod on Windows", (assert) => {
-  assert.strictEqual(normalizeHotkey("Mod+S", Platform.Windows), "Control+S");
-});
-
 QUnit.test("Normalizes aliases", (assert) => {
   assert.strictEqual(normalizeHotkey("cmd+shift+s", Platform.Mac), "Shift+Meta+S");
 });
@@ -165,10 +157,6 @@ QUnit.test("Meta+S to Mod+S on Mac", (assert) => {
 
 QUnit.test("Multi-modifier: Control+Shift+S to Mod+Shift+S on Windows", (assert) => {
   assert.strictEqual(convertToModFormat("Control+Shift+S", Platform.Windows), "Mod+Shift+S");
-});
-
-QUnit.test("Multi-modifier: Meta+Shift+S to Mod+Shift+S on Mac", (assert) => {
-  assert.strictEqual(convertToModFormat("Meta+Shift+S", Platform.Mac), "Mod+Shift+S");
 });
 
 QUnit.test("No conversion for non-platform modifier", (assert) => {

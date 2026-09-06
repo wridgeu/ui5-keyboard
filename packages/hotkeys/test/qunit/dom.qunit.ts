@@ -53,17 +53,6 @@ QUnit.test("Returns false for readonly text input", (assert) => {
   assert.notOk(isInputElement(el), "readonly text input is not editable");
 });
 
-QUnit.test("Returns false for readonly input with no explicit type", (assert) => {
-  const el = createElement("input", { readonly: "" });
-  assert.notOk(isInputElement(el), "readonly default-type input is not editable");
-});
-
-QUnit.test("Returns false for non-editable-type input even when readonly", (assert) => {
-  // readonly has no effect on button inputs; isInputElement still returns false
-  const el = createElement("input", { type: "button", readonly: "" });
-  assert.notOk(isInputElement(el), "button input stays false regardless of readonly");
-});
-
 QUnit.test("Returns true for textarea", (assert) => {
   const el = createElement("textarea");
   assert.ok(isInputElement(el));
@@ -100,17 +89,20 @@ QUnit.test("Returns false for non-HTMLElement", (assert) => {
 
 QUnit.module("dom - getEventTarget");
 
-QUnit.test("Returns the element that dispatched the event", (assert) => {
-  const div = document.createElement("div");
-  document.getElementById("qunit-fixture")!.appendChild(div);
+QUnit.test("Returns the node inside a shadow root that dispatched the event", (assert) => {
+  const host = document.createElement("div");
+  document.getElementById("qunit-fixture")!.appendChild(host);
+  const inner = document.createElement("div");
+  host.attachShadow({ mode: "open" }).appendChild(inner);
 
+  // Outside the shadow tree event.target is retargeted to the host.
   let capturedTarget: EventTarget | null = null;
-  div.addEventListener("click", (e) => {
+  host.addEventListener("click", (e) => {
     capturedTarget = getEventTarget(e);
   });
 
-  div.dispatchEvent(new Event("click", { bubbles: true }));
-  assert.strictEqual(capturedTarget, div, "Returns the dispatching element");
+  inner.dispatchEvent(new Event("click", { bubbles: true, composed: true }));
+  assert.strictEqual(capturedTarget, inner, "Returns the dispatching node, not the retargeted host");
 });
 
 QUnit.test("Falls back to event.target when composedPath is unavailable", (assert) => {

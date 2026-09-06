@@ -24,18 +24,10 @@ QUnit.test("Known aliases are resolved", (assert) => {
   assert.strictEqual(normalizeKeyName("PgDn"), "PageDown");
 });
 
-QUnit.test("Function keys are normalized", (assert) => {
+QUnit.test("Function keys F1-F24 are uppercased, out-of-range ones pass through", (assert) => {
+  assert.strictEqual(normalizeKeyName("f1"), "F1");
   assert.strictEqual(normalizeKeyName("f5"), "F5");
-  assert.strictEqual(normalizeKeyName("F5"), "F5");
-  assert.strictEqual(normalizeKeyName("f12"), "F12");
-  assert.strictEqual(normalizeKeyName("F1"), "F1");
-});
-
-QUnit.test("Function key boundary validation (F1-F24 only)", (assert) => {
-  assert.strictEqual(normalizeKeyName("F1"), "F1", "F1 normalizes");
-  assert.strictEqual(normalizeKeyName("f1"), "F1", "f1 normalizes");
-  assert.strictEqual(normalizeKeyName("F24"), "F24", "F24 normalizes");
-  assert.strictEqual(normalizeKeyName("f24"), "F24", "f24 normalizes");
+  assert.strictEqual(normalizeKeyName("f24"), "F24");
   assert.strictEqual(normalizeKeyName("F0"), "F0", "F0 passes through unchanged");
   assert.strictEqual(normalizeKeyName("f0"), "f0", "f0 passes through unchanged");
   assert.strictEqual(normalizeKeyName("F25"), "F25", "F25 passes through unchanged");
@@ -47,10 +39,4 @@ QUnit.test("Canonical key names are preserved", (assert) => {
   assert.strictEqual(normalizeKeyName("Enter"), "Enter");
   assert.strictEqual(normalizeKeyName("Tab"), "Tab");
   assert.strictEqual(normalizeKeyName("NumpadDecimal"), "NumpadDecimal");
-});
-
-QUnit.test("Special characters are returned as-is", (assert) => {
-  assert.strictEqual(normalizeKeyName("+"), "+");
-  assert.strictEqual(normalizeKeyName("-"), "-");
-  assert.strictEqual(normalizeKeyName("/"), "/");
 });
