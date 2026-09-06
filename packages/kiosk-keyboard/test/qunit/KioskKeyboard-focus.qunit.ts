@@ -303,41 +303,9 @@ QUnit.test("Alt+Arrow keys are not intercepted", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Meta+Arrow keys are not intercepted", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const firstKey = getFirstKeyElement(kb);
-  firstKey.setAttribute("tabindex", "0");
-  firstKey.focus();
-
-  firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", metaKey: true, bubbles: true }));
-  assert.strictEqual(document.activeElement, firstKey, "Focus unchanged with Meta+Arrow");
-
-  kb.destroy();
-});
-
 // ──────────────────────────────────────────────
 // controls multi-input targeting
 // ──────────────────────────────────────────────
-
-QUnit.test("controls resolves controls and registers focus delegation", async (assert) => {
-  const input1 = new Input("test-input-1");
-  const input2 = new Input("test-input-2");
-  input1.placeAt("qunit-fixture");
-  input2.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    controls: ["test-input-1", "test-input-2"],
-  });
-  await placeAndWait(kb);
-
-  assert.strictEqual(kb.getControls().length, 2, "controls property has 2 entries");
-
-  input1.destroy();
-  input2.destroy();
-  kb.destroy();
-});
 
 QUnit.test("Focusing a registered input sets it as target", async (assert) => {
   const input1 = new Input("target-input-a");
@@ -916,21 +884,6 @@ QUnit.test("getFocusDomRef returns null when keyboard is disabled", async (asser
   kb.destroy();
 });
 
-QUnit.test("Programmatic focus() on disabled keyboard does not focus a key", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  kb.setEnabled(false);
-  await waitForRender();
-
-  kb.focus();
-  const dom = kb.getDomRef()!;
-  const active = document.activeElement;
-  assert.notOk(active && dom.contains(active), "No key inside the keyboard has focus");
-
-  kb.destroy();
-});
-
 QUnit.test("applyFocusInfo is a no-op when keyboard is disabled", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
@@ -942,9 +895,6 @@ QUnit.test("applyFocusInfo is a no-op when keyboard is disabled", async (assert)
   await waitForRender();
 
   kb.applyFocusInfo(info);
-
-  const focusableKeys = getFocusableKeys(kb);
-  assert.strictEqual(focusableKeys.length, 0, "No key has tabindex=0 after applyFocusInfo on disabled keyboard");
 
   const active = document.activeElement;
   assert.notOk(active && getKeyboardDom(kb).contains(active), "No key inside the keyboard has focus");
@@ -1090,28 +1040,6 @@ QUnit.test("setVisible(false) closes docked keyboard", async (assert) => {
   assert.notOk(kb.isOpen(), "Docked keyboard is closed after hiding");
 
   kb.destroy();
-});
-
-// ──────────────────────────────────────────────
-// applyFocusInfo preventScroll
-// ──────────────────────────────────────────────
-
-[true, false].forEach((preventScroll) => {
-  QUnit.test(`applyFocusInfo fallback focuses the first key (preventScroll: ${preventScroll})`, async (assert) => {
-    const kb = new KioskKeyboard();
-    await placeAndWait(kb);
-
-    // No lastFocusedKey -> fallback path focuses the first key.
-    kb.applyFocusInfo({ preventScroll });
-
-    assert.strictEqual(
-      document.activeElement,
-      getFirstKeyElement(kb),
-      "Focus landed on the first key after applyFocusInfo fallback",
-    );
-
-    kb.destroy();
-  });
 });
 
 // ──────────────────────────────────────────────

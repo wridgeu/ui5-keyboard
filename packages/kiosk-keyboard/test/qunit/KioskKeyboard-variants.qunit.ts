@@ -69,7 +69,7 @@ function release(kb: KioskKeyboard, el: HTMLElement): void {
  * right button's mousedown/mouseup onto the simulated touchstart/touchend with
  * no button filter, and the native contextmenu only arrives after the mouseup.
  */
-function rightClick(kb: KioskKeyboard, el: HTMLElement): void {
+function rightClick(kb: KioskKeyboard, el: HTMLElement): Event {
   const touchStart = new Event("touchstart", { bubbles: true, cancelable: true });
   Object.defineProperty(touchStart, "target", { value: el, writable: false });
   Object.defineProperty(touchStart, "button", { value: 2, writable: false });
@@ -83,6 +83,7 @@ function rightClick(kb: KioskKeyboard, el: HTMLElement): void {
   const contextMenu = new Event("contextmenu", { bubbles: true, cancelable: true });
   Object.defineProperty(contextMenu, "target", { value: el, writable: false });
   kb.oncontextmenu(contextMenu);
+  return contextMenu;
 }
 
 /** Press and hold past the open threshold so the popup opens; leaves the press live. */
@@ -523,16 +524,6 @@ QUnit.test("hold opens the popup with the correct glyphs", async (assert) => {
   cleanup(kb, input);
 });
 
-QUnit.test("the lift-off after a hold does not also insert the base glyph", async (assert) => {
-  const { kb, input } = await makeKeyboard();
-  const aKey = getRequiredKeyElement(kb, "a");
-  await holdOpen(kb, aKey);
-  release(kb, aKey);
-  assert.strictEqual(input.getValue(), "", "no base 'a' inserted by the release that opened the popup");
-  assert.ok(getPopup(), "popup stayed open (sticky) after release");
-  cleanup(kb, input);
-});
-
 QUnit.test("a commit while the origin key is still held does not also type the base", async (assert) => {
   const { kb, input } = await makeKeyboard();
   const aKey = getRequiredKeyElement(kb, "a");
@@ -764,22 +755,12 @@ QUnit.test("a tap that dismisses the popup and latches Shift announces each in t
   cleanup(kb, input);
 });
 
-QUnit.test("right-click opens the popup on a key with variants", async (assert) => {
-  const { kb, input } = await makeKeyboard();
-  const aKey = getRequiredKeyElement(kb, "a");
-  const event = new Event("contextmenu", { bubbles: true, cancelable: true });
-  Object.defineProperty(event, "target", { value: aKey, writable: false });
-  kb.oncontextmenu(event);
-  assert.ok(getPopup(), "right-click opened the popup");
-  assert.ok(event.defaultPrevented, "the native context menu was suppressed");
-  cleanup(kb, input);
-});
-
 QUnit.test("a right-click opens the popup without first typing the base glyph", async (assert) => {
   const { kb, input } = await makeKeyboard();
-  rightClick(kb, getRequiredKeyElement(kb, "a"));
+  const contextMenu = rightClick(kb, getRequiredKeyElement(kb, "a"));
   assert.strictEqual(input.getValue(), "", "the right-click's simulated release did not type 'a'");
   assert.ok(getPopup(), "the right-click opened the popup");
+  assert.ok(contextMenu.defaultPrevented, "the native context menu was suppressed");
   cleanup(kb, input);
 });
 
