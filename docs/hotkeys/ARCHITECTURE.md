@@ -301,26 +301,26 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 
 ## Edge Cases
 
-| Edge Case                                      | How It Is Handled                                                         |
-| ---------------------------------------------- | ------------------------------------------------------------------------- |
-| macOS Option+letter produces special character | Fallback to `event.code` for letter keys                                  |
-| Shift+digit produces symbol                    | Fallback to `event.code` for digit keys                                   |
-| IME composition (CJK input methods)            | Guard on `event.isComposing` and `keyCode === 229`                        |
-| Key repeat from holding a key                  | `ignoreRepeat: true` checks `event.repeat`                                |
-| Extra modifiers beyond what is registered      | Exact modifier match prevents false positives                             |
-| Shadow DOM event target retargeting            | `event.composedPath()[0]` for true target                                 |
-| contentEditable inheritance from parent        | `element.isContentEditable` property, not attribute                       |
-| Scope priority                                 | Two-pass matching: active scope first, then global                        |
-| Dialog Escape interop                          | `stopPropagation: false` with dialog `escapeHandler`                      |
-| sap.m not loaded                               | Probe `InstanceManager` via `sap.ui.require` each call; `false` if absent |
-| Router detach requires listener context        | Group passes `this` as oListener to `detachBeforeRouteMatched`            |
-| Nested target-scoped same key                  | Innermost target in composedPath() wins                                   |
-| Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                                   |
-| Dispatch suspended via guard                   | Steps 5-7 skipped, UnhandledReason.Suspended reported                     |
-| Closed shadow root targets                     | composedPath() stops at boundary, no match                                |
-| Detached targets                               | No identity match; a same-id node in the path matches (id index)          |
-| Empty composedPath()                           | Fallback to `[event.target, document, window]`                            |
-| stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)                            |
+| Edge Case                                      | How It Is Handled                                                               |
+| ---------------------------------------------- | ------------------------------------------------------------------------------- |
+| macOS Option+letter produces special character | Fallback to `event.code` for letter keys                                        |
+| Shift+digit produces symbol                    | Fallback to `event.code` for digit keys                                         |
+| IME composition (CJK input methods)            | Guard on `event.isComposing` and `keyCode === 229`                              |
+| Key repeat from holding a key                  | `ignoreRepeat: true` checks `event.repeat`                                      |
+| Extra modifiers beyond what is registered      | Exact modifier match prevents false positives                                   |
+| Shadow DOM event target retargeting            | `event.composedPath()[0]` for true target                                       |
+| contentEditable inheritance from parent        | `element.isContentEditable` property, not attribute                             |
+| Scope priority                                 | Two-pass matching: active scope first, then global                              |
+| Dialog Escape interop                          | `stopPropagation: false` with dialog `escapeHandler`                            |
+| sap.m not loaded                               | Probe `InstanceManager` via `sap.ui.require` each call; `false` if absent       |
+| Router detach requires listener context        | Group passes `this` as oListener to `detachBeforeRouteMatched`/`detachBypassed` |
+| Nested target-scoped same key                  | Innermost target in composedPath() wins                                         |
+| Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                                         |
+| Dispatch suspended via guard                   | Steps 5-7 skipped, UnhandledReason.Suspended reported                           |
+| Closed shadow root targets                     | composedPath() stops at boundary, no match                                      |
+| Detached targets                               | No identity match; a same-id node in the path matches (id index)                |
+| Empty composedPath()                           | Fallback to `[event.target, document, window]`                                  |
+| stopPropagation on window capture              | Blocks untargeted listeners (UI5, third-party)                                  |
 
 ## Project Layout
 
@@ -363,7 +363,7 @@ packages/hotkeys/
     manifest.json       Library manifest (descriptor schema v2.0.0)
   test/qunit/
     testsuite.qunit.ts  Test suite runner (UI5 Test Starter)
-    *.qunit.ts          One test file per module
+    *.qunit.ts          Per-module tests plus scenario suites (dialog-scope, router-integration, negative-edge-cases)
 ```
 
 For the consuming demo application's structure, see [`packages/demo-app/README.md`](../../packages/demo-app/README.md).

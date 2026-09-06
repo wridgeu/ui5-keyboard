@@ -528,7 +528,7 @@ KioskKeyboard-specific public instance methods (excluding inherited UI5 base cla
 | `refreshResponsiveState()` | `this`                                            | Recompute responsive width/height classes after runtime `--ui5KioskKeyboard-*` sizing changes inside a fixed-height host, where the rendered outer size does not change so no `ResizeObserver` callback fires. Usually not needed for normal container resizing. |
 | `setTargetResolver(fn)`    | `this`                                            | Set an instance-level custom resolver for locating native inputs. Pass `null` to clear.                                                                                                                                                                          |
 | `getTargetResolver()`      | `Function\|null`                                  | Returns the instance-level target resolver, or `null`.                                                                                                                                                                                                           |
-| `getFocusDomRef()`         | `Element \| null`                                 | Returns the keyboard root DOM reference used for focus handling.                                                                                                                                                                                                 |
+| `getFocusDomRef()`         | `Element \| null`                                 | Returns the keycap that currently holds the roving tab stop, or `null` while the keyboard is disabled or renders no keys.                                                                                                                                        |
 | `getFocusInfo()`           | `object`                                          | Returns focus state snapshot for UI5 focus restoration.                                                                                                                                                                                                          |
 | `applyFocusInfo(info)`     | `this`                                            | Restores focus state snapshot previously returned by `getFocusInfo()`.                                                                                                                                                                                           |
 | `getAccessibilityInfo()`   | `object`                                          | Returns UI5 accessibility metadata for assistive technologies.                                                                                                                                                                                                   |
@@ -602,7 +602,7 @@ The `keyboardType` property provides a shortcut for common configurations:
 - **`Numeric`**: renders the numeric layout regardless of the `layout` property
 - **`Numpad`**: renders the numpad layout regardless of the `layout` property
 
-`keyboardType` is a _constraint on the default_ rather than a hard lock. A user-initiated `{layout:X}` tap (e.g. a custom `{layout:special}` key added through a `customLayouts` entry on the numpad surface) takes precedence and shows the user's pick. A subsequent `{layout:base}` tap re-engages the `keyboardType` constraint and returns to the constrained default. `setLayout`, `setKeyboardType`, `resetKeyboardType`, and auto-type detection all clear the user pick. A cleared pick returns to the tracked base layout, so Full -> Numpad -> Full lands on the base; a pick of a primary layout (for example `{layout:qwertz-de}`) is itself the base and stays.
+`keyboardType` is a _constraint on the default_ rather than a hard lock. A user-initiated `{layout:X}` tap (e.g. a custom `{layout:special}` key added through a `customLayouts` entry on the numpad surface) takes precedence and shows the user's pick. A subsequent `{layout:base}` tap re-engages the `keyboardType` constraint and returns to the constrained default. `setLayout`, `setKeyboardType`, `resetKeyboardType`, auto-type detection, and a switch to another target input all clear the user pick. A cleared pick returns to the tracked base layout, so Full -> Numpad -> Full lands on the base; a pick of a primary layout (for example `{layout:qwertz-de}`) is itself the base and stays.
 
 While the `Numpad`/`Numeric` constraint is active (even on a user-driven pick that overrides it), a rendered layout reshapes its `{layout:base}` key. Where the key is useless it is dropped: on the constrained layout itself (tapping it would re-render the same surface), and on a layout that also carries a `{layout:numpad}`/`{layout:numeric}` key matching the constraint (there the key would sit dead next to one reaching the same numbers surface, e.g. next to "123" on the numeric keyboard's symbols layout). Where `{layout:base}` is instead the only route back to the constrained default (on the numpad's symbols layout "123" leads to the numeric layout, so `{layout:base}` is the only way back to the numpad; likewise the `nav` and `fkeys` layouts), the key is kept but relabeled: under the constraint it returns to the number surface rather than letters, so it renders as a back icon (accessible name "Return to numbers") instead of the misleading "ABC" text.
 
@@ -739,7 +739,7 @@ const kb = new KioskKeyboard({
 });
 ```
 
-Base letters must be **lowercase**; a mis-keyed letter is logged and the entry skipped, rather than silently arming nothing.
+Base letters must be **lowercase**; a table with an uppercased or padded letter is rejected as a whole and reported as `invalid-variants`, rather than silently arming nothing.
 
 Three levels of opt-out, narrowest first:
 
@@ -1080,7 +1080,7 @@ keyboard.close(); // slides out
 
 Both `show()` and `close()` are idempotent; calling them multiple times has no effect. They fire `afterOpen` and `afterClose` immediately.
 
-The docked keyboard uses `position: fixed` with `z-index: var(--ui5KioskKeyboard-dockedZIndex)` (default `100`) and a `box-shadow` for visual separation.
+The docked keyboard uses `position: fixed` with `z-index: var(--ui5KioskKeyboard-dockedZIndex)` (default `100`) and a `box-shadow` for visual separation. Its bottom padding adds `env(safe-area-inset-bottom)`, so on a page that opts into `viewport-fit=cover` the last key row sits above a home indicator or gesture bar.
 
 With `mobileKeyboard="Auto"` (the default), coarse-pointer devices intentionally defer to the native on-screen keyboard. In that mode, calling `show()` keeps the custom docked keyboard closed. Set `mobileKeyboard="Custom"` to always open the UI5 control regardless of device.
 
@@ -1091,7 +1091,7 @@ With `mobileKeyboard="Auto"` (the default), coarse-pointer devices intentionally
 When `autoShow="true"` (requires `docked="true"`), the keyboard automatically:
 
 1. **Opens** when any `<input>` or `<textarea>` on the page receives focus, setting it as the target. When `controls` is set, only the listed inputs trigger open.
-2. **Closes** when focus leaves all inputs (uses `FocusEvent.relatedTarget` for synchronous close decisions, with a one-tick deferred fallback when `relatedTarget` is `null` during browser/shadow-DOM transitions).
+2. **Closes** when focus leaves all inputs. `FocusEvent.relatedTarget` decides synchronously only that the keyboard stays open; the close itself is always deferred one animation frame and re-checked against `document.activeElement`, so a `null` `relatedTarget` during browser/shadow-DOM transitions needs no special case. A programmatic `show()` in that frame cancels the pending close.
 3. **Stays open** when focus moves between the keyboard and an input, or between two inputs.
 
 ```xml
@@ -1562,7 +1562,7 @@ KioskKeyboard.setGlobalTargetResolver(null);
 2. **Global resolver**: checked if no instance resolver is set (`setGlobalTargetResolver`)
 3. **Built-in resolver**: default DOM traversal (light DOM → shadow DOM, up to 3 levels)
 
-At each level, if the resolver returns `null`, the next level is tried.
+Only one custom resolver runs per lookup: the instance one when set, otherwise the global one. When it returns `null` (or throws, which is logged), the built-in resolver is tried; an instance resolver returning `null` does not fall through to the global one.
 
 The callback receives the focused `HTMLElement` (the host element / DOM ref of the control) and must return:
 

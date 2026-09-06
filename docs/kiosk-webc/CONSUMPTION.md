@@ -150,8 +150,9 @@ not tied to the tag name.
 The demo app's web component tooling page shows the actual registered tag name
 at runtime. Because this demo disables scoping, you will see the canonical
 unscoped tag `<kiosk-keyboard>`. The manual bridge pattern is documented as a
-reference in the demo-app README, including a minimal `WebComponent.extend()`
-code example.
+reference, with a minimal `WebComponent.extend()` code example, in the
+[package README](../../packages/kiosk-keyboard-webc/README.md#3b-webcomponentextend-bridge-reference),
+which the demo-app README links to.
 
 **Alternatives considered** (for the scoping-on coexistence case):
 
@@ -270,7 +271,7 @@ a build artifact of that machine, not a defect in the release.
 The middleware constructs the module path from the CEM:
 
 ```javascript
-// ui5-tooling-modules/lib/rollup-plugin-webcomponents.js:440-441
+// ui5-tooling-modules@3.37.8 lib/rollup-plugin-webcomponents.js:523-524
 const modulePath = `${clazz.package}/${clazz.module}`;
 const absModulePath = resolveModule(modulePath);
 ```

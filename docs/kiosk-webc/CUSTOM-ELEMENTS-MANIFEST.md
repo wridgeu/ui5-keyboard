@@ -115,7 +115,7 @@ The class must have `@class` (or `@abstract`/`@constructor`) in its JSDoc for th
  */
 ```
 
-**Allowed class tags**: `public`, `protected`, `private`, `since`, `deprecated`, `constructor`, `class`, `abstract`, `experimental`, `implements`, `extends`, `slot`, `csspart`
+**Allowed class tags**: `public`, `protected`, `private`, `since`, `deprecated`, `constructor`, `class`, `abstract`, `experimental`, `implements`, `extends`, `slot`, `csspart`, `cssstate` / `cssState`
 
 ### Class Export Pattern
 

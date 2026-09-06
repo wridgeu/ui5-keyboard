@@ -131,12 +131,12 @@ The full reference, including the asset code-generation data flow, the `ui5nps` 
 
 Both library packages generate code and make opposite calls on committing it, by one rule.
 
-- **`kiosk-keyboard` commits its interface** (`src/KioskKeyboard.gen.d.ts`, from `@ui5/ts-interface-generator`). The control references `$KioskKeyboardSettings` without importing it, so the IDE and a bare `tsc --noEmit` need the file before any build runs, and the package publishes `src/` to npm. Never hand-edit it; regenerate with `npm run generate -w packages/kiosk-keyboard` (wired to `prebuild` / `pretypecheck`).
+- **`kiosk-keyboard` commits its interfaces** (`src/KioskKeyboard.gen.d.ts` and `src/CustomLayout.gen.d.ts`, from `@ui5/ts-interface-generator`). Each control references its `$…Settings` type without importing it, so the IDE and a bare `tsc --noEmit` need the file before any build runs, and the package publishes `src/` to npm. Never hand-edit it; regenerate with `npm run generate -w packages/kiosk-keyboard` (wired to `prebuild` / `pretypecheck`).
 - **`kiosk-keyboard-webc` gitignores its output** (`src/generated/`, from `ui5nps generate`). It is bulk machine output consumed via `import`s and rebuilt by every entry point, so committing it would only add noise and a drift surface.
 
 The rule: commit a generated file when something reads it before the build runs (IDE, `tsc`, an npm consumer of `src/`); gitignore it when only the build consumes it. The wider JS/TS ecosystem splits the same way, committing types the typechecker needs up front (e.g. TanStack Router's `routeTree.gen.ts`) and regenerating build-only codegen. Decided in #150.
 
-Committing costs two things, both guarded: drift (the #142/#143/#149 JSDoc-strip class) is caught by CI regenerating and running `git diff --exit-code`, with the generator pinned to verbose on both paths that rewrite the file (`generate --jsdoc verbose` and `ui5.yaml`'s `generateTsInterfacesJsDoc: verbose`); review noise is hidden by `.gitattributes` marking `*.gen.d.ts linguist-generated`.
+Committing costs two things, both guarded: drift (the #142/#143/#149 JSDoc-strip class) is caught by CI regenerating, staging, and running `git diff --cached --exit-code` over `src/**/*.gen.d.ts` (staging first so a never-committed file from a new control cannot pass unnoticed), with the generator pinned to verbose on both paths that rewrite the file (`generate --jsdoc verbose` and `ui5.yaml`'s `generateTsInterfacesJsDoc: verbose`); review noise is hidden by `.gitattributes` marking `*.gen.d.ts linguist-generated`.
 
 ## Questions
 

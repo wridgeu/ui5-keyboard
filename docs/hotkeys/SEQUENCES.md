@@ -79,17 +79,17 @@ manager.register(
 
 ### Options
 
-| Option             | Type                       | Default        | Description                                                   |
-| ------------------ | -------------------------- | -------------- | ------------------------------------------------------------- |
-| `description`      | `string`                   | `""`           | Human-readable description                                    |
-| `timeout`          | `number`                   | `1000`         | Timeout in ms between keys before reset                       |
-| `scope`            | `string`                   | `"__global__"` | Scope for filtering                                           |
-| `enabled`          | `boolean \| () => boolean` | `true`         | Whether the sequence is active                                |
-| `ignoreInputs`     | `boolean \| "auto"`        | `"auto"`       | Suppress in inputs; auto allows Ctrl/Meta combos and Escape   |
-| `preventDefault`   | `boolean`                  | `true`         | Call `event.preventDefault()` when the full sequence matches  |
-| `stopPropagation`  | `boolean`                  | `true`         | Call `event.stopPropagation()` when the full sequence matches |
-| `suppressInPopups` | `boolean`                  | `true`         | Suppress this sequence when a UI5 dialog or popover is open   |
-| `onPending`        | `SequencePendingCallback`  | -              | Per-registration mid-sequence progress callback               |
+| Option             | Type                       | Default        | Description                                                     |
+| ------------------ | -------------------------- | -------------- | --------------------------------------------------------------- |
+| `description`      | `string`                   | `""`           | Human-readable description                                      |
+| `timeout`          | `number`                   | `1000`         | Timeout in ms between keys before reset; must be finite and > 0 |
+| `scope`            | `string`                   | `"__global__"` | Scope for filtering                                             |
+| `enabled`          | `boolean \| () => boolean` | `true`         | Whether the sequence is active                                  |
+| `ignoreInputs`     | `boolean \| "auto"`        | `"auto"`       | Suppress in inputs; auto allows Ctrl/Meta combos and Escape     |
+| `preventDefault`   | `boolean`                  | `true`         | Call `event.preventDefault()` when the full sequence matches    |
+| `stopPropagation`  | `boolean`                  | `true`         | Call `event.stopPropagation()` when the full sequence matches   |
+| `suppressInPopups` | `boolean`                  | `true`         | Suppress this sequence when a UI5 dialog or popover is open     |
+| `onPending`        | `SequencePendingCallback`  | -              | Per-registration mid-sequence progress callback                 |
 
 ## Design Decisions
 
