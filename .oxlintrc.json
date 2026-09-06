@@ -21,14 +21,15 @@
   },
   "rules": {
     "eqeqeq": "warn",
+    "complexity": "error",
     "no-console": "warn",
     "no-underscore-dangle": "off",
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-unsafe-function-type": "error",
     "unicorn/no-null": "off",
-    "unicorn/prefer-event-target": "off",
+    "unicorn/prefer-event-target": "warn",
     "unicorn/prefer-top-level-await": "off",
-    "unicorn/no-static-only-class": "off",
+    "unicorn/no-static-only-class": "warn",
     "unicorn/prefer-global-this": "off",
     "unicorn/consistent-function-scoping": "off",
     "code-quality/no-double-type-assertion": "error",
@@ -49,7 +50,6 @@
       "rules": {
         "@typescript-eslint/no-explicit-any": "off",
         "no-unused-expressions": "off",
-        "no-shadow": "off",
         "no-console": "off",
         "import/no-unassigned-import": "off",
         "code-quality/no-double-type-assertion": "off"
@@ -58,7 +58,12 @@
     {
       "files": ["packages/*/src/**/*.ts"],
       "rules": {
-        "no-console": "off",
+        "no-console": [
+          "warn",
+          {
+            "allow": ["warn", "error"]
+          }
+        ],
         "import/no-unassigned-import": "off"
       }
     },

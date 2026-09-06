@@ -190,13 +190,13 @@ QUnit.test("Switching autoCompact off gives the requested layout back", async (a
 /** A keyboard whose `layout` is bound to `/layout` of its own model in the given mode. */
 async function mountBound(width: number, mode: "TwoWay" | "OneWay"): Promise<Mounted & { model: JSONModel }> {
   const model = new JSONModel({ layout: "home" });
-  const mounted = await mount(width, {
+  const box = await mount(width, {
     layout: { path: "/layout", mode },
     autoCompact: true,
     customLayouts: pair(),
     models: model,
   });
-  return { ...mounted, model };
+  return { ...box, model };
 }
 
 QUnit.test("A tier written through a two-way binding is reported once", async (assert) => {

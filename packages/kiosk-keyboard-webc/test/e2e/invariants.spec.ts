@@ -202,11 +202,11 @@ test("keys stay inside the keyboard box", async ({ page }) => {
   for (const id of [...HOSTS, ...HEIGHT_CAPPED_HOSTS]) {
     const geometry = await readGeometry(page, id);
     expect(geometry.keys.length, `${id} rendered no keys`).toBeGreaterThan(0);
-    for (const key of geometry.keys) {
-      expect(key.left, `${id} "${key.key}" overflows the leading edge`).toBeGreaterThanOrEqual(geometry.left - EPSILON);
-      expect(key.right, `${id} "${key.key}" overflows the trailing edge`).toBeLessThanOrEqual(geometry.right + EPSILON);
-      expect(key.top, `${id} "${key.key}" overflows the top edge`).toBeGreaterThanOrEqual(geometry.clipTop - EPSILON);
-      expect(key.bottom, `${id} "${key.key}" overflows the bottom edge`).toBeLessThanOrEqual(
+    for (const cap of geometry.keys) {
+      expect(cap.left, `${id} "${cap.key}" overflows the leading edge`).toBeGreaterThanOrEqual(geometry.left - EPSILON);
+      expect(cap.right, `${id} "${cap.key}" overflows the trailing edge`).toBeLessThanOrEqual(geometry.right + EPSILON);
+      expect(cap.top, `${id} "${cap.key}" overflows the top edge`).toBeGreaterThanOrEqual(geometry.clipTop - EPSILON);
+      expect(cap.bottom, `${id} "${cap.key}" overflows the bottom edge`).toBeLessThanOrEqual(
         geometry.clipBottom + EPSILON,
       );
     }
@@ -224,16 +224,16 @@ test("keys hold the target-size floor their container tier allows", async ({ pag
     const floor = FLOOR_REM * geometry.remPx;
     const inlineFloored = geometry.containerWidth > TIER_REM * geometry.remPx;
     expect(geometry.keys.length, `${id} rendered no keys`).toBeGreaterThan(0);
-    for (const key of geometry.keys) {
-      expect(key.height, `${id} "${key.key}" under the block target-size floor`).toBeGreaterThanOrEqual(
+    for (const cap of geometry.keys) {
+      expect(cap.height, `${id} "${cap.key}" under the block target-size floor`).toBeGreaterThanOrEqual(
         floor - EPSILON,
       );
       if (inlineFloored) {
-        expect(key.width, `${id} "${key.key}" under the inline target-size floor`).toBeGreaterThanOrEqual(
+        expect(cap.width, `${id} "${cap.key}" under the inline target-size floor`).toBeGreaterThanOrEqual(
           floor - EPSILON,
         );
       } else {
-        expect(key.reachable, `${id} "${key.key}" is not hit-testable`).toBe(true);
+        expect(cap.reachable, `${id} "${cap.key}" is not hit-testable`).toBe(true);
       }
     }
   }
