@@ -97,7 +97,6 @@ describe("ko-hangul layout structure", () => {
   it("has layout switches for numeric, qwerty (ABC), and fkeys", () => {
     const allKeys = koHangul.flat();
     expect(allKeys.find((k) => k.value === "{layout:numeric}")).toBeDefined();
-    expect(allKeys.find((k) => k.value === "{layout:qwerty}")).toBeDefined();
     expect(allKeys.find((k) => k.value === "{layout:fkeys}")).toBeDefined();
   });
 

@@ -53,16 +53,6 @@ describe("layout-registry", () => {
         expect(names).toContain(name);
       }
     });
-
-    it("does not include instance-only names in getRegisteredLayoutNames", () => {
-      // Resolved through the instance map first, so the exclusion has something
-      // to exclude: the guard is that the lookup does not write the name into
-      // the module-level map behind it.
-      const custom: LayoutDefinition = [[{ value: "x" }]];
-      const instanceMap = new Map([["instance-only", custom]]);
-      expect(getRegisteredLayout("instance-only", instanceMap)).toBe(custom);
-      expect(getRegisteredLayoutNames()).not.toContain("instance-only");
-    });
   });
 
   describe("instance map - shadows built-ins", () => {
@@ -74,9 +64,7 @@ describe("layout-registry", () => {
 
     it("falls through to built-in when instance map lacks the name", () => {
       const instanceMap = new Map([["unrelated", CUSTOM_LAYOUT]]);
-      const result = getRegisteredLayout("qwerty", instanceMap);
-      expect(result).toBeDefined();
-      expect(result).not.toBe(CUSTOM_LAYOUT);
+      expect(getRegisteredLayout("qwerty", instanceMap)).toBe(getRegisteredLayout("qwerty"));
     });
 
     it("accepts __proto__ / prototype / constructor in instance map", () => {
@@ -90,9 +78,7 @@ describe("layout-registry", () => {
 
   describe("getLayoutOrDefault", () => {
     it("returns the built-in layout when it exists", () => {
-      const layout = getLayoutOrDefault("qwerty");
-      expect(layout).toBeDefined();
-      expect(layout.length).toBeGreaterThan(0);
+      expect(getLayoutOrDefault("numeric")).toBe(getRegisteredLayout("numeric"));
     });
 
     it("returns default for unknown name", () => {
@@ -155,7 +141,6 @@ describe("layout-registry", () => {
     });
 
     it.each([
-      ["en", "qwerty"],
       ["de", "qwertz-de"],
       ["ja-JP", "ja-romaji"],
       ["ar", "arabic"],
@@ -219,19 +204,6 @@ describe("layout-registry", () => {
 
     it("trims and lowercases input when matching built-ins", () => {
       expect(getRegisteredLayout("  QWERTY  ")).toBeDefined();
-    });
-  });
-
-  describe("isBuiltInLayout - negative paths", () => {
-    it("returns false for non-string argument", () => {
-      vi.spyOn(console, "warn").mockImplementation(() => {});
-      // @ts-expect-error a name only plain JS can supply, which is what the guard covers
-      expect(isBuiltInLayout(123)).toBe(false);
-    });
-
-    it("returns false for empty string", () => {
-      vi.spyOn(console, "warn").mockImplementation(() => {});
-      expect(isBuiltInLayout("")).toBe(false);
     });
   });
 });

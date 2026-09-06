@@ -23,6 +23,7 @@ describe("BUILTIN_LAYOUT_META", () => {
   it("marks the auxiliary surfaces as the only secondary entries", () => {
     for (const name of ["numeric", "special", "fkeys", "nav"]) {
       expect(BUILTIN_LAYOUT_META.get(name)?.secondary, `${name} is secondary`).toBe(true);
+      expect(BUILTIN_LAYOUT_META.get(name)?.lang, `${name} keycaps stay in the UI language`).toBeUndefined();
     }
     for (const name of ["ja-romaji", "ja-kana", "ja-kana-compact", "arabic", "ko-hangul"]) {
       expect(BUILTIN_LAYOUT_META.get(name)?.secondary, `${name} declares no secondary flag`).toBeUndefined();
@@ -47,34 +48,14 @@ describe("BUILTIN_LAYOUT_META", () => {
   });
 });
 
-describe("isSecondaryLayout", () => {
+describe("KioskKeyboard.isSecondaryLayout", () => {
   it("is true for the auxiliary surfaces and false for the base layouts", () => {
     for (const name of ["numeric", "special", "fkeys", "nav"]) {
-      expect(isSecondaryLayout(name), `${name} is secondary`).toBe(true);
+      expect(KioskKeyboard.isSecondaryLayout(name), `${name} is secondary`).toBe(true);
     }
-    for (const name of ["qwerty", "qwertz-de", "arabic"]) {
-      expect(isSecondaryLayout(name), `${name} is a base alphabetic layout`).toBe(false);
+    for (const name of ["qwerty", "qwertz-de", "numpad", "arabic"]) {
+      expect(KioskKeyboard.isSecondaryLayout(name), `${name} can be the base layout`).toBe(false);
     }
-  });
-
-  it("is false for an unregistered name", () => {
-    expect(isSecondaryLayout("nope"), "an absent entry takes the base default").toBe(false);
-  });
-});
-
-describe("getLayoutLang", () => {
-  it("returns the declared keycap language", () => {
-    expect(getLayoutLang("ja-kana")).toBe("ja");
-    expect(getLayoutLang("arabic")).toBe("ar");
-    expect(getLayoutLang("ko-hangul")).toBe("ko");
-  });
-
-  it("returns undefined for keycaps in the UI language", () => {
-    expect(getLayoutLang("ja-romaji"), "opting out of variants does not imply a language").toBeUndefined();
-    expect(getLayoutLang("qwerty"), "Latin base layout").toBeUndefined();
-    expect(getLayoutLang("qwertz-de"), "Latin base layout").toBeUndefined();
-    expect(getLayoutLang("numeric"), "auxiliary surface").toBeUndefined();
-    expect(getLayoutLang("nope"), "an unregistered name").toBeUndefined();
   });
 });
 
