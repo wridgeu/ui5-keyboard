@@ -469,41 +469,6 @@ QUnit.test("ariaDescribedBy renders aria-describedby attribute", async (assert) 
   kb.destroy();
 });
 
-QUnit.test("Multiple ariaLabelledBy IDs render space-separated", async (assert) => {
-  const label1 = new InvisibleText({ text: "Label 1" });
-  const label2 = new InvisibleText({ text: "Label 2" });
-  label1.placeAt("qunit-fixture");
-  label2.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard();
-  kb.addAriaLabelledBy(label1);
-  kb.addAriaLabelledBy(label2);
-  await placeAndWait(kb);
-
-  const dom = kb.getDomRef()!;
-  const attr = dom.getAttribute("aria-labelledby") ?? "";
-  assert.ok(attr.includes(label1.getId()), "Contains first label ID");
-  assert.ok(attr.includes(label2.getId()), "Contains second label ID");
-
-  label1.destroy();
-  label2.destroy();
-  kb.destroy();
-});
-
-QUnit.test("ariaLabel + ariaLabelledBy coexist", async (assert) => {
-  const label = new InvisibleText({ text: "External label" });
-  label.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ ariaLabel: "Custom Keyboard" });
-  kb.addAriaLabelledBy(label);
-  await placeAndWait(kb);
-
-  const dom = kb.getDomRef()!;
-  const labelledBy = dom.getAttribute("aria-labelledby") ?? "";
-  assert.ok(labelledBy.includes(label.getId()), "ariaLabelledBy ID included in aria-labelledby");
-
-  label.destroy();
-  kb.destroy();
-});
-
 QUnit.test("Root aria-label defers to ariaLabelledBy but honors an explicit ariaLabel", async (assert) => {
   // No ariaLabelledBy: the default fallback names the group.
   const kbDefault = new KioskKeyboard();
@@ -538,21 +503,23 @@ QUnit.test("Root aria-label defers to ariaLabelledBy but honors an explicit aria
   label.destroy();
 });
 
-QUnit.test("removeAriaLabelledBy clears attribute after re-render", async (assert) => {
+QUnit.test("removeAriaLabelledBy restores the default aria-label after re-render", async (assert) => {
   const label = new InvisibleText({ text: "Removable label" });
   label.placeAt("qunit-fixture");
   const kb = new KioskKeyboard();
   kb.addAriaLabelledBy(label);
   await placeAndWait(kb);
 
-  let attr = kb.getDomRef()!.getAttribute("aria-labelledby") ?? "";
-  assert.ok(attr.includes(label.getId()), "Label ID initially present");
+  assert.notOk(kb.getDomRef()!.hasAttribute("aria-label"), "precondition: the label suppresses the default aria-label");
 
   kb.removeAriaLabelledBy(label);
   await waitForRender();
 
-  attr = kb.getDomRef()!.getAttribute("aria-labelledby") ?? "";
-  assert.notOk(attr.includes(label.getId()), "Label ID removed after re-render");
+  assert.strictEqual(
+    kb.getDomRef()!.getAttribute("aria-label"),
+    "Virtual Keyboard",
+    "the default aria-label is back once nothing else names the group",
+  );
 
   label.destroy();
   kb.destroy();

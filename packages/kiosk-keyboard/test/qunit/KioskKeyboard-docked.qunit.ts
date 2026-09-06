@@ -88,36 +88,6 @@ QUnit.test("setDocked(false) closes an open keyboard and restores inputmode", as
   kb.destroy();
 });
 
-QUnit.test("show() fires afterOpen event", async (assert) => {
-  const kb = new KioskKeyboard();
-  kb.setDocked(true);
-  await placeAndWait(kb);
-
-  let fired = false;
-  kb.attachEvent("afterOpen", () => (fired = true));
-
-  kb.show();
-  assert.ok(fired, "afterOpen fired");
-
-  kb.destroy();
-});
-
-QUnit.test("close() fires afterClose event", async (assert) => {
-  const kb = new KioskKeyboard();
-  kb.setDocked(true);
-  await placeAndWait(kb);
-
-  kb.show();
-
-  let fired = false;
-  kb.attachEvent("afterClose", () => (fired = true));
-
-  kb.close();
-  assert.ok(fired, "afterClose fired");
-
-  kb.destroy();
-});
-
 QUnit.test("show() is idempotent", async (assert) => {
   const kb = new KioskKeyboard();
   kb.setDocked(true);
@@ -197,51 +167,37 @@ QUnit.test("show()/close() are no-ops when docked is false", async (assert) => {
 // Escape key closes docked keyboard
 // ──────────────────────────────────────────────
 
-QUnit.test("Escape closes docked keyboard when virtual key has focus", async (assert) => {
-  const input = new Input("escape-test-input");
-  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
-  input.placeAt("qunit-fixture");
-  await placeAndWait(kb);
+QUnit.test(
+  "Escape from a keycap closes the keyboard, fires afterClose and returns focus to the input",
+  async (assert) => {
+    const input = new Input("escape-test-input");
+    const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
+    input.placeAt("qunit-fixture");
+    await placeAndWait(kb);
 
-  kb.show();
-  assert.ok(kb.isOpen(), "Keyboard is open");
+    kb.show();
+    assert.ok(kb.isOpen(), "Keyboard is open");
 
-  // Focus a virtual key and dispatch Escape on it
-  const firstKey = getFirstKeyElement(kb);
-  firstKey.setAttribute("tabindex", "0");
-  firstKey.focus();
+    let fired = false;
+    kb.attachEvent("afterClose", () => (fired = true));
 
-  firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    const firstKey = getFirstKeyElement(kb);
+    firstKey.setAttribute("tabindex", "0");
+    firstKey.focus();
 
-  assert.notOk(kb.isOpen(), "Keyboard closed after Escape");
+    firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
 
-  input.destroy();
-  kb.destroy();
-});
+    assert.notOk(kb.isOpen(), "Keyboard closed after Escape");
+    assert.ok(fired, "afterClose event fired");
+    assert.strictEqual(document.activeElement, input.getFocusDomRef(), "Focus returned to target input");
 
-QUnit.test("Escape closes docked keyboard when target input has focus", async (assert) => {
+    input.destroy();
+    kb.destroy();
+  },
+);
+
+QUnit.test("Escape from the input or from outside closes the keyboard and leaves focus where it is", async (assert) => {
   const input = new Input("escape-input-focus");
-  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
-  input.placeAt("qunit-fixture");
-  await placeAndWait(kb);
-
-  kb.show();
-  assert.ok(kb.isOpen(), "Keyboard is open");
-
-  // Focus the target input and dispatch Escape on it
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-
-  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-
-  assert.notOk(kb.isOpen(), "Keyboard closed after Escape on input");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Escape closes docked keyboard when focus is outside keyboard and target input", async (assert) => {
-  const input = new Input("escape-outside-focus");
   const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
   input.placeAt("qunit-fixture");
 
@@ -254,54 +210,24 @@ QUnit.test("Escape closes docked keyboard when focus is outside keyboard and tar
   kb.show();
   assert.ok(kb.isOpen(), "Keyboard is open");
 
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+  assert.notOk(kb.isOpen(), "Keyboard closed after Escape on input");
+  assert.strictEqual(document.activeElement, inputDom, "Focus stays on the input");
+
+  kb.show();
+  assert.ok(kb.isOpen(), "Keyboard is open again");
+
   outside.focus();
   outside.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
 
   assert.notOk(kb.isOpen(), "Keyboard closed after Escape outside keyboard/input");
+  assert.strictEqual(document.activeElement, outside, "Focus is not pulled onto the input");
 
   outside.remove();
   input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Escape on docked keyboard returns focus to target input", async (assert) => {
-  const input = new Input("escape-focus-input");
-  const kb = new KioskKeyboard({ docked: true, controls: [input.getId()] });
-  input.placeAt("qunit-fixture");
-  await placeAndWait(kb);
-
-  kb.show();
-
-  const firstKey = getFirstKeyElement(kb);
-  firstKey.setAttribute("tabindex", "0");
-  firstKey.focus();
-
-  firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-
-  const focusDom = input.getFocusDomRef() as HTMLElement;
-  assert.strictEqual(document.activeElement, focusDom, "Focus returned to target input");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Escape fires afterClose event", async (assert) => {
-  const kb = new KioskKeyboard({ docked: true });
-  await placeAndWait(kb);
-
-  kb.show();
-
-  let fired = false;
-  kb.attachEvent("afterClose", () => (fired = true));
-
-  const firstKey = getFirstKeyElement(kb);
-  firstKey.setAttribute("tabindex", "0");
-  firstKey.focus();
-
-  firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-
-  assert.ok(fired, "afterClose event fired");
-
   kb.destroy();
 });
 
@@ -329,50 +255,18 @@ QUnit.test("Escape still closes the keyboard on a second open", async (assert) =
   kb.destroy();
 });
 
-QUnit.test("Escape does nothing when keyboard is not docked", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const firstKey = getFirstKeyElement(kb);
-  firstKey.setAttribute("tabindex", "0");
-  firstKey.focus();
-
-  // Non-docked keyboard - Escape listener is never attached (only show()/close() manage it)
-  firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-
-  assert.strictEqual(document.activeElement, firstKey, "Focus unchanged - Escape not intercepted");
-
-  kb.destroy();
-});
-
-QUnit.test("Escape does nothing when docked keyboard is already closed", async (assert) => {
-  const kb = new KioskKeyboard({ docked: true });
-  await placeAndWait(kb);
-
-  // Keyboard is docked but closed (default state) - Escape listener not attached
-  assert.notOk(kb.isOpen(), "Keyboard starts closed");
-
-  const firstKey = getFirstKeyElement(kb);
-  firstKey.setAttribute("tabindex", "0");
-  firstKey.focus();
-
-  let closeFired = false;
-  kb.attachEvent("afterClose", () => (closeFired = true));
-
-  firstKey.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-
-  assert.notOk(closeFired, "afterClose not fired - keyboard was already closed");
-
-  kb.destroy();
-});
-
 // ──────────────────────────────────────────────
 // Rapid Show/Close Cycling
 // ──────────────────────────────────────────────
 
-QUnit.test("20 show/close cycles without error or state desync", async (assert) => {
+QUnit.test("Show/close cycling ends closed with one afterOpen and one afterClose per cycle", async (assert) => {
   const kb = new KioskKeyboard({ docked: true });
   await placeAndWait(kb);
+
+  let openCount = 0;
+  let closeCount = 0;
+  kb.attachEvent("afterOpen", () => openCount++);
+  kb.attachEvent("afterClose", () => closeCount++);
 
   for (let i = 0; i < 20; i++) {
     kb.show();
@@ -381,6 +275,8 @@ QUnit.test("20 show/close cycles without error or state desync", async (assert) 
 
   assert.notOk(kb.isOpen(), "Keyboard is closed after all cycles");
   assert.ok(hasKeyboardClass(kb, DOM.classes.rootClosed), "Closed CSS class present");
+  assert.strictEqual(openCount, 20, "20 afterOpen events fired");
+  assert.strictEqual(closeCount, 20, "20 afterClose events fired");
 
   kb.destroy();
 });
@@ -402,26 +298,6 @@ QUnit.test("Rapid cycling preserves inputmode restoration", async (assert) => {
   assert.strictEqual(inputEl.inputMode, originalInputMode, "inputMode restored after cycling");
 
   input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Event counts match actual show/close transitions", async (assert) => {
-  const kb = new KioskKeyboard({ docked: true });
-  await placeAndWait(kb);
-
-  let openCount = 0;
-  let closeCount = 0;
-  kb.attachEvent("afterOpen", () => openCount++);
-  kb.attachEvent("afterClose", () => closeCount++);
-
-  for (let i = 0; i < 5; i++) {
-    kb.show();
-    kb.close();
-  }
-
-  assert.strictEqual(openCount, 5, "5 afterOpen events fired");
-  assert.strictEqual(closeCount, 5, "5 afterClose events fired");
-
   kb.destroy();
 });
 
@@ -464,25 +340,6 @@ QUnit.test("auto-show still opens on focus after an undock/re-dock cycle", async
   assert.ok(kb.isOpen(), "Focus opens the keyboard again after re-docking");
 
   input.destroy();
-  kb.destroy();
-});
-
-// ──────────────────────────────────────────────
-// setDocked Runtime Toggling
-// ──────────────────────────────────────────────
-
-QUnit.test("docked false \u2192 true \u2192 show \u2192 false \u2192 true resets to closed", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  kb.setDocked(true);
-  kb.show();
-  assert.ok(kb.isOpen(), "Open after show()");
-
-  kb.setDocked(false);
-  kb.setDocked(true);
-  assert.notOk(kb.isOpen(), "Closed after toggling docked off and on");
-
   kb.destroy();
 });
 

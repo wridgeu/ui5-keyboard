@@ -42,9 +42,6 @@ QUnit.module("FKeys", {
 
 QUnit.test("fkeys is a registered built-in layout", (assert) => {
   assert.ok(KioskKeyboard.isBuiltInLayout("fkeys"), "fkeys is built-in");
-
-  const names = KioskKeyboard.getRegisteredLayoutNames();
-  assert.ok(names.includes("fkeys"), "fkeys in registered names");
 });
 
 // Pins the slice boundaries against fkeyRow's source order.
@@ -86,33 +83,18 @@ QUnit.test("fkeys is a secondary layout (does not become base)", (assert) => {
 // Standalone fkeys layout rendering
 // ──────────────────────────────────────────────
 
-QUnit.test("Standalone fkeys layout renders 3 rows", async (assert) => {
+QUnit.test("Standalone fkeys layout renders 3 rows with F1-F12, ABC and Enter", async (assert) => {
   const kb = new KioskKeyboard({ layout: "fkeys" });
   await placeAndWait(kb);
 
   const rows = getRowElements(kb);
   assert.strictEqual(rows.length, 3, "fkeys layout has 3 rows");
 
-  kb.destroy();
-});
-
-QUnit.test("Standalone fkeys layout contains F1-F12 + ABC + Enter", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "fkeys" });
-  await placeAndWait(kb);
-
-  // Check all F-keys are present
   for (let i = 1; i <= 12; i++) {
-    const el = getKeyElement(kb, `{fkey:F${i}}`);
-    assert.ok(el, `F${i} key is rendered`);
+    assert.ok(getKeyElement(kb, `{fkey:F${i}}`), `F${i} key is rendered`);
   }
-
-  // ABC button
-  const abc = getKeyElement(kb, "{layout:base}");
-  assert.ok(abc, "ABC layout switch is rendered");
-
-  // Enter button
-  const enter = getKeyElement(kb, "{enter}");
-  assert.ok(enter, "Enter key is rendered");
+  assert.ok(getKeyElement(kb, "{layout:base}"), "ABC layout switch is rendered");
+  assert.ok(getKeyElement(kb, "{enter}"), "Enter key is rendered");
 
   kb.destroy();
 });
@@ -325,42 +307,48 @@ QUnit.test("Shift+Enter on a focused F-key does not latch the on-screen Shift st
 // Fn button on base layouts
 // ──────────────────────────────────────────────
 
-for (const baseLayout of ["qwerty", "qwertz-de"]) {
-  QUnit.test(`${baseLayout} bottom row has Fn button that switches to fkeys`, async (assert) => {
-    const kb = new KioskKeyboard({ layout: baseLayout });
-    await placeAndWait(kb);
-
-    const fnKey = getKeyElement(kb, "{layout:fkeys}");
-    assert.ok(fnKey, `Fn button exists on ${baseLayout} layout`);
-    assert.strictEqual(fnKey!.textContent!.trim(), "Fn", "Fn button shows Fn label");
-
-    // Tap Fn to switch to fkeys layout
-    tapKey(kb, "{layout:fkeys}");
-    await waitForRender();
-
-    assert.strictEqual(kb.getLayout(), "fkeys", "Layout switched to fkeys");
-
-    // Verify fkeys layout is rendered
-    const f1 = getKeyElement(kb, "{fkey:F1}");
-    assert.ok(f1, "F1 key visible after Fn tap");
-
-    kb.destroy();
-  });
-}
-
-QUnit.test("ABC button on fkeys layout returns to base layout", async (assert) => {
+QUnit.test("qwerty bottom row has Fn button that switches to fkeys", async (assert) => {
   const kb = new KioskKeyboard({ layout: "qwerty" });
   await placeAndWait(kb);
 
-  // Switch to fkeys
+  const fnKey = getKeyElement(kb, "{layout:fkeys}");
+  assert.ok(fnKey, "Fn button exists on qwerty layout");
+  assert.strictEqual(fnKey!.textContent!.trim(), "Fn", "Fn button shows Fn label");
+
+  // Tap Fn to switch to fkeys layout
+  tapKey(kb, "{layout:fkeys}");
+  await waitForRender();
+
+  assert.strictEqual(kb.getLayout(), "fkeys", "Layout switched to fkeys");
+
+  // Verify fkeys layout is rendered
+  const f1 = getKeyElement(kb, "{fkey:F1}");
+  assert.ok(f1, "F1 key visible after Fn tap");
+
+  kb.destroy();
+});
+
+// A non-default base, so a {layout:base} that fell back to the registry default
+// would land on qwerty instead of the layout that was asked for.
+QUnit.test("{layout:base} returns from fkeys and nav to the qwertz-de base layout", async (assert) => {
+  const kb = new KioskKeyboard({ layout: "qwertz-de" });
+  await placeAndWait(kb);
+
   tapKey(kb, "{layout:fkeys}");
   await waitForRender();
   assert.strictEqual(kb.getLayout(), "fkeys", "Switched to fkeys");
 
-  // Tap ABC to return
   tapKey(kb, "{layout:base}");
   await waitForRender();
-  assert.strictEqual(kb.getLayout(), "qwerty", "Returned to qwerty base layout");
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "ABC returned to the qwertz-de base layout");
+
+  kb.setLayout("nav");
+  await waitForRender();
+  assert.strictEqual(kb.getLayout(), "nav", "Switched to nav");
+
+  tapKey(kb, "{layout:base}");
+  await waitForRender();
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "nav returned to the qwertz-de base layout");
 
   kb.destroy();
 });

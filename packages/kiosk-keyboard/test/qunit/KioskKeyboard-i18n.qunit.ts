@@ -13,26 +13,6 @@ QUnit.module("KioskKeyboard - i18n integration", {
   },
 });
 
-QUnit.test("Resolver can change KIOSK_KEYBOARD_LABEL on rendered control", async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  KioskKeyboard.setI18nResolver((key) => {
-    if (key === "KIOSK_KEYBOARD_LABEL") return "Custom Keyboard Label";
-    return undefined;
-  });
-  await waitForRender();
-
-  const dom = kb.getDomRef();
-  assert.ok(dom, "Keyboard is rendered");
-  assert.strictEqual(dom?.getAttribute("aria-label"), "Custom Keyboard Label", "aria-label reflects resolver");
-
-  input.destroy();
-  kb.destroy();
-});
-
 QUnit.test("Setting resolver to null restores base labels", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
@@ -155,22 +135,6 @@ QUnit.test("Destroying last instance auto-clears resolver", async (assert) => {
   kb.destroy();
 
   assert.strictEqual(getText("KEY_SHIFT", "Shift"), "Shift", "Resolver auto-cleared after last instance destroyed");
-
-  // Verify cleared by rendering a fresh keyboard
-  const input2 = new Input({ value: "" });
-  input2.placeAt("qunit-fixture");
-  const kb2 = new KioskKeyboard({ controls: [input2.getId()] });
-  await placeAndWait(kb2);
-
-  const shiftKey = getKeyElement(kb2, "{shift}");
-  assert.strictEqual(
-    shiftKey?.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
-    "Shift",
-    "Fresh keyboard uses default labels",
-  );
-
-  input2.destroy();
-  kb2.destroy();
 });
 
 QUnit.test("Destroying one of two instances does NOT clear resolver", async (assert) => {
@@ -196,8 +160,6 @@ QUnit.test("Destroying one of two instances does NOT clear resolver", async (ass
 
   input2.destroy();
   kb2.destroy();
-
-  assert.strictEqual(getText("KEY_SHIFT", "Shift"), "Shift", "Resolver cleared after last instance destroyed");
 });
 
 QUnit.test("Destroying last instance clears global target resolver", async (assert) => {

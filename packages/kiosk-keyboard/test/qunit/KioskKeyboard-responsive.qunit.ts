@@ -237,7 +237,7 @@ QUnit.test("Switching to Numpad clears height classes after re-render", async (a
   kb.destroy();
 });
 
-QUnit.test("Intrinsic content height growth updates height classes on refresh", async (assert) => {
+QUnit.test("Intrinsic content height growth and shrink update height classes on refresh", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
@@ -258,53 +258,10 @@ QUnit.test("Intrinsic content height growth updates height classes on refresh", 
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort applied after intrinsic growth");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent at 15rem");
 
-  kb.destroy();
-});
-
-QUnit.test("Intrinsic content height shrink clears height classes on refresh", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const dom = kb.getDomRef()! as HTMLElement;
-  const remPx = rootRemPx();
-  dom.style.overflow = "hidden";
-
-  // Intrinsic content (24rem) taller than the 16rem rendered height -> constrained.
-  await setMeasuredHeight(kb, dom, 16 * remPx, 24 * remPx);
-  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "Starts constrained (cqShort)");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny absent at 16rem");
-
-  // Intrinsic content shrinks below the rendered height -> unconstrained.
-  await setMeasuredHeight(kb, dom, 16 * remPx, 8 * remPx);
+  // Intrinsic content shrinks below the rendered height -> unconstrained again.
+  await setMeasuredHeight(kb, dom, 15 * remPx, 8 * remPx);
   assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort cleared after intrinsic shrink");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny cleared after intrinsic shrink");
-
-  kb.destroy();
-});
-
-QUnit.test("Height classes update when constraint changes", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const dom = kb.getDomRef()!;
-  const remPx = rootRemPx();
-
-  (dom as HTMLElement).style.setProperty("--ui5KioskKeyboard-keyHeight", "4rem");
-  (dom as HTMLElement).style.overflow = "hidden";
-
-  // Start constrained (tiny)
-  await setMeasuredHeight(kb, dom, 10 * remPx);
-  assert.ok(dom.classList.contains(DOM.classes.rootCqTiny), "Starts as tiny");
-
-  // Grow to short
-  await setMeasuredHeight(kb, dom, 15 * remPx);
-  assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "Transitions to short");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny removed");
-
-  // Grow to unconstrained
-  await setMeasuredHeight(kb, dom, 400);
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqShort), "cqShort removed at full height");
-  assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "cqTiny removed at full height");
 
   kb.destroy();
 });

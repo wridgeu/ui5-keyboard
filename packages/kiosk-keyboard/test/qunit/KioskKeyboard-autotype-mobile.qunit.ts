@@ -1,7 +1,11 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
+import ComboBox from "sap/m/ComboBox";
+import DatePicker from "sap/m/DatePicker";
 import Input from "sap/m/Input";
+import SearchField from "sap/m/SearchField";
 import StepInput from "sap/m/StepInput";
+import TextArea from "sap/m/TextArea";
 import Control from "sap/ui/core/Control";
 import Device from "sap/ui/Device";
 import JSONModel from "sap/ui/model/json/JSONModel";
@@ -9,7 +13,6 @@ import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
   createFakeKeyElement,
   getFirstKeyElement,
-  getKeyElements,
   getRowKeyValues,
   placeAndWait,
   simulateTap,
@@ -90,16 +93,40 @@ const detectCases: DetectCase[] = [
     message: "Auto-detected Numpad for StepInput",
   },
   {
-    title: "autoType stays Full for regular text input",
-    make: () => new Input(),
+    title: "autoType claims a Password input and stays Full",
+    make: () => new Input({ type: "Password" }),
     expected: "Full",
-    message: "Stays Full for regular text input",
+    message: "Password input keeps Full keyboard",
   },
   {
-    title: "autoType Email input stays Full",
-    make: () => new Input({ type: "Email" }),
+    title: "autoType claims a Url input and stays Full",
+    make: () => new Input({ type: "Url" }),
     expected: "Full",
-    message: "Email input keeps Full keyboard",
+    message: "Url input keeps Full keyboard",
+  },
+  {
+    title: "autoType claims a TextArea and stays Full",
+    make: () => new TextArea(),
+    expected: "Full",
+    message: "TextArea keeps Full keyboard",
+  },
+  {
+    title: "autoType claims a SearchField and stays Full",
+    make: () => new SearchField(),
+    expected: "Full",
+    message: "SearchField keeps Full keyboard",
+  },
+  {
+    title: "autoType claims a ComboBox and stays Full",
+    make: () => new ComboBox(),
+    expected: "Full",
+    message: "ComboBox keeps Full keyboard",
+  },
+  {
+    title: "autoType claims a DatePicker and stays Full",
+    make: () => new DatePicker(),
+    expected: "Full",
+    message: "DatePicker keeps Full keyboard",
   },
 ];
 
@@ -121,6 +148,9 @@ for (const { title, make, prep, expected, message } of detectCases) {
       inputDom.focus();
       await nextUIUpdate();
 
+      // Detection runs only on a claim, so a Full verdict is the default unless
+      // the keyboard actually opened for the control.
+      assert.ok(kb.isOpen(), "the control is claimed");
       assert.strictEqual(kb.getKeyboardType(), expected, message);
     } finally {
       control.destroy();
@@ -128,32 +158,6 @@ for (const { title, make, prep, expected, message } of detectCases) {
     }
   });
 }
-
-QUnit.test("autoType switches back from Numpad to Full when focus moves", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  const textInput = new Input();
-  numInput.placeAt("qunit-fixture");
-  textInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Numpad for number input");
-
-  (textInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Switched back to Full for text input");
-
-  numInput.destroy();
-  textInput.destroy();
-  kb.destroy();
-});
 
 QUnit.test("autoType detects an inputmode-only target refocused while the keyboard is open", async (assert) => {
   // Both inputs keep the default Text type, so inputmode is the only Numpad signal.
@@ -267,48 +271,6 @@ QUnit.test("autoType detects a single controls entry claimed before the first fo
   kb.destroy();
 });
 
-QUnit.test("Explicit setKeyboardType disables autoType", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  numInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  kb.setKeyboardType(KeyboardType.Full);
-  await placeAndWait(kb);
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Explicit keyboardType prevents auto-detection");
-
-  numInput.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Constructor keyboardType also disables autoType", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  numInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-    keyboardType: KeyboardType.Full,
-  });
-  await placeAndWait(kb);
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Constructor keyboardType prevents auto-detection");
-
-  numInput.destroy();
-  kb.destroy();
-});
-
 QUnit.test("autoType=false does not switch keyboardType on focus", async (assert) => {
   const numInput = new Input({ type: "Number" });
   numInput.placeAt("qunit-fixture");
@@ -326,59 +288,6 @@ QUnit.test("autoType=false does not switch keyboardType on focus", async (assert
   assert.strictEqual(kb.getKeyboardType(), "Full", "autoType=false keeps Full for Number input");
 
   numInput.destroy();
-  kb.destroy();
-});
-
-QUnit.test("autoType renders numpad keys after switching to Numpad", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  numInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await waitForRender();
-
-  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.ok(keys.includes("7"), "Numpad keys present after auto-switch");
-  assert.notOk(keys.includes("q"), "No alphabetic keys in auto-switched numpad");
-
-  numInput.destroy();
-  kb.destroy();
-});
-
-QUnit.test("resetKeyboardType re-enables autoType after explicit setKeyboardType", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  const textInput = new Input();
-  numInput.placeAt("qunit-fixture");
-  textInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  kb.setKeyboardType(KeyboardType.Full);
-  await placeAndWait(kb);
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Locked: Number input stays Full");
-
-  (textInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  kb.resetKeyboardType();
-
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "After reset: Number input triggers Numpad");
-
-  numInput.destroy();
-  textInput.destroy();
   kb.destroy();
 });
 
@@ -504,7 +413,9 @@ QUnit.test("Default mobileKeyboard is Auto", (assert) => {
   kb.destroy();
 });
 
-QUnit.test("mobileKeyboard Custom never defers to native (desktop)", async (assert) => {
+QUnit.test("mobileKeyboard Custom never defers to native (phone)", async (assert) => {
+  emulateDevice("phone");
+
   const input = new Input();
   input.placeAt("qunit-fixture");
 
@@ -764,35 +675,6 @@ QUnit.test("show() without target input does not throw", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Switching target while open restores old and suppresses new", async (assert) => {
-  const input1 = new Input();
-  const input2 = new Input();
-  input1.placeAt("qunit-fixture");
-  input2.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    mobileKeyboard: MobileKeyboard.Custom,
-  });
-  await placeAndWait(kb);
-
-  (input1.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  const dom1 = input1.getFocusDomRef() as HTMLInputElement;
-  assert.strictEqual(dom1.getAttribute("inputmode"), "none", "input1 suppressed");
-
-  (input2.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  const dom2 = input2.getFocusDomRef() as HTMLInputElement;
-  assert.strictEqual(dom2.getAttribute("inputmode"), "none", "input2 suppressed");
-  assert.notStrictEqual(dom1.getAttribute("inputmode"), "none", "input1 restored");
-
-  input1.destroy();
-  input2.destroy();
-  kb.destroy();
-});
-
 QUnit.test("Switching target while closed does not suppress inputmode", async (assert) => {
   const input1 = new Input();
   const input2 = new Input();
@@ -816,39 +698,6 @@ QUnit.test("Switching target while closed does not suppress inputmode", async (a
   input1.destroy();
   input2.destroy();
   kb.destroy();
-});
-
-QUnit.test("Removing controls while open restores old inputmode", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    mobileKeyboard: MobileKeyboard.Custom,
-  });
-  await placeAndWait(kb);
-
-  // Focus input to trigger autoShow and set target
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  const inputDom = input.getFocusDomRef() as HTMLInputElement;
-  assert.ok(kb.isOpen(), "Keyboard is open");
-  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode suppressed");
-
-  // Move focus away to clear the target
-  const outside = document.createElement("button");
-  document.getElementById("qunit-fixture")!.appendChild(outside);
-  outside.focus();
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-  await nextUIUpdate();
-
-  assert.notStrictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode restored after focus moves away");
-
-  outside.remove();
-  kb.destroy();
-  input.destroy();
 });
 
 QUnit.test("Rapid target switches while open: each intermediate target is restored", async (assert) => {

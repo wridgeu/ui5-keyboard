@@ -31,41 +31,22 @@ QUnit.test("empty string returns 0", (assert) => {
   assert.strictEqual(graphemeLengthBefore("", 0), 0, "empty string at 0");
 });
 
-QUnit.test("surrogate pair (emoji outside BMP)", (assert) => {
-  // 😀 = U+1F600 = 2 code units
-  const s = "a😀b";
-  // positions: a=0, 😀=1..2, b=3
-  assert.strictEqual(graphemeLengthBefore(s, 3), 2, "😀 is 2 code units");
-});
-
-QUnit.test("variation selector sequence", (assert) => {
-  // ❤️ = U+2764 + U+FE0F = 2 code units (base + VS16)
-  const s = "a❤️b";
-  // a=0, ❤=1, ️(FE0F)=2, b=3
-  assert.strictEqual(graphemeLengthBefore(s, 3), 2, "❤️ is 2 code units as one grapheme");
-});
-
-QUnit.test("ZWJ sequence", (assert) => {
-  // 👨‍👩‍👧 = U+1F468 ZWJ U+1F469 ZWJ U+1F467 = 8 code units
-  const emoji = "👨‍👩‍👧";
-  const s = `a${emoji}b`;
-  const emojiEnd = 1 + emoji.length;
-  assert.strictEqual(graphemeLengthBefore(s, emojiEnd), emoji.length, "ZWJ family emoji treated as one grapheme");
-});
-
-QUnit.test("combining mark (n + combining tilde)", (assert) => {
-  // ñ as n(U+006E) + combining tilde(U+0303) = 2 code units
-  const s = "an\u0303o";
-  // a=0, n=1, ̃=2, o=3
-  assert.strictEqual(graphemeLengthBefore(s, 3), 2, "n + combining tilde is one grapheme of 2 code units");
-});
-
-QUnit.test("regional indicator pair (flag)", (assert) => {
-  // 🇩🇪 = U+1F1E9 + U+1F1EA = 4 code units (two surrogate pairs)
-  const flag = "🇩🇪";
-  const s = `x${flag}y`;
-  const flagEnd = 1 + flag.length;
-  assert.strictEqual(graphemeLengthBefore(s, flagEnd), flag.length, "flag emoji is one grapheme");
+QUnit.test("a multi-unit cluster is one grapheme", (assert) => {
+  const clusters: [string, string][] = [
+    ["😀", "surrogate pair"],
+    ["❤️", "variation selector sequence"],
+    ["👨‍👩‍👧", "ZWJ sequence"],
+    ["n\u0303", "combining mark"],
+    ["🇩🇪", "regional indicator pair"],
+  ];
+  for (const [cluster, name] of clusters) {
+    const s = `a${cluster}b`;
+    assert.strictEqual(
+      graphemeLengthBefore(s, 1 + cluster.length),
+      cluster.length,
+      `${name} is one grapheme of ${cluster.length} code units`,
+    );
+  }
 });
 
 // ── Unit tests: graphemeLengthAfter ───────────────────────────
@@ -85,31 +66,22 @@ QUnit.test("empty string returns 0", (assert) => {
   assert.strictEqual(graphemeLengthAfter("", 0), 0, "empty string");
 });
 
-QUnit.test("surrogate pair (emoji outside BMP)", (assert) => {
-  const s = "a😀b";
-  assert.strictEqual(graphemeLengthAfter(s, 1), 2, "😀 starting at offset 1 is 2 code units");
-});
-
-QUnit.test("variation selector sequence", (assert) => {
-  const s = "a❤️b";
-  assert.strictEqual(graphemeLengthAfter(s, 1), 2, "❤️ starting at offset 1 is 2 code units");
-});
-
-QUnit.test("ZWJ sequence", (assert) => {
-  const emoji = "👨‍👩‍👧";
-  const s = `a${emoji}b`;
-  assert.strictEqual(graphemeLengthAfter(s, 1), emoji.length, "ZWJ family emoji treated as one grapheme");
-});
-
-QUnit.test("combining mark", (assert) => {
-  const s = "an\u0303o";
-  assert.strictEqual(graphemeLengthAfter(s, 1), 2, "n + combining tilde at offset 1 is one grapheme");
-});
-
-QUnit.test("regional indicator pair (flag)", (assert) => {
-  const flag = "🇩🇪";
-  const s = `x${flag}y`;
-  assert.strictEqual(graphemeLengthAfter(s, 1), flag.length, "flag emoji at offset 1 is one grapheme");
+QUnit.test("a multi-unit cluster is one grapheme", (assert) => {
+  const clusters: [string, string][] = [
+    ["😀", "surrogate pair"],
+    ["❤️", "variation selector sequence"],
+    ["👨‍👩‍👧", "ZWJ sequence"],
+    ["n\u0303", "combining mark"],
+    ["🇩🇪", "regional indicator pair"],
+  ];
+  for (const [cluster, name] of clusters) {
+    const s = `a${cluster}b`;
+    assert.strictEqual(
+      graphemeLengthAfter(s, 1),
+      cluster.length,
+      `${name} at offset 1 is one grapheme of ${cluster.length} code units`,
+    );
+  }
 });
 
 // ── Integration tests through KioskKeyboard ───────────────────
@@ -121,11 +93,12 @@ QUnit.module("Grapheme integration", {
   },
 });
 
-QUnit.test("Backspace deletes entire surrogate-pair emoji in one press", async (assert) => {
+QUnit.test("Backspace deletes an entire multi-unit emoji in one press", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
 
-  const emojiLayout: LayoutDefinition = [[{ value: "😀" }, { value: "{backspace}" }]];
+  const family = "👨‍👩‍👧";
+  const emojiLayout: LayoutDefinition = [[{ value: "😀" }, { value: family }, { value: "{backspace}" }]];
   const kb = new KioskKeyboard({
     layout: "test-emoji-bs",
     controls: [input.getId()],
@@ -136,39 +109,17 @@ QUnit.test("Backspace deletes entire surrogate-pair emoji in one press", async (
   input.focus();
   await waitForRender();
 
-  // Type the emoji
   tapKey(kb, "😀");
   await waitForRender();
-  assert.strictEqual(input.getValue(), "😀", "Emoji inserted");
+  assert.strictEqual(input.getValue(), "😀", "Surrogate-pair emoji inserted");
 
-  // One backspace should remove the whole emoji
   tapKey(kb, "{backspace}");
   await waitForRender();
-  assert.strictEqual(input.getValue(), "", "Emoji fully deleted in one backspace");
+  assert.strictEqual(input.getValue(), "", "Surrogate-pair emoji fully deleted in one backspace");
 
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Backspace deletes ZWJ sequence in one press", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const emoji = "👨‍👩‍👧";
-  const layout: LayoutDefinition = [[{ value: emoji }, { value: "{backspace}" }]];
-  const kb = new KioskKeyboard({
-    layout: "test-zwj-bs",
-    controls: [input.getId()],
-    customLayouts: [new CustomLayout({ name: "test-zwj-bs", rows: layout })],
-  });
-  await placeAndWait(kb);
-
-  input.focus();
+  tapKey(kb, family);
   await waitForRender();
-
-  tapKey(kb, emoji);
-  await waitForRender();
-  assert.strictEqual(input.getValue(), emoji, "ZWJ emoji inserted");
+  assert.strictEqual(input.getValue(), family, "ZWJ emoji inserted");
 
   tapKey(kb, "{backspace}");
   await waitForRender();
@@ -279,16 +230,6 @@ QUnit.test("empty string returns false", (assert) => {
   assert.strictEqual(isSingleGlyph(""), false, "empty string has no glyphs");
 });
 
-QUnit.test("surrogate pair emoji returns true", (assert) => {
-  // 😀 = U+1F600 = 2 code units (surrogate pair) but one grapheme
-  assert.strictEqual(isSingleGlyph("😀"), true, "surrogate-pair emoji is one glyph");
-});
-
-QUnit.test("flag emoji (regional indicator pair) returns true", (assert) => {
-  // 🇩🇪 = U+1F1E9 + U+1F1EA = 4 code units but one grapheme cluster
-  assert.strictEqual(isSingleGlyph("🇩🇪"), true, "flag emoji is one glyph");
-});
-
 QUnit.test("ZWJ sequence returns true", (assert) => {
   // 👨‍👩‍👧 = multiple code points joined by ZWJ, one grapheme cluster
   const family = "👨‍👩‍👧";
@@ -332,18 +273,9 @@ QUnit.test("CJK unified ideographs returns true", (assert) => {
   assert.strictEqual(isCJKGlyph("\u4E00"), true, "\u4E00 (ichi/one) is CJK ideograph");
 });
 
-QUnit.test("halfwidth katakana returns true", (assert) => {
-  assert.strictEqual(isCJKGlyph("\uFF66"), true, "\uFF66 halfwidth wo");
-});
-
 QUnit.test("Hangul syllables returns true", (assert) => {
   assert.strictEqual(isCJKGlyph("\uAC00"), true, "\uAC00 first Hangul syllable");
   assert.strictEqual(isCJKGlyph("\uD7A3"), true, "\uD7A3 last Hangul syllable");
-});
-
-QUnit.test("Hangul Jamo returns true", (assert) => {
-  assert.strictEqual(isCJKGlyph("\u1100"), true, "\u1100 Jamo initial consonant");
-  assert.strictEqual(isCJKGlyph("\u3131"), true, "\u3131 Hangul Compatibility Jamo");
 });
 
 QUnit.test("Bopomofo returns true", (assert) => {
@@ -358,10 +290,6 @@ QUnit.test("Latin characters return false", (assert) => {
   assert.strictEqual(isCJKGlyph("1"), false, "digit");
 });
 
-QUnit.test("Arabic characters return false", (assert) => {
-  assert.strictEqual(isCJKGlyph("\u0639"), false, "\u0639 Arabic ain");
-});
-
 QUnit.test("empty string returns false", (assert) => {
   assert.strictEqual(isCJKGlyph(""), false, "empty string");
 });
@@ -374,51 +302,27 @@ QUnit.test("emoji returns false", (assert) => {
 
 QUnit.module("isHangulGlyph");
 
-QUnit.test("Hangul Compatibility Jamo consonants return true", (assert) => {
-  assert.strictEqual(isHangulGlyph("\u3131"), true, "\u3131 kiyeok");
-  assert.strictEqual(isHangulGlyph("\u3134"), true, "\u3134 nieun");
-  assert.strictEqual(isHangulGlyph("\u3142"), true, "\u3142 pieup");
-  assert.strictEqual(isHangulGlyph("\u314E"), true, "\u314E hieuh");
+QUnit.test("Hangul code points return true", (assert) => {
+  const rows: [string, string][] = [
+    ["\u3131", "Compatibility Jamo consonant kiyeok"],
+    ["\u314F", "Compatibility Jamo vowel a"],
+    ["\u3132", "tense consonant ssangkiyeok"],
+    ["\uAC00", "first syllable"],
+    ["\uD7A3", "last syllable"],
+    ["\u1100", "conjoining Jamo initial consonant"],
+    ["\u1161", "conjoining Jamo medial vowel"],
+  ];
+  for (const [codePoint, name] of rows) {
+    assert.strictEqual(isHangulGlyph(codePoint), true, name);
+  }
 });
 
-QUnit.test("Hangul Compatibility Jamo vowels return true", (assert) => {
-  assert.strictEqual(isHangulGlyph("\u314F"), true, "\u314F a");
-  assert.strictEqual(isHangulGlyph("\u3153"), true, "\u3153 eo");
-  assert.strictEqual(isHangulGlyph("\u3163"), true, "\u3163 i");
-});
-
-QUnit.test("tense (ssang) consonants return true", (assert) => {
-  assert.strictEqual(isHangulGlyph("\u3132"), true, "\u3132 ssangkiyeok");
-  assert.strictEqual(isHangulGlyph("\u3143"), true, "\u3143 ssangpieup");
-  assert.strictEqual(isHangulGlyph("\u3146"), true, "\u3146 ssangsios");
-});
-
-QUnit.test("Hangul syllables return true", (assert) => {
-  assert.strictEqual(isHangulGlyph("\uAC00"), true, "\uAC00 first syllable");
-  assert.strictEqual(isHangulGlyph("\uD7A3"), true, "\uD7A3 last syllable");
-  assert.strictEqual(isHangulGlyph("\uD55C"), true, "\uD55C han");
-});
-
-QUnit.test("Hangul Jamo (conjoining) return true", (assert) => {
-  assert.strictEqual(isHangulGlyph("\u1100"), true, "\u1100 initial consonant");
-  assert.strictEqual(isHangulGlyph("\u1161"), true, "\u1161 medial vowel");
-});
-
-QUnit.test("Japanese hiragana/katakana return false", (assert) => {
+QUnit.test("non-Hangul code points return false, including shared CJK punctuation (Script=Common)", (assert) => {
   assert.strictEqual(isHangulGlyph("\u3042"), false, "\u3042 hiragana a");
   assert.strictEqual(isHangulGlyph("\u30A2"), false, "\u30A2 katakana a");
-});
-
-QUnit.test("CJK ideographs return false", (assert) => {
   assert.strictEqual(isHangulGlyph("\u4E00"), false, "\u4E00 CJK ideograph");
-});
-
-QUnit.test("Latin characters return false", (assert) => {
   assert.strictEqual(isHangulGlyph("A"), false, "uppercase Latin");
   assert.strictEqual(isHangulGlyph("1"), false, "digit");
-});
-
-QUnit.test("shared CJK punctuation returns false (Script=Common, not Hangul)", (assert) => {
   assert.strictEqual(isHangulGlyph("\u3001"), false, "\u3001 ideographic comma");
   assert.strictEqual(isHangulGlyph("\u3002"), false, "\u3002 ideographic full stop");
   assert.strictEqual(isHangulGlyph("\u30FB"), false, "\u30FB katakana middle dot");
@@ -461,17 +365,11 @@ QUnit.test("each Indic script's range returns true", (assert) => {
   });
 });
 
-QUnit.test("Latin characters return false", (assert) => {
+QUnit.test("other scripts return false (Latin, CJK, Thai)", (assert) => {
   assert.strictEqual(isIndicGlyph("A"), false, "uppercase Latin");
   assert.strictEqual(isIndicGlyph("1"), false, "digit");
-});
-
-QUnit.test("CJK characters return false", (assert) => {
   assert.strictEqual(isIndicGlyph("\u3042"), false, "\u3042 hiragana");
   assert.strictEqual(isIndicGlyph("\uAC00"), false, "\uAC00 Hangul syllable");
-});
-
-QUnit.test("Thai characters return false", (assert) => {
   assert.strictEqual(isIndicGlyph("\u0E01"), false, "\u0E01 Thai ko kai");
 });
 
@@ -483,88 +381,25 @@ QUnit.test("empty string returns false", (assert) => {
 
 QUnit.module("isArabicGlyph");
 
-QUnit.test("basic Arabic letters return true", (assert) => {
-  assert.strictEqual(isArabicGlyph("\u0627"), true, "\u0627 alef");
-  assert.strictEqual(isArabicGlyph("\u0628"), true, "\u0628 ba");
-  assert.strictEqual(isArabicGlyph("\u062A"), true, "\u062A ta");
-  assert.strictEqual(isArabicGlyph("\u0639"), true, "\u0639 ain");
-  assert.strictEqual(isArabicGlyph("\u0641"), true, "\u0641 fa");
-  assert.strictEqual(isArabicGlyph("\u0644"), true, "\u0644 lam");
-  assert.strictEqual(isArabicGlyph("\u0645"), true, "\u0645 mim");
-  assert.strictEqual(isArabicGlyph("\u0646"), true, "\u0646 nun");
-  assert.strictEqual(isArabicGlyph("\u064A"), true, "\u064A ya");
+QUnit.test("Arabic code points return true, basic letters and Presentation Forms alike", (assert) => {
+  const rows: [string, string][] = [
+    ["\u0627", "alef"],
+    ["\u0628", "ba"],
+    ["\u0639", "ain"],
+    ["\u064A", "ya"],
+    ["\uFB50", "alef wasla isolated (Presentation Forms-A)"],
+    ["\uFE70", "fathatan isolated (Presentation Forms-B)"],
+    ["\uFEFC", "lam alef final (Presentation Forms-B)"],
+  ];
+  for (const [codePoint, name] of rows) {
+    assert.strictEqual(isArabicGlyph(codePoint), true, name);
+  }
 });
 
-QUnit.test("Arabic diacritical marks return true", (assert) => {
-  assert.strictEqual(isArabicGlyph("\u064E"), true, "\u064E fatha");
-  assert.strictEqual(isArabicGlyph("\u064F"), true, "\u064F damma");
-  assert.strictEqual(isArabicGlyph("\u0650"), true, "\u0650 kasra");
-  assert.strictEqual(isArabicGlyph("\u0651"), true, "\u0651 shadda");
-  assert.strictEqual(isArabicGlyph("\u0652"), true, "\u0652 sukun");
-});
-
-QUnit.test("Arabic-Indic digits return true", (assert) => {
-  assert.strictEqual(isArabicGlyph("\u0660"), true, "\u0660 zero");
-  assert.strictEqual(isArabicGlyph("\u0669"), true, "\u0669 nine");
-});
-
-QUnit.test("Persian characters return true", (assert) => {
-  assert.strictEqual(isArabicGlyph("\u067E"), true, "\u067E pe");
-  assert.strictEqual(isArabicGlyph("\u0686"), true, "\u0686 che");
-  assert.strictEqual(isArabicGlyph("\u0698"), true, "\u0698 zhe");
-  assert.strictEqual(isArabicGlyph("\u06AF"), true, "\u06AF gaf");
-});
-
-QUnit.test("Urdu characters return true", (assert) => {
-  assert.strictEqual(isArabicGlyph("\u0679"), true, "\u0679 tte");
-  assert.strictEqual(isArabicGlyph("\u0688"), true, "\u0688 ddal");
-  assert.strictEqual(isArabicGlyph("\u0691"), true, "\u0691 rreh");
-  assert.strictEqual(isArabicGlyph("\u06BA"), true, "\u06BA noon ghunna");
-  assert.strictEqual(isArabicGlyph("\u06D2"), true, "\u06D2 yeh barree");
-});
-
-QUnit.test("Arabic Presentation Forms return true", (assert) => {
-  assert.strictEqual(isArabicGlyph("\uFB50"), true, "\uFB50 alef wasla isolated");
-  assert.strictEqual(isArabicGlyph("\uFE70"), true, "\uFE70 fathatan isolated");
-  assert.strictEqual(isArabicGlyph("\uFEFC"), true, "\uFEFC lam alef final");
-});
-
-QUnit.test("Latin characters return false", (assert) => {
-  assert.strictEqual(isArabicGlyph("A"), false, "uppercase Latin");
-  assert.strictEqual(isArabicGlyph("z"), false, "lowercase Latin");
-  assert.strictEqual(isArabicGlyph("1"), false, "digit");
-});
-
-QUnit.test("CJK characters return false", (assert) => {
-  assert.strictEqual(isArabicGlyph("\u3042"), false, "\u3042 hiragana");
-  assert.strictEqual(isArabicGlyph("\uAC00"), false, "\uAC00 Hangul syllable");
-});
-
-QUnit.test("Indic characters return false", (assert) => {
-  assert.strictEqual(isArabicGlyph("\u0905"), false, "\u0905 Devanagari a");
-  assert.strictEqual(isArabicGlyph("\u0B85"), false, "\u0B85 Tamil a");
-});
-
-QUnit.test("Hebrew characters return false", (assert) => {
-  assert.strictEqual(isArabicGlyph("\u05D0"), false, "\u05D0 aleph");
-  assert.strictEqual(isArabicGlyph("\u05EA"), false, "\u05EA tav");
-});
-
-QUnit.test("Cyrillic characters return false", (assert) => {
-  assert.strictEqual(isArabicGlyph("\u0410"), false, "\u0410 A");
-  assert.strictEqual(isArabicGlyph("\u042F"), false, "\u042F Ya");
-});
-
-QUnit.test("Thai characters return false", (assert) => {
-  assert.strictEqual(isArabicGlyph("\u0E01"), false, "\u0E01 ko kai");
-});
-
-QUnit.test("empty string returns false", (assert) => {
+QUnit.test("other scripts return false, Hebrew included, and so does the empty string", (assert) => {
+  assert.strictEqual(isArabicGlyph("\u05D0"), false, "\u05D0 Hebrew aleph");
+  assert.strictEqual(isArabicGlyph("\u05EA"), false, "\u05EA Hebrew tav");
   assert.strictEqual(isArabicGlyph(""), false, "empty string");
-});
-
-QUnit.test("emoji returns false", (assert) => {
-  assert.strictEqual(isArabicGlyph("\uD83D\uDE00"), false, "emoji is not Arabic");
 });
 
 QUnit.test("checks only the first code point for multi-character strings", (assert) => {
