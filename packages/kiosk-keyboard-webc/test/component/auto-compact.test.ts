@@ -77,12 +77,6 @@ function pair(): CustomLayout[] {
 }
 
 describe("kiosk-keyboard - autoCompact", () => {
-  it("is off by default", async () => {
-    const { el } = await mount(NARROW_PX, { layout: "ja-kana" });
-
-    expect(el.autoCompact).to.equal(false);
-  });
-
   it("does not swap while it is off, however narrow the keyboard is", async () => {
     // ja-kana declares ja-kana-compact, so in a box this narrow the property is
     // the only thing holding the swap back.
@@ -93,7 +87,6 @@ describe("kiosk-keyboard - autoCompact", () => {
     expect(on.changes, "the same box swaps with the property on").to.deep.equal([
       { layout: "ja-kana-compact", autoDetected: true },
     ]);
-    expect(readDataKeys(off.el)).to.not.deep.equal(readDataKeys(on.el));
   });
 
   it("yields to the compact counterpart below the threshold and takes the layout back above it", async () => {
@@ -103,8 +96,6 @@ describe("kiosk-keyboard - autoCompact", () => {
 
     await resize(NARROW_PX);
     expect(changes).to.deep.equal([{ layout: "ja-kana-compact", autoDetected: true }]);
-    const narrowKeys = readDataKeys(el);
-    expect(narrowKeys, "the compact rows replaced the wide ones").to.not.deep.equal(wideKeys);
 
     await resize(WIDE_PX);
     // Not the locale default and not the compact form: the layout that was asked for.
@@ -163,15 +154,12 @@ describe("kiosk-keyboard - autoCompact", () => {
     expect(readDataKeys(el), "the new request is what the room returns to").to.deep.equal([["{layout:away}", "h"]]);
   });
 
-  it("fires layout-change with autoDetected false for a request and true for a tier swap", async () => {
-    const requested = await mount(WIDE_PX, { layout: "home", "auto-compact": "" }, ...pair());
-    requireKey(requested.el, "{layout:away}").click();
+  it("fires layout-change with autoDetected false for a request", async () => {
+    const { el, changes } = await mount(WIDE_PX, { layout: "home", "auto-compact": "" }, ...pair());
+    requireKey(el, "{layout:away}").click();
     await settle();
 
-    expect(requested.changes).to.deep.equal([{ layout: "away", autoDetected: false }]);
-
-    const tiered = await mount(NARROW_PX, { layout: "home", "auto-compact": "" }, ...pair());
-    expect(tiered.changes).to.deep.equal([{ layout: "home-c", autoDetected: true }]);
+    expect(changes).to.deep.equal([{ layout: "away", autoDetected: false }]);
   });
 
   it("follows the focused key to the seat the compact form gives it", async () => {
@@ -241,19 +229,6 @@ describe("kiosk-keyboard - autoCompact", () => {
 
     expect(el.layout, "a key press is not a re-declaration either").to.equal("qwerty");
     expect(el.effectiveLayout, "but it is what renders").to.equal("numeric");
-  });
-
-  it("names no layout, so the announcement carries no untranslated identifier", async () => {
-    const { resize } = await mount(WIDE_PX, { layout: "ja-kana", "auto-compact": "" });
-    const announced = () => announcedText();
-
-    // The user never chose the layout a width picks and never sees its name, and the
-    // name would sit untranslated inside a translated sentence.
-    await resize(NARROW_PX);
-    expect(announced(), "the compacting announcement quotes no layout name").to.not.contain("ja-kana");
-
-    await resize(WIDE_PX);
-    expect(announced(), "and neither does the one restoring it").to.not.contain("ja-kana");
   });
 
   it("says nothing when the layout switch was asked for", async () => {

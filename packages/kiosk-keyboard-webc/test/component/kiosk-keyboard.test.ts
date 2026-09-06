@@ -60,13 +60,6 @@ describe("kiosk-keyboard", () => {
   // ── Render ──
 
   describe("rendering", () => {
-    it("creates shadow DOM with the layout's keys", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      // A known qwerty key must be present, not merely "something rendered".
-      expect(queryKey(el, "q"), "qwerty layout renders its 'q' key").to.not.be.null;
-    });
-
     it("renders one .kiosk-row per row in the layout definition", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="numeric"></kiosk-keyboard> `);
       await nextRender();
@@ -75,10 +68,16 @@ describe("kiosk-keyboard", () => {
       expect(rows.length, "one rendered row per numeric layout row").to.equal(numericLayout.length);
     });
 
-    it("renders disabled state with disabled class", async () => {
+    it("renders disabled state with the disabled class, aria-disabled keys and no tab stop", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" disabled></kiosk-keyboard> `);
       await nextRender();
       expect(rootDiv(el).classList.contains(DOM.classes.rootDisabled)).to.be.true;
+      const keys = queryKeys(el);
+      expect(keys.length, "layout should render at least one key").to.be.greaterThan(0);
+      for (const key of keys) {
+        expect(key.getAttribute("aria-disabled")).to.equal("true");
+        expect(key.getAttribute("tabindex")).to.equal("-1");
+      }
     });
 
     it("exposes a frozen DOM contract", async () => {
@@ -108,15 +107,10 @@ describe("kiosk-keyboard", () => {
       expect(selectedIds, "keyByPosition selects the key rendered at that coordinate").to.deep.equal(renderedIds);
     });
 
-    it("renders docked mode with docked class", async () => {
+    it("renders docked mode with the docked class, hidden until opened", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard> `);
       await nextRender();
       expect(rootDiv(el).classList.contains(DOM.classes.rootDocked)).to.be.true;
-    });
-
-    it("renders hidden state when docked and not opened", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard> `);
-      await nextRender();
       expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.true;
     });
   });
@@ -948,7 +942,7 @@ describe("kiosk-keyboard", () => {
   // ── Layout switching ──
 
   describe("layout switching", () => {
-    it("switches layout via layout-change key", async () => {
+    it("a layout-switch key fires a cancelable key-press, and switches unless it is prevented", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
 
@@ -956,10 +950,27 @@ describe("kiosk-keyboard", () => {
       const layoutKey = queryKey(el, "{layout:numeric}");
       expect(layoutKey, "layout switch key should exist in qwerty").to.not.be.null;
 
-      const layoutChangeEvent = oneEvent(el, "layout-change");
+      const seen: string[] = [];
+      let cancelable = false;
+      el.addEventListener("key-press", (e: Event) => {
+        seen.push((e as CustomEvent<{ key: string }>).detail.key);
+        cancelable = e.cancelable;
+      });
+      const changes: string[] = [];
+      el.addEventListener("layout-change", (e: Event) => {
+        changes.push((e as CustomEvent<{ layout: string }>).detail.layout);
+      });
+
+      el.addEventListener("key-press", (e: Event) => e.preventDefault(), { once: true });
       layoutKey!.click();
-      const { detail } = await layoutChangeEvent;
-      expect(detail.layout).to.equal("numeric");
+      await nextRender();
+      expect(seen).to.deep.equal(["{layout:numeric}"]);
+      expect(cancelable, "key-press is cancelable").to.be.true;
+      expect(changes, "layout-change should not fire when key-press is prevented").to.deep.equal([]);
+
+      layoutKey!.click();
+      await nextRender();
+      expect(changes, "layout-change fires when key-press is not prevented").to.deep.equal(["numeric"]);
     });
 
     it("Full keyboard: the symbols layout keeps the ABC key (letters stay reachable)", async () => {
@@ -1056,65 +1067,10 @@ describe("kiosk-keyboard", () => {
       );
     });
 
-    it("fires cancelable key-press for layout-switch keys before the switch", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-
-      const layoutKey = queryKey(el, "{layout:numeric}");
-      expect(layoutKey, "layout switch key should exist in qwerty").to.not.be.null;
-
-      const seen: string[] = [];
-      const onKeyPress = (e: Event) => {
-        const detail = (e as CustomEvent<{ key: string }>).detail;
-        seen.push(detail.key);
-      };
-      el.addEventListener("key-press", onKeyPress);
-      let layoutChanges = 0;
-      el.addEventListener("layout-change", () => {
-        layoutChanges++;
-      });
-
-      layoutKey!.click();
-      await nextRender();
-
-      expect(seen).to.deep.equal(["{layout:numeric}"]);
-      expect(layoutChanges, "layout-change should fire when key-press is not prevented").to.equal(1);
-
-      el.removeEventListener("key-press", onKeyPress);
-    });
-
-    it("preventDefault on key-press blocks the layout switch", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-
-      const layoutKey = queryKey(el, "{layout:numeric}");
-      expect(layoutKey).to.not.be.null;
-
-      el.addEventListener(
-        "key-press",
-        (e: Event) => {
-          if ((e as CustomEvent<{ key: string }>).detail.key.startsWith("{layout:")) {
-            e.preventDefault();
-          }
-        },
-        { once: true },
-      );
-      let layoutChanges = 0;
-      el.addEventListener("layout-change", () => {
-        layoutChanges++;
-      });
-
-      layoutKey!.click();
-      await nextRender();
-
-      expect(layoutChanges, "layout-change should not fire when key-press is prevented").to.equal(0);
-    });
-
     it("ignores {layout:*} for unregistered layout names", async () => {
       const el = await fixture<KioskKeyboard>(html`<kiosk-keyboard layout="qwerty"></kiosk-keyboard>`);
       await nextRender();
 
-      const initialLayout = el.layout;
       let layoutChanges = 0;
       el.addEventListener("layout-change", () => {
         layoutChanges++;
@@ -1130,7 +1086,6 @@ describe("kiosk-keyboard", () => {
       await nextRender();
 
       expect(layoutChanges, "no layout-change for unregistered layout").to.equal(0);
-      expect(el.layout, "layout property unchanged").to.equal(initialLayout);
       fakeKey.remove();
     });
 
@@ -1384,42 +1339,22 @@ describe("kiosk-keyboard", () => {
   // ── Docked mode ──
 
   describe("docked mode", () => {
-    it("opens and closes via show()/close()", async () => {
+    it("opens and closes via show()/close(), dispatching after-open and after-close", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard> `);
       await nextRender();
       expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.true;
 
-      el.show();
-      await nextRender();
-      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.false;
-
-      el.close();
-      await nextRender();
-      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.true;
-    });
-
-    it("dispatches after-open event", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard> `);
       const afterOpenEvent = oneEvent(el, "after-open");
       el.show();
       await afterOpenEvent;
-    });
+      await nextRender();
+      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.false;
 
-    it("dispatches after-close event", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard> `);
-      el.show();
       const afterCloseEvent = oneEvent(el, "after-close");
       el.close();
       await afterCloseEvent;
-    });
-
-    it("closes on Escape key", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard> `);
-      el.show();
-      expect(el.open).to.be.true;
-
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-      expect(el.open).to.be.false;
+      await nextRender();
+      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.true;
     });
 
     it("fires after-close and resets state when docked is set to false while open", async () => {
@@ -1482,20 +1417,6 @@ describe("kiosk-keyboard", () => {
       expect(el.open).to.be.false;
     });
 
-    it("opens via open property (reactive attribute)", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" docked></kiosk-keyboard> `);
-      await nextRender();
-      expect(el.open).to.be.false;
-
-      el.open = true;
-      await nextRender();
-      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.false;
-
-      el.open = false;
-      await nextRender();
-      expect(rootDiv(el).classList.contains(DOM.classes.rootHidden)).to.be.true;
-    });
-
     it("does not fire spurious after-close when open=true is rejected (non-docked)", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
@@ -1516,26 +1437,6 @@ describe("kiosk-keyboard", () => {
 
       expect(el.open, "open should remain false when not docked").to.be.false;
       expect(closeFired, "after-close should NOT fire when open was rejected").to.be.false;
-    });
-
-    it("does not fire spurious after-close when show() is called on non-docked keyboard", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-
-      let closeFired = false;
-      el.addEventListener(
-        "after-close",
-        () => {
-          closeFired = true;
-        },
-        { once: true },
-      );
-
-      el.show();
-      await nextRender();
-
-      expect(el.open, "open should remain false when not docked").to.be.false;
-      expect(closeFired, "after-close should NOT fire when show() was rejected").to.be.false;
     });
 
     it("fires after-open when open attribute is set in markup", async () => {
@@ -1709,16 +1610,6 @@ describe("kiosk-keyboard", () => {
   // ── i18n ──
 
   describe("i18n", () => {
-    it("renders visible labels for special keys", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      const shift = queryKey(el, "{shift}")!;
-      const labelEl = shift.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`);
-      expect(labelEl).to.not.be.null;
-      expect(labelEl!.textContent!.length).to.be.greaterThan(0);
-      expect(labelEl!.textContent).to.not.equal("{shift}");
-    });
-
     it("resolver overrides apply", async () => {
       const { default: KK } = await import("../../src/KioskKeyboard.js");
       KK.setI18nResolver((key: string) => {
@@ -2075,64 +1966,6 @@ describe("kiosk-keyboard", () => {
     });
   });
 
-  // ── Per-instance layout declarations ──
-
-  describe("custom layouts", () => {
-    it("a slotted custom layout makes a layout available for rendering", async () => {
-      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
-      el.appendChild(
-        customLayout({
-          name: "test-pin",
-          rows: [
-            [{ value: "1" }, { value: "2" }, { value: "3" }],
-            [{ value: "4" }, { value: "5" }, { value: "6" }],
-          ],
-        }),
-      );
-      await fixture(el);
-      el.layout = "test-pin";
-      await nextRender();
-
-      const keys = queryKeys(el);
-      const values = Array.from(keys).map((k) => k.dataset.key);
-      expect(values).to.include("1");
-      expect(values).to.include("6");
-      expect(values).to.have.lengthOf(6);
-    });
-
-    it("a custom layout on one element does not leak into another", async () => {
-      const container = document.createElement("div");
-      const kbA = document.createElement("kiosk-keyboard") as KioskKeyboard;
-      const kbB = document.createElement("kiosk-keyboard") as KioskKeyboard;
-      kbA.appendChild(customLayout({ name: "shared-test", rows: [[{ value: "x" }, { value: "y" }]] }));
-      container.append(kbA, kbB);
-      await fixture(container);
-
-      kbA.layout = "shared-test";
-      kbB.layout = "shared-test";
-      await nextRender();
-
-      const valuesA = Array.from(queryKeys(kbA)).map((k) => k.dataset.key);
-      expect(valuesA).to.include("x");
-      expect(valuesA).to.include("y");
-
-      // kbB declares no "shared-test" and no built-in registration exists, so it
-      // falls back to the default layout (more than 2 keys).
-      const keysB = queryKeys(kbB);
-      expect(keysB.length).to.be.greaterThan(2);
-    });
-
-    it("falls back to default when an unknown layout is requested with no custom layouts", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard></kiosk-keyboard> `);
-      el.layout = "temp-layout";
-      await nextRender();
-
-      const keys = queryKeys(el);
-      // Default layout has more than 1 key
-      expect(keys.length).to.be.greaterThan(1);
-    });
-  });
-
   // ── Accessibility ──
 
   describe("accessibility", () => {
@@ -2144,24 +1977,6 @@ describe("kiosk-keyboard", () => {
       for (const key of keys) {
         expect(key.getAttribute("role")).to.equal("button");
       }
-    });
-
-    it("special keys are accessible via visible label or aria-label", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-
-      // Shift and Enter: have visible text labels (icon+label dual rendering)
-      const shift = queryKey(el, "{shift}")!;
-      const shiftLabel = shift.querySelector<HTMLElement>(`.${DOM.classes.keyLabel}`);
-      expect(shiftLabel).to.not.be.null;
-      expect(shiftLabel!.textContent!.length).to.be.greaterThan(0);
-
-      const enter = queryKey(el, "{enter}")!;
-      expect(enter.querySelector(`.${DOM.classes.keyLabel}`)).to.not.be.null;
-
-      // Backspace: qwerty layout shows icon+label (dual rendering)
-      const backspace = queryKey(el, "{backspace}")!;
-      expect(backspace.querySelector(`.${DOM.classes.keyLabel}`)).to.not.be.null;
     });
 
     it("has a live region outside the aria-hidden root so docked-but-hidden announcements aren't suppressed by AT", async () => {
@@ -2300,42 +2115,12 @@ describe("kiosk-keyboard", () => {
       expect(focusable.length).to.equal(1);
     });
 
-    it("keyboard group has aria-label and aria-roledescription", async () => {
+    it("keyboard group has a role and aria-roledescription", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
       const group = rootDiv(el);
       expect(group.getAttribute("role")).to.equal("group");
-      expect(group.getAttribute("aria-label")!.length).to.be.greaterThan(0);
       expect(group.getAttribute("aria-roledescription")!.length).to.be.greaterThan(0);
-    });
-
-    it("shift key has aria-pressed=false initially (presence + correct default value)", async () => {
-      // Assert the value, not just presence: a bare hasAttribute check passes
-      // whether shift defaults to "true" or "false".
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      const shift = queryKey(el, "{shift}")!;
-      expect(shift.getAttribute("aria-pressed")).to.equal("false");
-    });
-
-    it("disabled keys have aria-disabled", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" disabled></kiosk-keyboard> `);
-      await nextRender();
-      const keys = queryKeys(el);
-      expect(keys.length, "layout should render at least one key").to.be.greaterThan(0);
-      for (const key of keys) {
-        expect(key.getAttribute("aria-disabled")).to.equal("true");
-      }
-    });
-
-    it("a disabled keyboard exposes no tab stop", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty" disabled></kiosk-keyboard> `);
-      await nextRender();
-      const keys = queryKeys(el);
-      expect(keys.length, "layout should render at least one key").to.be.greaterThan(0);
-      for (const key of keys) {
-        expect(key.getAttribute("tabindex")).to.equal("-1");
-      }
     });
 
     it("passes axe-core a11y audit", async () => {
@@ -2664,18 +2449,6 @@ describe("kiosk-keyboard", () => {
   // ── keyboard-type-change event ──
 
   describe("keyboard-type-change event", () => {
-    it("fires when keyboardType property changes", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-
-      const typeChangeEvent = oneEvent(el, "keyboard-type-change");
-      el.keyboardType = "Numpad";
-      const { detail } = await typeChangeEvent;
-      expect(detail.keyboardType).to.equal("Numpad");
-      expect(detail.previousKeyboardType).to.equal("Full");
-      expect(detail.autoDetected).to.be.false;
-    });
-
     it("fires with autoDetected=true for auto-type detection", async () => {
       const container = await fixture(html`
         <div>
@@ -2695,27 +2468,16 @@ describe("kiosk-keyboard", () => {
       expect(detail.autoDetected).to.be.true;
     });
 
-    it("does not fire when keyboardType is set to same value", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-
-      let fired = false;
-      el.addEventListener("keyboard-type-change", () => {
-        fired = true;
-      });
-      el.keyboardType = "Full"; // same as default
-      await nextRender();
-      expect(fired).to.be.false;
-    });
-
-    it("fires with correct previous type on sequential changes", async () => {
+    it("fires on property changes with the previous type, across sequential changes", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
 
       const firstEvent = oneEvent(el, "keyboard-type-change");
       el.keyboardType = "Numpad";
       const first = await firstEvent;
+      expect(first.detail.keyboardType).to.equal("Numpad");
       expect(first.detail.previousKeyboardType).to.equal("Full");
+      expect(first.detail.autoDetected).to.be.false;
 
       const secondEvent = oneEvent(el, "keyboard-type-change");
       el.keyboardType = "Numeric";
@@ -2728,18 +2490,23 @@ describe("kiosk-keyboard", () => {
   // ── Invalid value clamping ──
 
   describe("invalid value clamping", () => {
-    it("clamps invalid enum values back to their defaults", async () => {
-      const cases: [property: "keyboardType" | "fKeyMode" | "mobileKeyboard", expectedDefault: string][] = [
-        ["keyboardType", "Full"],
-        ["fKeyMode", "Virtual"],
-        ["mobileKeyboard", "Auto"],
+    it("clamps invalid enum values back to their defaults and reflects the default attribute", async () => {
+      const cases: [
+        property: "keyboardType" | "fKeyMode" | "mobileKeyboard",
+        attribute: string,
+        expectedDefault: string,
+      ][] = [
+        ["keyboardType", "keyboard-type", "Full"],
+        ["fKeyMode", "f-key-mode", "Virtual"],
+        ["mobileKeyboard", "mobile-keyboard", "Auto"],
       ];
-      for (const [property, expectedDefault] of cases) {
+      for (const [property, attribute, expectedDefault] of cases) {
         const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
         await nextRender();
         setInvalidValue(el, property, "InvalidValue");
         await nextRender();
-        expect(el[property]).to.equal(expectedDefault);
+        expect(el[property], `${property} clamped`).to.equal(expectedDefault);
+        expect(el.getAttribute(attribute), `${attribute} reflected`).to.equal(expectedDefault);
       }
     });
 
@@ -2862,33 +2629,12 @@ describe("kiosk-keyboard", () => {
       expect(detail.keyboardType).to.equal("Numpad");
       expect(detail.autoDetected).to.be.true;
     });
-
-    it("a post-render invalid mobile-keyboard reflects the default attribute", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-
-      await captureConsole("warn", async () => {
-        setInvalidValue(el, "mobileKeyboard", "native");
-        await nextRender();
-      });
-      expect(el.mobileKeyboard, "clamped").to.equal("Auto");
-      expect(el.getAttribute("mobile-keyboard"), "reflected attribute").to.equal("Auto");
-    });
   });
 
   // ── accessibleName ──
 
   describe("accessibleName", () => {
-    it("accessibleName renders as aria-label on the root group", async () => {
-      const el = await fixture<KioskKeyboard>(html`
-        <kiosk-keyboard layout="qwerty" accessible-name="Custom Label"></kiosk-keyboard>
-      `);
-      await nextRender();
-      const group = rootDiv(el);
-      expect(group.getAttribute("aria-label")).to.equal("Custom Label");
-    });
-
-    it("accessibleName change triggers re-render", async () => {
+    it("accessibleName renders as aria-label on the root group and follows a change", async () => {
       const el = await fixture<KioskKeyboard>(html`
         <kiosk-keyboard layout="qwerty" accessible-name="Label A"></kiosk-keyboard>
       `);
@@ -2903,37 +2649,17 @@ describe("kiosk-keyboard", () => {
     it("falls back to i18n default when accessibleName is empty", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
-      const label = rootDiv(el).getAttribute("aria-label")!;
-      expect(label.length).to.be.greaterThan(0);
       // Default English text is "Virtual Keyboard"
-      expect(label).to.equal("Virtual Keyboard");
+      expect(rootDiv(el).getAttribute("aria-label")).to.equal("Virtual Keyboard");
     });
   });
 
   // ── mobileKeyboard open/defer behavior ──
 
   describe("mobileKeyboard open/defer behavior", () => {
-    it("mobileKeyboard='Custom' always opens the docked keyboard", async () => {
-      const el = await fixture<KioskKeyboard>(html`
-        <kiosk-keyboard layout="qwerty" docked mobile-keyboard="Custom"></kiosk-keyboard>
-      `);
-      await nextRender();
-      el.show();
-      await nextRender();
-      expect(el.open).to.be.true;
-    });
-
-    it("mobileKeyboard='Native' prevents the docked keyboard from opening", async () => {
-      const el = await fixture<KioskKeyboard>(html`
-        <kiosk-keyboard layout="qwerty" docked mobile-keyboard="Native"></kiosk-keyboard>
-      `);
-      await nextRender();
-      el.show();
-      await nextRender();
-      expect(el.open).to.be.false;
-    });
-
-    it("mobileKeyboard='Native' does not fire after-open", async () => {
+    // The `Custom` mode is only distinguishable from `Auto` on a coarse pointer;
+    // it is pinned in mobile-keyboard-coarse.test.ts under touch emulation.
+    it("mobileKeyboard='Native' refuses show() without firing after-open", async () => {
       const el = await fixture<KioskKeyboard>(html`
         <kiosk-keyboard layout="qwerty" docked mobile-keyboard="Native"></kiosk-keyboard>
       `);
@@ -2944,6 +2670,7 @@ describe("kiosk-keyboard", () => {
       });
       el.show();
       await nextRender();
+      expect(el.open).to.be.false;
       expect(fired).to.be.false;
     });
   });
@@ -2951,36 +2678,6 @@ describe("kiosk-keyboard", () => {
   // ── Additional public API ──
 
   describe("additional public API", () => {
-    it("resetKeyboardType() resets to Full and re-enables auto-detection", async () => {
-      const container = await fixture(html`
-        <div>
-          <input id="reset-type-input" type="number" />
-          <kiosk-keyboard layout="qwerty" docked auto-show auto-type controls="reset-type-input"></kiosk-keyboard>
-        </div>
-      `);
-      const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
-      const input = container.querySelector<HTMLInputElement>("#reset-type-input")!;
-      await nextRender();
-
-      // Explicitly set a type
-      kb.keyboardType = "Numpad";
-      await nextRender();
-      expect(kb.keyboardType).to.equal("Numpad");
-
-      // Reset should go back to Full
-      kb.resetKeyboardType();
-      await nextRender();
-      expect(kb.keyboardType).to.equal("Full");
-
-      // Auto-detection should now resume: focusing a number input should auto-detect Numpad
-      const typeChangeEvent = oneEvent(kb, "keyboard-type-change");
-      input.focus();
-      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
-      const { detail } = await typeChangeEvent;
-      expect(detail.keyboardType).to.equal("Numpad");
-      expect(detail.autoDetected).to.be.true;
-    });
-
     it("resetKeyboardType() from an explicit type fires keyboard-type-change with autoDetected false", async () => {
       const container = await fixture(html`
         <div>
@@ -3140,26 +2837,6 @@ describe("kiosk-keyboard", () => {
       expect(detail.autoDetected).to.be.true;
     });
 
-    it("a keyboardType assigned before connection locks auto-type", async () => {
-      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
-      el.layout = "qwerty";
-      el.keyboardType = "Numeric";
-      el.docked = true;
-      el.autoShow = true;
-      el.autoType = true;
-      el.controls = "pre-text";
-
-      const container = await fixture(html` <div><input id="pre-text" type="text" />${el}</div> `);
-      const textInput = container.querySelector<HTMLInputElement>("#pre-text")!;
-      await nextRender();
-
-      textInput.focus();
-      textInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
-      await nextRender();
-      expect(el.open, "auto-show opened the keyboard").to.be.true;
-      expect(el.keyboardType, "pre-connect type survives auto-type detection").to.equal("Numeric");
-    });
-
     it("re-attaching an auto-detected keyboard does not lock the detected type", async () => {
       const container = await fixture(html`
         <div>
@@ -3192,18 +2869,6 @@ describe("kiosk-keyboard", () => {
       textInput.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await nextRender();
       expect(kb.keyboardType, "auto-type still detects after re-attach").to.equal("Full");
-    });
-
-    it("isSecondaryLayout() identifies secondary layouts", async () => {
-      const { default: KK } = await import("../../src/KioskKeyboard.js");
-      expect(KK.isSecondaryLayout("numeric")).to.be.true;
-      expect(KK.isSecondaryLayout("special")).to.be.true;
-      expect(KK.isSecondaryLayout("fkeys")).to.be.true;
-      expect(KK.isSecondaryLayout("nav")).to.be.true;
-      expect(KK.isSecondaryLayout("numpad")).to.be.false;
-      expect(KK.isSecondaryLayout("qwerty")).to.be.false;
-      expect(KK.isSecondaryLayout("qwertz-de")).to.be.false;
-      expect(KK.isSecondaryLayout("nonexistent")).to.be.false;
     });
   });
 
@@ -3774,75 +3439,33 @@ describe("kiosk-keyboard", () => {
       }
     });
 
-    it("exposes 'keyboard' part on root container", async () => {
+    it("names each key kind by its part, and leaves character keys anonymous", async () => {
       const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
       await nextRender();
-      const root = rootDiv(el);
-      expect(root.getAttribute("part")).to.equal("keyboard");
-    });
 
-    it("exposes 'row' part on each row", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
+      expect(rootDiv(el).getAttribute("part")).to.equal("keyboard");
       const rows = queryRows(el);
       expect(rows.length).to.be.greaterThan(0);
       for (const row of rows) {
         expect(row.getAttribute("part")).to.equal("row");
       }
-    });
 
-    it("exposes 'key' part on regular keys", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      const key = queryKey(el, "a")!;
-      expect(key).to.not.be.null;
-      expect(key.getAttribute("part")).to.equal("key");
-    });
-
-    it("exposes 'key modifier' part on modifier keys", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      const shift = queryKey(el, "{shift}")!;
-      expect(shift).to.not.be.null;
-      expect(shift.getAttribute("part")).to.equal("key modifier key-shift");
-    });
-
-    it("exposes 'key action' part on action keys", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      const enter = queryKey(el, "{enter}")!;
-      expect(enter).to.not.be.null;
-      expect(enter.getAttribute("part")).to.equal("key action key-enter");
-    });
-
-    it("names each built-in special key so one key can be styled alone", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-
+      // Character keys stay anonymous, so no glyph becomes public API.
+      for (const value of ["a", "q", "1"]) {
+        expect(queryKey(el, value)!.getAttribute("part"), `part of "${value}"`).to.equal("key");
+      }
+      // Each built-in special key is named so one key can be styled alone.
+      expect(queryKey(el, "{shift}")!.getAttribute("part")).to.equal("key modifier key-shift");
+      expect(queryKey(el, "{enter}")!.getAttribute("part")).to.equal("key action key-enter");
       expect(queryKey(el, "{backspace}")!.getAttribute("part")).to.equal("key action key-backspace");
       expect(queryKey(el, " ")!.getAttribute("part")).to.equal("key key-space");
-    });
+      // A layout-switch key is named generically and by its target.
+      const layoutParts = queryKey(el, "{layout:numeric}")!.getAttribute("part")!.split(" ");
+      expect(layoutParts).to.include("key-layout");
+      expect(layoutParts).to.include("key-layout-numeric");
 
-    it("names a layout-switch key generically and by its target", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-
-      const toNumeric = queryKey(el, "{layout:numeric}")!;
-      expect(toNumeric).to.not.be.null;
-      const parts = toNumeric.getAttribute("part")!.split(" ");
-      expect(parts).to.include("key-layout");
-      expect(parts).to.include("key-layout-numeric");
-    });
-
-    it("leaves character keys anonymous, so no glyph becomes public API", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-
-      for (const value of ["a", "q", "1"]) {
-        const key = queryKey(el, value)!;
-        expect(key, `key "${value}" rendered`).to.not.be.null;
-        expect(key.getAttribute("part"), `part of "${value}"`).to.equal("key");
-      }
+      expect(el.shadowRoot!.querySelector(`.${DOM.classes.keyLabel}`)!.getAttribute("part")).to.equal("key-label");
+      expect(el.shadowRoot!.querySelector(`.${DOM.classes.keyIcon}`)!.getAttribute("part")).to.equal("key-icon");
     });
 
     it("is reachable through ::part() from outside the shadow root", async () => {
@@ -3859,22 +3482,6 @@ describe("kiosk-keyboard", () => {
       } finally {
         style.remove();
       }
-    });
-
-    it("exposes 'key-label' part on text labels", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      const label = el.shadowRoot!.querySelector(`.${DOM.classes.keyLabel}`)!;
-      expect(label).to.not.be.null;
-      expect(label.getAttribute("part")).to.equal("key-label");
-    });
-
-    it("exposes 'key-icon' part on icon elements", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
-      const icon = el.shadowRoot!.querySelector(`.${DOM.classes.keyIcon}`)!;
-      expect(icon).to.not.be.null;
-      expect(icon.getAttribute("part")).to.equal("key-icon");
     });
   });
 

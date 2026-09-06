@@ -1,7 +1,7 @@
 import { fixture, html, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-import { requireKey } from "../helpers/fixtures.js";
+import { queryKey, requireKey } from "../helpers/fixtures.js";
 
 const nextRender = renderFinished;
 
@@ -70,8 +70,7 @@ describe("kiosk-keyboard - reset() restores a fresh input context (#199)", () =>
     await nextRender();
 
     // Back on the base layout, the alphabetic "q" key is rendered again.
-    // requireKey throws if the key is absent, so this asserts the surface.
-    expect(requireKey(kb, "q"), "reset returns to the base layout").to.exist;
+    expect(queryKey(kb, "q"), "reset returns to the base layout").to.not.be.null;
   });
 
   it("does not touch the already-typed target value", async () => {

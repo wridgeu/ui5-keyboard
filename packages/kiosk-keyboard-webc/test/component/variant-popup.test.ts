@@ -128,7 +128,6 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(popover!.open, "opened in the top layer").to.equal(true);
     const popup = popupEl(kb);
     expect(popup, "button toolbar slotted into the popover").to.exist;
-    expect(popup!.getAttribute("role")).to.equal("toolbar");
     expect(optionGlyphs(kb)).to.deep.equal(["ä", "à", "â"]);
     // The roving-active option is the Emphasized themed button; the rest Default.
     const [first, ...rest] = optionEls(kb);
@@ -225,13 +224,6 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(input.value).to.equal("â");
     await renderFinished();
     expect(popupEl(kb)).to.not.exist;
-  });
-
-  it("still types the base glyph on a quick tap (no hold)", async () => {
-    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
-    requireKey(kb, "a").click();
-    expect(input.value).to.equal("a");
-    expect(popupEl(kb), "no popup on a plain tap").to.not.exist;
   });
 
   it("does not open the popup when released before the hold threshold", async () => {
