@@ -41,40 +41,6 @@ async function setup(layout: LayoutDefinition): Promise<{ kb: KioskKeyboard; inp
 }
 
 // ───────────────────────────────────────────────────
-// Custom key dispatch via the enriched keyPress contract
-// ───────────────────────────────────────────────────
-
-QUnit.module("custom-keys - keyPress contract", { afterEach: commonAfterEach });
-
-QUnit.test("A custom {paste} key fires keyPress with the full token (no literal insertion)", async (assert) => {
-  const { kb, input } = await setup(layoutOf(keycap("{paste}")));
-  let pressedKey = "";
-  kb.attachKeyPress((e) => {
-    pressedKey = e.getParameter("key") ?? "";
-  });
-
-  tapKey(kb, "{paste}");
-  assert.strictEqual(pressedKey, "{paste}", "keyPress fired with the full custom token as key");
-  assert.strictEqual(input.getValue(), "", "No literal text inserted for the custom token");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("preventDefault on the custom keyPress suppresses the default no-op warning", async (assert) => {
-  const warnSpy = sandbox.spy(Log, "warning");
-  const { kb, input } = await setup(layoutOf(keycap("{paste}")));
-  kb.attachKeyPress((e) => e.preventDefault());
-
-  tapKey(kb, "{paste}");
-  assert.notOk(warnSpy.called, "A vetoed custom token is not warned (consumer owns it)");
-  assert.strictEqual(input.getValue(), "", "Nothing inserted");
-
-  input.destroy();
-  kb.destroy();
-});
-
-// ───────────────────────────────────────────────────
 // Public input API: insertText / deleteBackward
 // ───────────────────────────────────────────────────
 

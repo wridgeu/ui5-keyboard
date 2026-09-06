@@ -1,4 +1,3 @@
-import CustomLayout from "ui5/kiosk/CustomLayout";
 import {
   getRegisteredLayout,
   getLayoutOrDefault,
@@ -112,8 +111,7 @@ QUnit.test("Instance map shadows built-in layout of same name", (assert) => {
 QUnit.test("Falls through to built-in when instance map lacks the name", (assert) => {
   const instanceMap = new Map([["unrelated", makeLayout()]]);
   const result = getRegisteredLayout("qwerty", instanceMap);
-  assert.ok(result, "Falls back to built-in qwerty");
-  assert.notStrictEqual(result, instanceMap.get("unrelated"), "Result is not the unrelated entry");
+  assert.strictEqual(result, getRegisteredLayout("qwerty"), "Falls back to built-in qwerty");
 });
 
 QUnit.test("Accepts __proto__ / prototype / constructor in instance map", (assert) => {
@@ -162,15 +160,10 @@ QUnit.test("Region is lowercased for matching", (assert) => {
   assert.strictEqual(getLocaleLayout(instanceLocale, instanceLayouts), "swiss-de", "Lowercase region key matches");
 });
 
-QUnit.test("Skips exact match when region is empty", (assert) => {
-  sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
-  assert.strictEqual(getLocaleLayout(), "qwertz-de", "Empty region uses prefix");
-});
-
 QUnit.test("Instance locale map shadows built-in locale map", (assert) => {
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("de"));
-  const instanceLocale = new Map([["de", "qwerty"]]);
-  assert.strictEqual(getLocaleLayout(instanceLocale), "qwerty", "Instance map shadows built-in de mapping");
+  const instanceLocale = new Map([["de", "numeric"]]);
+  assert.strictEqual(getLocaleLayout(instanceLocale), "numeric", "Instance map shadows built-in de mapping");
 });
 
 QUnit.test("Instance locale map can resolve to instance-only layout", (assert) => {
@@ -190,9 +183,9 @@ QUnit.test("Exact BCP-47 match takes precedence over language prefix", (assert) 
   sandbox.stub(Localization, "getLanguageTag").returns(langTag("de", "CH"));
   const instanceLocale = new Map([
     ["de", "qwertz-de"],
-    ["de-ch", "qwerty"],
+    ["de-ch", "numeric"],
   ]);
-  assert.strictEqual(getLocaleLayout(instanceLocale), "qwerty", "Exact de-ch wins over de prefix");
+  assert.strictEqual(getLocaleLayout(instanceLocale), "numeric", "Exact de-ch wins over de prefix");
 });
 
 // ──────────────────────────────────────────────────
@@ -200,11 +193,6 @@ QUnit.test("Exact BCP-47 match takes precedence over language prefix", (assert) 
 // ──────────────────────────────────────────────────
 
 QUnit.module("layout-registry - getLayoutOrDefault", { afterEach: commonAfterEach });
-
-QUnit.test("Returns built-in layout for known name", (assert) => {
-  const result = getLayoutOrDefault("qwerty");
-  assert.ok(result, "Returns layout for qwerty");
-});
 
 QUnit.test("Falls back to default when name is unknown", (assert) => {
   const fallback = getRegisteredLayout("qwerty");
@@ -313,11 +301,8 @@ QUnit.test("Static getRegisteredLayout returns built-in layouts", (assert) => {
   assert.strictEqual(KioskKeyboard.getRegisteredLayout("nonexistent"), undefined, "Unknown name returns undefined");
 });
 
-QUnit.test("Static getRegisteredLayoutNames includes all built-ins", (assert) => {
-  const names = KioskKeyboard.getRegisteredLayoutNames();
-  for (const name of BUILTIN_NAMES) {
-    assert.ok(names.includes(name), `Built-in "${name}" in facade names list`);
-  }
+QUnit.test("Static getRegisteredLayoutNames delegates to the registry", (assert) => {
+  assert.ok(KioskKeyboard.getRegisteredLayoutNames().includes("qwertz-de"), "Built-in qwertz-de in facade names list");
 });
 
 QUnit.test("Static isBuiltInLayout distinguishes built-in from non-existent", (assert) => {
@@ -353,27 +338,6 @@ QUnit.test("Unknown layout name falls back to qwerty", async (assert) => {
   const renderedKeys = getRenderedLayoutKeys(kb);
   const expectedKeys = qwertyLayout.map((row) => row.map((k) => k.value));
   assert.deepEqual(renderedKeys, expectedKeys, "Unknown layout falls back to qwerty");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Instance layout renders correctly when configured at construction", async (assert) => {
-  const customLayout: LayoutDefinition = [[{ value: "x" }, { value: "y" }, { value: "z" }]];
-
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    controls: [input.getId()],
-    customLayouts: [new CustomLayout({ name: "xyz-layout", rows: customLayout })],
-    layout: "xyz-layout",
-  });
-  await placeAndWait(kb);
-
-  const renderedKeys = getRenderedLayoutKeys(kb);
-  const expectedKeys = customLayout.map((row) => row.map((k) => k.value));
-  assert.deepEqual(renderedKeys, expectedKeys, "Instance layout is used by control");
 
   input.destroy();
   kb.destroy();

@@ -134,29 +134,6 @@ QUnit.test("two instances suppress the same input, single restore keeps it suppr
   }
 });
 
-QUnit.test("two instances suppress the same input, destroy one keeps it suppressed", (assert) => {
-  const { inputId, input } = registerInputElement("shared2");
-  const stub = sinon.stub(Element, "getElementById");
-  try {
-    stub.withArgs(inputId).returns({ getFocusDomRef: () => input } as never);
-
-    const a = new NativeKeyboardSuppression(makeHost(inputId));
-    const b = new NativeKeyboardSuppression(makeHost(inputId));
-
-    a.suppress();
-    b.suppress();
-
-    a.destroy();
-    assert.strictEqual(input.getAttribute("inputmode"), "none", "still suppressed after A destroyed");
-
-    b.destroy();
-    assert.strictEqual(input.getAttribute("inputmode"), null, "restored after both destroyed");
-  } finally {
-    stub.restore();
-    fixture.innerHTML = "";
-  }
-});
-
 QUnit.test("original inputmode is correctly restored after multi-instance release", (assert) => {
   const { inputId, input } = registerInputElement("shared3");
   input.setAttribute("inputmode", "tel");

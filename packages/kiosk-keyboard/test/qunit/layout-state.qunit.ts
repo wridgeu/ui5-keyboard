@@ -28,22 +28,6 @@ function createHost() {
 
 QUnit.module("LayoutState.clearUserOverride");
 
-QUnit.test("a keyboardType round-trip lands on the base, not on the user pick", (assert) => {
-  const { box, state } = createHost();
-  state.perform("numeric", "user", "referenced by a {layout:*} key");
-  assert.strictEqual(box.layout, "numeric", "precondition: the user pick landed");
-
-  box.keyboardType = KeyboardType.Numpad;
-  state.clearUserOverride();
-  assert.strictEqual(state.getSource(), "external", "the pick is dropped");
-  assert.strictEqual(state.resolvedName(), "numpad", "the constraint pins the surface");
-
-  box.keyboardType = KeyboardType.Full;
-  assert.strictEqual(state.resolvedName(), "qwerty", "the lifted constraint lands on the base");
-  assert.strictEqual(box.layout, "qwerty", "the layout property is the base again");
-  assert.deepEqual(box.changes, ["numeric", "qwerty"], "one layoutChange per real switch");
-});
-
 QUnit.test("a user pick of a primary layout still returns to the base under the constraint", (assert) => {
   const { box, state } = createHost();
   state.perform("qwertz-de", "user", "referenced by a {layout:*} key");

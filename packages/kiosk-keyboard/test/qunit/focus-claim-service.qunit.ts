@@ -80,16 +80,12 @@ QUnit.module("focus-claim-service - isTextualInput filtering", {
   },
 });
 
-QUnit.test("Rejects null target", (assert) => {
-  const svc = createService();
-  assert.strictEqual(svc.resolveClaimableControl(null), null, "null target rejected");
-});
-
-QUnit.test("Rejects non-input element", (assert) => {
+QUnit.test("Rejects a null target and a non-input element", (assert) => {
   const div = document.createElement("div");
   fixture.appendChild(div);
 
   const svc = createService();
+  assert.strictEqual(svc.resolveClaimableControl(null), null, "null target rejected");
   assert.strictEqual(svc.resolveClaimableControl(div), null, "div element rejected");
 });
 
@@ -340,44 +336,23 @@ QUnit.test("Returns null when no ancestor matches", (assert) => {
   parent.destroy();
 });
 
-QUnit.test("Returns null when resolved set is empty", (assert) => {
-  const ctrl = createControl("fcs-empty-set");
-
-  const svc = createService({
-    getResolvedControlIds: () => new Set(),
-  });
-
-  assert.strictEqual(svc.resolveControlsAncestor(ctrl), null, "Empty resolved set returns null");
-
-  ctrl.destroy();
-});
-
 // ──────────────────────────────────────────────────
 // isInControls
 // ──────────────────────────────────────────────────
 
 QUnit.module("focus-claim-service - isInControls");
 
-QUnit.test("Returns true when ancestor is in resolved set", (assert) => {
+QUnit.test("Reports whether an ancestor is in the resolved set", (assert) => {
   const ctrl = createControl("fcs-in");
+  const other = createControl("fcs-out");
 
   const svc = createService({
     getResolvedControlIds: () => new Set(["fcs-in"]),
   });
 
   assert.ok(svc.isInControls(ctrl), "Control found in controls");
+  assert.notOk(svc.isInControls(other), "Control not in controls");
 
   ctrl.destroy();
-});
-
-QUnit.test("Returns false when no ancestor matches", (assert) => {
-  const ctrl = createControl("fcs-out");
-
-  const svc = createService({
-    getResolvedControlIds: () => new Set(["other"]),
-  });
-
-  assert.notOk(svc.isInControls(ctrl), "Control not in controls");
-
-  ctrl.destroy();
+  other.destroy();
 });

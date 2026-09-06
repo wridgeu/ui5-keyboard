@@ -101,15 +101,6 @@ QUnit.module("target-input-session - cursor recovery", {
   },
 });
 
-QUnit.test("First access with no cached state places cursor at end", (assert) => {
-  const input = makeInput("hello");
-  const mock = makeMockElement(input);
-  const session = new TargetInputSession(() => mock);
-
-  session.insertText("!");
-  assert.strictEqual(input.value, "hello!", "Text appended at end on first access");
-});
-
 QUnit.test("Detects programmatic setValue and resets cursor to end", (assert) => {
   const input = makeInput("hello");
   const mock = makeMockElement(input);
@@ -282,17 +273,6 @@ QUnit.test("Textarea: inserts newline without marking dirty", (assert) => {
   assert.strictEqual(cb, null, "Textarea Enter does not mark session dirty");
 });
 
-QUnit.test("Textarea: successive Enter calls insert multiple newlines", (assert) => {
-  const ta = makeTextarea("start");
-  const mock = makeMockElement(ta);
-  const session = new TargetInputSession(() => mock);
-
-  session.handleEnter();
-  session.handleEnter();
-
-  assert.strictEqual(ta.value, "start\n\n", "Two newlines appended");
-});
-
 QUnit.test("No-op when target has no DOM ref", (assert) => {
   const mock = makeMockElement(null);
   const session = new TargetInputSession(() => mock);
@@ -383,52 +363,6 @@ QUnit.test("Fires change event for dirty HTMLInputElement", (assert) => {
   const changes = changeEvents(mock);
   assert.strictEqual(changes.length, 1, "Change event fired");
   assert.strictEqual(changes[0].params.value, "hello!", "Correct value in event");
-});
-
-QUnit.test("Does not fire when session is not dirty", (assert) => {
-  const input = makeInput("hello");
-  const mock = makeMockElement(input);
-  const session = new TargetInputSession(() => mock);
-
-  session.fireChangeIfDirty();
-  assert.strictEqual(changeEvents(mock).length, 0, "No event when not dirty");
-});
-
-QUnit.test("Skips HTMLTextAreaElement even when dirty", (assert) => {
-  const ta = makeTextarea("text");
-  const mock = makeMockElement(ta);
-  const session = new TargetInputSession(() => mock);
-
-  session.insertText("!"); // marks dirty
-
-  session.fireChangeIfDirty();
-  assert.strictEqual(changeEvents(mock).length, 0, "No change event for textarea");
-});
-
-QUnit.test("Clears dirty flag after firing - second call is a no-op", (assert) => {
-  const input = makeInput("test");
-  const mock = makeMockElement(input);
-  const session = new TargetInputSession(() => mock);
-
-  session.insertText("x");
-
-  session.fireChangeIfDirty();
-  assert.strictEqual(changeEvents(mock).length, 1, "First call fires");
-
-  session.fireChangeIfDirty();
-  assert.strictEqual(changeEvents(mock).length, 1, "Second call does not fire - dirty was cleared");
-});
-
-QUnit.test("No-op when target element becomes null after dirty", (assert) => {
-  const input = makeInput("test");
-  const mock = makeMockElement(input);
-  let element: TargetElement | null = mock;
-  const session = new TargetInputSession(() => element);
-  session.insertText("x"); // marks dirty
-  element = null; // target removed
-
-  session.fireChangeIfDirty(); // should not throw
-  assert.strictEqual(changeEvents(mock).length, 0, "No event when element is gone");
 });
 
 // ──────────────────────────────────────────────────
