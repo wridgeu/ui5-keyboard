@@ -114,14 +114,3 @@ export async function setDocumentDirection(page: Page, dir: "ltr" | "rtl"): Prom
     document.documentElement.setAttribute("lang", d === "rtl" ? "ar" : "en");
   }, dir);
 }
-
-/** CSS override disabling the text-box-trim progressive enhancement (fallback baseline). */
-export const DISABLE_TEXT_BOX_TRIM = `
-  .${DOM.classes.keyLabel},
-  .${DOM.classes.keyLabelGlyph} {
-    text-box-trim: none !important;
-    text-box-edge: auto !important;
-  }
-  .${DOM.classes.keyLabel} { line-height: 1.2 !important; }
-  .${DOM.classes.keyLabelGlyph} { line-height: 1 !important; }
-`;
