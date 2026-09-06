@@ -539,6 +539,40 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(kb.shadowRoot!.activeElement, "focus returned to the origin key").to.equal(aKey);
   });
 
+  it("keeps a docked auto-show keyboard open while the popup holds focus", async () => {
+    const container = await fixture(html`
+      <div>
+        <input id="docked-variant-input" type="text" />
+        <kiosk-keyboard
+          layout="qwerty"
+          docked
+          auto-show
+          accent-variants
+          controls="docked-variant-input"
+        ></kiosk-keyboard>
+      </div>
+    `);
+    const input = container.querySelector<HTMLInputElement>("#docked-variant-input")!;
+    const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+    await renderFinished();
+
+    input.focus();
+    input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    await waitUntil(() => kb.open, "the keyboard opens on focus");
+
+    rightClick(requireKey(kb, "a"));
+    await waitUntil(() => popoverEl(kb)?.open === true, "the popup opens");
+    await waitUntil(() => document.activeElement === kb, "focus moves into the popup");
+
+    // Focus leaving the input schedules the auto-show close for the next frame;
+    // it has to see the popup's focus as the keyboard's own.
+    input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await renderFinished();
+
+    expect(kb.open, "the keyboard stays open behind its own popup").to.be.true;
+  });
+
   it("opens on right-click (contextmenu)", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     const aKey = requireKey(kb, "a");

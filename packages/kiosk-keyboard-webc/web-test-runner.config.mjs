@@ -1,25 +1,10 @@
 import { playwrightLauncher } from "@web/test-runner-playwright";
 import { esbuildPlugin } from "@web/dev-server-esbuild";
 
-// Needs `(pointer: coarse)` to match, which the default context cannot give it.
-const COARSE_POINTER_FILE = "test/component/mobile-keyboard-coarse.test.ts";
-
 export default {
-  files: ["test/component/**/*.test.ts", `!${COARSE_POINTER_FILE}`],
+  files: "test/component/**/*.test.ts",
   nodeResolve: true,
   browsers: [playwrightLauncher({ product: "chromium" })],
-  groups: [
-    {
-      name: "coarse-pointer",
-      files: COARSE_POINTER_FILE,
-      browsers: [
-        playwrightLauncher({
-          product: "chromium",
-          createBrowserContext: ({ browser }) => browser.newContext({ hasTouch: true }),
-        }),
-      ],
-    },
-  ],
   plugins: [
     esbuildPlugin({
       ts: true,

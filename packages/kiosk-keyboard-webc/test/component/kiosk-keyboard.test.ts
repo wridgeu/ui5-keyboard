@@ -90,21 +90,53 @@ describe("kiosk-keyboard", () => {
     // `keyByPosition` is the published way to select on the per-key grid
     // coordinate, so it is resolved against the shadow DOM: a selector that
     // names the attributes differently than the template writes them reaches
-    // no key at all.
+    // no key at all, and a coordinate that disagrees with the key's place in
+    // the DOM reaches a key the user sees somewhere else.
     it("resolves keyByPosition to the key rendered at that coordinate", async () => {
-      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwerty"></kiosk-keyboard> `);
-      await nextRender();
+      for (const layout of ["qwerty", "numpad", "nav", "fkeys", "ja-kana"]) {
+        const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout=${layout}></kiosk-keyboard> `);
+        await nextRender();
 
-      const rows = Array.from(queryRows(el)).map((row) =>
-        Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)),
-      );
-      const renderedIds = rows.map((row) => row.map((k) => k.id));
-      const selectedIds = rows.map((row, r) =>
-        row.map((_, c) => el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByPosition(r, c))?.id ?? null),
-      );
+        const rows = Array.from(queryRows(el)).map((row) =>
+          Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key)),
+        );
+        const renderedIds = rows.map((row) => row.map((k) => k.id));
+        const selectedIds = rows.map((row, r) =>
+          row.map((_, c) => el.shadowRoot!.querySelector<HTMLElement>(DOM.selectors.keyByPosition(r, c))?.id ?? null),
+        );
 
-      expect(rows.flat().length, "qwerty renders keys").to.be.greaterThan(0);
-      expect(selectedIds, "keyByPosition selects the key rendered at that coordinate").to.deep.equal(renderedIds);
+        expect(rows.flat().length, `${layout} renders keys`).to.be.greaterThan(0);
+        expect(selectedIds, `${layout}: keyByPosition selects the key rendered at that coordinate`).to.deep.equal(
+          renderedIds,
+        );
+      }
+    });
+
+    // Rows are classified by content, so a custom layout gets the same CSS
+    // hooks as the built-in ones.
+    it("classifies rows by content through data-row-kind", async () => {
+      const kinds = async (layout: string) => {
+        const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout=${layout}></kiosk-keyboard> `);
+        await nextRender();
+        return Array.from(queryRows(el)).map((row) => row.getAttribute(DOM.attributes.rowKind));
+      };
+      expect(await kinds("fkeys"), "fkeys: two F-key rows, the control row unclassified").to.deep.equal([
+        "fkey",
+        "fkey",
+        null,
+      ]);
+      expect(await kinds("nav"), "nav: two arrow rows; the mixed and control rows unclassified").to.deep.equal([
+        "nav",
+        "nav",
+        null,
+        null,
+      ]);
+      const qwerty = await kinds("qwerty");
+      expect(qwerty.length, "qwerty rendered no rows").to.be.greaterThan(0);
+      expect(
+        qwerty.every((k) => k === null),
+        "character rows carry no kind",
+      ).to.be.true;
     });
 
     it("renders docked mode with the docked class, hidden until opened", async () => {

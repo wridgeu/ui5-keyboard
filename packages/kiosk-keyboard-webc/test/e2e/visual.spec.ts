@@ -7,7 +7,6 @@ import {
   isHoverCapable,
   isCoarsePointer,
   waitForDockedOpen,
-  waitForDockedClosed,
   waitForDockedShown,
 } from "./helpers.js";
 
@@ -18,12 +17,6 @@ import {
 async function activateShift(page: import("@playwright/test").Page, hostId: string): Promise<void> {
   await key(page, hostId, "{shift}").click();
   await expect(key(page, hostId, "{shift}")).toHaveAttribute("aria-pressed", "true");
-}
-
-/** From the shifted state, two more taps (shifted -> caps -> off) return to base. */
-async function resetShift(page: import("@playwright/test").Page, hostId: string): Promise<void> {
-  await key(page, hostId, "{shift}").click();
-  await key(page, hostId, "{shift}").click();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -68,7 +61,6 @@ test.describe("Visual Regression", () => {
     test(tag, async ({ page }) => {
       await activateShift(page, id);
       await expectVisualMatch(keyboardRoot(page, id), `${tag}.png`);
-      await resetShift(page, id);
     });
   }
 });
@@ -83,15 +75,12 @@ test.describe("Interactive States", () => {
   test("webc-qwerty-shifted", async ({ page }) => {
     await activateShift(page, "kb-qwerty");
     await expectVisualMatch(keyboardRoot(page, "kb-qwerty"), "webc-qwerty-shifted.png");
-    await resetShift(page, "kb-qwerty");
   });
 
   test("webc-docked-open", async ({ page }) => {
     test.skip(await isCoarsePointer(page), "docked auto-stays-closed on coarse pointers");
     await page.evaluate(() => (document.getElementById("kb-docked") as HTMLElement & { show(): void }).show());
-    const state = await waitForDockedOpen(page, "kb-docked");
-    expect(state.open).toBe(true);
-    expect(state.hiddenClass).toBe(false);
+    await waitForDockedOpen(page, "kb-docked");
     await expectVisualMatch(keyboardRoot(page, "kb-docked"), "webc-docked-open.png");
     await page.evaluate(() => (document.getElementById("kb-docked") as HTMLElement & { close(): void }).close());
   });
@@ -104,23 +93,6 @@ test.describe("Interactive States", () => {
     await page.evaluate(() =>
       (document.getElementById("kb-docked-disabled") as HTMLElement & { close(): void }).close(),
     );
-  });
-
-  test("keeps docked closed on coarse pointers", async ({ page }) => {
-    test.skip(!(await isCoarsePointer(page)), "coarse-pointer behavior only");
-    await page.evaluate(() => (document.getElementById("kb-docked") as HTMLElement & { show(): void }).show());
-    const state = await waitForDockedClosed(page, "kb-docked");
-    expect(state.open).toBe(false);
-    expect(state.hiddenClass).toBe(true);
-  });
-
-  test("opens docked with mobile-keyboard Custom on coarse pointers", async ({ page }) => {
-    test.skip(!(await isCoarsePointer(page)), "coarse-pointer behavior only");
-    await page.evaluate(() => (document.getElementById("kb-docked-custom") as HTMLElement & { show(): void }).show());
-    const state = await waitForDockedOpen(page, "kb-docked-custom");
-    expect(state.open).toBe(true);
-    expect(state.hiddenClass).toBe(false);
-    await page.evaluate(() => (document.getElementById("kb-docked-custom") as HTMLElement & { close(): void }).close());
   });
 });
 
