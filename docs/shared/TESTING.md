@@ -80,7 +80,7 @@ Each package drives Playwright from configs at its **package root** (not inside 
 Within `playwright.config.ts`, projects share a single `webServer` and differ only by emulated device:
 
 - The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores `flp-lifecycle` and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
-- The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs; the behavioral specs (kiosk: autotype, focus, i18n, inputmode, interop; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
+- The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs; the behavioral specs (kiosk: `focus.spec.ts`; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
 
 On CI the device projects narrow to `invariants.spec.ts` (`CI_DEVICE_SPECS` in both configs), since the rest of their matrix captures nothing there; the non-pixel assertions those specs carry still run through the desktop project, which keeps the full spec list. Both configs throw when `invariants.spec.ts` no longer exists, since a project whose `testMatch` selects nothing still exits 0. Locally every project runs every spec and compares pixels.
 
@@ -181,7 +181,7 @@ await expectKeyboardVisualMatch(page, "kb-shift", "kb-shift-active.png", SOFT);
 
 The tolerance is wide because the miss is: `kb-ko-hangul-shifted` settles up to 916 pixels off its baseline on desktop, where a one-keycap glyph change measures 62 (45 on phone-sm). No budget covers both, so a snapshot carrying `SOFT` gates layout-scale change and not the wrong glyph on a key.
 
-A few snapshots are too unstable under phone emulation to be meaningful (e.g. the docked render and the Spanish shifted layout) and are skipped on the phone projects via `test.skip(...)` with a reason, rather than carried as flaky baselines. Hover snapshots `test.skip` on profiles without `(hover: hover)`.
+The kiosk docked render is too unstable under phone emulation to be meaningful and is skipped on the phone projects via `test.skip(...)` with a reason, rather than carried as a flaky baseline. Hover snapshots `test.skip` on profiles without `(hover: hover)`.
 
 ### Generated assets for webc E2E
 
@@ -193,17 +193,16 @@ The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2
 
 Each package keeps its own minimal `test/e2e/helpers.ts`. There is no shared cross-package helper module, and native Playwright APIs cover most needs (web-first assertions, `emulateMedia`, `addStyleTag`, projects for the device matrix). Most of the helpers that remain are thin wrappers; the kiosk clip helper is the one substantial piece of logic:
 
-| Helper                                                 | Package | Purpose                                                                                                                  |
-| ------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `openPage(page, path)`                                 | both    | Navigate to a test page and wait for the keyboard root to attach; the path is optional in kiosk, required in webc        |
-| `keyboardRoot(page, id)`                               | both    | `Locator` for the keyboard root (light DOM for kiosk; the host for webc)                                                 |
-| `key(page, id, dataKey)`                               | both    | `Locator` for a specific key                                                                                             |
-| `setDocumentDirection(page, dir)`                      | both    | Set `dir`/`lang` for RTL snapshots                                                                                       |
-| `expectVisualMatch` / `expectKeyboardVisualMatch`      | kiosk   | Measure a document-coordinate clip and compare it as a full-page capture (see Capture above)                             |
-| `waitForKeys` / `waitForDocked*`                       | webc    | Await shadow-DOM render / docked open/closed/shown states                                                                |
-| `isCoarsePointer` / `isHoverCapable`                   | webc    | Gate pointer/hover-dependent assertions on the active device project                                                     |
-| `injectShadowStyleOverride` / `remove…`                | webc    | Inject a `<style>` into the shadow root to force enhancement-fallback paths                                              |
-| `CLOSED_CLASS`, `VISUAL_PAGE`, `DISABLE_TEXT_BOX_TRIM` | varies  | Shared constants (the kiosk closed-state class, the visual page URL, a CSS opt-out for progressive-enhancement features) |
+| Helper                                            | Package | Purpose                                                                                                           |
+| ------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| `openPage(page, path)`                            | both    | Navigate to a test page and wait for the keyboard root to attach; the path is optional in kiosk, required in webc |
+| `keyboardRoot(page, id)`                          | both    | `Locator` for the keyboard root (light DOM for kiosk; the host for webc)                                          |
+| `key(page, id, dataKey)`                          | both    | `Locator` for a specific key                                                                                      |
+| `setDocumentDirection(page, dir)`                 | both    | Set `dir`/`lang` for RTL snapshots                                                                                |
+| `expectVisualMatch` / `expectKeyboardVisualMatch` | kiosk   | Measure a document-coordinate clip and compare it as a full-page capture (see Capture above)                      |
+| `waitForKeys` / `waitForDocked*`                  | webc    | Await shadow-DOM render / docked open/closed/shown states                                                         |
+| `isCoarsePointer` / `isHoverCapable`              | webc    | Gate pointer/hover-dependent assertions on the active device project                                              |
+| `CLOSED_CLASS`, `VISUAL_PAGE`                     | kiosk   | Shared constants (the closed-state class and the visual page URL)                                                 |
 
 Media features are emulated with Playwright's native `page.emulateMedia({ forcedColors, reducedMotion })` rather than a custom CDP helper.
 

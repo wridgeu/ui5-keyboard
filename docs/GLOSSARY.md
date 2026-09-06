@@ -87,7 +87,7 @@ This means a scoped registration always shadows a global registration for the sa
 
 ### Router integration
 
-When `enableRouterIntegration(router)` is active, route changes automatically reset to global scope and push the new route name as the active scope. Dialog scopes still require manual `pushScope`/`popScope`.
+When `enableRouterIntegration(router)` is active, route changes automatically reset to global scope and push the new route name as the active scope; a hash that matches no route (the router's `bypassed` event) resets to global scope without pushing anything. Dialog scopes still require manual `pushScope`/`popScope`.
 
 ## Suppression
 
@@ -109,7 +109,7 @@ On Windows, pressing AltGr sends **both** `ctrlKey: true` and `altKey: true` sim
 
 ### How we handle it
 
-The EventDispatcher detects AltGr via two mechanisms:
+On Windows (the only platform where the ambiguity exists), the EventDispatcher detects AltGr via two mechanisms:
 
 1. `event.getModifierState("AltGraph")`, the modern, reliable check.
 2. Tracking `event.location` on Alt keydowns. If the last Alt press was on the right side (`location === 2`) and both `ctrlKey` and `altKey` are active, treat it as AltGr.

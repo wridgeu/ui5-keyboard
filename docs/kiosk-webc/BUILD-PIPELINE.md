@@ -12,7 +12,7 @@ src/*.ts  -->  ui5-tooling-transpile  -->  dist/resources/ui5/{namespace}/
 
 The UI5 CLI handles TypeScript transpilation, version replacement, and library packaging. Theming and i18n need no generation step: UI5 libraries use LESS for theming (processed by the UI5 builder) and standard `.properties` files for i18n (resolved at runtime by the UI5 resource bundle mechanism).
 
-`kiosk-keyboard` does run one generator, outside the arrow above. `@ui5/ts-interface-generator` emits the committed `src/KioskKeyboard.gen.d.ts` from the control's metadata via `npm run generate` (also wired as `prebuild` and `pretypecheck`). It is type-only, produces no runtime output, and is not part of the UI5 CLI build. The file is deliberately committed rather than gitignored, and CI gates drift with `generate && git diff --exit-code`; see the control-authoring conventions in [CLAUDE.md](../../CLAUDE.md). `hotkeys` has no generation step at all.
+`kiosk-keyboard` does run one generator, outside the arrow above. `@ui5/ts-interface-generator` emits the committed `src/KioskKeyboard.gen.d.ts` and `src/CustomLayout.gen.d.ts` from the controls' metadata via `npm run generate` (also wired as `prebuild` and `pretypecheck`). It is type-only, produces no runtime output, and is not part of the UI5 CLI build. The files are deliberately committed rather than gitignored, and CI gates drift by running `generate`, staging with `git add -A`, then `git diff --cached --exit-code` over `src/**/*.gen.d.ts` (a plain `git diff` is blind to a newly generated, never-committed file); see the control-authoring conventions in [CLAUDE.md](../../CLAUDE.md). `hotkeys` has no generation step at all.
 
 ## Web Component (kiosk-keyboard-webc)
 

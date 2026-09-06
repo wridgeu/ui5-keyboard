@@ -28,7 +28,7 @@ core/
   shift-state.ts          Shift/Caps Lock state machine
   grapheme.ts             Grapheme-aware cursor utilities (Intl.Segmenter)
   key-token.ts            Classifies a key's data-key value into its token kind (shift/backspace/enter/layout/fkey/unknown/char)
-  layout-registry.ts      Layout registration/reset + locale-based layout resolution;
+  layout-registry.ts      Built-in layout lookup + locale-based layout resolution;
                           imports and seals all built-in layouts
   layout-meta.ts          Per-layout attributes (secondary / lang / variants) for the built-ins, resolved per attribute against the folded custom layouts
   custom-layout-fold.ts   Folds the customLayouts slot into the per-facet lookup maps the resolution paths read, plus the diagnostics it reports
@@ -39,7 +39,7 @@ core/
   fkey-controller.ts      FKeyController: F-key dispatch (Virtual fires key-press + caret nav; Native synthesizes keydown)
   key-grid-navigation.ts  KeyGridNavigation: arrow-key/Home/End grid navigation across rendered keys (WAI-ARIA grid)
   i18n.ts                 i18n resolution: UI5 WC bundle + custom resolver
-  middleware-registry.ts  Middleware factory registration, lazy instantiation, deactivation
+  middleware-registry.ts  Sealed map of the built-in middleware factories; resolves a layout's factory, a custom layout's `middleware` (or its suppression) taking precedence
   composition-utils.ts    Shared composition utilities (preedit text, CompositionEvent dispatch)
   auto-repeat.ts          AutoRepeater press-and-hold scheduler + BACKSPACE_AUTO_REPEAT timing curve (accelerating cadence)
   backspace-repeat-controller.ts  BackspaceRepeatController: owns press-and-hold Backspace pointer wiring, repeat timer, trailing-click suppression
@@ -347,6 +347,8 @@ keyboardType    Resolved layout
 "Full"          current layout from user switch, or base layout
 ```
 
+`LayoutState.seed()` runs once on connect: the `layout` attribute becomes the requested layout, and the base layout - what `{layout:base}` and `reset()` return to - is that attribute unless it names a secondary layout, in which case the base falls through to the locale layout so both still land on an alphabetic surface. A `keyboardType` change drops a user `{layout:*}` pick (`clearUserOverride()`), so lifting a Numpad/Numeric constraint lands on the base layout rather than on the pick.
+
 ### Layout Composition
 
 Composite layouts are composed at consumption time using the shared row modules and supplied to a single element through the `customLayouts` slot:
@@ -389,7 +391,7 @@ When `autoType` is enabled and the keyboard auto-shows for a focused input, `det
 3. HTML `type`: `"number"`, `"tel"` → `"Numpad"`
 4. Default: `"Full"`
 
-A `_keyboardTypeSource` tag (`"unset" | "explicit" | "auto:VALUE"`) tracks who last set `keyboardType`. Explicit values disable auto-detection; auto-detected values encode which type was detected so the `onInvalidation` handler can distinguish consumer-driven changes from auto-detection round-trips.
+A `_keyboardTypeSource` tag (`"unset" | "explicit" | "reset" | "auto:VALUE"`) tracks who last set `keyboardType`. Explicit values disable auto-detection; auto-detected values encode which type was detected so the `onInvalidation` handler can distinguish consumer-driven changes from auto-detection round-trips; `"reset"` marks a `resetKeyboardType()` call, which `onInvalidation` folds back to `"unset"` and reports as not auto-detected, unless the `keyboard-type-change` handler claimed the property again. The framework suppresses invalidation until the first render, so a value authored as an attribute or set before connection never reaches `onInvalidation`; `onBeforeRendering` normalises those once on the first render (invalid enum values are clamped to the default, a non-`Full` type is marked explicit).
 
 Detection is also skipped for a refocus of the already-active target while the keyboard is open: that element carries the `inputmode="none"` suppression written on its previous focus, which masks an authored `numeric`/`decimal`/`tel`, so it keeps the type it already has. While the keyboard is closed nothing carries the mask, so a target set before the first focus is still read from its authored markup.
 
@@ -444,7 +446,7 @@ focusout event (capture)
   |     Otherwise → close()
 ```
 
-The deferred close via `requestAnimationFrame` handles the case where focus briefly leaves the input during a click on a keyboard key before the key's `mousedown` fires.
+The deferred close via `requestAnimationFrame` handles the case where focus briefly leaves the input during a click on a keyboard key before the key's `mousedown` fires. A programmatic `show()` in that window cancels the pending close as well, so a keyboard opened in the same task as the focusout is not closed a frame later.
 
 ### Controls Matching
 

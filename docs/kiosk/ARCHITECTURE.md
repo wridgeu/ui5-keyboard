@@ -183,7 +183,9 @@ The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in th
 
 ### Cursor Initialization
 
-When the target input hasn't been focused yet (e.g. set programmatically via `_setActiveTarget()`), `selectionStart` defaults to 0. `TargetInputSession` owns the cursor state: on first access per target its `_getTargetDomRef()` places the cursor at the end of the value, but only when the input is **not** already the active element, so a user-placed cursor is never overwritten.
+When the target input hasn't been focused yet (e.g. set programmatically via `_setActiveTarget()`), `selectionStart` defaults to 0. `TargetInputSession` owns the cursor state: on first access per target its `_getTargetDomRef()` seeds its tracked cursor at the end of the value, but only when the input is **not** already the active element, so a user-placed cursor is never overwritten.
+
+After an edit made while the target is not focused (focus parked on a keycap, say), the session writes the tracked caret back to the DOM on the next animation frame, carrying the browser's `selectionDirection` along, so the input's own selection matches where the on-screen edit left it and a Shift-extended selection keeps its anchor.
 
 Critically, this does **not** call `dom.focus()`. This avoids stealing focus from surrounding containers (e.g. a `sap.m.Popover` that contains the keyboard while the target input is outside). Selection state persists on unfocused inputs in all modern browsers per the HTML Living Standard. `resetForTargetSwitch()` nulls the cached cursor position on every target change, so the end-of-value placement runs once per target.
 
@@ -575,7 +577,7 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Focus steal on key tap                    | `ontouchstart` `preventDefault()` keeps focus on input                                                         |
 | Target input not yet focused              | `TargetInputSession` seeds its own tracked cursor at the end of the value; the DOM selection is left untouched |
-| Auto-show flicker on focus transitions    | Synchronous `relatedTarget` check, plus one-tick deferred fallback when null                                   |
+| Auto-show flicker on focus transitions    | `relatedTarget` keeps the keyboard open synchronously; every close is deferred one frame and re-checked        |
 | Focus on keyboard during auto-show        | `relatedTarget` checked against keyboard DOM via `contains()`                                                  |
 | Auto-show vs input owned by other kbd     | `_wouldClaimInput()` checks `_isTargetOfOther()`                                                               |
 | Focus moves to claimed input while open   | `_wouldClaimInput()` checks `_isTargetOfOther()`, closes normally                                              |
