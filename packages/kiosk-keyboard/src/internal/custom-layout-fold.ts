@@ -169,6 +169,94 @@ function foldVariantOverlay(
   return { replace, table: composeVariantPatches(under, table) };
 }
 
+/** Everything `foldCustomLayouts` accumulates while walking `specs`, keyed by normalized layout name. */
+interface FoldState {
+  readonly layouts: Map<string, LayoutDefinition>;
+  readonly meta: Map<string, LayoutMeta>;
+  readonly localeLayouts: Map<string, string>;
+  readonly middleware: Map<string, (() => CompositionMiddleware) | null>;
+  readonly variants: Map<string, VariantOverlay>;
+  readonly diagnostics: LayoutDiagnostic[];
+  /** Names whose `rows` was present, accepted or not. */
+  readonly rowsDeclared: Set<string>;
+  readonly middlewareDeclared: Set<string>;
+  /** Layout name to the compact counterpart it points at. */
+  readonly compactTargets: Map<string, string>;
+}
+
+function foldRows(spec: CustomLayoutSpec, name: string, state: FoldState): void {
+  const { rowsDeclared, diagnostics } = state;
+  if (spec.rows !== undefined) {
+    // `rowsDeclared` records that a `rows` was present, not that it was accepted. A
+    // rejected `rows` therefore reports `invalid-rows` alone: recording only the valid
+    // branch would let the second pass add `unknown-target` for the same fault, two
+    // warnings for one mistake.
+    if (rowsDeclared.has(name)) diagnostics.push({ code: "duplicate-rows", layout: name });
+    rowsDeclared.add(name);
+    if (!isValidLayoutDefinition(spec.rows)) diagnostics.push({ code: "invalid-rows", layout: name });
+    else state.layouts.set(name, spec.rows);
+  } else if (spec.rowsPending) {
+    // Declared, but the binding has not delivered. Registering nothing is right - there
+    // are no rows to resolve yet - while still counting the name as addressed, because
+    // the author did declare it and the value arrives on the next fold.
+    rowsDeclared.add(name);
+  }
+}
+
+function foldMeta(spec: CustomLayoutSpec, name: string, state: FoldState): void {
+  // The three guards below degrade one facet rather than throwing. They are inert for a spec
+  // that came through the aggregation, since `validateProperty` coerces to the declared type,
+  // and load-bearing for a hand-built spec and for the drift-pinned webc twin, whose
+  // `@property()` neither coerces nor validates. `spec.compact?.trim()` would throw and take
+  // the whole custom layout down with it.
+  const lang = typeof spec.keycapLang === "string" ? spec.keycapLang.trim() : "";
+  // Names a layout, so it is normalized the way every layout name is.
+  const compact = typeof spec.compact === "string" ? spec.compact.trim().toLowerCase() : "";
+  const patch: LayoutMeta = {
+    ...(lang && { lang }),
+    ...(compact && { compact }),
+    // `boolean`, not truthy and not `!== undefined`: `false` is a role the author chose, while
+    // `null` has to leave the tier below standing.
+    ...(typeof spec.secondary === "boolean" && { secondary: spec.secondary }),
+  };
+  if (Object.keys(patch).length > 0) state.meta.set(name, { ...state.meta.get(name), ...patch });
+  if (compact) state.compactTargets.set(name, compact);
+}
+
+function foldLocales(locales: readonly string[] | undefined, name: string, state: FoldState): void {
+  for (const raw of locales ?? []) {
+    const tag = raw.trim().toLowerCase();
+    if (!tag) {
+      state.diagnostics.push({ code: "invalid-locale", layout: name });
+      continue;
+    }
+    const owner = state.localeLayouts.get(tag);
+    if (owner !== undefined && owner !== name) {
+      state.diagnostics.push({ code: "duplicate-locale", layout: owner, other: name, value: tag });
+    }
+    state.localeLayouts.set(tag, name);
+  }
+}
+
+function foldMiddleware(spec: CustomLayoutSpec, name: string, suppressed: boolean, state: FoldState): void {
+  if (suppressed) state.middleware.set(name, null);
+  if (spec.middleware === undefined) return;
+  // A diagnostic rather than a `TypeError` at composition time, for the same reason as in `foldMeta`.
+  if (typeof spec.middleware !== "function") {
+    state.diagnostics.push({ code: "invalid-middleware", layout: name });
+    return;
+  }
+  if (state.middlewareDeclared.has(name)) state.diagnostics.push({ code: "duplicate-middleware", layout: name });
+  state.middlewareDeclared.add(name);
+  state.middleware.set(name, spec.middleware);
+}
+
+function foldVariants(spec: CustomLayoutSpec, name: string, suppressed: boolean, state: FoldState): void {
+  const table = readVariants(spec.variants, name, state.diagnostics);
+  const overlay = foldVariantOverlay(state.variants.get(name), suppressed, table);
+  if (overlay !== undefined) state.variants.set(name, overlay);
+}
+
 /**
  * Folds `specs`, in order, into the maps the resolution paths read. Later declarations
  * of a facet win; long-press variants accumulate per base letter instead, and a facet a
@@ -183,88 +271,35 @@ export function foldCustomLayouts(
 ): CustomLayoutFold {
   if (specs.length === 0) return EMPTY_FOLD;
 
-  const layouts = new Map<string, LayoutDefinition>();
-  const meta = new Map<string, LayoutMeta>();
-  const localeLayouts = new Map<string, string>();
-  const middleware = new Map<string, (() => CompositionMiddleware) | null>();
-  const variants = new Map<string, VariantOverlay>();
-  const diagnostics: LayoutDiagnostic[] = [];
-  const rowsDeclared = new Set<string>();
-  const middlewareDeclared = new Set<string>();
+  const state: FoldState = {
+    layouts: new Map(),
+    meta: new Map(),
+    localeLayouts: new Map(),
+    middleware: new Map(),
+    variants: new Map(),
+    diagnostics: [],
+    rowsDeclared: new Set(),
+    middlewareDeclared: new Set(),
+    compactTargets: new Map(),
+  };
   const addressed = new Set<string>();
-  const compactTargets = new Map<string, string>();
 
   for (const spec of specs) {
     const name = spec.name.trim().toLowerCase();
     if (!name) {
-      diagnostics.push({ code: "empty-name", layout: "" });
+      state.diagnostics.push({ code: "empty-name", layout: "" });
       continue;
     }
     addressed.add(name);
-    const facets = readSuppress(spec.suppress, name, diagnostics);
-
-    if (spec.rows !== undefined) {
-      // `rowsDeclared` records that a `rows` was present, not that it was accepted. A
-      // rejected `rows` therefore reports `invalid-rows` alone: recording only the valid
-      // branch would let the second pass add `unknown-target` for the same fault, two
-      // warnings for one mistake.
-      if (rowsDeclared.has(name)) diagnostics.push({ code: "duplicate-rows", layout: name });
-      rowsDeclared.add(name);
-      if (!isValidLayoutDefinition(spec.rows)) diagnostics.push({ code: "invalid-rows", layout: name });
-      else layouts.set(name, spec.rows);
-    } else if (spec.rowsPending) {
-      // Declared, but the binding has not delivered. Registering nothing is right - there
-      // are no rows to resolve yet - while still counting the name as addressed, because
-      // the author did declare it and the value arrives on the next fold.
-      rowsDeclared.add(name);
-    }
-
-    // The three guards below degrade one facet rather than throwing. They are inert for a spec
-    // that came through the aggregation, since `validateProperty` coerces to the declared type,
-    // and load-bearing for a hand-built spec and for the drift-pinned webc twin, whose
-    // `@property()` neither coerces nor validates. `spec.compact?.trim()` would throw and take
-    // the whole custom layout down with it.
-    const lang = typeof spec.keycapLang === "string" ? spec.keycapLang.trim() : "";
-    // Names a layout, so it is normalized the way every layout name is.
-    const compact = typeof spec.compact === "string" ? spec.compact.trim().toLowerCase() : "";
-    const patch: LayoutMeta = {
-      ...(lang && { lang }),
-      ...(compact && { compact }),
-      // `boolean`, not truthy and not `!== undefined`: `false` is a role the author chose, while
-      // `null` has to leave the tier below standing.
-      ...(typeof spec.secondary === "boolean" && { secondary: spec.secondary }),
-    };
-    if (Object.keys(patch).length > 0) meta.set(name, { ...meta.get(name), ...patch });
-    if (compact) compactTargets.set(name, compact);
-
-    for (const raw of spec.locales ?? []) {
-      const tag = raw.trim().toLowerCase();
-      if (!tag) {
-        diagnostics.push({ code: "invalid-locale", layout: name });
-        continue;
-      }
-      const owner = localeLayouts.get(tag);
-      if (owner !== undefined && owner !== name) {
-        diagnostics.push({ code: "duplicate-locale", layout: owner, other: name, value: tag });
-      }
-      localeLayouts.set(tag, name);
-    }
-
-    if (facets.has("Middleware")) middleware.set(name, null);
-    if (spec.middleware !== undefined) {
-      // A diagnostic rather than a `TypeError` at composition time, for the same reason as above.
-      if (typeof spec.middleware !== "function") diagnostics.push({ code: "invalid-middleware", layout: name });
-      else {
-        if (middlewareDeclared.has(name)) diagnostics.push({ code: "duplicate-middleware", layout: name });
-        middlewareDeclared.add(name);
-        middleware.set(name, spec.middleware);
-      }
-    }
-
-    const table = readVariants(spec.variants, name, diagnostics);
-    const overlay = foldVariantOverlay(variants.get(name), facets.has("Variants"), table);
-    if (overlay !== undefined) variants.set(name, overlay);
+    const facets = readSuppress(spec.suppress, name, state.diagnostics);
+    foldRows(spec, name, state);
+    foldMeta(spec, name, state);
+    foldLocales(spec.locales, name, state);
+    foldMiddleware(spec, name, facets.has("Middleware"), state);
+    foldVariants(spec, name, facets.has("Variants"), state);
   }
+
+  const { layouts, meta, localeLayouts, middleware, variants, diagnostics, rowsDeclared, compactTargets } = state;
 
   // Resolvability is a property of the complete list: an overlay may precede the custom
   // layout that declares its rows.

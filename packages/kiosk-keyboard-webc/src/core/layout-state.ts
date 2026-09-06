@@ -76,17 +76,19 @@ export class LayoutState {
   }
 
   /**
-   * Seeds the base and requested layout on connect, once. An authored `layout`
-   * attribute reaches the first render through {@link resolvedName}'s fallback
-   * chain, so only the unauthored case seats `_currentLayout` here.
+   * Seeds the base, the requested layout and the layout on screen on connect, once.
+   * A `layout` attribute naming a secondary layout is rendered but is not the base,
+   * which falls through to the locale layout so `{layout:base}` and the session reset
+   * still return to an alphabetic layout. Seating `_currentLayout` here keeps the first
+   * `{layout:*}` tap from announcing the layout already on screen as a change.
    */
   seed(): void {
     if (this._base) return;
-    this._base = this._host.getLayoutAttribute() || this._host.getLocaleLayout();
-    this._requested = this._base;
-    if (!this._host.getLayoutAttribute()) {
-      this._host.setCurrentLayout(this._base);
-    }
+    const attribute = this._host.getLayoutAttribute().trim().toLowerCase();
+    const secondary = getLayoutMeta(attribute, this._host.getFold().layoutMeta)?.secondary === true;
+    this._requested = attribute || this._host.getLocaleLayout();
+    this._base = attribute && !secondary ? attribute : this._host.getLocaleLayout();
+    this._host.setCurrentLayout(this._requested);
   }
 
   /**
@@ -143,10 +145,9 @@ export class LayoutState {
    * unregistered counterpart resolves to no swap rather than to the default layout,
    * since a consumer who names a missing one should keep the layout they asked for.
    *
-   * The tier is compared against the layout on screen, not against the current layout:
-   * a `layout` attribute present before the element connects reaches the first render
-   * through {@link resolvedName}'s fallback chain without passing through the current
-   * layout, which stays empty until the first switch.
+   * The tier is compared against the layout on screen, which is what
+   * {@link resolvedName} reports: the current layout alone would miss both the
+   * `keyboardType` constraint and the registry fallback an unregistered name takes.
    */
   applyTier(narrow: boolean, crossed: boolean): void {
     // Numpad and Numeric pin the rendered surface to their own layout, so tiering

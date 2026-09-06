@@ -710,17 +710,12 @@ packages/kiosk-keyboard/
     *.qunit.ts                           One suite per module / feature
   test/e2e/
     helpers.ts                 Minimal shared Playwright helpers (openPage, keyboardRoot, ...)
-    inputmode.spec.ts          E2E tests for inputmode suppression
     focus.spec.ts              Focus/auto-show behavior
-    autotype.spec.ts           Auto-type keyboard switching
-    interop.spec.ts            StepInput + UI5 Web Components interop
-    i18n.spec.ts               i18n extensibility e2e tests
     flp-lifecycle.spec.ts      FLP lifecycle i18n auto-reset tests
     invariants.spec.ts         Structural assertions the device matrix runs on CI
     visual.spec.ts             Core visual regression (toHaveScreenshot)
     visual-container.spec.ts   Container-query layout snapshots
     visual-container-responsive.spec.ts  Responsive container-query snapshots
-    visual-enhancements.spec.ts  Progressive-enhancement fallback snapshots
     visual-themes.spec.ts      Per-theme snapshots
     accessibility-media.spec.ts  Accessibility and media-query (forced-colors, reduced-motion) snapshots
     rtl.spec.ts                RTL layout snapshots

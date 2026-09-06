@@ -10,10 +10,6 @@ import { openPage, keyboardRoot, key, expectVisualMatch } from "./helpers.js";
 // are already disabled), so the baseline is byte-identical to webc-qwerty.png.
 // What it suppresses is asserted on computed styles below.
 
-test.afterEach(async ({ page }) => {
-  await page.emulateMedia({ forcedColors: null, reducedMotion: null });
-});
-
 test("webc-qwerty-forced-colors", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
   await openPage(page, "/test/pages/visual.html");
@@ -93,7 +89,12 @@ test("webc-caps-lock-ring-does-not-animate-under-reduced-motion", async ({ page 
 // Under forced colors `box-shadow` is dropped, so the latch signal moves to the
 // border. It must not move onto `outline`, which the same key needs for its
 // focus indicator: the outline assertions prove `:focus-visible` really engaged,
-// so the border assertion below cannot pass vacuously.
+// so the border assertion below cannot pass vacuously. The resting border is the
+// `ButtonText` system color, read off a probe painted with the keyword because
+// the emulated palette resolves it to an rgb value only at computed time. That
+// palette gives `ButtonText` and `CanvasText` one value, so the line tells the
+// resting key apart from the `Highlight` and `GrayText` arms, not from the UA
+// fallback.
 test("webc-caps-lock-indicator-survives-focus-in-forced-colors", async ({ page }) => {
   await page.emulateMedia({ forcedColors: "active" });
   await openPage(page, "/test/pages/visual.html");
@@ -103,6 +104,16 @@ test("webc-caps-lock-indicator-survives-focus-in-forced-colors", async ({ page }
       const computed = getComputedStyle(el);
       return { border: computed.borderTopColor, outline: computed.outlineStyle };
     });
+
+  const buttonText = await page.evaluate(() => {
+    const probe = document.body.appendChild(document.createElement("div"));
+    probe.style.color = "ButtonText";
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+  const resting = await styles();
+  expect(resting.border, "the resting key is bordered in the ButtonText system color").toBe(buttonText);
 
   await shiftKey.evaluate((el, cls) => el.classList.add(cls), DOM.classes.keyShiftActive);
   const shiftOnly = await styles();

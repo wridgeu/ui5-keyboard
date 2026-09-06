@@ -140,11 +140,17 @@ QUnit.test("reset is a no-op (no onChange) when already off", (assert) => {
 
 // ── syncFromPhysical ─────────────────────────────────────────────
 
-QUnit.test("syncFromPhysical: (false, false) from Off does not fire onChange", (assert) => {
+QUnit.test("syncFromPhysical: no onChange when the physical state matches the current mode", (assert) => {
   state.syncFromPhysical(false, false);
   assert.strictEqual(state.isShifted, false, "still not shifted");
   assert.strictEqual(state.isCapsLock, false, "still not caps lock");
-  assert.ok(onChange.notCalled, "onChange not fired");
+  assert.ok(onChange.notCalled, "onChange not fired from Off");
+
+  state.syncFromPhysical(true, false);
+  onChange.resetHistory();
+  state.syncFromPhysical(true, false);
+  assert.ok(state.isShifted, "still shifted");
+  assert.ok(onChange.notCalled, "second call with the same state is a no-op");
 });
 
 QUnit.test("syncFromPhysical: (true, false) from Off sets Shift and fires onChange", (assert) => {
@@ -161,20 +167,17 @@ QUnit.test("syncFromPhysical: (false, true) from Off sets CapsLock and fires onC
   assert.strictEqual(onChange.callCount, 1, "onChange fired");
 });
 
-QUnit.test("syncFromPhysical: (false, false) from Shift returns to Off (fires onChange)", (assert) => {
+QUnit.test("syncFromPhysical: (false, false) from Shift or CapsLock returns to Off (fires onChange)", (assert) => {
   state.syncFromPhysical(true, false);
   state.syncFromPhysical(false, false);
-  assert.strictEqual(state.isShifted, false, "not shifted");
-  assert.strictEqual(state.isCapsLock, false, "not caps lock");
+  assert.strictEqual(state.isShifted, false, "not shifted after Shift");
   assert.strictEqual(onChange.callCount, 2, "onChange fired per transition");
-});
 
-QUnit.test("syncFromPhysical: (false, false) from CapsLock returns to Off (fires onChange)", (assert) => {
   state.syncFromPhysical(false, true);
   state.syncFromPhysical(false, false);
-  assert.strictEqual(state.isShifted, false, "not shifted");
+  assert.strictEqual(state.isShifted, false, "not shifted after CapsLock");
   assert.strictEqual(state.isCapsLock, false, "not caps lock");
-  assert.strictEqual(onChange.callCount, 2, "onChange fired per transition");
+  assert.strictEqual(onChange.callCount, 4, "onChange fired per transition");
 });
 
 QUnit.test("syncFromPhysical: CapsLock wins over Shift when both flags set", (assert) => {
@@ -182,15 +185,6 @@ QUnit.test("syncFromPhysical: CapsLock wins over Shift when both flags set", (as
   assert.ok(state.isShifted, "shifted");
   assert.ok(state.isCapsLock, "caps lock: capsLock wins over shift");
   assert.strictEqual(onChange.callCount, 1, "onChange fired");
-});
-
-QUnit.test("syncFromPhysical: no onChange when called repeatedly with the same state", (assert) => {
-  state.syncFromPhysical(true, false);
-  onChange.resetHistory();
-  state.syncFromPhysical(true, false);
-  assert.ok(state.isShifted, "still shifted");
-  assert.strictEqual(state.isCapsLock, false, "still not caps lock");
-  assert.ok(onChange.notCalled, "second call is a no-op");
 });
 
 QUnit.test("syncFromPhysical: resets double-click window so next toggle starts fresh Shift", (assert) => {

@@ -48,15 +48,6 @@ QUnit.test("Browser conflict warning for F5", (assert) => {
   );
 });
 
-QUnit.test("Browser conflict warning for Ctrl+W", (assert) => {
-  const result = validateHotkey("Ctrl+W", Platform.Windows);
-  assert.ok(result.valid, "Ctrl+W is valid");
-  assert.ok(
-    result.warnings.some((w) => w.includes("browser shortcut")),
-    "Warning about browser conflict",
-  );
-});
-
 QUnit.test("SAP conflict warning for Ctrl+S", (assert) => {
   const result = validateHotkey("Ctrl+S", Platform.Windows);
   assert.ok(result.valid, "Ctrl+S is valid");

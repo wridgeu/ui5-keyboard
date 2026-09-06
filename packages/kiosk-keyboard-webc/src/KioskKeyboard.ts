@@ -1168,6 +1168,9 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   show(): void {
+    // Also cancelled in _performOpen(); this covers the already-open keyboard,
+    // whose property assignment below is a no-op.
+    this._autoShow.cancelPendingClose();
     this.open = true;
   }
 
@@ -1194,6 +1197,7 @@ class KioskKeyboard extends UI5Element {
       this._openValue = false;
       return;
     }
+    this._autoShow.cancelPendingClose();
     // Auto-target when nothing is targeted yet: _resolveTarget falls back to
     // the single-entry `controls` lookup.
     if (!this._targetElement) {

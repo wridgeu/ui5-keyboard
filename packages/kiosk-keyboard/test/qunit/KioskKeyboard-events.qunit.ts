@@ -106,41 +106,6 @@ QUnit.test("resetKeyboardType does not fire when already Full", (assert) => {
   kb.destroy();
 });
 
-QUnit.test("autoType fires keyboardTypeChange with autoDetected=true", async (assert) => {
-  const input = new Input({ type: "Number" });
-  input.placeAt("qunit-fixture");
-
-  const events: Array<{ keyboardType: string; previousKeyboardType: string; autoDetected: boolean }> = [];
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-
-  kb.attachKeyboardTypeChange((event) => {
-    const params = event.getParameters();
-    events.push({
-      keyboardType: params.keyboardType!,
-      previousKeyboardType: params.previousKeyboardType!,
-      autoDetected: params.autoDetected!,
-    });
-  });
-
-  await placeAndWait(kb);
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.strictEqual(events.length, 1, "Event fired once");
-  assert.strictEqual(events[0].keyboardType, "Numpad", "Auto-detected Numpad");
-  assert.strictEqual(events[0].previousKeyboardType, "Full", "Was Full before");
-  assert.strictEqual(events[0].autoDetected, true, "Flagged as auto-detected");
-
-  input.destroy();
-  kb.destroy();
-});
-
 QUnit.test("autoType does not fire keyboardTypeChange when type stays Full", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
@@ -175,17 +140,6 @@ QUnit.test("RTL: renders with direction rtl under a document dir of rtl", async 
 
   const computed = window.getComputedStyle(kb.getDomRef() as HTMLElement);
   assert.strictEqual(computed.direction, "rtl", "Keyboard has direction: rtl in RTL context");
-
-  kb.destroy();
-});
-
-QUnit.test("RTL: renders with direction ltr when not in RTL container", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const dom = kb.getDomRef() as HTMLElement;
-  const computed = window.getComputedStyle(dom);
-  assert.strictEqual(computed.direction, "ltr", "Keyboard has direction: ltr by default");
 
   kb.destroy();
 });

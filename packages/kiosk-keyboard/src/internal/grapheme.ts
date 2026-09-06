@@ -102,3 +102,22 @@ const ARABIC_RE = /^[\p{Script_Extensions=Arabic}]/u;
 export function isArabicGlyph(label: string): boolean {
   return label.length > 0 && ARABIC_RE.test(label);
 }
+
+/** Script family a keycap label is typeset for, carried on `data-glyph-script`. */
+export type GlyphScript = "hangul" | "cjk" | "indic" | "arabic";
+
+/**
+ * Classifies a single-glyph label by script family; `undefined` for every
+ * other script. Hangul is tested first: its regex uses strict
+ * `\p{Script=Hangul}` (not Script_Extensions) so shared CJK punctuation
+ * (、。・) falls through to `isCJKGlyph`, and the chain keeps a real Hangul
+ * character from also classifying as CJK. Indic and Arabic are disjoint from
+ * every other family by Unicode definition, so they need no guard.
+ */
+export function glyphScriptOf(label: string): GlyphScript | undefined {
+  if (isHangulGlyph(label)) return "hangul";
+  if (isCJKGlyph(label)) return "cjk";
+  if (isIndicGlyph(label)) return "indic";
+  if (isArabicGlyph(label)) return "arabic";
+  return undefined;
+}

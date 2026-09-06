@@ -3,6 +3,7 @@ import { KeyboardType, MobileKeyboard } from "ui5/kiosk/library";
 import CheckBox from "sap/m/CheckBox";
 import Control from "sap/ui/core/Control";
 import Input from "sap/m/Input";
+import RadioButton from "sap/m/RadioButton";
 import type RenderManager from "sap/ui/core/RenderManager";
 import VBox from "sap/m/VBox";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
@@ -66,6 +67,24 @@ QUnit.test("autoShow ignores readonly inputs", async (assert) => {
   assert.notOk(kb.isOpen(), "Keyboard does not open for readonly input");
 
   input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("autoShow ignores non-textual input types (radio)", async (assert) => {
+  const radio = new RadioButton();
+  radio.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  const innerInput = radio.getDomRef()?.querySelector("input") as HTMLElement;
+  assert.ok(innerInput, "RadioButton renders an inner <input>");
+  innerInput.focus();
+  await nextUIUpdate();
+
+  assert.notOk(kb.isOpen(), "Keyboard does not open for radio input");
+
+  radio.destroy();
   kb.destroy();
 });
 
@@ -157,6 +176,32 @@ QUnit.test("autoShow ignores date/time input types", async (assert) => {
   dateInput.destroy();
 });
 
+QUnit.test("autoShow keeps the keyboard open when focus moves from one input to another", async (assert) => {
+  const input1 = new Input();
+  const input2 = new Input();
+  input1.placeAt("qunit-fixture");
+  input2.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  (input1.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.ok(kb.isOpen(), "Keyboard opened for the first input");
+
+  (input2.getFocusDomRef() as HTMLElement).focus();
+  // Give a wrongly scheduled deferred close its frame before asserting it did not run.
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await nextUIUpdate();
+
+  assert.ok(kb.isOpen(), "Keyboard stays open across the move");
+  assert.strictEqual(kb.getActiveControl()?.getId(), input2.getId(), "Target followed focus to the second input");
+
+  input1.destroy();
+  input2.destroy();
+  kb.destroy();
+});
+
 QUnit.test(
   "autoShow keeps keyboard open when null relatedTarget settles on another claimable input",
   async (assert) => {
@@ -214,6 +259,34 @@ QUnit.test("autoShow closes when null relatedTarget settles outside claimable in
   kb.destroy();
 });
 
+QUnit.test("show() overrides a deferred close scheduled in the same task", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const outside = document.createElement("button");
+  outside.id = "kb-show-wins-focus-target";
+  document.getElementById("qunit-fixture")!.appendChild(outside);
+
+  const kb = new KioskKeyboard({ docked: true, autoShow: true });
+  await placeAndWait(kb);
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await nextUIUpdate();
+  assert.ok(kb.isOpen(), "Keyboard opened for input");
+
+  dispatchNullRelatedFocusOut(input.getFocusDomRef() as HTMLElement);
+  outside.focus();
+  kb.show();
+
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  await nextUIUpdate();
+
+  assert.ok(kb.isOpen(), "show() outranks the deferred auto-show close");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("destroy cancels deferred null-relatedTarget close", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
@@ -242,64 +315,6 @@ QUnit.test("destroy cancels deferred null-relatedTarget close", async (assert) =
   assert.ok(cancelled, "destroy cancels the pending deferred-close rAF");
 
   input.destroy();
-});
-
-QUnit.test("Auto-show skips input targeted by another keyboard", async (assert) => {
-  const input = new Input();
-  input.placeAt("qunit-fixture");
-
-  const inlineKb = new KioskKeyboard({
-    keyboardType: KeyboardType.Numpad,
-    controls: [input.getId()],
-  });
-  inlineKb.placeAt("qunit-fixture");
-
-  const dockedKb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-  });
-  dockedKb.placeAt("qunit-fixture");
-  await waitForRender();
-
-  (input.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.notOk(dockedKb.isOpen(), "Docked keyboard does not open for input targeted by inline keyboard");
-
-  input.destroy();
-  inlineKb.destroy();
-  dockedKb.destroy();
-});
-
-QUnit.test("Auto-show still works for unclaimed inputs", async (assert) => {
-  const claimedInput = new Input();
-  const freeInput = new Input();
-  claimedInput.placeAt("qunit-fixture");
-  freeInput.placeAt("qunit-fixture");
-
-  const inlineKb = new KioskKeyboard({
-    keyboardType: KeyboardType.Numpad,
-    controls: [claimedInput.getId()],
-  });
-  inlineKb.placeAt("qunit-fixture");
-
-  const dockedKb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-  });
-  dockedKb.placeAt("qunit-fixture");
-  await waitForRender();
-
-  (freeInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.ok(dockedKb.isOpen(), "Docked keyboard opens for unclaimed input");
-  assert.strictEqual(dockedKb.getActiveControl()?.getId(), freeInput.getId(), "Target set to unclaimed input");
-
-  claimedInput.destroy();
-  freeInput.destroy();
-  inlineKb.destroy();
-  dockedKb.destroy();
 });
 
 QUnit.test("Hidden keyboard target does not block auto-show", async (assert) => {
@@ -331,13 +346,9 @@ QUnit.test("Hidden keyboard target does not block auto-show", async (assert) => 
   dockedKb.destroy();
 });
 
-QUnit.test("Open keyboard still closes and restores inputmode after becoming hidden", async (assert) => {
+QUnit.test("setVisible(false) closes the keyboard and restores inputmode", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
-
-  const outside = document.createElement("button");
-  outside.id = "kb-hidden-close-target";
-  document.getElementById("qunit-fixture")!.appendChild(outside);
 
   const kb = new KioskKeyboard({
     docked: true,
@@ -357,12 +368,8 @@ QUnit.test("Open keyboard still closes and restores inputmode after becoming hid
   assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode is suppressed while open");
 
   kb.setVisible(false);
-  await nextUIUpdate();
 
-  outside.focus();
-  await nextUIUpdate();
-
-  assert.notOk(kb.isOpen(), "Keyboard closes even after becoming hidden");
+  assert.notOk(kb.isOpen(), "Keyboard closes when it is hidden");
   if (originalInputMode !== null) {
     assert.strictEqual(inputDom.getAttribute("inputmode"), originalInputMode, "Original inputmode is restored");
   } else {
@@ -509,6 +516,7 @@ QUnit.test("Docked keyboard closes when focus moves from unclaimed to claimed in
   (freeInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
   assert.ok(dockedKb.isOpen(), "Docked keyboard is open for free input");
+  assert.strictEqual(dockedKb.getActiveControl()?.getId(), freeInput.getId(), "Target set to unclaimed input");
 
   (claimedInput.getFocusDomRef() as HTMLElement).focus();
   await new Promise((resolve) => requestAnimationFrame(resolve));

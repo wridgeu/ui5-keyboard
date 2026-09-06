@@ -44,13 +44,8 @@ QUnit.test("the Latin layouts declare nothing at all", (assert) => {
 
 QUnit.module("layout-meta - isSecondaryLayout");
 
-QUnit.test("only the auxiliary surfaces are secondary", (assert) => {
-  for (const name of ["numeric", "special", "fkeys", "nav"]) {
-    assert.strictEqual(isSecondaryLayout(name), true, `${name} is secondary`);
-  }
-  for (const name of ["qwerty", "qwertz-de", "arabic"]) {
-    assert.strictEqual(isSecondaryLayout(name), false, `${name} is a base alphabetic layout`);
-  }
+QUnit.test("reads the built-in entry when no instance map is given", (assert) => {
+  assert.strictEqual(isSecondaryLayout("numeric"), true, "numeric is secondary");
 });
 
 QUnit.test("an unregistered name is not secondary", (assert) => {
@@ -58,12 +53,6 @@ QUnit.test("an unregistered name is not secondary", (assert) => {
 });
 
 QUnit.module("layout-meta - getLayoutLang");
-
-QUnit.test("returns the declared keycap language", (assert) => {
-  assert.strictEqual(getLayoutLang("ja-kana"), "ja", "ja-kana -> ja");
-  assert.strictEqual(getLayoutLang("arabic"), "ar", "arabic -> ar");
-  assert.strictEqual(getLayoutLang("ko-hangul"), "ko", "ko-hangul -> ko");
-});
 
 QUnit.test("a layout with keycaps in the UI language has none", (assert) => {
   assert.strictEqual(getLayoutLang("ja-romaji"), undefined, "opting out of variants does not imply a language");

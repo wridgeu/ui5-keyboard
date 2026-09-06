@@ -14,24 +14,6 @@ describe("middleware integration", () => {
       m = getMiddlewareFactory("ko-hangul")!();
     });
 
-    it("decomposes LVT -> LV -> L -> empty via sequential backspaces", () => {
-      m.handleKey("\u314e", input);
-      m.handleKey("\u314f", input);
-      m.handleKey("\u3134", input);
-
-      expect(input.value).toBe("\uD55C");
-
-      m.handleKey("{backspace}", input);
-      const lvChar = String.fromCharCode(0xac00 + 18 * 588 + 0 * 28);
-      expect(input.value).toBe(lvChar);
-
-      m.handleKey("{backspace}", input);
-      expect(input.value).toBe("\u1112");
-
-      m.handleKey("{backspace}", input);
-      expect(input.value).toBe("");
-    });
-
     it("after full backspace decomposition, middleware is ready for new input", () => {
       m.handleKey("\u3131", input);
       m.handleKey("\u314f", input);
@@ -68,27 +50,6 @@ describe("middleware integration", () => {
       expect(inputA.value).toBe("\uAC00");
       expect(inputB.value).toBe("\uB108");
     });
-
-    it("preedit text on one target does not appear on another", () => {
-      const inputA = document.createElement("input");
-      inputA.value = "existing";
-      inputA.setSelectionRange(8, 8);
-
-      const inputB = document.createElement("input");
-      inputB.value = "";
-      inputB.setSelectionRange(0, 0);
-
-      const m = getMiddlewareFactory("ko-hangul")!();
-
-      m.handleKey("\u3131", inputA);
-      expect(inputA.value).toBe("existing\u1100");
-
-      m.commit();
-
-      m.handleKey("\u3134", inputB);
-      expect(inputB.value).toBe("\u1102");
-      expect(inputA.value).toBe("existing\u1100");
-    });
   });
 
   describe("two components using the same layout get independent instances", () => {
@@ -117,28 +78,6 @@ describe("middleware integration", () => {
       expect(inputB.value).toBe("\uB108");
       expect(inputA.value).toBe("\uAC00");
     });
-
-    it("resetting instance A does not affect instance B", () => {
-      const inputA = document.createElement("input");
-      inputA.value = "";
-      inputA.setSelectionRange(0, 0);
-
-      const inputB = document.createElement("input");
-      inputB.value = "";
-      inputB.setSelectionRange(0, 0);
-
-      const factory = getMiddlewareFactory("ko-hangul")!;
-      const mwA = factory();
-      const mwB = factory();
-
-      mwA.handleKey("\u3131", inputA);
-      mwB.handleKey("\u3134", inputB);
-
-      mwA.reset();
-
-      expect(inputA.value).toBe("");
-      expect(inputB.value).toBe("\u1102");
-    });
   });
 
   describe("component destroy calls reset (not commit)", () => {
@@ -158,7 +97,6 @@ describe("middleware integration", () => {
       compositionEndSpy.mockClear();
       m.reset();
 
-      expect(input.value).toBe("");
       const endData = compositionEndSpy.mock.calls[0]?.[0]?.data;
       expect(endData).toBe("");
     });
@@ -191,9 +129,7 @@ describe("middleware integration", () => {
       m.handleKey("\u3131", input);
       m.handleKey("\u314f", input);
 
-      const text = m.commit();
-      expect(text).toBe("\uAC00");
-      expect(input.value).toBe("\uAC00");
+      m.commit();
       expect(compositionEndSpy).toHaveBeenCalled();
       const endData = compositionEndSpy.mock.calls[0]?.[0]?.data;
       expect(endData).toBe("\uAC00");

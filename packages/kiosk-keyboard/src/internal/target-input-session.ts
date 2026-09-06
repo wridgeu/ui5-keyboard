@@ -16,6 +16,7 @@ export default class TargetInputSession {
   private _targetDirty = false;
 
   private _customResolver: TargetResolverFn | null = null;
+  private _cursorSyncFrame: number | null = null;
 
   constructor(private readonly _getTargetElement: () => TargetElement | null) {}
 
@@ -33,7 +34,7 @@ export default class TargetInputSession {
     if (!dom) return;
     const pos = opsInsertText(dom, text, this._cursorPos ?? undefined);
     if (!pos) return;
-    this._cursorPos = pos;
+    this._trackCursor(pos, dom);
     this._lastKnownValue = dom.value;
     this._targetDirty = true;
   }
@@ -46,7 +47,7 @@ export default class TargetInputSession {
     const pos = opsHandleBackspace(dom, this._cursorPos ?? undefined);
     if (!pos) return false;
 
-    this._cursorPos = pos;
+    this._trackCursor(pos, dom);
     this._lastKnownValue = dom.value;
     this._targetDirty = true;
     return true;
@@ -61,7 +62,7 @@ export default class TargetInputSession {
       // skips textarea targets by design.
       const pos = opsInsertText(dom, "\n", this._cursorPos ?? undefined);
       if (!pos) return;
-      this._cursorPos = pos;
+      this._trackCursor(pos, dom);
       this._lastKnownValue = dom.value;
       return;
     }
@@ -79,7 +80,7 @@ export default class TargetInputSession {
 
     const pos = opsHandleNavigation(dom, key, this._cursorPos ?? undefined, extend);
     if (!pos) return;
-    this._cursorPos = pos;
+    this._trackCursor(pos, dom);
   }
 
   /**
@@ -115,6 +116,30 @@ export default class TargetInputSession {
       return () => opsFireTargetChange(element, value);
     }
     return null;
+  }
+
+  /**
+   * Records the tracked caret. While the target is unfocused it is re-applied on
+   * the next frame: the browser discards an unfocused input's selection in the
+   * rendering step after a pointer activation, after the edit has written it.
+   */
+  private _trackCursor(pos: [number, number], dom: HTMLInputElement | HTMLTextAreaElement): void {
+    this._cursorPos = pos;
+    if (document.activeElement === dom) return;
+
+    // The navigation op reads the anchor back from selectionDirection, so it
+    // is restored along with the range.
+    const direction = dom.selectionDirection ?? undefined;
+    if (this._cursorSyncFrame !== null) cancelAnimationFrame(this._cursorSyncFrame);
+    this._cursorSyncFrame = requestAnimationFrame(() => {
+      this._cursorSyncFrame = null;
+      if (!dom.isConnected || document.activeElement === dom) return;
+      try {
+        dom.setSelectionRange(pos[0], pos[1], direction);
+      } catch {
+        // May throw on certain input types (e.g. type="number")
+      }
+    });
   }
 
   private _getTargetDomRef(): HTMLInputElement | HTMLTextAreaElement | null {

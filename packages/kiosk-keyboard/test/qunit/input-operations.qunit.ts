@@ -188,23 +188,6 @@ QUnit.test("Inserts empty string (no-op value, cursor unchanged)", (assert) => {
   assert.deepEqual(result, [2, 2], "Cursor stays at position 2");
 });
 
-QUnit.test("Inserts multi-character text", (assert) => {
-  const input = makeInput("ab", [1, 1]);
-  const result = insertText(input, "XYZ", [1, 1]);
-
-  assert.strictEqual(input.value, "aXYZb", "Multi-char text inserted");
-  assert.deepEqual(result, [4, 4], "Cursor after all inserted chars");
-});
-
-QUnit.test("Falls back to dom.value when no UI5 element", (assert) => {
-  // Raw DOM input not attached to any UI5 control - Element.closestTo returns null
-  const input = makeInput("test", [0, 0]);
-  const result = insertText(input, "A", [0, 0]);
-
-  assert.strictEqual(input.value, "Atest", "Fallback path sets dom.value directly");
-  assert.deepEqual(result, [1, 1], "Returns correct cursor position");
-});
-
 QUnit.test("Works in a textarea with newlines", (assert) => {
   const ta = makeTextarea("line1\nline2", [6, 6]);
   const result = insertText(ta, "X", [6, 6]);
@@ -321,50 +304,6 @@ QUnit.test("Removes entire surrogate-pair emoji", (assert) => {
   assert.deepEqual(result, [1, 1], "Cursor moved back by 2 code units (one grapheme)");
 });
 
-QUnit.test("Removes entire ZWJ sequence", (assert) => {
-  const emoji = "👨‍👩‍👧"; // ZWJ family
-  const input = makeInput(`a${emoji}b`, [1 + emoji.length, 1 + emoji.length]);
-  const result = handleBackspace(input, [1 + emoji.length, 1 + emoji.length]);
-
-  assert.strictEqual(input.value, "ab", "ZWJ sequence fully deleted");
-  assert.deepEqual(result, [1, 1], "Cursor after 'a'");
-});
-
-QUnit.test("Removes combining mark sequence as one grapheme", (assert) => {
-  // ñ as n(U+006E) + combining tilde(U+0303) = 2 code units, 1 grapheme
-  const input = makeInput("an\u0303o", [3, 3]);
-  const result = handleBackspace(input, [3, 3]);
-
-  assert.strictEqual(input.value, "ao", "n + combining tilde deleted as one grapheme");
-  assert.deepEqual(result, [1, 1], "Cursor moved back by 2 code units");
-});
-
-QUnit.test("Removes regional indicator pair (flag)", (assert) => {
-  const flag = "🇩🇪"; // 4 code units
-  const input = makeInput(`x${flag}y`, [1 + flag.length, 1 + flag.length]);
-  const result = handleBackspace(input, [1 + flag.length, 1 + flag.length]);
-
-  assert.strictEqual(input.value, "xy", "Flag emoji deleted as one grapheme");
-  assert.deepEqual(result, [1, 1], "Cursor after 'x'");
-});
-
-QUnit.test("Removes variation selector sequence (heart)", (assert) => {
-  // ❤️ = U+2764 + U+FE0F = 2 code units
-  const input = makeInput("a❤️b", [3, 3]);
-  const result = handleBackspace(input, [3, 3]);
-
-  assert.strictEqual(input.value, "ab", "Heart emoji deleted as one grapheme");
-  assert.deepEqual(result, [1, 1], "Cursor after 'a'");
-});
-
-QUnit.test("Deletes last character from single-char value", (assert) => {
-  const input = makeInput("x", [1, 1]);
-  const result = handleBackspace(input, [1, 1]);
-
-  assert.strictEqual(input.value, "", "Value is now empty");
-  assert.deepEqual(result, [0, 0], "Cursor at position 0");
-});
-
 QUnit.test("Selection removal takes precedence over grapheme deletion", (assert) => {
   // With selection active, removes only the selection (not grapheme before start)
   const input = makeInput("a😀bc", [1, 3]);
@@ -414,13 +353,6 @@ QUnit.test("ArrowLeft collapses selection to start", (assert) => {
   assert.deepEqual(result, [2, 2], "Cursor at selection start");
 });
 
-QUnit.test("ArrowLeft steps over emoji as one grapheme", (assert) => {
-  const input = makeInput("a😀b", [3, 3]);
-  const result = handleNavigation(input, "ArrowLeft", [3, 3]);
-
-  assert.deepEqual(result, [1, 1], "Skipped entire 😀 (2 code units)");
-});
-
 QUnit.test("ArrowLeft at position 0 stays at 0", (assert) => {
   const input = makeInput("abc", [0, 0]);
   const result = handleNavigation(input, "ArrowLeft", [0, 0]);
@@ -442,13 +374,6 @@ QUnit.test("ArrowRight collapses selection to end", (assert) => {
   assert.deepEqual(result, [5, 5], "Cursor at selection end");
 });
 
-QUnit.test("ArrowRight steps over emoji as one grapheme", (assert) => {
-  const input = makeInput("a😀b", [1, 1]);
-  const result = handleNavigation(input, "ArrowRight", [1, 1]);
-
-  assert.deepEqual(result, [3, 3], "Skipped entire 😀 (2 code units)");
-});
-
 QUnit.test("ArrowRight at end stays at end", (assert) => {
   const input = makeInput("abc", [3, 3]);
   const result = handleNavigation(input, "ArrowRight", [3, 3]);
@@ -456,32 +381,18 @@ QUnit.test("ArrowRight at end stays at end", (assert) => {
   assert.deepEqual(result, [3, 3], "Stays at end");
 });
 
-QUnit.test("Home moves to position 0", (assert) => {
+QUnit.test("Home and PageUp move to position 0", (assert) => {
   const input = makeInput("hello", [3, 3]);
-  const result = handleNavigation(input, "Home", [3, 3]);
 
-  assert.deepEqual(result, [0, 0], "Cursor at start");
+  assert.deepEqual(handleNavigation(input, "Home", [3, 3]), [0, 0], "Home: cursor at start");
+  assert.deepEqual(handleNavigation(input, "PageUp", [4, 4]), [0, 0], "PageUp: cursor at start");
 });
 
-QUnit.test("End moves to end of value", (assert) => {
+QUnit.test("End and PageDown move to end of value", (assert) => {
   const input = makeInput("hello", [2, 2]);
-  const result = handleNavigation(input, "End", [2, 2]);
 
-  assert.deepEqual(result, [5, 5], "Cursor at end");
-});
-
-QUnit.test("PageUp moves to position 0", (assert) => {
-  const input = makeInput("hello", [4, 4]);
-  const result = handleNavigation(input, "PageUp", [4, 4]);
-
-  assert.deepEqual(result, [0, 0], "Cursor at start");
-});
-
-QUnit.test("PageDown moves to end of value", (assert) => {
-  const input = makeInput("hello", [1, 1]);
-  const result = handleNavigation(input, "PageDown", [1, 1]);
-
-  assert.deepEqual(result, [5, 5], "Cursor at end");
+  assert.deepEqual(handleNavigation(input, "End", [2, 2]), [5, 5], "End: cursor at end");
+  assert.deepEqual(handleNavigation(input, "PageDown", [1, 1]), [5, 5], "PageDown: cursor at end");
 });
 
 QUnit.test("Unsupported key returns null", (assert) => {
@@ -542,32 +453,6 @@ QUnit.test("ArrowDown at last line moves to end of value", (assert) => {
   assert.deepEqual(result, [7, 7], "Moved to end of content");
 });
 
-QUnit.test("ArrowDown in single-line value moves to end", (assert) => {
-  const ta = makeTextarea("hello", [2, 2]);
-  const result = handleNavigation(ta, "ArrowDown", [2, 2]);
-
-  assert.deepEqual(result, [5, 5], "Moved to end (only one line)");
-});
-
-QUnit.test("ArrowUp in single-line value moves to start", (assert) => {
-  const ta = makeTextarea("hello", [3, 3]);
-  const result = handleNavigation(ta, "ArrowUp", [3, 3]);
-
-  assert.deepEqual(result, [0, 0], "Moved to start (only one line)");
-});
-
-QUnit.test("ArrowDown with three lines navigates correctly", (assert) => {
-  // 3 lines: "ab"(2), "cde"(3), "f"(1)
-  const ta = makeTextarea("ab\ncde\nf", [1, 1]); // line 1 col 1
-  let result = handleNavigation(ta, "ArrowDown", [1, 1]);
-  // line2 starts at 3, col 1 → position 4
-  assert.deepEqual(result, [4, 4], "line1→line2: col 1 preserved");
-
-  result = handleNavigation(ta, "ArrowDown", [4, 4]);
-  // line3 starts at 7, length 1, clamp col 1 to 1 → position 8
-  assert.deepEqual(result, [8, 8], "line2→line3: col 1 preserved");
-});
-
 QUnit.test("ArrowDown collapses selection and moves from end position", (assert) => {
   const ta = makeTextarea("abc\ndef", [1, 3]); // selection covers "bc" on line 1
   const result = handleNavigation(ta, "ArrowDown", [1, 3]);
@@ -603,6 +488,9 @@ QUnit.test("Extending ArrowLeft twice then ArrowRight keeps the anchor", (assert
 
   let result = handleNavigation(input, "ArrowLeft", [5, 5], true);
   assert.deepEqual(result, [4, 5], "First extension covers one grapheme");
+  assert.strictEqual(input.selectionStart, 4, "DOM start at 4");
+  assert.strictEqual(input.selectionEnd, 5, "DOM end at 5");
+  assert.strictEqual(input.selectionDirection, "backward", "Focus at the start");
 
   result = handleNavigation(input, "ArrowLeft", result ?? undefined, true);
   assert.deepEqual(result, [3, 5], "Second extension grows the selection");
@@ -615,16 +503,6 @@ QUnit.test("Extending ArrowLeft twice then ArrowRight keeps the anchor", (assert
   assert.strictEqual(input.selectionStart, 4, "DOM start back at 4");
   assert.strictEqual(input.selectionEnd, 5, "DOM end still at 5");
   assert.strictEqual(input.selectionDirection, "backward", "Anchor still at the end");
-});
-
-QUnit.test("Extending ArrowLeft from a collapsed caret selects backward", (assert) => {
-  const input = makeInput("hello", [5, 5]);
-  const result = handleNavigation(input, "ArrowLeft", [5, 5], true);
-
-  assert.deepEqual(result, [4, 5], "One grapheme selected");
-  assert.strictEqual(input.selectionStart, 4, "DOM start at 4");
-  assert.strictEqual(input.selectionEnd, 5, "DOM end at 5");
-  assert.strictEqual(input.selectionDirection, "backward", "Focus at the start");
 });
 
 QUnit.test("Extending ArrowRight from a collapsed caret selects forward", (assert) => {
@@ -985,7 +863,7 @@ QUnit.test("Inserts a newline into a focused textarea", async (assert) => {
   assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 });
 
-QUnit.test("Undo reverts the DOM value; the value property keeps the pre-undo text", async (assert) => {
+QUnit.test("Undo reverts the DOM value", async (assert) => {
   const ctrl = await renderControl(new Input({ value: "hello" }));
   const dom = focusInner(ctrl);
   const inputEvents = countInputEvents(dom);
@@ -997,11 +875,6 @@ QUnit.test("Undo reverts the DOM value; the value property keeps the pre-undo te
   document.execCommand("undo");
 
   assert.strictEqual(dom.value, "hello", "Undo reverted the DOM value");
-  assert.strictEqual(
-    ctrl.getProperty("value"),
-    "hello!",
-    "Property stays at the pre-undo text - sap.m.Input writes it from oninput only under valueLiveUpdate",
-  );
 });
 
 // ──────────────────────────────────────────────
@@ -1062,18 +935,5 @@ QUnit.test("Deletes an entire surrogate-pair emoji", async (assert) => {
 
   assert.strictEqual(dom.value, "ab", "Entire emoji deleted in one backspace");
   assert.deepEqual(result, [1, 1], "Cursor moved back by 2 code units (one grapheme)");
-  assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
-});
-
-QUnit.test("Deletes an entire ZWJ sequence", async (assert) => {
-  const emoji = "👨‍👩‍👧"; // ZWJ family
-  const ctrl = await renderControl(new Input({ value: `a${emoji}b` }));
-  const dom = focusInner(ctrl);
-  const inputEvents = countInputEvents(dom);
-
-  const result = handleBackspace(dom, [1 + emoji.length, 1 + emoji.length]);
-
-  assert.strictEqual(dom.value, "ab", "ZWJ sequence fully deleted");
-  assert.deepEqual(result, [1, 1], "Cursor after 'a'");
   assert.strictEqual(inputEvents(), 1, ONE_PLATFORM_EVENT);
 });

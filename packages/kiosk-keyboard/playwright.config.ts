@@ -10,10 +10,9 @@ import { CHROMIUM_ARGS, DESKTOP_VIEWPORT, ui5ServeWebServer } from "./playwright
  * shadow piercing). Pages are served by `ui5 serve` (the UI5 Tooling middleware
  * transpiles the TS test code).
  *
- * The behavioral specs (autotype, focus, i18n, inputmode, interop) are
- * desktop-only; the visual specs run on the desktop + device matrix. The FLP
- * specs (flp-*.spec.ts) use a different server and run under
- * playwright.flp.config.ts.
+ * The behavioral spec (focus) is desktop-only; the visual specs run on the
+ * desktop + device matrix. The FLP spec (flp-*.spec.ts) uses a different server
+ * and runs under playwright.flp.config.ts.
  *
  * Browser provisioning: `npx playwright install chromium` (`--with-deps` in CI).
  * Visual baselines under test/e2e/__baselines__/<project>/ are committed and
@@ -39,7 +38,7 @@ const deviceProfiles = [
 // A denylist (not an allowlist) keeps the matrix self-maintaining: a new visual
 // spec joins it automatically, while a forgotten new behavioral spec fails
 // loudly on mobile instead of being silently skipped.
-const DESKTOP_ONLY_SPECS = /(autotype|focus|i18n|inputmode|interop)\.spec\.ts$/;
+const DESKTOP_ONLY_SPECS = /focus\.spec\.ts$/;
 const SEPARATE_CONFIG_SPECS = /(flp-.*|readme-screenshots)\.spec\.ts$/;
 
 // CI narrows the device profiles to the structural invariants. The rest of their

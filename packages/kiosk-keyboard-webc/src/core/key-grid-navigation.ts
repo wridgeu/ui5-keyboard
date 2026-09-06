@@ -17,6 +17,14 @@ export interface KeyGridNavigationHost {
   setPressedKey(pos: KeyPosition | null): void;
 }
 
+/** The horizontal arrows swap roles when the row is rendered right-to-left. */
+const MIRRORED_ARROWS: Readonly<Record<string, string>> = { ArrowLeft: "ArrowRight", ArrowRight: "ArrowLeft" };
+
+/** Index of the last key in `row`. */
+function lastCol(layout: LayoutDefinition, row: number): number {
+  return (layout[row]?.length ?? 1) - 1;
+}
+
 /**
  * Keyboard grid navigation for the web component (mirrors the UI5 control's
  * `KeyGridNavigation`, which attaches via `addDelegate`). Follows the WAI-ARIA
@@ -76,103 +84,117 @@ export class KeyGridNavigation {
     const from = keyPositionOf(keyEl);
     if (!from) return;
 
-    let row = from.row;
-    let col = from.col;
-
-    // In RTL the row is mirrored (.kiosk-row is display:flex), so the arrow
-    // that moves focus visually forward is ArrowLeft. Mirrors the variant popup.
-    const forwardKey = this._host.isRtl() ? "ArrowLeft" : "ArrowRight";
-    const backwardKey = this._host.isRtl() ? "ArrowRight" : "ArrowLeft";
-
-    if (e.key === forwardKey) {
-      if (col + 1 < (layout[row]?.length ?? 0)) {
-        col += 1;
-      } else if (row + 1 < layout.length) {
-        // End of the row: continue onto the first key of the next row.
-        row += 1;
-        col = 0;
-      }
-      // Last key of the grid: stay put.
-    } else if (e.key === backwardKey) {
-      if (col - 1 >= 0) {
-        col -= 1;
-      } else if (row - 1 >= 0) {
-        // Start of the row: continue onto the last key of the previous row.
-        row -= 1;
-        col = (layout[row]?.length ?? 1) - 1;
-      }
-      // First key of the grid: stay put.
-    } else {
-      switch (e.key) {
-        case "ArrowDown":
-          // Clamp the column onto a narrower row; stop at the bottom edge.
-          if (row + 1 < layout.length) {
-            row += 1;
-            col = Math.min(col, (layout[row]?.length ?? 1) - 1);
-          }
-          break;
-        case "ArrowUp":
-          // Clamp the column onto a narrower row; stop at the top edge.
-          if (row - 1 >= 0) {
-            row -= 1;
-            col = Math.min(col, (layout[row]?.length ?? 1) - 1);
-          }
-          break;
-        case "Home":
-          // Ctrl+Home jumps to the first key of the whole grid; plain Home
-          // stays within the current row.
-          if (e.ctrlKey) row = 0;
-          col = 0;
-          break;
-        case "End":
-          // Ctrl+End jumps to the last key of the whole grid; plain End
-          // stays within the current row.
-          if (e.ctrlKey) row = layout.length - 1;
-          col = (layout[row]?.length ?? 1) - 1;
-          break;
-        case "Enter":
-          // Activate only without Ctrl/Alt/Meta: those combinations are
-          // browser/OS shortcuts, not key activations. Shift is the exception -
-          // it means "type the shifted glyph" (see `_activate`).
-          if (e.ctrlKey || e.altKey || e.metaKey) return;
-          e.preventDefault();
-          // One activation per press: drop the OS auto-repeat keydowns.
-          // `{backspace}` is the only key that repeats, from pointer input on
-          // `BackspaceRepeatController`'s tuned curve.
-          if (e.repeat) return;
-          this._press(keyEl);
-          this._activate(keyEl, e.shiftKey);
-          return;
-        case " ":
-          // Native `<button>` semantics: Space activates on release, not on
-          // press, and does not repeat while held. Suppress the page scroll
-          // here and remember the pressed key; onKeyUp performs the activation.
-          // The Shift comes from the press, not the release: nothing makes the
-          // user lift two keys under different hands in a fixed order.
-          if (e.ctrlKey || e.altKey || e.metaKey) return;
-          this._spaceKeyDown = { el: keyEl, shift: e.shiftKey };
-          this._press(keyEl);
-          e.preventDefault();
-          return;
-        default:
-          return;
-      }
+    if (e.key === "Enter" || e.key === " ") {
+      this._onActivationKey(e, keyEl);
+      return;
     }
 
+    const to = this._navigationTarget(e, from, layout);
+    if (!to) return;
     // A handled navigation key: always prevent the default (e.g. page scroll),
     // even at an edge where focus does not move.
     e.preventDefault();
-    if (row === from.row && col === from.col) return;
+    if (to.row === from.row && to.col === from.col) return;
 
     const nextEl =
-      this._host.getShadowRoot()?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyByPosition(row, col)) ??
-      null;
+      this._host
+        .getShadowRoot()
+        ?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyByPosition(to.row, to.col)) ?? null;
     if (nextEl) {
       keyEl.setAttribute("tabindex", "-1");
       nextEl.setAttribute("tabindex", "0");
       nextEl.focus();
-      this._lastFocusedKey = { row, col };
+      this._lastFocusedKey = to;
     }
+  }
+
+  /**
+   * The grid position a navigation key moves focus to: `from` itself at a grid
+   * edge, or `null` for a key that is not navigation.
+   */
+  private _navigationTarget(e: KeyboardEvent, from: KeyPosition, layout: LayoutDefinition): KeyPosition | null {
+    let { row, col } = from;
+    // In RTL the row is mirrored (.kiosk-row is display:flex), so the arrow
+    // that moves focus visually forward is ArrowLeft. Mirrors the variant popup.
+    const key = this._host.isRtl() ? (MIRRORED_ARROWS[e.key] ?? e.key) : e.key;
+
+    switch (key) {
+      case "ArrowRight":
+        if (col < lastCol(layout, row)) {
+          col += 1;
+        } else if (row + 1 < layout.length) {
+          // End of the row: continue onto the first key of the next row.
+          row += 1;
+          col = 0;
+        }
+        // Last key of the grid: stay put.
+        break;
+      case "ArrowLeft":
+        if (col > 0) {
+          col -= 1;
+        } else if (row > 0) {
+          // Start of the row: continue onto the last key of the previous row.
+          row -= 1;
+          col = lastCol(layout, row);
+        }
+        // First key of the grid: stay put.
+        break;
+      case "ArrowDown":
+        // Clamp the column onto a narrower row; stop at the bottom edge.
+        if (row + 1 < layout.length) {
+          row += 1;
+          col = Math.min(col, lastCol(layout, row));
+        }
+        break;
+      case "ArrowUp":
+        // Clamp the column onto a narrower row; stop at the top edge.
+        if (row > 0) {
+          row -= 1;
+          col = Math.min(col, lastCol(layout, row));
+        }
+        break;
+      case "Home":
+        // Ctrl+Home jumps to the first key of the whole grid; plain Home
+        // stays within the current row.
+        if (e.ctrlKey) row = 0;
+        col = 0;
+        break;
+      case "End":
+        // Ctrl+End jumps to the last key of the whole grid; plain End
+        // stays within the current row.
+        if (e.ctrlKey) row = layout.length - 1;
+        col = lastCol(layout, row);
+        break;
+      default:
+        return null;
+    }
+    return { row, col };
+  }
+
+  /**
+   * Enter activates on press and Space on release, matching native `<button>`.
+   * Only without Ctrl/Alt/Meta: those combinations are browser/OS shortcuts,
+   * not key activations. Shift is the exception - it means "type the shifted
+   * glyph" (see `_activate`).
+   */
+  private _onActivationKey(e: KeyboardEvent, keyEl: HTMLElement): void {
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    e.preventDefault();
+    if (e.key === "Enter") {
+      // One activation per press: drop the OS auto-repeat keydowns.
+      // `{backspace}` is the only key that repeats, from pointer input on
+      // `BackspaceRepeatController`'s tuned curve.
+      if (e.repeat) return;
+      this._press(keyEl);
+      this._activate(keyEl, e.shiftKey);
+      return;
+    }
+    // Space does not repeat while held. Suppress the page scroll here and
+    // remember the pressed key; onKeyUp performs the activation. The Shift
+    // comes from the press, not the release: nothing makes the user lift two
+    // keys under different hands in a fixed order.
+    this._spaceKeyDown = { el: keyEl, shift: e.shiftKey };
+    this._press(keyEl);
   }
 
   /**

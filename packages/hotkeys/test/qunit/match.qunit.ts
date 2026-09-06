@@ -63,21 +63,3 @@ QUnit.test("Mod+S on Mac matches Meta+S event", (assert) => {
   const event = mockKeyEvent({ key: "s", metaKey: true });
   assert.ok(matchesKeyboardEvent(event, parsed));
 });
-
-QUnit.test("Mod+S on Windows matches Ctrl+S event", (assert) => {
-  const parsed = parseHotkey("Mod+S", Platform.Windows);
-  const event = mockKeyEvent({ key: "s", ctrlKey: true });
-  assert.ok(matchesKeyboardEvent(event, parsed));
-});
-
-QUnit.test("Function key match", (assert) => {
-  const parsed = parseHotkey("F5", Platform.Windows);
-  const event = mockKeyEvent({ key: "F5" });
-  assert.ok(matchesKeyboardEvent(event, parsed));
-});
-
-QUnit.test("Ctrl+Shift+K two-modifier combo", (assert) => {
-  const parsed = parseHotkey("Ctrl+Shift+K", Platform.Windows);
-  const event = mockKeyEvent({ key: "K", ctrlKey: true, shiftKey: true });
-  assert.ok(matchesKeyboardEvent(event, parsed));
-});

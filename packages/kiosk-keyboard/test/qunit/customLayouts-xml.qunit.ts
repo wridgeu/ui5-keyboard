@@ -69,10 +69,7 @@ QUnit.test("a bound rows reports nothing while the model is still propagating", 
   </mvc:View>`);
   const kb = v.byId("kb") as KioskKeyboard;
 
-  assert.notOk(
-    warn.getCalls().some((call) => String(call.args[0]).includes("nothing resolves it")),
-    "the pending binding is not reported as an unresolvable name",
-  );
+  assert.ok(warn.notCalled, "the pending binding is not reported as an unresolvable name");
   assert.deepEqual(kb.getCustomLayouts()[0]!.getRows(), [[{ value: "w" }]], "and the rows arrive");
 
   v.destroy();

@@ -147,10 +147,12 @@ The global scope is always at the bottom and cannot be popped.
 
 Router integration is **purely additive**. The `HotkeyManager` works without any router: the scope stack, `pushScope()`/`popScope()`, two-pass matching, and the entire dispatch pipeline function independently. Router integration is a convenience that automates scope transitions for route changes.
 
-`group.enableRouterIntegration(router)` (on `RegistrationGroup`) attaches a handler to the router's `beforeRouteMatched` event. On each route change:
+`group.enableRouterIntegration(router)` (on `RegistrationGroup`) attaches handlers to the router's `beforeRouteMatched` and `bypassed` events. On each route change:
 
 1. The scope stack is reset to global via `resetToGlobalScope()`.
 2. The new route's name is pushed as the active scope.
+
+On `bypassed` (no route matches the hash, so the router displays its not-found target) only step 1 runs: the not-found target carries the global scope, never the previous route's.
 
 This removes the need for manual `pushScope`/`popScope` calls in route-based applications. Each route name becomes a scope ID, and controllers register their hotkeys with `scope: "routeName"`.
 

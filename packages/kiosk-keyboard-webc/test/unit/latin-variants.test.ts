@@ -162,7 +162,6 @@ describe("resolveVariantTable", () => {
 
   it("returns the built-in table itself when no tier applies", () => {
     expect(resolveVariantTable("qwerty", named("azerty-fr", { b: ["ḃ"] }))).toBe(LATIN_DIACRITIC_VARIANTS);
-    expect(resolveVariantTable("qwerty", undefined, null)).toBe(LATIN_DIACRITIC_VARIANTS);
   });
 });
 

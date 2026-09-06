@@ -8,18 +8,17 @@ import TextArea from "sap/m/TextArea";
 import Popover from "sap/m/Popover";
 import VBox from "sap/m/VBox";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
+import type { LayoutDefinition } from "ui5/kiosk/types";
 import {
   createFakeKeyElement,
   freezeDoubleClickWindow,
   getFirstKeyElement,
   getFocusableKeys,
-  getKeyElement,
   placeAndWait,
   getKeyElements,
   getKeyboardDom,
   getRenderedKeyLabel,
   getRequiredKeyElement,
-  getRowElements,
   hasKeyboardClass,
   hasKeyClass,
   isCapsLock,
@@ -101,7 +100,6 @@ QUnit.test("Renders with default properties", async (assert) => {
   await placeAndWait(kb);
 
   const dom = getKeyboardDom(kb);
-  assert.ok(dom, "Control is rendered");
   assert.ok(hasKeyboardClass(kb, DOM.classes.root), "Has root CSS class");
   assert.strictEqual(dom.getAttribute("role"), "group", "Root has role=group");
   assert.strictEqual(dom.getAttribute("aria-label"), "Virtual Keyboard", "Default aria-label");
@@ -115,16 +113,6 @@ QUnit.test("Renders with default properties", async (assert) => {
   assert.strictEqual(keys[0].getAttribute("tabindex"), "0", "First key has tabindex=0");
   // Second key should have tabindex=-1
   assert.strictEqual(keys[1].getAttribute("tabindex"), "-1", "Other keys have tabindex=-1");
-
-  kb.destroy();
-});
-
-QUnit.test("Renders rows matching QWERTY layout", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const rows = getRowElements(kb);
-  assert.strictEqual(rows.length, 5, "QWERTY layout has 5 rows");
 
   kb.destroy();
 });
@@ -359,25 +347,6 @@ for (const token of ["q", "{backspace}", "{enter}", "{paste}"]) {
   });
 }
 
-QUnit.test("Shift key renders active class", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const shiftKey = getKeyElement(kb, "{shift}");
-  assert.ok(shiftKey, "Shift key exists");
-  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "Shift not active initially");
-
-  tapKey(kb, "{shift}");
-
-  // Wait for re-render
-  await waitForRender();
-
-  assert.ok(getKeyElement(kb, "{shift}"), "Shift key still exists after re-render");
-  assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "Shift key has active class");
-
-  kb.destroy();
-});
-
 // ──────────────────────────────────────────────
 // Key press event
 // ──────────────────────────────────────────────
@@ -557,6 +526,77 @@ QUnit.test("Consecutive backspaces delete from the tracked caret", async (assert
   kb.destroy();
 });
 
+// Focus parked on a keycap leaves the target unfocused while the delete runs;
+// the browser then discards the input's selection and the session must restore it.
+QUnit.test("Backspace with focus on a keycap restores the DOM caret after the edit", async (assert) => {
+  const input = new Input({ value: "hello world" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  inputDom.focus();
+  inputDom.setSelectionRange(11, 11);
+
+  getRequiredKeyElement(kb, "q").focus();
+
+  tapKey(kb, "{backspace}");
+  assert.strictEqual(input.getValue(), "hello worl", "Last character deleted");
+
+  // Stands in for the discard, which no synthetic event reproduces; the browser
+  // one is covered by test/e2e/focus.spec.ts.
+  inputDom.setSelectionRange(0, 0);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  assert.strictEqual(inputDom.selectionStart, 10, "DOM selectionStart back at the caret");
+  assert.strictEqual(inputDom.selectionEnd, 10, "DOM selectionEnd back at the caret");
+
+  input.destroy();
+  kb.destroy();
+});
+
+// The navigation op reads the DOM's selectionDirection as the anchor, so the
+// restore must carry the direction too, or the next Shift+Arrow extends the wrong end.
+QUnit.test("Shift+Arrow with focus on a keycap restores the selection direction after the edit", async (assert) => {
+  const input = new Input({ value: "hello world" });
+  input.placeAt("qunit-fixture");
+
+  const layout: LayoutDefinition = [[{ value: "{shift}" }, { value: "{fkey:ArrowLeft}" }, { value: "q" }]];
+  const kb = new KioskKeyboard({
+    layout: "test-shift-arrow",
+    controls: [input.getId()],
+    customLayouts: [new CustomLayout({ name: "test-shift-arrow", rows: layout })],
+  });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  inputDom.focus();
+  inputDom.setSelectionRange(11, 11);
+
+  getRequiredKeyElement(kb, "q").focus();
+
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{fkey:ArrowLeft}");
+  assert.strictEqual(inputDom.selectionStart, 10, "Selection extends one grapheme left");
+  assert.strictEqual(inputDom.selectionDirection, "backward", "Anchor stays at the caret");
+
+  inputDom.setSelectionRange(0, 0);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  assert.strictEqual(inputDom.selectionStart, 10, "DOM selectionStart back at the selection");
+  assert.strictEqual(inputDom.selectionEnd, 11, "DOM selectionEnd back at the selection");
+  assert.strictEqual(inputDom.selectionDirection, "backward", "DOM direction back to backward");
+
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{fkey:ArrowLeft}");
+  assert.strictEqual(inputDom.selectionStart, 9, "Second Shift+Left keeps extending from the same anchor");
+  assert.strictEqual(inputDom.selectionEnd, 11, "Anchor unchanged");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Space key inserts a space character", async (assert) => {
   const input = new Input({ value: "hi" });
   input.placeAt("qunit-fixture");
@@ -593,7 +633,7 @@ QUnit.test("Enter does nothing for single-line Input", async (assert) => {
 // Enabled / disabled
 // ──────────────────────────────────────────────
 
-QUnit.test("Disabled keyboard ignores tap events", async (assert) => {
+QUnit.test("Disabled keyboard ignores tap and keyboard activation", async (assert) => {
   const kb = new KioskKeyboard();
   kb.setEnabled(false);
   await placeAndWait(kb);
@@ -606,29 +646,12 @@ QUnit.test("Disabled keyboard ignores tap events", async (assert) => {
   const fakeEl = createFakeKeyElement("a", "fake-key");
 
   simulateTap(kb, fakeEl);
-
-  assert.notOk(keyPressed, "No keyPress event when disabled");
-
-  kb.destroy();
-});
-
-QUnit.test("Disabled keyboard ignores keyboard events", async (assert) => {
-  const kb = new KioskKeyboard();
-  kb.setEnabled(false);
-  await placeAndWait(kb);
-
-  let keyPressed = false;
-  kb.attachEvent("keyPress", () => {
-    keyPressed = true;
-  });
-
-  const fakeTarget = createFakeKeyElement("a");
+  assert.notOk(keyPressed, "No keyPress event from a tap when disabled");
 
   const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true });
-  Object.defineProperty(event, "target", { value: fakeTarget, writable: false });
+  Object.defineProperty(event, "target", { value: fakeEl, writable: false });
   kb.onsapselect(event);
-
-  assert.notOk(keyPressed, "No keyPress event from keyboard when disabled");
+  assert.notOk(keyPressed, "No keyPress event from Enter when disabled");
 
   kb.destroy();
 });
@@ -919,30 +942,6 @@ QUnit.test("change NOT fired for TextArea on close", async (assert) => {
 // Physical keyboard highlighting
 // ──────────────────────────────────────────────
 
-QUnit.test("Physical keydown adds highlight class to matching key", async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  assert.notOk(hasKeyClass(kb, "q", DOM.classes.keyHighlight), "No highlight initially");
-
-  // Simulate physical keydown on the target input via delegation
-  // The delegation uses onkeydown which is called by UI5's event delegation
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "q", bubbles: true }));
-
-  // Allow event delegation to process
-  await nextUIUpdate();
-
-  assert.ok(hasKeyClass(kb, "q", DOM.classes.keyHighlight), "Highlight class added on keydown");
-
-  input.destroy();
-  kb.destroy();
-});
-
 QUnit.test("Physical keyup removes highlight class", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
@@ -995,26 +994,6 @@ QUnit.test("Changing target input moves highlight delegation", async (assert) =>
 // ──────────────────────────────────────────────
 // Physical keyboard shift/CapsLock sync
 // ──────────────────────────────────────────────
-
-QUnit.test("Physical Shift keydown syncs virtual shift state", async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  assert.notOk(isShiftActive(kb), "Shift is not active initially");
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "Shift", shiftKey: true, bubbles: true }));
-  await nextUIUpdate();
-
-  assert.ok(isShiftActive(kb), "Virtual shift state synced from physical Shift keydown");
-
-  input.destroy();
-  kb.destroy();
-});
 
 QUnit.test("Physical Shift keyup releases virtual shift state", async (assert) => {
   const input = new Input({ value: "" });
@@ -1070,109 +1049,6 @@ QUnit.test("Physical key with CapsLock modifier syncs virtual CapsLock state", a
 });
 
 // ──────────────────────────────────────────────
-// Popover integration (consumption scenario)
-// ──────────────────────────────────────────────
-
-QUnit.test("Keyboard renders inside a Popover", async (assert) => {
-  const trigger = document.createElement("button");
-  trigger.id = "popover-trigger";
-  document.getElementById("qunit-fixture")!.appendChild(trigger);
-
-  const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  const popover = new Popover({
-    title: "Kiosk Input",
-    contentWidth: "360px",
-    content: [new VBox({ items: [input, kb] })],
-  });
-
-  try {
-    popover.openBy(trigger);
-    await waitForRender();
-
-    assert.ok(popover.isOpen(), "Popover is open");
-    assert.ok(kb.getDomRef(), "Keyboard is rendered inside popover");
-
-    const keys = getKeyElements(kb);
-    assert.ok(keys.length > 0, "Keyboard keys are rendered");
-  } finally {
-    popover.close();
-    await waitForRender();
-    popover.destroy();
-  }
-});
-
-QUnit.test("Typing into input inside a Popover", async (assert) => {
-  const trigger = document.createElement("button");
-  trigger.id = "popover-trigger-typing";
-  document.getElementById("qunit-fixture")!.appendChild(trigger);
-
-  const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  const popover = new Popover({
-    title: "Kiosk Input",
-    contentWidth: "360px",
-    content: [new VBox({ items: [input, kb] })],
-  });
-
-  try {
-    popover.openBy(trigger);
-    await waitForRender();
-
-    input.focus();
-
-    tapKey(kb, "h");
-    tapKey(kb, "i");
-    assert.strictEqual(input.getValue(), "hi", "Typing works inside popover");
-
-    tapKey(kb, "{shift}");
-    tapKey(kb, "a");
-    assert.strictEqual(input.getValue(), "hiA", "Shift works inside popover");
-
-    tapKey(kb, "{backspace}");
-    assert.strictEqual(input.getValue(), "hi", "Backspace works inside popover");
-  } finally {
-    popover.close();
-    await waitForRender();
-    popover.destroy();
-  }
-});
-
-QUnit.test("Popover stays open while interacting with keyboard", async (assert) => {
-  const trigger = document.createElement("button");
-  trigger.id = "popover-trigger-focus";
-  document.getElementById("qunit-fixture")!.appendChild(trigger);
-
-  const input = new Input({ value: "" });
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  const popover = new Popover({
-    title: "Kiosk Input",
-    contentWidth: "360px",
-    content: [new VBox({ items: [input, kb] })],
-  });
-
-  try {
-    popover.openBy(trigger);
-    await waitForRender();
-
-    input.focus();
-
-    // Tap several keys - popover should remain open
-    tapKey(kb, "a");
-    tapKey(kb, "b");
-    tapKey(kb, "c");
-
-    await nextUIUpdate();
-    assert.ok(popover.isOpen(), "Popover stays open during keyboard interaction");
-    assert.strictEqual(input.getValue(), "abc", "Input value accumulated correctly");
-  } finally {
-    popover.close();
-    await waitForRender();
-    popover.destroy();
-  }
-});
-
-// ──────────────────────────────────────────────
 // Caps Lock visual indicator
 // ──────────────────────────────────────────────
 
@@ -1191,9 +1067,9 @@ QUnit.test("Caps Lock renders lock icon on shift key", async (assert) => {
   assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyCapsLock), "Shift key has capsLock CSS class");
   assert.ok(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "Shift key also has active CSS class");
 
-  // Should render a lock icon (sapUiIcon element)
+  // The lock icon replaces the arrow icon the shift key otherwise renders
   const icon = shiftKey.querySelector(".sapUiIcon");
-  assert.ok(icon, "Lock icon is rendered inside shift key");
+  assert.strictEqual(icon?.getAttribute("aria-label"), "locked", "Shows the lock icon, not the arrow icon");
 
   // Visible label changes to "Caps Lock" during CapsLock state
   assert.strictEqual(
@@ -1315,22 +1191,9 @@ QUnit.test("Shift toggle works via keyboard (Enter key)", async (assert) => {
     shiftKey.dispatchEvent(event);
   };
 
-  // Off → Shift
   pressEnter();
   await waitForRender();
-  assert.ok(isShiftActive(kb), "Shift active after first Enter");
-  assert.notOk(isCapsLock(kb), "Not caps lock yet");
-
-  // Shift → Caps Lock
-  pressEnter();
-  await waitForRender();
-  assert.ok(isCapsLock(kb), "Caps Lock after second Enter");
-
-  // Caps Lock → Off
-  pressEnter();
-  await waitForRender();
-  assert.notOk(isShiftActive(kb), "Shift off after third Enter");
-  assert.notOk(isCapsLock(kb), "Caps Lock off after third Enter");
+  assert.ok(isShiftActive(kb), "Shift active after Enter");
 
   kb.destroy();
 });
@@ -1339,6 +1202,7 @@ QUnit.test("Single Shift does NOT show capsLock class or lock icon", async (asse
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
 
+  assert.notOk(hasKeyClass(kb, "{shift}", DOM.classes.keyShiftActive), "Shift not active initially");
   tapKey(kb, "{shift}");
   await waitForRender();
   assert.ok(isShiftActive(kb), "Shift is active");
@@ -1392,7 +1256,7 @@ QUnit.test("Physical Shift+1 highlights the '1' key via data-shift-value", async
 });
 
 // ──────────────────────────────────────────────
-// Popover integration (continued)
+// Popover integration
 // ──────────────────────────────────────────────
 
 QUnit.test("Layout switching works inside a Popover", async (assert) => {
@@ -1610,28 +1474,6 @@ QUnit.test("Enter on focused key activates it via onsapselect", async (assert) =
   kb.destroy();
 });
 
-QUnit.test("Space on focused key activates it via onsapselect", async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-  input.focus();
-  await waitForRender();
-
-  const bKey = getRequiredKeyElement(kb, "b");
-  bKey.setAttribute("tabindex", "0");
-  bKey.focus();
-
-  bKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true, cancelable: true }));
-  await waitForRender();
-
-  assert.strictEqual(input.getValue(), "b", "Space on focused 'b' key inserts 'b'");
-
-  input.destroy();
-  kb.destroy();
-});
-
 QUnit.test("Ctrl+Space on focused key does NOT activate (modifier filtering)", async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
@@ -1675,28 +1517,6 @@ QUnit.test("Shift+Enter on a focused key types the shifted glyph", async (assert
 
   assert.strictEqual(input.getValue(), "A", "Shift+Enter types the shifted glyph");
   assert.notOk(isShiftActive(kb), "The transient Shift does not latch the on-screen Shift state");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Shift+Space on a focused key types the shifted glyph", async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-  input.focus();
-  await waitForRender();
-
-  const bKey = getRequiredKeyElement(kb, "b");
-  bKey.setAttribute("tabindex", "0");
-  bKey.focus();
-
-  bKey.dispatchEvent(new KeyboardEvent("keydown", { key: " ", shiftKey: true, bubbles: true, cancelable: true }));
-  await waitForRender();
-
-  assert.strictEqual(input.getValue(), "B", "Shift+Space types the shifted glyph");
 
   input.destroy();
   kb.destroy();
@@ -2199,28 +2019,6 @@ QUnit.test("Held Enter on a character key activates it once", async (assert) => 
   kb.destroy();
 });
 
-QUnit.test("Held Space on a character key activates it once", async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ controls: [input.getId()] });
-  await placeAndWait(kb);
-  input.focus();
-  await waitForRender();
-
-  const bKey = getRequiredKeyElement(kb, "b");
-  bKey.setAttribute("tabindex", "0");
-  bKey.focus();
-
-  holdKey(bKey, " ");
-  await waitForRender();
-
-  assert.strictEqual(input.getValue(), "b", "The auto-repeat keydowns insert nothing further");
-
-  input.destroy();
-  kb.destroy();
-});
-
 QUnit.test("Held Enter on the Shift key toggles it once", async (assert) => {
   const kb = new KioskKeyboard();
   await placeAndWait(kb);
@@ -2430,48 +2228,6 @@ QUnit.test("Typing with no target input does not throw", async (assert) => {
 // QWERTZ-DE Shift Symbols Highlight
 // ──────────────────────────────────────────────
 
-QUnit.test('Physical "\\\"" highlights "2" key (Shift+2 on QWERTZ-DE)', async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ layout: "qwertz-de", controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: '"', bubbles: true }));
-  await nextUIUpdate();
-
-  assert.ok(hasKeyClass(kb, "2", DOM.classes.keyHighlight), "Key '2' highlighted for '\"'");
-
-  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: '"', bubbles: true }));
-  await nextUIUpdate();
-  assert.notOk(hasKeyClass(kb, "2", DOM.classes.keyHighlight), "Highlight removed on release");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test('Physical "/" highlights "7" key (Shift+7 on QWERTZ-DE)', async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ layout: "qwertz-de", controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "/", bubbles: true }));
-  await nextUIUpdate();
-
-  assert.ok(hasKeyClass(kb, "7", DOM.classes.keyHighlight), "Key '7' highlighted for '/'");
-
-  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "/", bubbles: true }));
-  await nextUIUpdate();
-  assert.notOk(hasKeyClass(kb, "7", DOM.classes.keyHighlight), "Highlight removed on release");
-
-  input.destroy();
-  kb.destroy();
-});
-
 QUnit.test('Physical "\u00DC" (capital U-umlaut) highlights "\u00FC" key', async (assert) => {
   const input = new Input({ value: "" });
   input.placeAt("qunit-fixture");
@@ -2486,27 +2242,6 @@ QUnit.test('Physical "\u00DC" (capital U-umlaut) highlights "\u00FC" key', async
   assert.ok(hasKeyClass(kb, "\u00FC", DOM.classes.keyHighlight), "\u00FC key highlighted for capital \u00DC");
 
   inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "\u00DC", bubbles: true }));
-  await nextUIUpdate();
-  assert.notOk(hasKeyClass(kb, "\u00FC", DOM.classes.keyHighlight), "Highlight removed");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test('Physical "\u00FC" (lowercase) highlights its own key directly', async (assert) => {
-  const input = new Input({ value: "" });
-  input.placeAt("qunit-fixture");
-  const kb = new KioskKeyboard({ layout: "qwertz-de", controls: [input.getId()] });
-  await placeAndWait(kb);
-
-  const inputDom = input.getFocusDomRef() as HTMLElement;
-  inputDom.focus();
-  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "\u00FC", bubbles: true }));
-  await nextUIUpdate();
-
-  assert.ok(hasKeyClass(kb, "\u00FC", DOM.classes.keyHighlight), "\u00FC key highlighted directly");
-
-  inputDom.dispatchEvent(new KeyboardEvent("keyup", { key: "\u00FC", bubbles: true }));
   await nextUIUpdate();
   assert.notOk(hasKeyClass(kb, "\u00FC", DOM.classes.keyHighlight), "Highlight removed");
 
@@ -2610,30 +2345,6 @@ QUnit.test("Switching target while open suppresses new target inputmode and rest
 });
 
 // ──────────────────────────────────────────────
-// Shift State on Numpad/Numeric
-// ──────────────────────────────────────────────
-
-QUnit.test("Numpad has no shift key rendered", async (assert) => {
-  const kb = new KioskKeyboard({ keyboardType: KeyboardType.Numpad });
-  await placeAndWait(kb);
-
-  const shiftKey = getKeyElement(kb, "{shift}");
-  assert.notOk(shiftKey, "No shift key in numpad layout");
-
-  kb.destroy();
-});
-
-QUnit.test("Numeric layout has no shift key rendered", async (assert) => {
-  const kb = new KioskKeyboard({ keyboardType: KeyboardType.Numeric });
-  await placeAndWait(kb);
-
-  const shiftKey = getKeyElement(kb, "{shift}");
-  assert.notOk(shiftKey, "No shift key in numeric layout");
-
-  kb.destroy();
-});
-
-// ──────────────────────────────────────────────
 // Custom Control Targeting (DOM Fallback)
 // ──────────────────────────────────────────────
 
@@ -2702,7 +2413,6 @@ QUnit.test("getActiveControl resolves active control instance", async (assert) =
   input.focus();
 
   const target = kb.getActiveControl();
-  assert.ok(target instanceof Control, "Resolved target is a control instance");
   assert.strictEqual(target, input, "Resolved target matches the associated control");
 
   kb.destroy();

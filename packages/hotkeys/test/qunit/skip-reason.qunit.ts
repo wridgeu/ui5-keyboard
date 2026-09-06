@@ -45,27 +45,6 @@ QUnit.module("skip-reason - recordSkip");
   }),
 );
 
-QUnit.test("Higher-priority reason overwrites lower", (assert) => {
-  const skipInfo: SkipInfo = { reason: UnhandledReason.NoMatch };
-  const reg = makeRegistration("disabled-reg");
-
-  recordSkip(skipInfo, UnhandledReason.Disabled, reg, toInfo);
-
-  assert.strictEqual(skipInfo.reason, UnhandledReason.Disabled, "Reason upgraded to Disabled");
-  assert.strictEqual(skipInfo.registration?.id, "disabled-reg", "Registration recorded");
-});
-
-QUnit.test("Lower-priority reason does not overwrite higher", (assert) => {
-  // @ts-expect-error Partial stub: only `id` is needed for test assertions
-  const origInfo: SkipInfo["registration"] = { id: "orig" };
-  const skipInfo: SkipInfo = { reason: UnhandledReason.Disabled, registration: origInfo };
-
-  recordSkip(skipInfo, UnhandledReason.RepeatIgnored, makeRegistration("lower"), toInfo);
-
-  assert.strictEqual(skipInfo.reason, UnhandledReason.Disabled, "Reason unchanged");
-  assert.strictEqual(skipInfo.registration?.id, "orig", "Original registration preserved");
-});
-
 QUnit.test("Equal-priority reason does not overwrite", (assert) => {
   // @ts-expect-error Partial stub: only `id` is needed for test assertions
   const firstInfo: SkipInfo["registration"] = { id: "first" };

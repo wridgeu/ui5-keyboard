@@ -2,11 +2,8 @@ import { test, expect, type Page } from "@playwright/test";
 
 // FLP Component lifecycle e2e: enter the app via a tile, run the i18n scenario,
 // then leave to the FLP home (Component.exit) and re-enter (Component.init on a
-// fresh instance) to verify state resets. Sequential by nature, so the suite
-// runs serially against one shared page. Driven purely through DOM selectors
+// fresh instance) to verify state resets. Driven purely through DOM selectors
 // and the ushell window.hasher (no UI5 control-bridge needed).
-
-test.describe.configure({ mode: "serial" });
 
 const FLP_PAGE = "/test/flp.html";
 type HasherWindow = Window & typeof globalThis & { hasher: { setHash(hash: string): void } };
@@ -42,38 +39,22 @@ async function navigateToFlpHome(page: Page): Promise<void> {
 const keyboard = (page: Page) => page.locator(".ui5KioskKeyboard").first();
 const shiftLabel = (page: Page) => keyboard(page).locator('[data-key="{shift}"] .ui5KioskKey__label');
 
-test.describe("FLP lifecycle - Component re-entry", () => {
-  let page: Page;
+test("restores default labels after leaving and re-entering via tile click", async ({ page }) => {
+  await waitForFlpShell(page);
+  await openAppTile(page);
+  await navigateToI18nPage(page);
+  await expect(keyboard(page)).toBeVisible();
+  await expect(keyboard(page)).toHaveAttribute("aria-label", "Virtual Keyboard");
+  await expect(shiftLabel(page)).toHaveText("Shift");
 
-  test.beforeAll(async ({ browser }) => {
-    page = await browser.newPage();
-    await waitForFlpShell(page);
-  });
+  await page.locator("li").filter({ hasText: "French" }).first().click();
+  await expect(keyboard(page)).toHaveAttribute("aria-label", "Clavier virtuel");
+  await expect(shiftLabel(page)).toHaveText("Maj");
 
-  test.afterAll(async () => {
-    await page.close();
-  });
-
-  test("opens the app via tile click", async () => {
-    await openAppTile(page);
-    await navigateToI18nPage(page);
-    await expect(keyboard(page)).toBeVisible();
-    await expect(keyboard(page)).toHaveAttribute("aria-label", "Virtual Keyboard");
-    await expect(shiftLabel(page)).toHaveText("Shift");
-  });
-
-  test("applies the French i18n bundle", async () => {
-    await page.locator("li").filter({ hasText: "French" }).first().click();
-    await expect(keyboard(page)).toHaveAttribute("aria-label", "Clavier virtuel");
-    await expect(shiftLabel(page)).toHaveText("Maj");
-  });
-
-  test("restores default labels after leaving and re-entering via tile click", async () => {
-    await navigateToFlpHome(page);
-    await openAppTile(page);
-    await navigateToI18nPage(page);
-    await expect(keyboard(page)).toBeVisible();
-    await expect(keyboard(page)).toHaveAttribute("aria-label", "Virtual Keyboard");
-    await expect(shiftLabel(page)).toHaveText("Shift");
-  });
+  await navigateToFlpHome(page);
+  await openAppTile(page);
+  await navigateToI18nPage(page);
+  await expect(keyboard(page)).toBeVisible();
+  await expect(keyboard(page)).toHaveAttribute("aria-label", "Virtual Keyboard");
+  await expect(shiftLabel(page)).toHaveText("Shift");
 });

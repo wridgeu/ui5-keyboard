@@ -515,14 +515,6 @@ describe("KeyGridNavigation - element ids take no part in resolution", () => {
   });
 });
 
-describe("KeyGridNavigation - last-focused-key tracking", () => {
-  it("records the key a move lands on", () => {
-    const g = grid();
-    g.press(g.keyAt(0, 0), "ArrowRight");
-    expect(g.nav.getLastFocusedKey()).toEqual({ row: 0, col: 1 });
-  });
-});
-
 describe("KeyGridNavigation - a disabled keyboard handles nothing", () => {
   it("does not activate or paint press feedback", () => {
     const g = grid();

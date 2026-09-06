@@ -49,49 +49,12 @@ QUnit.test("Docked auto-show opens on input focus and closes via API", async (as
 // 2. Auto-type switch by focused input
 // ──────────────────────────────────────────────
 
-QUnit.test("Auto-type switches keyboard type based on focused input", async (assert) => {
+QUnit.test("Auto-type switches type, root class and fires keyboardTypeChange per focused input", async (assert) => {
   const numInput = new Input({ type: "Number" });
-  const textInput = new Input();
+  // Claimable and not numeric, so it is the switch back to Full.
+  const emailInput = new Input({ type: "Email" });
   numInput.placeAt("qunit-fixture");
-  textInput.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({
-    docked: true,
-    autoShow: true,
-    autoType: true,
-  });
-  await placeAndWait(kb);
-
-  // Focus number input → should switch to Numpad
-  (numInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  await waitForRender();
-
-  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Switched to Numpad for Number input");
-  assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "DOM has numpad class after auto-type");
-
-  // Focus text input → should switch back to Full
-  (textInput.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  await waitForRender();
-
-  assert.strictEqual(kb.getKeyboardType(), "Full", "Switched back to Full for text input");
-  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "DOM no longer has numpad class");
-
-  numInput.destroy();
-  textInput.destroy();
-  kb.destroy();
-});
-
-// ──────────────────────────────────────────────
-// 3. keyboardTypeChange event contract
-// ──────────────────────────────────────────────
-
-QUnit.test("keyboardTypeChange event on auto-detected transitions", async (assert) => {
-  const numInput = new Input({ type: "Number" });
-  const textInput = new Input();
-  numInput.placeAt("qunit-fixture");
-  textInput.placeAt("qunit-fixture");
+  emailInput.placeAt("qunit-fixture");
 
   const events: Array<{ keyboardType: string; previousKeyboardType: string; autoDetected: boolean }> = [];
 
@@ -112,26 +75,32 @@ QUnit.test("keyboardTypeChange event on auto-detected transitions", async (asser
 
   await placeAndWait(kb);
 
-  // Focus number input → auto-switch to Numpad
+  // Focus number input → should switch to Numpad
   (numInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
+  await waitForRender();
 
+  assert.strictEqual(kb.getKeyboardType(), "Numpad", "Switched to Numpad for Number input");
+  assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "DOM has numpad class after auto-type");
   assert.strictEqual(events.length, 1, "One event after focusing number input");
   assert.strictEqual(events[0].keyboardType, "Numpad", "Transitioned to Numpad");
   assert.strictEqual(events[0].previousKeyboardType, "Full", "Was Full before");
   assert.strictEqual(events[0].autoDetected, true, "Flagged as auto-detected");
 
-  // Focus text input → auto-switch back to Full
-  (textInput.getFocusDomRef() as HTMLElement).focus();
+  // Focus email input → should switch back to Full
+  (emailInput.getFocusDomRef() as HTMLElement).focus();
   await nextUIUpdate();
+  await waitForRender();
 
-  assert.strictEqual(events.length, 2, "Two events total after focusing text input");
+  assert.strictEqual(kb.getKeyboardType(), "Full", "Switched back to Full for Email input");
+  assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "DOM no longer has numpad class");
+  assert.strictEqual(events.length, 2, "Two events total after focusing email input");
   assert.strictEqual(events[1].keyboardType, "Full", "Transitioned back to Full");
   assert.strictEqual(events[1].previousKeyboardType, "Numpad", "Was Numpad before");
   assert.strictEqual(events[1].autoDetected, true, "Second transition also auto-detected");
 
   numInput.destroy();
-  textInput.destroy();
+  emailInput.destroy();
   kb.destroy();
 });
 
@@ -140,7 +109,7 @@ QUnit.test("keyboardTypeChange event on auto-detected transitions", async (asser
 // ──────────────────────────────────────────────
 
 QUnit.test(
-  "_setActiveTarget re-entrancy: change handler focusing another input lands on correct target",
+  "_setActiveTarget re-entrancy: a change handler focusing another input lands on it, announced once",
   async (assert) => {
     const inputA = new Input({ value: "" });
     const inputB = new Input({ value: "" });
@@ -168,8 +137,14 @@ QUnit.test(
       (inputC.getFocusDomRef() as HTMLElement).focus();
     });
 
+    const events: string[] = [];
+    kb.attachEvent("activeControlChange", (e: { getParameter(name: string): string }) => {
+      events.push(e.getParameter("controlId"));
+    });
+
     // Focus inputB → triggers _setActiveTarget(inputB) → deferred change
-    // fires on inputA → handler focuses inputC → _setActiveTarget(inputC)
+    // fires on inputA → handler focuses inputC → _setActiveTarget(inputC).
+    // The inner call announces C; the outer call must not announce it again.
     (inputB.getFocusDomRef() as HTMLElement).focus();
     await nextUIUpdate();
 
@@ -180,6 +155,7 @@ QUnit.test(
       inputC.getId(),
       "Target is inputC - re-entrant _setActiveTarget from change handler wins",
     );
+    assert.deepEqual(events, [inputC.getId()], "Exactly one activeControlChange, carrying the final target");
 
     inputA.destroy();
     inputB.destroy();
@@ -187,47 +163,6 @@ QUnit.test(
     kb.destroy();
   },
 );
-
-QUnit.test("Re-entrant target switch fires activeControlChange once for the final target", async (assert) => {
-  const inputA = new Input({ value: "" });
-  const inputB = new Input({ value: "" });
-  const inputC = new Input({ value: "" });
-  inputA.placeAt("qunit-fixture");
-  inputB.placeAt("qunit-fixture");
-  inputC.placeAt("qunit-fixture");
-
-  const kb = new KioskKeyboard({ docked: true, autoShow: true });
-  await placeAndWait(kb);
-
-  (inputA.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-  assert.strictEqual(kb.getActiveControl()?.getId(), inputA.getId(), "Target is inputA after focus");
-
-  // Type a character to mark the session dirty (needed for change event)
-  tapKey(kb, "x");
-
-  // Change handler on A synchronously focuses inputC (re-entrant switch)
-  inputA.attachChange(() => {
-    (inputC.getFocusDomRef() as HTMLElement).focus();
-  });
-
-  const events: string[] = [];
-  kb.attachEvent("activeControlChange", (e: { getParameter(name: string): string }) => {
-    events.push(e.getParameter("controlId"));
-  });
-
-  // Outer switch A→B; its deferred change handler re-enters with B→C. The
-  // inner call announces C; the outer call must not announce it again.
-  (inputB.getFocusDomRef() as HTMLElement).focus();
-  await nextUIUpdate();
-
-  assert.deepEqual(events, [inputC.getId()], "Exactly one activeControlChange, carrying the final target");
-
-  inputA.destroy();
-  inputB.destroy();
-  inputC.destroy();
-  kb.destroy();
-});
 
 QUnit.test("Armed shift survives a same-input refocus (caret reposition)", async (assert) => {
   const input = new Input({ value: "" });

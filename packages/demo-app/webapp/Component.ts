@@ -60,6 +60,7 @@ export default class Component extends UIComponent {
       stateModel.setProperty("/activeScope", this._hotkeyManager.getActiveScope());
     };
     this.getRouter().attachRouteMatched(this._routeMatchedHandler, this);
+    this.getRouter().attachBypassed(this._routeMatchedHandler, this);
 
     // Re-apply the live active scope once the JSONModel fixture finishes async
     // loading, since the fixture would otherwise overwrite /activeScope.

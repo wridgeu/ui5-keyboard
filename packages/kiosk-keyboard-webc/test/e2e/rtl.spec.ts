@@ -1,7 +1,7 @@
 import { test } from "@playwright/test";
 import { openPage, keyboardRoot, expectVisualMatch, setDocumentDirection } from "./helpers.js";
 
-// Right-to-left visual regression. Direction is reset after each test.
+// Right-to-left visual regression.
 //
 // The captures are the whole assertion, so CI's --ignore-snapshots leaves these
 // checking nothing. No computed style on the root closes that gap: `direction`
@@ -14,10 +14,6 @@ import { openPage, keyboardRoot, expectVisualMatch, setDocumentDirection } from 
 test.beforeEach(async ({ page }) => {
   await openPage(page, "/test/pages/visual.html");
   await setDocumentDirection(page, "rtl");
-});
-
-test.afterEach(async ({ page }) => {
-  await setDocumentDirection(page, "ltr");
 });
 
 for (const { id, tag } of [

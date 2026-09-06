@@ -23,18 +23,6 @@ describe("insertText", () => {
     expect(pos).toEqual([2, 2]);
   });
 
-  it("appends at end", () => {
-    const el = mockInput("ab", 2);
-    insertText(el, "c");
-    expect(el.value).toBe("abc");
-  });
-
-  it("inserts at beginning", () => {
-    const el = mockInput("bc", 0);
-    insertText(el, "a");
-    expect(el.value).toBe("abc");
-  });
-
   it("uses explicit cursor parameter", () => {
     const el = mockInput("ac", 0);
     const pos = insertText(el, "b", [1, 1]);

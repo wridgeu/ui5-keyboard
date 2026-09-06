@@ -265,45 +265,32 @@ export default class SequenceManager {
 
     // 1. Advance or reset existing active matches
     const newActiveMatches: ActiveMatch[] = [];
-    let fullMatch: { registration: SequenceRegistration; event: KeyboardEvent } | null = null;
+    let fullMatch: SequenceRegistration | null = null;
 
     for (const match of this._activeMatches) {
       clearTimeout(match.timerId);
+      // A match this key does not advance is dropped (not re-added).
+      if (!this._stepMatches(match, event, activeScope, isInput, popupOpen)) continue;
+      consumed = true;
 
       const reg = match.registration;
-      if (!this._isRegistrationActiveInScope(reg, activeScope)) continue;
-      if (!this._isRegistrationEnabled(reg)) continue;
-      if (reg.suppressInPopups && popupOpen) continue;
-
-      // match.stepIndex is in [0, parsedSteps.length) by construction.
-      const nextStep = reg.parsedSteps[match.stepIndex]!;
-
-      // If focused into an input mid-sequence, drop matches that suppress in inputs
-      if (resolveIgnoreInputs(reg.ignoreInputs, nextStep) && isInput) continue;
-
-      if (matchesKeyboardEvent(event, nextStep)) {
-        consumed = true;
-
-        // This key advances the sequence
-        if (match.stepIndex + 1 >= reg.parsedSteps.length) {
-          // Full match! Preserve scope priority: active scope always wins over global.
-          if (!fullMatch || (fullMatch.registration.scope !== activeScope && reg.scope === activeScope)) {
-            fullMatch = { registration: reg, event };
-          }
-        } else {
-          // Mid-sequence - advance
-          const newMatch: ActiveMatch = {
-            registration: reg,
-            stepIndex: match.stepIndex + 1,
-            timerId: undefined,
-          };
-          newMatch.timerId = setTimeout(() => {
-            this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
-          }, reg.timeout);
-          newActiveMatches.push(newMatch);
+      if (match.stepIndex + 1 >= reg.parsedSteps.length) {
+        // Full match! Preserve scope priority: active scope always wins over global.
+        if (!fullMatch || (fullMatch.scope !== activeScope && reg.scope === activeScope)) {
+          fullMatch = reg;
         }
+      } else {
+        // Mid-sequence - advance
+        const newMatch: ActiveMatch = {
+          registration: reg,
+          stepIndex: match.stepIndex + 1,
+          timerId: undefined,
+        };
+        newMatch.timerId = setTimeout(() => {
+          this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
+        }, reg.timeout);
+        newActiveMatches.push(newMatch);
       }
-      // If doesn't match, the active match is dropped (not re-added)
     }
 
     this._activeMatches = [...newActiveMatches];
@@ -314,24 +301,7 @@ export default class SequenceManager {
         clearTimeout(m.timerId);
       }
       this._activeMatches = [];
-
-      const reg = fullMatch.registration;
-      if (reg.preventDefault) event.preventDefault();
-      if (reg.stopPropagation) event.stopPropagation();
-
-      try {
-        reg.callback(fullMatch.event, {
-          hotkey: reg.sequence.join(" "),
-          parsedHotkey: reg.parsedSteps.at(-1)!,
-          scope: reg.scope,
-        });
-      } catch (error) {
-        Log.error(
-          `Sequence callback threw for [${reg.sequence.join(", ")}]`,
-          error instanceof Error ? error : String(error),
-          LOG_COMPONENT,
-        );
-      }
+      this._fireSequence(fullMatch, event);
       return true;
     }
 
@@ -348,6 +318,48 @@ export default class SequenceManager {
     }
 
     return consumed || startedMatch;
+  }
+
+  /**
+   * Whether `event` is the next step of `match`, for a registration that is
+   * live in the active scope, enabled, and not suppressed by an open popup or
+   * a focused input.
+   */
+  private _stepMatches(
+    match: ActiveMatch,
+    event: KeyboardEvent,
+    activeScope: string,
+    isInput: boolean,
+    popupOpen: boolean,
+  ): boolean {
+    const reg = match.registration;
+    if (!this._isRegistrationActiveInScope(reg, activeScope)) return false;
+    if (!this._isRegistrationEnabled(reg)) return false;
+    if (reg.suppressInPopups && popupOpen) return false;
+    // match.stepIndex is in [0, parsedSteps.length) by construction.
+    const nextStep = reg.parsedSteps[match.stepIndex]!;
+    // If focused into an input mid-sequence, drop matches that suppress in inputs
+    if (resolveIgnoreInputs(reg.ignoreInputs, nextStep) && isInput) return false;
+    return matchesKeyboardEvent(event, nextStep);
+  }
+
+  /** Runs a completed sequence's callback, honoring its preventDefault/stopPropagation options. */
+  private _fireSequence(reg: SequenceRegistration, event: KeyboardEvent): void {
+    if (reg.preventDefault) event.preventDefault();
+    if (reg.stopPropagation) event.stopPropagation();
+    try {
+      reg.callback(event, {
+        hotkey: reg.sequence.join(" "),
+        parsedHotkey: reg.parsedSteps.at(-1)!,
+        scope: reg.scope,
+      });
+    } catch (error) {
+      Log.error(
+        `Sequence callback threw for [${reg.sequence.join(", ")}]`,
+        error instanceof Error ? error : String(error),
+        LOG_COMPONENT,
+      );
+    }
   }
 
   private _isRegistrationActiveInScope(reg: SequenceRegistration, activeScope: string): boolean {

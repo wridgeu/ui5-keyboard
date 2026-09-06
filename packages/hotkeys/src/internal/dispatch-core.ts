@@ -6,7 +6,7 @@ import type { HotkeyRegistrationInfo } from "../types";
 import type { HotkeyRegistration } from "./types";
 import { recordSkip, type SkipInfo } from "./skip-reason";
 
-interface FindMatchOptions {
+export interface FindMatchOptions {
   event: KeyboardEvent;
   isInput: boolean;
   popupOpen: boolean;

@@ -178,6 +178,33 @@ const PAIRS = [
 // the check pass while comparing fewer pairs).
 const EXPECTED_PAIR_COUNT = 32;
 
+/** The string mode each quote character opens, and the character that closes each mode. */
+const STRING_OPENER = /** @type {const} */ ({ "'": "single", '"': "double", "`": "template" });
+const STRING_CLOSER = /** @type {const} */ ({ single: "'", double: '"', template: "`" });
+
+/**
+ * Skips the comment that starts at `i` (`src[i]` is the `/` of `//` or `/*`).
+ * A line comment ends at (not past) its newline; a block comment yields the
+ * newlines it contained so the caller can keep the line structure.
+ *
+ * @param {string} src TypeScript source text
+ * @param {number} i index of the comment's opening slash
+ * @returns {[number, string]} index just past the comment, and the newlines to emit for it
+ */
+function skipComment(src, i) {
+  if (src[i + 1] === "/") {
+    while (i < src.length && src[i] !== "\n") i++;
+    return [i, ""];
+  }
+  let newlines = "";
+  i += 2;
+  while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) {
+    if (src[i] === "\n") newlines += "\n";
+    i++;
+  }
+  return [i + 2, newlines];
+}
+
 /**
  * Removes line and block comments, but ONLY outside string literals: a `//` or
  * `/*` inside a string is real data (layout key values are strings like "/" or
@@ -207,22 +234,14 @@ function stripComments(src) {
     const next = src[i + 1] ?? "";
 
     if (mode === "code") {
-      if (c === "/" && next === "/") {
-        while (i < src.length && src[i] !== "\n") i++; // skip to (not past) the newline
+      if (c === "/" && (next === "/" || next === "*")) {
+        const [end, newlines] = skipComment(src, i);
+        out += newlines;
+        i = end;
         continue;
       }
-      if (c === "/" && next === "*") {
-        i += 2;
-        while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) {
-          if (src[i] === "\n") out += "\n"; // preserve contained newlines for line structure
-          i++;
-        }
-        i += 2;
-        continue;
-      }
-      if (c === "'" || c === '"' || c === "`") {
-        stack.push(c === "'" ? "single" : c === '"' ? "double" : "template");
-      }
+      const opened = STRING_OPENER[c];
+      if (opened) stack.push(opened);
       out += c;
       i++;
       continue;
@@ -234,9 +253,7 @@ function stripComments(src) {
       i += 2;
       continue;
     }
-    if ((mode === "single" && c === "'") || (mode === "double" && c === '"') || (mode === "template" && c === "`")) {
-      stack.pop();
-    }
+    if (c === STRING_CLOSER[mode]) stack.pop();
     out += c;
     i++;
   }

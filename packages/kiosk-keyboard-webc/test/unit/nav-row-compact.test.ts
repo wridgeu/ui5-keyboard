@@ -8,6 +8,8 @@ const values = (rows: typeof navRowCompact) => rows.map((row) => row.map((key) =
 describe("navRowCompact", () => {
   // Pins the slice boundaries against navRow's source order: reordering navRow
   // without revisiting the slices would silently rearrange the compact form.
+  // Arrow-key navigation moves on layout coordinates, so the column Up shares
+  // with Down is what makes the two reachable from one another.
   it("arranges the eight nav keys as a position row over an arrow row", () => {
     expect(values(navRowCompact)).toEqual([
       ["{fkey:Home}", "{fkey:ArrowUp}", "{fkey:End}", "{fkey:PageUp}"],
@@ -20,17 +22,6 @@ describe("navRowCompact", () => {
 
     expect(flat).toHaveLength(navRow.length);
     expect(new Set(flat)).toEqual(new Set(navRow.map((key) => key.value)));
-  });
-
-  // Arrow-key navigation moves on layout coordinates, so a column shared between
-  // the two rows is what makes Up and Down reachable from one another.
-  it("seats Up directly above Down, flanked by Left and Right", () => {
-    const [position, arrows] = values(navRowCompact);
-    const upColumn = position!.indexOf("{fkey:ArrowUp}");
-
-    expect(arrows![upColumn]).toBe("{fkey:ArrowDown}");
-    expect(arrows![upColumn - 1]).toBe("{fkey:ArrowLeft}");
-    expect(arrows![upColumn + 1]).toBe("{fkey:ArrowRight}");
   });
 
   it("classifies both rows as nav", () => {

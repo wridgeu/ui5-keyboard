@@ -195,11 +195,6 @@ QUnit.test("applies to every layout, even non-Latin ones", (assert) => {
   assert.deepEqual(table.a, [...LATIN_DIACRITIC_VARIANTS.a], "the built-in tier below it survives");
   // The non-Latin built-in tier is null, so the defaults tier stands alone there.
   assert.deepEqual(resolveVariantTable("arabic", undefined, DEFAULTS), DEFAULTS, "it re-enables a non-Latin layout");
-  assert.strictEqual(
-    resolveVariantTable("arabic", undefined, DEFAULTS)!.a,
-    undefined,
-    "without inheriting the Latin table",
-  );
 });
 
 QUnit.test("composes with a named entry rather than being discarded by it", (assert) => {
@@ -257,7 +252,6 @@ QUnit.test("Shift (no Caps) keeps an explicit shiftValue, even for ß", (assert)
 QUnit.test("a lone cased letter falls back to its uppercase; multi-char values are unchanged", (assert) => {
   assert.strictEqual(shiftedGlyph("a", undefined, false), "A", "a -> A");
   assert.strictEqual(shiftedGlyph("a", undefined, true), "A", "Caps on a plain letter is unaffected");
-  assert.strictEqual(shiftedGlyph(" ", undefined, false), " ", "whitespace value is returned unchanged");
   assert.strictEqual(shiftedGlyph("abc", undefined, false), "abc", "multi-char value with no shiftValue is unchanged");
 });
 

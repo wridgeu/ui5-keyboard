@@ -199,7 +199,7 @@ jobs:
 
   # Behavioral e2e assertions are platform-independent; visual snapshots are
   # not (baselines carry no platform suffix), so they are ignored here. This
-  # gates focus/auto-type/inputmode/i18n/interop behavior and runs the visual
+  # gates the keycap-caret focus behavior and invariants and runs the visual
   # specs as render smoke tests without pixel-comparing OS-specific baselines.
   #
   # The two packages run as parallel matrix legs so neither waits on the other.

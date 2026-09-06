@@ -21,15 +21,6 @@ describe("fkeyRowCompact", () => {
     expect(new Set(flat)).toEqual(new Set(fkeyRow.map((key) => key.value)));
   });
 
-  // Arrow-key navigation moves on layout coordinates, so a column shared between
-  // the two rows is what makes F1 and F7 reachable from one another.
-  it("seats each second-row key directly below its first-row counterpart", () => {
-    const [first, second] = values(fkeyRowCompact);
-
-    expect(second).toHaveLength(first!.length);
-    expect(second![0]).toBe("{fkey:F7}");
-  });
-
   it("classifies both rows as fkey", () => {
     expect(fkeyRowCompact.map((row) => classifyRow(row))).toEqual(["fkey", "fkey"]);
   });

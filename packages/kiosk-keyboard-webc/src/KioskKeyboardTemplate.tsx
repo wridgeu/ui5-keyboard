@@ -1,9 +1,66 @@
 import type KioskKeyboard from "./KioskKeyboard.js";
 import { classifyRow, keyElementId, keyPart } from "./core/dom-utils.js";
 import { parseKeyAction } from "./core/key-token.js";
-import { isArabicGlyph, isCJKGlyph, isHangulGlyph, isIndicGlyph, isSingleGlyph } from "./core/grapheme.js";
+import { glyphScriptOf, isSingleGlyph } from "./core/grapheme.js";
+import type { KeyDefinition } from "./types.js";
 
 import { KIOSK_KEYBOARD_DOM } from "./core/dom-contract.js";
+
+/** The keycap's class map, from the key's definition and the host's transient key state. */
+function keyClasses(host: KioskKeyboard, key: KeyDefinition, rowIndex: number, colIndex: number, isDual: boolean) {
+  const isShift = key.value === "{shift}";
+  return {
+    [KIOSK_KEYBOARD_DOM.classes.key]: true,
+    [KIOSK_KEYBOARD_DOM.classes.keyModifier]: key.type === "modifier",
+    [KIOSK_KEYBOARD_DOM.classes.keyAction]: key.type === "action",
+    [KIOSK_KEYBOARD_DOM.classes.keyShiftActive]: isShift && host._shifted,
+    [KIOSK_KEYBOARD_DOM.classes.keyCapsLock]: isShift && host._capsLock,
+    [KIOSK_KEYBOARD_DOM.classes.keyPressed]: host._pressedKey?.row === rowIndex && host._pressedKey.col === colIndex,
+    [KIOSK_KEYBOARD_DOM.classes.keyHighlight]: host._highlightedKey === key.value.toLowerCase(),
+    [KIOSK_KEYBOARD_DOM.classes.keyDual]: isDual,
+  };
+}
+
+/** The keycap's visible face: an optional icon (UI5 icon or literal glyph) and an optional label span. */
+function renderKeyFace(
+  icon: { value: string; sap: boolean } | null,
+  label: string,
+  isSingleGlyphLabel: boolean,
+  labelLang: string | undefined,
+) {
+  return (
+    <>
+      {icon?.sap ? (
+        <ui5-icon class={KIOSK_KEYBOARD_DOM.classes.keyIcon} part="key-icon" name={icon.value} mode="Decorative" />
+      ) : icon ? (
+        <span class={KIOSK_KEYBOARD_DOM.classes.keyIcon} part="key-icon" aria-hidden="true">
+          {icon.value}
+        </span>
+      ) : null}
+      {label ? (
+        <span
+          class={{
+            [KIOSK_KEYBOARD_DOM.classes.keyLabel]: true,
+            [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph]: isSingleGlyphLabel,
+            [KIOSK_KEYBOARD_DOM.classes.keyLabelMulti]: !isSingleGlyphLabel,
+          }}
+          // Keyed on the language so a switch to a layout that declares
+          // none remounts the span. Key ids are stable across layouts,
+          // so the span is otherwise reused, and the renderer assigns
+          // through the `lang` IDL property: an undefined value writes
+          // `lang=""`, which means "unknown language" and stops
+          // inheritance rather than clearing the declaration.
+          key={`label-${labelLang ?? ""}`}
+          data-glyph-script={isSingleGlyphLabel ? glyphScriptOf(label) : undefined}
+          lang={labelLang}
+          part="key-label"
+        >
+          {label}
+        </span>
+      ) : null}
+    </>
+  );
+}
 
 /**
  * JSX template for `<kiosk-keyboard>`.
@@ -66,46 +123,15 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
               const labelLang = isKeycapContent ? layoutLang : undefined;
               const resolved = this._resolveKeyIcon(key);
               const label = this._getKeyLabel(key);
-              const hasIcon = resolved !== null;
               const hasLabel = label !== "";
-              const isDual = hasIcon && hasLabel;
               const isSingleGlyphLabel = isSingleGlyph(label);
-              // The Hangul regex uses strict \p{Script=Hangul} (not Script_Extensions)
-              // so shared CJK punctuation (、。・) falls through to isCJKGlyph().
-              // The !isHangul guard on isCJK prevents double-classification of
-              // actual Hangul characters. Indic and Arabic are disjoint from all
-              // other script families by Unicode definition, so no guards are needed.
-              const isHangul = isSingleGlyphLabel && isHangulGlyph(label);
-              const isCJK = isSingleGlyphLabel && !isHangul && isCJKGlyph(label);
-              const isIndic = isSingleGlyphLabel && isIndicGlyph(label);
-              const isArabic = isSingleGlyphLabel && isArabicGlyph(label);
-              const glyphScript = isHangul
-                ? "hangul"
-                : isCJK
-                  ? "cjk"
-                  : isIndic
-                    ? "indic"
-                    : isArabic
-                      ? "arabic"
-                      : undefined;
-
               const hasVariants = !!(key.variants && key.variants.length > 0);
 
               return (
                 <div
                   key={id}
                   id={id}
-                  class={{
-                    [KIOSK_KEYBOARD_DOM.classes.key]: true,
-                    [KIOSK_KEYBOARD_DOM.classes.keyModifier]: key.type === "modifier",
-                    [KIOSK_KEYBOARD_DOM.classes.keyAction]: key.type === "action",
-                    [KIOSK_KEYBOARD_DOM.classes.keyShiftActive]: isShift && this._shifted,
-                    [KIOSK_KEYBOARD_DOM.classes.keyCapsLock]: isShift && this._capsLock,
-                    [KIOSK_KEYBOARD_DOM.classes.keyPressed]:
-                      this._pressedKey?.row === rowIndex && this._pressedKey.col === colIndex,
-                    [KIOSK_KEYBOARD_DOM.classes.keyHighlight]: this._highlightedKey === key.value.toLowerCase(),
-                    [KIOSK_KEYBOARD_DOM.classes.keyDual]: isDual,
-                  }}
+                  class={keyClasses(this, key, rowIndex, colIndex, resolved !== null && hasLabel)}
                   part={keyPart(keyAction, key.type)}
                   role="button"
                   tabindex={!this.disabled && isFocusTarget ? 0 : -1}
@@ -132,39 +158,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   title={hasLabel && !isSingleGlyphLabel ? label : ""}
                   aria-label={hasLabel ? undefined : this._getKeyAriaLabel(key)}
                 >
-                  {hasIcon && resolved.sap ? (
-                    <ui5-icon
-                      class={KIOSK_KEYBOARD_DOM.classes.keyIcon}
-                      part="key-icon"
-                      name={resolved.value}
-                      mode="Decorative"
-                    />
-                  ) : hasIcon ? (
-                    <span class={KIOSK_KEYBOARD_DOM.classes.keyIcon} part="key-icon" aria-hidden="true">
-                      {resolved.value}
-                    </span>
-                  ) : null}
-                  {hasLabel ? (
-                    <span
-                      class={{
-                        [KIOSK_KEYBOARD_DOM.classes.keyLabel]: true,
-                        [KIOSK_KEYBOARD_DOM.classes.keyLabelGlyph]: isSingleGlyphLabel,
-                        [KIOSK_KEYBOARD_DOM.classes.keyLabelMulti]: !isSingleGlyphLabel,
-                      }}
-                      // Keyed on the language so a switch to a layout that declares
-                      // none remounts the span. Key ids are stable across layouts,
-                      // so the span is otherwise reused, and the renderer assigns
-                      // through the `lang` IDL property: an undefined value writes
-                      // `lang=""`, which means "unknown language" and stops
-                      // inheritance rather than clearing the declaration.
-                      key={`label-${labelLang ?? ""}`}
-                      data-glyph-script={glyphScript}
-                      lang={labelLang}
-                      part="key-label"
-                    >
-                      {label}
-                    </span>
-                  ) : null}
+                  {renderKeyFace(resolved, label, isSingleGlyphLabel, labelLang)}
                 </div>
               );
             })}

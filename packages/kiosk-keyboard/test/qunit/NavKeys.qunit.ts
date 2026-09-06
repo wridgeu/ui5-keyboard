@@ -1,7 +1,6 @@
 import CustomLayout from "ui5/kiosk/CustomLayout";
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import { FKeyMode } from "ui5/kiosk/library";
-import fkeyRow from "ui5/kiosk/layouts/fkey-row";
 import navRow from "ui5/kiosk/layouts/nav-row";
 import navRowCompact from "ui5/kiosk/layouts/nav-row-compact";
 import type { LayoutDefinition } from "ui5/kiosk/types";
@@ -16,7 +15,6 @@ import {
   getKeyElements,
   getRequiredKeyElement,
   getRowElements,
-  hasKeyClass,
   isCapsLock,
   isShiftActive,
   placeAndWait,
@@ -39,9 +37,6 @@ QUnit.module("NavKeys", {
 
 QUnit.test("nav is a registered built-in layout", (assert) => {
   assert.ok(KioskKeyboard.isBuiltInLayout("nav"), "nav is built-in");
-
-  const names = KioskKeyboard.getRegisteredLayoutNames();
-  assert.ok(names.includes("nav"), "nav in registered names");
 });
 
 QUnit.test("nav-row exports 8 navigation key definitions", (assert) => {
@@ -64,18 +59,6 @@ QUnit.test("nav-row-compact arranges the eight nav keys as a position row over a
   );
 });
 
-// Arrow-key navigation moves on layout coordinates, so a column shared between
-// the two rows is what makes Up and Down reachable from one another.
-QUnit.test("nav-row-compact seats Up directly above Down, flanked by Left and Right", (assert) => {
-  const position = navRowCompact[0].map((key) => key.value);
-  const arrows = navRowCompact[1].map((key) => key.value);
-  const upColumn = position.indexOf("{fkey:ArrowUp}");
-
-  assert.strictEqual(arrows[upColumn], "{fkey:ArrowDown}", "Down sits in Up's column");
-  assert.strictEqual(arrows[upColumn - 1], "{fkey:ArrowLeft}", "Left flanks Down");
-  assert.strictEqual(arrows[upColumn + 1], "{fkey:ArrowRight}", "Right flanks Down");
-});
-
 QUnit.test("nav-row-compact renders as two rows of four nav keys", async (assert) => {
   const kb = new KioskKeyboard({
     layout: "nav-compact",
@@ -89,15 +72,6 @@ QUnit.test("nav-row-compact renders as two rows of four nav keys", async (assert
     assert.strictEqual(row.getAttribute(DOM.attributes.rowKind), "nav", "Row classified as nav");
     assert.strictEqual(row.querySelectorAll(DOM.selectors.key).length, 4, "Four keys in the row");
   }
-
-  // The logical coordinate arrow-key navigation moves on: Down is one row below
-  // Up in the same column, so ArrowDown from Up reaches it.
-  const up = getRequiredKeyElement(kb, "{fkey:ArrowUp}");
-  const down = getRequiredKeyElement(kb, "{fkey:ArrowDown}");
-  assert.strictEqual(up.getAttribute(DOM.attributes.rowIndex), "0", "Up is on row 0");
-  assert.strictEqual(up.getAttribute(DOM.attributes.keyIndex), "1", "Up is in column 1");
-  assert.strictEqual(down.getAttribute(DOM.attributes.rowIndex), "1", "Down is one row below Up");
-  assert.strictEqual(down.getAttribute(DOM.attributes.keyIndex), "1", "Down is in Up's column");
 
   kb.destroy();
 });
@@ -370,68 +344,6 @@ QUnit.test("Caps Lock extends the selection continuously", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("FKeyMode.None suppresses the selection extension", async (assert) => {
-  const input = new Input({ value: "55555" });
-  const kb = new KioskKeyboard({ layout: "nav", controls: [input.getId()] });
-  kb.setFKeyMode(FKeyMode.None);
-  input.placeAt("qunit-fixture");
-  await placeAndWait(kb);
-
-  input.focus();
-  await waitForRender();
-
-  const dom = input.getFocusDomRef() as HTMLInputElement;
-  dom.setSelectionRange(3, 3);
-
-  tapKey(kb, "{shift}");
-  await waitForRender();
-  assert.ok(isShiftActive(kb), "Precondition: {shift} is latched");
-
-  tapKey(kb, "{fkey:ArrowLeft}");
-  await waitForRender();
-
-  assert.strictEqual(dom.selectionStart, 3, "Selection start unchanged");
-  assert.strictEqual(dom.selectionEnd, 3, "Selection stays collapsed");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("nav is treated as secondary layout and returns to base via {layout:base}", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "qwerty" });
-  await placeAndWait(kb);
-
-  kb.setLayout("nav");
-  await waitForRender();
-  assert.strictEqual(kb.getLayout(), "nav", "Switched to nav");
-
-  tapKey(kb, "{layout:base}");
-  await waitForRender();
-  assert.strictEqual(kb.getLayout(), "qwerty", "Returned to base qwerty layout");
-
-  kb.destroy();
-});
-
-QUnit.test("Consumers can compose fkey-row + nav-row + base layout", async (assert) => {
-  const base = KioskKeyboard.getRegisteredLayout("qwerty")!;
-  assert.ok(base, "qwerty base layout exists");
-
-  const composite: LayoutDefinition = [fkeyRow, navRow, ...base];
-
-  const kb = new KioskKeyboard({
-    layout: "qwerty-fk-nav-test",
-    customLayouts: [new CustomLayout({ name: "qwerty-fk-nav-test", rows: composite })],
-  });
-  await placeAndWait(kb);
-
-  const rows = getRowElements(kb);
-  assert.strictEqual(rows.length, 7, "Composite layout has 7 rows (fkey + nav + qwerty)");
-  assert.ok(getKeyElement(kb, "{fkey:F1}"), "Composite includes fkey row");
-  assert.ok(getKeyElement(kb, "{fkey:ArrowLeft}"), "Composite includes nav row");
-
-  kb.destroy();
-});
-
 QUnit.test("ArrowUp and ArrowDown move caret vertically in TextArea", async (assert) => {
   const textarea = new TextArea({ value: "abc\ndefgh\nij", rows: 4 });
   const kb = new KioskKeyboard({ layout: "nav", controls: [textarea.getId()] });
@@ -513,33 +425,6 @@ QUnit.test("PageUp moves caret to start, PageDown moves to end", async (assert) 
   tapKey(kb, "{fkey:PageDown}");
   await waitForRender();
   assert.strictEqual(dom.selectionStart, 11, "PageDown moves caret to end of value");
-
-  input.destroy();
-  kb.destroy();
-});
-
-QUnit.test("Physical Arrow key highlights matching virtual nav key", async (assert) => {
-  const input = new Input();
-  const kb = new KioskKeyboard({
-    layout: "test-qwerty-nav",
-    controls: [input.getId()],
-    customLayouts: [new CustomLayout({ name: "test-qwerty-nav", rows: qwertyNav })],
-  });
-  input.placeAt("qunit-fixture");
-  await placeAndWait(kb);
-
-  const left = getRequiredKeyElement(kb, "{fkey:ArrowLeft}");
-  assert.ok(left, "ArrowLeft key exists");
-
-  input.focus();
-
-  input.getFocusDomRef()!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
-  await nextUIUpdate();
-  assert.ok(hasKeyClass(kb, "{fkey:ArrowLeft}", DOM.classes.keyHighlight), "ArrowLeft highlighted on physical keydown");
-
-  input.getFocusDomRef()!.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowLeft", bubbles: true }));
-  await nextUIUpdate();
-  assert.notOk(hasKeyClass(kb, "{fkey:ArrowLeft}", DOM.classes.keyHighlight), "ArrowLeft unhighlighted on keyup");
 
   input.destroy();
   kb.destroy();

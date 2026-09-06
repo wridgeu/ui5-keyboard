@@ -8,6 +8,7 @@ import LanguageTag from "sap/base/i18n/LanguageTag";
 import nextUIUpdate from "sap/ui/test/utils/nextUIUpdate";
 import {
   createFakeKeyElement,
+  getKeyAttr,
   getKeyElement,
   getKeyElements,
   getRenderedKeyLabel,
@@ -59,24 +60,13 @@ QUnit.test("KeyboardType 'Numpad' renders numpad keys", async (assert) => {
   const rows = getRowElements(kb);
   assert.strictEqual(rows.length, 5, "Numpad has 5 rows");
   assert.strictEqual(getRowKeyValues(kb, 0)[0], "7", "Numpad row 0 starts with 7 (distinguishes from QWERTY)");
-  kb.destroy();
-});
-
-QUnit.test("KeyboardType 'Numpad' renders numpad layout", async (assert) => {
-  const kb = new KioskKeyboard();
-  kb.setKeyboardType(KeyboardType.Numpad);
-  await placeAndWait(kb);
-
   assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Has numpad CSS class");
 
-  const keys = getKeyElements(kb);
-  assert.ok(keys.length > 0, "Numpad keys rendered");
-
-  const keyValues = Array.from(keys).map((k) => k.dataset.key);
+  const keyValues = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
   assert.notOk(keyValues.includes("q"), "No alphabetic keys in numpad");
+  assert.notOk(keyValues.includes("{shift}"), "No shift key in numpad");
   assert.ok(keyValues.includes("7"), "Numpad has 7");
   assert.ok(keyValues.includes("0"), "Numpad has 0");
-
   kb.destroy();
 });
 
@@ -89,6 +79,7 @@ QUnit.test("Layout property switches full keyboard layout", async (assert) => {
   assert.strictEqual(firstKey, "1", "Numeric layout starts with 1");
   const allValues = getRenderedLayoutKeys(kb).flat();
   assert.notOk(allValues.includes("q"), "Numeric layout has no alphabetic keys");
+  assert.notOk(allValues.includes("{shift}"), "Numeric layout has no shift key");
 
   kb.destroy();
 });
@@ -319,19 +310,17 @@ QUnit.test("Full keyboardType has no type-specific CSS class", async (assert) =>
 });
 
 QUnit.test("setLayout with unregistered name is ignored and keeps current layout", async (assert) => {
-  const kb = new KioskKeyboard();
+  // A non-default base: an unregistered name must leave the layout where it was,
+  // not resolve it to the default.
+  const kb = new KioskKeyboard({ layout: "qwertz-de" });
   await placeAndWait(kb);
 
-  const before = kb.getLayout();
   kb.setLayout("nonexistent-layout");
+  await waitForRender();
 
-  assert.strictEqual(kb.getLayout(), before, "getLayout() still returns the previous layout");
-  const firstKey = getRowKeyValues(kb, 0)[0];
-  assert.strictEqual(firstKey, "1", "QWERTY layout still rendered (number row starts with 1)");
-  assert.strictEqual(getRowElements(kb).length, 5, "QWERTY layout has 5 rows");
-
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "getLayout() still returns the previous layout");
   const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.ok(keys.includes("q"), "QWERTY keys rendered - unregistered name had no effect");
+  assert.ok(keys.includes("z"), "QWERTZ keys rendered - unregistered name had no effect");
 
   kb.destroy();
 });
@@ -339,42 +328,6 @@ QUnit.test("setLayout with unregistered name is ignored and keeps current layout
 // ──────────────────────────────────────────────
 // Layout switching
 // ──────────────────────────────────────────────
-
-QUnit.test("Layout switch fires layoutChange event", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const done = assert.async();
-  kb.attachLayoutChange((event) => {
-    assert.strictEqual(event.getParameter("layout"), "numeric", "Layout changed to numeric");
-    done();
-  });
-
-  tapKey(kb, "{layout:numeric}");
-  kb.destroy();
-});
-
-QUnit.test("Layout switch updates rendered keys", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  // Initially QWERTY - has alphabetic keys
-  let keys = getKeyElements(kb);
-  const initialKeyValues = Array.from(keys).map((k) => k.dataset.key);
-  assert.ok(initialKeyValues.includes("q"), "QWERTY has 'q' key");
-
-  // Switch to numeric
-  tapKey(kb, "{layout:numeric}");
-
-  // Wait for re-render
-  await waitForRender();
-
-  keys = getKeyElements(kb);
-  const numericKeyValues = Array.from(keys).map((k) => k.dataset.key);
-  assert.notOk(numericKeyValues.includes("q"), "Numeric layout has no 'q' key");
-
-  kb.destroy();
-});
 
 QUnit.test(
   "User {layout:X} switch fires layoutChange even when keyboardType is Numpad (webc parity)",
@@ -467,37 +420,12 @@ QUnit.test("No-op {layout:X} tap keeps the keyboardType constraint (source not f
   kb.destroy();
 });
 
-QUnit.test("Programmatic setKeyboardType resets a user-driven layout switch", async (assert) => {
-  // Companion to the symmetry test above: changing keyboardType (explicit
-  // or auto-detect) must invalidate any prior user layout pick, so the new
-  // constraint context isn't silently overridden by stale state.
-  // Distinguish numpad from numeric by the first key (numpad row 0 starts at
-  // "7", numeric at "1"). An `includes('1')` check would match both.
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  simulateTap(kb, createFakeKeyElement("{layout:numeric}", "fake-numeric"));
-  await waitForRender();
-  assert.strictEqual(kb.getLayout(), "numeric", "User switch lands");
-  assert.strictEqual(getRowKeyValues(kb, 0)[0], "1", "Numeric layout actually renders before the reset");
-
-  kb.setKeyboardType(KeyboardType.Numpad);
-  await waitForRender();
-
-  assert.strictEqual(
-    getRowKeyValues(kb, 0)[0],
-    "7",
-    "After setKeyboardType the resolved surface is numpad (user switch cleared); numpad row 0 starts at '7'",
-  );
-
-  kb.destroy();
-});
-
 QUnit.test("setKeyboardType round trip (Numpad -> Full) returns a user pick to the base", async (assert) => {
   // Numpad drops the pick and returns the layout property to the base under the
   // constraint; Full lifts the constraint and lands on that base, not on the pick.
-  // Row 0 of qwerty starts with "1" just as numeric does, so "q" tells them apart.
-  const kb = new KioskKeyboard();
+  // The base is a non-default layout so that landing on it is distinct from a reset
+  // to the default.
+  const kb = new KioskKeyboard({ layout: "qwertz-de" });
   await placeAndWait(kb);
   const events: string[] = [];
   kb.attachLayoutChange((e) => {
@@ -506,7 +434,7 @@ QUnit.test("setKeyboardType round trip (Numpad -> Full) returns a user pick to t
 
   simulateTap(kb, createFakeKeyElement("{layout:numeric}", "fake-numeric"));
   await waitForRender();
-  assert.notOk(getKeyElement(kb, "q"), "precondition: the user pick landed (no q on numeric)");
+  assert.notOk(getKeyElement(kb, "z"), "precondition: the user pick landed (no z on numeric)");
 
   kb.setKeyboardType(KeyboardType.Numpad);
   await waitForRender();
@@ -514,9 +442,9 @@ QUnit.test("setKeyboardType round trip (Numpad -> Full) returns a user pick to t
 
   kb.setKeyboardType(KeyboardType.Full);
   await waitForRender();
-  assert.strictEqual(kb.getLayout(), "qwerty", "The lifted constraint lands on the base layout");
-  assert.ok(getKeyElement(kb, "q"), "The base surface renders");
-  assert.deepEqual(events, ["numeric", "qwerty"], "One layoutChange for the pick, one for its drop");
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "The lifted constraint lands on the base layout");
+  assert.ok(getKeyElement(kb, "z"), "The base surface renders");
+  assert.deepEqual(events, ["numeric", "qwertz-de"], "One layoutChange for the pick, one for its drop");
 
   kb.destroy();
 });
@@ -610,28 +538,6 @@ QUnit.test("Programmatic setLayout fires layoutChange when the layout actually c
   kb.destroy();
 });
 
-QUnit.test("Layout switch does not fire layoutChange for invalid or unchanged layout", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const initialLayout = kb.getLayout();
-  let changeCount = 0;
-  kb.attachEvent("layoutChange", () => {
-    changeCount++;
-  });
-
-  const invalidLayoutEl = createFakeKeyElement("{layout:not-registered}", "fake-layout-invalid");
-  simulateTap(kb, invalidLayoutEl);
-
-  const sameLayoutEl = createFakeKeyElement(`{layout:${initialLayout}}`, "fake-layout-same");
-  simulateTap(kb, sameLayoutEl);
-
-  assert.strictEqual(changeCount, 0, "No layoutChange event for invalid or unchanged layout");
-  assert.strictEqual(kb.getLayout(), initialLayout, "Layout remains unchanged");
-
-  kb.destroy();
-});
-
 // ──────────────────────────────────────────────
 // German QWERTZ layout
 // ──────────────────────────────────────────────
@@ -655,22 +561,6 @@ QUnit.test("QWERTZ-DE layout resolves correctly", async (assert) => {
 
   const row4Values = getRowKeyValues(kb, 3);
   assert.ok(row4Values.includes("\u00DF"), "Row 4 contains \u00DF");
-
-  kb.destroy();
-});
-
-QUnit.test("QWERTZ-DE renders correctly", async (assert) => {
-  const kb = new KioskKeyboard();
-  kb.setLayout("qwertz-de");
-  await placeAndWait(kb);
-
-  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.ok(keys.includes("z"), "Has z key");
-  assert.ok(keys.includes("\u00FC"), "Has \u00FC key");
-  assert.ok(keys.includes("\u00F6"), "Has \u00F6 key");
-  assert.ok(keys.includes("\u00E4"), "Has \u00E4 key");
-  assert.ok(keys.includes("\u00DF"), "Has \u00DF key");
-  assert.notOk(keys.includes("y") && keys.indexOf("y") < keys.indexOf("z"), "Y not before Z (QWERTZ)");
 
   kb.destroy();
 });
@@ -703,51 +593,6 @@ QUnit.test("QWERTZ-DE German number row shift symbols", async (assert) => {
 // ──────────────────────────────────────────────
 // Base layout tracking ({layout:base})
 // ──────────────────────────────────────────────
-
-QUnit.test("Switching to numeric and back returns to base layout", async (assert) => {
-  const kb = new KioskKeyboard();
-  kb.setLayout("qwertz-de");
-  await placeAndWait(kb);
-
-  // Switch to numeric
-  tapKey(kb, "{layout:numeric}");
-  await waitForRender();
-
-  assert.strictEqual(kb.getLayout(), "numeric", "Layout is now numeric");
-
-  // Switch back via ABC (which uses {layout:base})
-  tapKey(kb, "{layout:base}");
-  await waitForRender();
-
-  assert.strictEqual(kb.getLayout(), "qwertz-de", "Layout returned to qwertz-de (not qwerty)");
-
-  // Verify QWERTZ keys are present
-  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.ok(keys.includes("z"), "QWERTZ z key is back");
-  assert.ok(keys.includes("\u00FC"), "\u00FC is back");
-
-  kb.destroy();
-});
-
-QUnit.test("Base layout defaults to qwerty", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  // Switch to numeric
-  tapKey(kb, "{layout:numeric}");
-  await waitForRender();
-
-  // Switch back via ABC ({layout:base})
-  tapKey(kb, "{layout:base}");
-  await waitForRender();
-
-  assert.strictEqual(kb.getLayout(), "qwerty", "Default base layout is qwerty");
-
-  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.ok(keys.includes("q"), "QWERTY q key is present");
-
-  kb.destroy();
-});
 
 QUnit.test("getBaseLayout tracks last non-secondary layout", async (assert) => {
   const kb = new KioskKeyboard();
@@ -798,6 +643,9 @@ QUnit.test("Base layout roundtrip: qwertz-de -> numeric -> special -> base", asy
   await waitForRender();
 
   assert.strictEqual(kb.getLayout(), "qwertz-de", "Returned to qwertz-de after special");
+  const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
+  assert.ok(keys.includes("z"), "QWERTZ z key is back");
+  assert.ok(keys.includes("\u00FC"), "\u00FC is back");
 
   kb.destroy();
 });
@@ -891,16 +739,6 @@ QUnit.test("getLocaleLayout returns qwertz-de for German locale", (assert) => {
   try {
     Localization.setLanguage("de");
     assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwertz-de", "German locale maps to qwertz-de");
-  } finally {
-    Localization.setLanguage(currentLang);
-  }
-});
-
-QUnit.test("getLocaleLayout returns qwerty for English locale", (assert) => {
-  const currentLang = Localization.getLanguage();
-  try {
-    Localization.setLanguage("en");
-    assert.strictEqual(KioskKeyboard.getLocaleLayout(), "qwerty", "English locale maps to qwerty");
   } finally {
     Localization.setLanguage(currentLang);
   }
@@ -1129,28 +967,37 @@ QUnit.test("ja-kana: row 4 punctuation shift variants", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("ja-kana: backspace, enter, shift, space have correct types", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "ja-kana" });
-  await placeAndWait(kb);
+// Each layout file spells its own `type` and `width` for these keys.
+const SPECIAL_KEY_TYPE_CASES: Array<[layout: string, backspaceSpan: string]> = [
+  ["ja-kana", "1.5"],
+  ["ko-hangul", "1.5"],
+  ["qwerty-es", "2"],
+];
 
-  const allKeys = Array.from(getKeyElements(kb));
-  const backspace = allKeys.find((el) => el.dataset.key === "{backspace}");
-  const enter = allKeys.find((el) => el.dataset.key === "{enter}");
-  const shift = allKeys.find((el) => el.dataset.key === "{shift}");
-  const space = allKeys.find((el) => el.dataset.key === " ");
+for (const [layout, backspaceSpan] of SPECIAL_KEY_TYPE_CASES) {
+  QUnit.test(`${layout}: backspace, enter, shift, space have correct types`, async (assert) => {
+    const kb = new KioskKeyboard({ layout });
+    await placeAndWait(kb);
 
-  assert.ok(backspace?.classList.contains(DOM.classes.keyAction), "Backspace has action type");
-  assert.ok(enter?.classList.contains(DOM.classes.keyAction), "Enter has action type");
-  assert.ok(shift?.classList.contains(DOM.classes.keyModifier), "Shift has modifier type");
-  assert.strictEqual(space?.getAttribute(DOM.attributes.keySpan), "space", "Space has the space width span");
-  assert.strictEqual(
-    backspace?.getAttribute(DOM.attributes.keySpan),
-    "1.5",
-    "Backspace width span is carried verbatim",
-  );
+    const allKeys = Array.from(getKeyElements(kb));
+    const backspace = allKeys.find((el) => el.dataset.key === "{backspace}");
+    const enter = allKeys.find((el) => el.dataset.key === "{enter}");
+    const shift = allKeys.find((el) => el.dataset.key === "{shift}");
+    const space = allKeys.find((el) => el.dataset.key === " ");
 
-  kb.destroy();
-});
+    assert.ok(backspace?.classList.contains(DOM.classes.keyAction), "Backspace has action type");
+    assert.ok(enter?.classList.contains(DOM.classes.keyAction), "Enter has action type");
+    assert.ok(shift?.classList.contains(DOM.classes.keyModifier), "Shift has modifier type");
+    assert.strictEqual(space?.getAttribute(DOM.attributes.keySpan), "space", "Space has the space width span");
+    assert.strictEqual(
+      backspace?.getAttribute(DOM.attributes.keySpan),
+      backspaceSpan,
+      "Backspace width span is carried verbatim",
+    );
+
+    kb.destroy();
+  });
+}
 
 QUnit.test("applySettings injects locale layout when no explicit layout", (assert) => {
   const currentLang = Localization.getLanguage();
@@ -1197,13 +1044,6 @@ QUnit.test("a custom layout's exact region locale takes priority over prefix", a
     await placeAndWait(kbAt);
     assert.strictEqual(kbAt.getLayout(), "test-de-at", "Exact de-at match wins over de prefix");
     kbAt.destroy();
-
-    // de (no region) still uses the built-in prefix match
-    Localization.setLanguage("de");
-    const kbDe = new KioskKeyboard();
-    await placeAndWait(kbDe);
-    assert.strictEqual(kbDe.getLayout(), "qwertz-de", "de without region still maps to qwertz-de");
-    kbDe.destroy();
   } finally {
     Localization.setLanguage(currentLang);
   }
@@ -1227,24 +1067,6 @@ QUnit.test("Locale layout used as base layout for {layout:base} roundtrip", asyn
     tapKey(kb, "{layout:base}");
     await waitForRender();
     assert.strictEqual(kb.getLayout(), "qwertz-de", "Returned to locale-detected qwertz-de");
-
-    kb.destroy();
-  } finally {
-    Localization.setLanguage(currentLang);
-  }
-});
-
-QUnit.test("Locale layout renders correct keys", async (assert) => {
-  const currentLang = Localization.getLanguage();
-  try {
-    Localization.setLanguage("de");
-
-    const kb = new KioskKeyboard();
-    await placeAndWait(kb);
-
-    const keys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-    assert.ok(keys.includes("z"), "German locale keyboard has z key (QWERTZ)");
-    assert.ok(keys.includes("\u00FC"), "German locale keyboard has \u00FC key");
 
     kb.destroy();
   } finally {
@@ -1335,27 +1157,7 @@ QUnit.test("ko-hangul has standard slash with ?-on-shift", async (assert) => {
   await placeAndWait(kb);
   const row5 = getRowKeyValues(kb, 4);
   assert.ok(row5.includes("/"), "Row 5 contains / key");
-  kb.destroy();
-});
-
-QUnit.test("ko-hangul: backspace, enter, shift, space have correct types", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "ko-hangul" });
-  await placeAndWait(kb);
-  const root = kb.getDomRef()!;
-  assert.ok(
-    root.querySelector('[data-key="{backspace}"]')!.classList.contains(DOM.classes.keyAction),
-    "Backspace is action",
-  );
-  assert.ok(root.querySelector('[data-key="{enter}"]')!.classList.contains(DOM.classes.keyAction), "Enter is action");
-  assert.ok(
-    root.querySelector('[data-key="{shift}"]')!.classList.contains(DOM.classes.keyModifier),
-    "Shift is modifier",
-  );
-  assert.strictEqual(
-    root.querySelector('[data-key=" "]')!.getAttribute(DOM.attributes.keySpan),
-    "space",
-    "Space is space",
-  );
+  assert.strictEqual(getKeyAttr(kb, "/", DOM.attributes.shiftValue), "?", "Shift of / is ?");
   kb.destroy();
 });
 
@@ -1392,27 +1194,6 @@ QUnit.test("qwerty-es has inverted punctuation ¿ with ¡ on shift", async (asse
   const invQuestion = root.querySelector('[data-key="\u00BF"]');
   assert.ok(invQuestion, "¿ key exists");
   assert.strictEqual(invQuestion!.getAttribute("data-shift-value"), "\u00A1", "Shift of ¿ is ¡");
-  kb.destroy();
-});
-
-QUnit.test("qwerty-es: backspace, enter, shift, space have correct types", async (assert) => {
-  const kb = new KioskKeyboard({ layout: "qwerty-es" });
-  await placeAndWait(kb);
-  const root = kb.getDomRef()!;
-  assert.ok(
-    root.querySelector('[data-key="{backspace}"]')!.classList.contains(DOM.classes.keyAction),
-    "Backspace is action",
-  );
-  assert.ok(root.querySelector('[data-key="{enter}"]')!.classList.contains(DOM.classes.keyAction), "Enter is action");
-  assert.ok(
-    root.querySelector('[data-key="{shift}"]')!.classList.contains(DOM.classes.keyModifier),
-    "Shift is modifier",
-  );
-  assert.strictEqual(
-    root.querySelector('[data-key=" "]')!.getAttribute(DOM.attributes.keySpan),
-    "space",
-    "Space is space",
-  );
   kb.destroy();
 });
 

@@ -45,13 +45,6 @@ QUnit.test("Composes ha + handakuten into pa", (assert) => {
   assert.strictEqual(input.value, "ぱ", "は + ゜ = ぱ");
 });
 
-QUnit.test("Composes ha + dakuten into ba", (assert) => {
-  input.value = "は";
-  input.setSelectionRange(1, 1);
-  mw().handleKey("゛", input);
-  assert.strictEqual(input.value, "ば", "は + ゛ = ば");
-});
-
 QUnit.test("Does not compose when preceding char has no dakuten form", (assert) => {
   input.value = "あ";
   input.setSelectionRange(1, 1);

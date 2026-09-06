@@ -72,26 +72,14 @@ describe("composition-utils", () => {
   });
 
   describe("composing flag", () => {
-    it("is false for a freshly created state", () => {
-      expect(state.composing).toBe(false);
-    });
-
-    it("is true after startComposition", () => {
-      startComposition(state, input);
-      expect(state.composing).toBe(true);
-    });
-
-    it("is false after endComposition", () => {
-      startComposition(state, input);
-      endComposition(state, input);
-      expect(state.composing).toBe(false);
-    });
-
-    it("tracks independently for separate state objects", () => {
+    it("follows start and end per state object", () => {
       const otherState = createCompositionState();
+      expect(state.composing).toBe(false);
       startComposition(state, input);
       expect(state.composing).toBe(true);
       expect(otherState.composing).toBe(false);
+      endComposition(state, input);
+      expect(state.composing).toBe(false);
     });
   });
 });

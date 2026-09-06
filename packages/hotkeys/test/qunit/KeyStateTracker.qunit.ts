@@ -96,7 +96,7 @@ QUnit.test("macOS modifier-release clears non-modifier keys", (assert) => {
   assert.notOk(tracker.isKeyHeld("Tab"), "Tab cleared by modifier-release fix");
 });
 
-QUnit.test("Destroy cleans up and allows fresh instance", (assert) => {
+QUnit.test("Destroy clears held keys and stops tracking", (assert) => {
   const manager = createHotkeyManager();
   const tracker = manager.getKeyStateTracker();
 
@@ -104,15 +104,10 @@ QUnit.test("Destroy cleans up and allows fresh instance", (assert) => {
   assert.ok(tracker.isKeyHeld("a"), "Key held before destroy");
 
   manager.destroy();
+  assert.strictEqual(tracker.getHeldKeys().length, 0, "Held keys cleared by destroy");
 
-  // New instance should have fresh tracker
-  const newManager = createHotkeyManager();
-  const newTracker = newManager.getKeyStateTracker();
-  assert.strictEqual(newTracker.getHeldKeys().length, 0, "New instance has no held keys");
-
-  // Old events should not affect new instance
   fireKey("b");
-  assert.ok(newTracker.isKeyHeld("b"), "New instance tracks new keys");
+  assert.strictEqual(tracker.getHeldKeys().length, 0, "Destroyed tracker ignores later keydowns");
 });
 
 // ──────────────────────────────────────────────

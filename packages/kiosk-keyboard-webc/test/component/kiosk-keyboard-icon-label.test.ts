@@ -165,6 +165,8 @@ describe("icon + label rendering", () => {
     expect(labelEl).to.exist;
     expect(labelEl!.textContent).to.match(/shift/i);
     expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.true;
+    // With visible text present, aria-label is removed to satisfy WCAG 2.5.3 (Label in Name).
+    expect(keyEl.getAttribute("aria-label")).to.be.null;
   });
 
   it("Enter key renders built-in icon + i18n label (dual)", async () => {
@@ -196,21 +198,16 @@ describe("icon + label rendering", () => {
 
   // Special key label suppression
 
-  it("Shift with label='' renders icon only (opt-out)", async () => {
+  it("Shift with label='' renders icon only (opt-out), keeping its aria-label", async () => {
     const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25", label: "" }]]);
     const keyEl = queryKey(el, "{shift}");
     expect(queryKeyIcon(keyEl)).to.exist;
     expect(queryKeyLabel(keyEl)).to.be.null;
     expect(keyEl.classList.contains(DOM.classes.keyDual)).to.be.false;
+    expect(keyEl.getAttribute("aria-label")).to.match(/shift/i);
   });
 
   // Accessibility
-
-  it("icon-only key retains aria-label", async () => {
-    const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25", label: "" }]]);
-    const keyEl = queryKey(el, "{shift}");
-    expect(keyEl.getAttribute("aria-label")).to.be.a("string").and.not.be.empty;
-  });
 
   it("warns once per icon-only key with no accessible name, not on every re-render", async () => {
     // Unique value so the module-level warn-once cache for this key starts
@@ -230,14 +227,6 @@ describe("icon + label rendering", () => {
     });
     const probeWarnings = messages.filter((m) => m.includes(noNameValue));
     expect(probeWarnings.length).to.equal(1);
-  });
-
-  it("dual icon+label key has no redundant aria-label", async () => {
-    const el = await createKeyboard([[{ value: "{shift}", type: "modifier", width: "2.25" }]]);
-    const keyEl = queryKey(el, "{shift}");
-    // When visible text is present, aria-label should be removed
-    // to satisfy WCAG 2.5.3 (Label in Name)
-    expect(keyEl.getAttribute("aria-label")).to.be.null;
   });
 
   // CapsLock property overrides

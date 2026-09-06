@@ -83,6 +83,11 @@ export class AutoShowController {
   /** Leave the claim registry and cancel any pending deferred close. */
   unregister(): void {
     AutoShowController._participants.delete(this);
+    this.cancelPendingClose();
+  }
+
+  /** Drop the close a focusout deferred to the next frame, if one is pending. */
+  cancelPendingClose(): void {
     if (this._deferredCloseId !== null) {
       cancelAnimationFrame(this._deferredCloseId);
       this._deferredCloseId = null;
@@ -106,27 +111,12 @@ export class AutoShowController {
   teardown(): void {
     this._abort?.abort();
     this._abort = null;
-    if (this._deferredCloseId !== null) {
-      cancelAnimationFrame(this._deferredCloseId);
-      this._deferredCloseId = null;
-    }
+    this.cancelPendingClose();
   }
 
   private _onDocumentFocusIn(e: FocusEvent): void {
-    if (this._host.disabled || !this._host.docked || !this._host.autoShow) return;
-
-    const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (this._host.shadowRoot?.contains(target) || this._host.contains(target)) return;
-
-    const inputEl = this._bridge.resolveInputFrom(target);
+    const inputEl = this._resolveAutoShowTarget(e);
     if (!inputEl) return;
-    if (this._isTargetOfOther(inputEl)) return;
-
-    const ids = this._bridge.getControlsList();
-    if (ids.length > 0) {
-      if (!this._matchesControls(target, ids)) return;
-    }
 
     const targetChanged = this._bridge.getTargetElement() !== inputEl;
     if (targetChanged) {
@@ -134,30 +124,8 @@ export class AutoShowController {
       this._bridge.resetTargetContext();
     }
     this._bridge.setTarget(inputEl, "autoShow");
-
-    // Detect keyboard type before open - this may trigger onInvalidation for
-    // keyboardType, but the target is already set so subsequent logic is safe.
-    // A refocus of the already-active target is not detectable while the
-    // keyboard is open: that element carries the inputmode="none" suppression
-    // written on its previous focus, which masks an authored
-    // numeric/decimal/tel value, so it keeps the type it already has. Closed,
-    // no target carries the mask, so a target set ahead of the first focus by
-    // setTargetElement() is still read from its authored markup.
-    if (
-      (targetChanged || !this._host.open) &&
-      this._host.autoType &&
-      this._bridge.getKeyboardTypeSource() !== "explicit"
-    ) {
-      const detected = detectKeyboardType(inputEl);
-      if (detected !== this._host.keyboardType) {
-        this._bridge.setKeyboardTypeInternal(detected);
-      }
-    }
-
-    if (this._deferredCloseId !== null) {
-      cancelAnimationFrame(this._deferredCloseId);
-      this._deferredCloseId = null;
-    }
+    this._detectKeyboardType(inputEl, targetChanged);
+    this.cancelPendingClose();
 
     if (!this._host.open) {
       this._bridge.show();
@@ -173,12 +141,49 @@ export class AutoShowController {
     }
   }
 
+  /**
+   * The editable element a document focusin should auto-show for, or `null`
+   * when this keyboard has to leave it alone.
+   */
+  private _resolveAutoShowTarget(e: FocusEvent): HTMLInputElement | HTMLTextAreaElement | null {
+    if (this._host.disabled || !this._host.docked || !this._host.autoShow) return null;
+
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return null;
+    if (this._host.shadowRoot?.contains(target) || this._host.contains(target)) return null;
+
+    const inputEl = this._bridge.resolveInputFrom(target);
+    if (!inputEl) return null;
+    if (this._isTargetOfOther(inputEl)) return null;
+
+    const ids = this._bridge.getControlsList();
+    if (ids.length > 0 && !this._matchesControls(target, ids)) return null;
+    return inputEl;
+  }
+
+  /**
+   * Detects the keyboard type before the open. This may trigger onInvalidation
+   * for keyboardType, but the target is already set so subsequent logic is safe.
+   * A refocus of the already-active target is not detectable while the keyboard
+   * is open: that element carries the inputmode="none" suppression written on
+   * its previous focus, which masks an authored numeric/decimal/tel value, so it
+   * keeps the type it already has. Closed, no target carries the mask, so a
+   * target set ahead of the first focus by setTargetElement() is still read
+   * from its authored markup.
+   */
+  private _detectKeyboardType(inputEl: HTMLInputElement | HTMLTextAreaElement, targetChanged: boolean): void {
+    if (!targetChanged && this._host.open) return;
+    if (!this._host.autoType || this._bridge.getKeyboardTypeSource() === "explicit") return;
+    const detected = detectKeyboardType(inputEl);
+    if (detected !== this._host.keyboardType) {
+      this._bridge.setKeyboardTypeInternal(detected);
+    }
+  }
+
   private _onDocumentFocusOut(_e: FocusEvent): void {
     if (!this._host.autoShow) return;
 
-    if (this._deferredCloseId !== null) {
-      cancelAnimationFrame(this._deferredCloseId);
-    }
+    this.cancelPendingClose();
 
     this._deferredCloseId = requestAnimationFrame(() => {
       this._deferredCloseId = null;

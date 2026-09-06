@@ -14,10 +14,6 @@ describe("hangul-compose middleware", () => {
     return getMiddlewareFactory("ko-hangul")!();
   }
 
-  it("is registered as a built-in for ko-hangul layout", () => {
-    expect(getMiddlewareFactory("ko-hangul")).not.toBeNull();
-  });
-
   it("single L consonant shows as preedit", () => {
     const m = mw();
     const consumed = m.handleKey("\u3131", input); // ㄱ

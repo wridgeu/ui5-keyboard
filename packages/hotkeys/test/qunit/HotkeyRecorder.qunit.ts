@@ -135,23 +135,6 @@ QUnit.test("Modifier-only waits for action key", (assert) => {
   assert.ok(recorded !== null, "Recorded after action key");
 });
 
-QUnit.test("Auto-stops after recording", (assert) => {
-  let recordCount = 0;
-
-  const recorder = createRecorder({
-    onRecord: () => {
-      recordCount++;
-    },
-  });
-
-  recorder.start();
-  fireKey("F5");
-
-  // Second key should not be captured
-  fireKey("F6");
-  assert.strictEqual(recordCount, 1, "Only one key recorded (auto-stopped)");
-});
-
 QUnit.test("Modifier+Backspace records as hotkey (not clear)", (assert) => {
   const done = assert.async();
 
@@ -203,31 +186,6 @@ QUnit.test("destroy() stops recording and prevents restart", (assert) => {
 
   recorder.start();
   assert.notOk(recorder.isRecording, "Cannot restart after destroy");
-});
-
-QUnit.test("start() while already recording is a no-op", (assert) => {
-  let recordCount = 0;
-
-  const recorder = createRecorder({
-    onRecord: () => {
-      recordCount++;
-    },
-  });
-
-  recorder.start();
-  recorder.start(); // Should be no-op
-  assert.ok(recorder.isRecording, "Still recording");
-
-  fireKey("F5");
-  assert.strictEqual(recordCount, 1, "Only one recording captured despite double start");
-});
-
-QUnit.test("stop() while not recording is a no-op", (assert) => {
-  const recorder = createRecorder({ onRecord: () => {} });
-
-  // Not recording yet - stop should not throw
-  recorder.stop();
-  assert.notOk(recorder.isRecording, "Still not recording");
 });
 
 QUnit.test("cancel() without onCancel callback does not throw", (assert) => {

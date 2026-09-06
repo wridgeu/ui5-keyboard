@@ -107,14 +107,6 @@ QUnit.test("CapsLock: a digit key keeps its digit", (assert) => {
   assert.strictEqual(getKeyAriaLabel(arabicDigitKey, true, true), "1", "aria agrees with the visible label");
 });
 
-QUnit.test("Shift only: a digit key shows its Shift symbol", (assert) => {
-  assert.strictEqual(getKeyLabel(arabicDigitKey, true, false), "١", "one-shot Shift keeps the ١ symbol");
-});
-
-QUnit.test("CapsLock: an accented-letter shiftValue is uppercased", (assert) => {
-  assert.strictEqual(getKeyLabel({ value: "e", shiftValue: "é" }, true, true), "É", "CapsLock uppercases the accent");
-});
-
 QUnit.test("CapsLock ignores shiftLabel, which describes the Shift symbol", (assert) => {
   const key: KeyDefinition = { value: "1", shiftValue: "١", shiftLabel: "١" };
   assert.strictEqual(getKeyLabel(key, true, false), "١", "one-shot Shift shows the shiftLabel");

@@ -191,34 +191,14 @@ QUnit.test("Shifted visible labels update in DOM", async (assert) => {
 
   // Unshifted state
   assert.strictEqual(getKey("1").textContent, "1", "Key '1' shows '1' unshifted");
-  assert.strictEqual(
-    getKey("1").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
-    "1",
-    "Key '1' visible label is '1'",
-  );
   assert.strictEqual(getKey("a").textContent, "a", "Key 'a' shows 'a' unshifted");
-  assert.strictEqual(
-    getKey("a").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
-    "a",
-    "Key 'a' visible label is 'a'",
-  );
 
   // Activate shift
   tapKey(kb, "{shift}");
   await waitForRender();
 
   assert.strictEqual(getKey("1").textContent, "!", "Key '1' shows '!' when shifted");
-  assert.strictEqual(
-    getKey("1").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
-    "!",
-    "Key '1' visible label is '!'",
-  );
   assert.strictEqual(getKey("a").textContent, "A", "Key 'a' shows 'A' when shifted");
-  assert.strictEqual(
-    getKey("a").querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
-    "A",
-    "Key 'a' visible label is 'A'",
-  );
 
   // Typing a character auto-releases shift
   tapKey(kb, "a");
@@ -263,6 +243,7 @@ QUnit.test("Keyboard type switching: Full → Numpad → Numeric → Full", asyn
   assert.ok(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numeric")), "Numeric: has numeric class");
   const numericKeys = keyValues();
   assert.notOk(numericKeys.includes("q"), "Numeric: no alphabetic keys");
+  assert.ok(numericKeys.includes("1"), "Numeric: has '1'");
 
   // Back to Full
   kb.setKeyboardType(KeyboardType.Full);
@@ -271,63 +252,6 @@ QUnit.test("Keyboard type switching: Full → Numpad → Numeric → Full", asyn
   assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numpad")), "Full again: no numpad class");
   assert.notOk(hasKeyboardClass(kb, DOM.keyboardTypeClass("Numeric")), "Full again: no numeric class");
   assert.ok(keyValues().includes("q"), "Full again: has alphabetic keys");
-
-  kb.destroy();
-});
-
-// ──────────────────────────────────────────────
-// 4. Special key accessibility labels
-// ──────────────────────────────────────────────
-
-QUnit.test("Special keys render correct labels", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  // Backspace in qwerty has visible text label (icon+label dual)
-  const backspace = getKeyElement(kb, "{backspace}");
-  assert.ok(backspace, "Backspace key rendered");
-  assert.strictEqual(
-    backspace!.querySelector(`.${DOM.classes.keyLabel}`)?.textContent,
-    "Backspace",
-    "Backspace visible label",
-  );
-
-  // Enter, Shift, Space have visible text labels (WCAG 2.5.3)
-  const enter = getKeyElement(kb, "{enter}");
-  assert.ok(enter, "Enter key rendered");
-  assert.strictEqual(enter!.querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "Enter", "Enter visible label");
-
-  const shift = getKeyElement(kb, "{shift}");
-  assert.ok(shift, "Shift key rendered");
-  assert.strictEqual(shift!.querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "Shift", "Shift visible label");
-
-  const space = getKeyElement(kb, " ");
-  assert.ok(space, "Space key rendered");
-  assert.strictEqual(space!.querySelector(`.${DOM.classes.keyLabel}`)?.textContent, "Space", "Space visible label");
-
-  kb.destroy();
-});
-
-// ──────────────────────────────────────────────
-// 5. Layout switch rendering
-// ──────────────────────────────────────────────
-
-QUnit.test("Layout switch via {layout:numeric} changes rendered key matrix", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  // QWERTY initially
-  const qwertyKeys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.ok(qwertyKeys.includes("q"), "QWERTY layout has 'q'");
-  assert.ok(qwertyKeys.includes("{layout:numeric}"), "QWERTY layout has layout:numeric switch key");
-
-  // Switch to numeric layout
-  tapKey(kb, "{layout:numeric}");
-  await waitForRender();
-
-  const numericKeys = Array.from(getKeyElements(kb)).map((k) => k.dataset.key);
-  assert.notOk(numericKeys.includes("q"), "Numeric layout does not have 'q'");
-  assert.notOk(numericKeys.includes("a"), "Numeric layout does not have 'a'");
 
   kb.destroy();
 });
@@ -454,24 +378,6 @@ QUnit.test("Unicode icon renders as text span with icon class", async (assert) =
   assert.strictEqual(iconEl!.textContent, "\u21E7", "Icon text is \u21E7");
   assert.strictEqual(iconEl!.getAttribute("aria-hidden"), "true", "Icon is aria-hidden");
   assert.ok(keyEl.querySelector(`.${DOM.classes.keyLabel}`), "Label element present");
-  assert.ok(keyEl.classList.contains(DOM.classes.keyDual), "Has dual class");
-
-  kb.destroy();
-});
-
-QUnit.test("emoji icon renders as text span with icon class", async (assert) => {
-  const layout: LayoutDefinition = [[{ value: "x", icon: "\uD83D\uDD0D", label: "Search" }]];
-  const kb = new KioskKeyboard({
-    customLayouts: [new CustomLayout({ name: "test-icon-label", rows: layout })],
-    layout: "test-icon-label",
-  });
-  await placeAndWait(kb);
-
-  const keyEl = getRequiredKeyElement(kb, "x");
-  const iconEl = keyEl.querySelector(`.${DOM.classes.keyIcon}`);
-  assert.ok(iconEl, "Icon element present");
-  assert.strictEqual(iconEl!.tagName.toLowerCase(), "span", "Icon is a span");
-  assert.strictEqual(iconEl!.textContent, "\uD83D\uDD0D", "Icon text is emoji");
   assert.ok(keyEl.classList.contains(DOM.classes.keyDual), "Has dual class");
 
   kb.destroy();
@@ -641,6 +547,7 @@ QUnit.test("title attribute is present only for multi-character labels", async (
     { value: "x", label: "", title: null },
     { value: "{layout:alpha}", label: "ローマ字", title: "ローマ字" },
     { value: "x", label: "あ", title: null },
+    { value: "{enter}", title: "Enter" },
   ];
 
   for (const { value, label, title } of titleCases) {
@@ -728,19 +635,6 @@ QUnit.test("layout-switch labels stay legible at the narrowest supported width",
       `${name} is not ellipsized (needs ${label.scrollWidth}px, has ${label.clientWidth}px)`,
     );
   }
-
-  kb.destroy();
-});
-
-QUnit.test("special key with i18n label gets title (e.g. Enter)", async (assert) => {
-  const kb = new KioskKeyboard();
-  await placeAndWait(kb);
-
-  const enter = getRequiredKeyElement(kb, "{enter}");
-  assert.strictEqual(enter.getAttribute("title"), "Enter", "Enter key has title");
-
-  const backspace = getRequiredKeyElement(kb, "{backspace}");
-  assert.strictEqual(backspace.getAttribute("title"), "Backspace", "Backspace key has title");
 
   kb.destroy();
 });

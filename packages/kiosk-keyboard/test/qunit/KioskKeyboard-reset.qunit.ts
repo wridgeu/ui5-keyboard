@@ -25,8 +25,8 @@ async function makeKeyboard(): Promise<{ kb: KioskKeyboard; input: Input }> {
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({
     controls: [input.getId()],
-    customLayouts: [new CustomLayout({ name: "qwerty", rows: layout })],
-    layout: "qwerty",
+    customLayouts: [new CustomLayout({ name: "reset-base", rows: layout })],
+    layout: "reset-base",
   });
   await placeAndWait(kb);
   input.focus();
@@ -98,7 +98,7 @@ QUnit.test("returns to the base layout after a secondary-layout switch", async (
 
   kb.reset();
   await waitForRender();
-  assert.strictEqual(kb.getLayout(), "qwerty", "reset returns to the base layout");
+  assert.strictEqual(kb.getLayout(), "reset-base", "reset returns to the base layout");
 
   cleanup(kb, input);
 });

@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "import", "unicorn"],
+  "plugins": ["typescript", "import", "unicorn", "oxc"],
   "jsPlugins": [
     {
       "name": "test-guardrails",
@@ -21,16 +21,21 @@
   },
   "rules": {
     "eqeqeq": "warn",
+    "complexity": "error",
+    "no-useless-call": "error",
     "no-console": "warn",
     "no-underscore-dangle": "off",
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-unsafe-function-type": "error",
     "unicorn/no-null": "off",
-    "unicorn/prefer-event-target": "off",
+    "unicorn/prefer-event-target": "warn",
     "unicorn/prefer-top-level-await": "off",
-    "unicorn/no-static-only-class": "off",
+    "unicorn/no-static-only-class": "warn",
     "unicorn/prefer-global-this": "off",
     "unicorn/consistent-function-scoping": "off",
+    "unicorn/prefer-array-find": "error",
+    "unicorn/prefer-array-flat-map": "error",
+    "oxc/no-accumulating-spread": "error",
     "code-quality/no-double-type-assertion": "error",
     "code-quality/no-console-only-catch": "warn",
     "code-quality/no-redundant-boolean-return": "warn",
@@ -49,7 +54,6 @@
       "rules": {
         "@typescript-eslint/no-explicit-any": "off",
         "no-unused-expressions": "off",
-        "no-shadow": "off",
         "no-console": "off",
         "import/no-unassigned-import": "off",
         "code-quality/no-double-type-assertion": "off"
@@ -58,8 +62,20 @@
     {
       "files": ["packages/*/src/**/*.ts"],
       "rules": {
-        "no-console": "off",
+        "no-await-in-loop": "warn",
+        "no-console": [
+          "warn",
+          {
+            "allow": ["warn", "error"]
+          }
+        ],
         "import/no-unassigned-import": "off"
+      }
+    },
+    {
+      "files": ["packages/kiosk-keyboard-webc/src/*Template.tsx"],
+      "rules": {
+        "oxc/no-this-in-exported-function": "off"
       }
     },
     {

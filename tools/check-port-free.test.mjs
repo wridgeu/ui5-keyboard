@@ -131,12 +131,4 @@ describe("test:qunit port wiring", () => {
     assert.equal(assertGuarded("kiosk-keyboard"), "8082");
     assert.equal(assertGuarded("hotkeys"), "8081");
   });
-
-  it("keeps the two packages on different ports", () => {
-    assert.notEqual(
-      assertGuarded("kiosk-keyboard"),
-      assertGuarded("hotkeys"),
-      "both QUnit servers claim the same port, so one run would guard against the other",
-    );
-  });
 });

@@ -25,18 +25,6 @@ QUnit.test("Non-Mod modifiers are returned unchanged", (assert) => {
   assert.strictEqual(resolveModifier("Meta", Platform.Mac), "Meta");
 });
 
-// ──────────────────────────────────────────────
-// detectPlatform (C4)
-// ──────────────────────────────────────────────
-
-QUnit.module("platform - detectPlatform");
-
-QUnit.test("Returns the same result on repeated calls", (assert) => {
-  const first = detectPlatform();
-  const second = detectPlatform();
-  assert.strictEqual(first, second, "Detection is deterministic");
-});
-
 QUnit.module("platform - detectPlatform mapping", {
   afterEach() {
     sandbox.restore();

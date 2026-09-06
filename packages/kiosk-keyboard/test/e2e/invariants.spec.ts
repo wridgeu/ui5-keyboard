@@ -10,9 +10,9 @@ import { openPage, keyboardRoot, setDocumentDirection } from "./helpers.js";
 // Every fixture renders the qwerty layout. kb-qwerty follows the viewport
 // width, kb-narrow is pinned to a 320px container (below the narrowest tier on
 // every profile, including desktop), kb-accent-variants arms the long-press
-// variants that carry the corner hint, and kb-qwerty-nav-compact prepends the
-// 2x4 navigation rows.
-const FIXTURES = ["kb-qwerty", "kb-narrow", "kb-accent-variants", "kb-qwerty-nav-compact"];
+// variants that carry the corner hint, kb-qwerty-nav-compact prepends the 2x4
+// navigation rows, and kb-unconstrained sits in a host with no cap on either axis.
+const FIXTURES = ["kb-qwerty", "kb-narrow", "kb-accent-variants", "kb-qwerty-nav-compact", "kb-unconstrained"];
 
 // Fixtures whose host caps the keyboard's height, directly or through an
 // ancestor. The block half of the target-size floor never lifts, so these are
@@ -28,6 +28,10 @@ const HEIGHT_CAPPED_FIXTURES = [
   "kb-ancestor-tiny-wrap",
   "kb-narrow-short",
   "kb-container-fixed",
+  "kb-vw-height-short",
+  "kb-vw-height-tiny",
+  "kb-flex-auto-wrap",
+  "kb-grid-auto-wrap",
 ];
 
 /** WCAG 2.5.8 (AA) target size, less a sub-pixel rounding allowance. */

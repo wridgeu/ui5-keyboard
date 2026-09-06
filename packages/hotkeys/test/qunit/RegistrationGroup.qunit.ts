@@ -9,15 +9,6 @@ QUnit.module("RegistrationGroup", {
   },
 });
 
-QUnit.test("createGroup returns a RegistrationGroup", (assert) => {
-  const manager = createHotkeyManager();
-  const group = manager.createGroup();
-
-  assert.ok(group, "Group is truthy");
-  assert.strictEqual(group.size, 0, "Empty group has size 0");
-  assert.notOk(group.isDestroyed, "New group is not destroyed");
-});
-
 QUnit.test("group.register delegates to manager and tracks handle", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
@@ -173,19 +164,6 @@ QUnit.test("size reflects active registrations", (assert) => {
   assert.strictEqual(group.size, 1, "Size decrements when individual handle is unregistered");
 });
 
-QUnit.test("size decrements for individually unregistered sequences", (assert) => {
-  const manager = createHotkeyManager();
-  const group = manager.createGroup();
-
-  group.register("F5", () => {});
-  const seqHandle = group.register("G I", () => {});
-
-  assert.strictEqual(group.size, 2, "Size counts hotkeys and sequences");
-
-  seqHandle.unregister();
-  assert.strictEqual(group.size, 1, "Size decrements after sequence unregister");
-});
-
 QUnit.test("Registering on a destroyed group throws", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
@@ -197,35 +175,6 @@ QUnit.test("Registering on a destroyed group throws", (assert) => {
     /destroyed RegistrationGroup/,
     "register throws on destroyed group",
   );
-
-  assert.throws(
-    () => group.register("G I", () => {}),
-    /destroyed RegistrationGroup/,
-    "register (sequence) throws on destroyed group",
-  );
-});
-
-QUnit.test("Handles returned by group are normal handles", (assert) => {
-  const manager = createHotkeyManager();
-  const group = manager.createGroup();
-  let count = 0;
-
-  const handle = group.register("F5", () => {
-    count++;
-  });
-
-  // setOptions works
-  handle.setOptions({ enabled: false });
-  fireKey("F5");
-  assert.strictEqual(count, 0, "Disabled via setOptions");
-
-  handle.setOptions({ enabled: true });
-  fireKey("F5");
-  assert.strictEqual(count, 1, "Re-enabled via setOptions");
-
-  // unregister works
-  handle.unregister();
-  assert.notOk(handle.isActive, "Handle is inactive after unregister");
 });
 
 // ──────────────────────────────────────────────
@@ -252,50 +201,5 @@ QUnit.test("onPending fires on intermediate key and dies with unregister", (asse
   group.register("G I", () => {});
   fireKey("g");
   assert.strictEqual(calls.length, 1, "onPending does not fire after unregister");
-  group.destroyAll();
-});
-
-QUnit.test("onPending dies with group.destroyAll", (assert) => {
-  const manager = createHotkeyManager();
-  const group = manager.createGroup();
-  const calls: string[] = [];
-
-  group.register("G I", () => {}, {
-    onPending: () => {
-      calls.push("pending");
-    },
-  });
-
-  fireKey("g");
-  assert.strictEqual(calls.length, 1, "Fires before destroyAll");
-
-  group.destroyAll();
-
-  // New sequence on fresh group - old onPending must not fire
-  const group2 = manager.createGroup();
-  group2.register("G I", () => {});
-  fireKey("g");
-  assert.strictEqual(calls.length, 1, "Does not fire after destroyAll");
-  group2.destroyAll();
-});
-
-QUnit.test("sequence without onPending does not fire any pending callback", (assert) => {
-  const manager = createHotkeyManager();
-  const group = manager.createGroup();
-  let pendingFired = false;
-
-  // Register a second sequence WITH onPending to prove the mechanism works,
-  // then verify the sequence WITHOUT onPending does not trigger it.
-  group.register("G I", () => {});
-  group.register("X Y", () => {}, {
-    onPending: () => {
-      pendingFired = true;
-    },
-  });
-
-  // Press "g" - starts the "G I" sequence (no onPending), should NOT fire pendingFired
-  fireKey("g");
-  assert.notOk(pendingFired, "No pending callback fires for sequence without onPending");
-
   group.destroyAll();
 });

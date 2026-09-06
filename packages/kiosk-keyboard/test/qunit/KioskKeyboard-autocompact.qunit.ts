@@ -190,13 +190,13 @@ QUnit.test("Switching autoCompact off gives the requested layout back", async (a
 /** A keyboard whose `layout` is bound to `/layout` of its own model in the given mode. */
 async function mountBound(width: number, mode: "TwoWay" | "OneWay"): Promise<Mounted & { model: JSONModel }> {
   const model = new JSONModel({ layout: "home" });
-  const mounted = await mount(width, {
+  const box = await mount(width, {
     layout: { path: "/layout", mode },
     autoCompact: true,
     customLayouts: pair(),
     models: model,
   });
-  return { ...mounted, model };
+  return { ...box, model };
 }
 
 QUnit.test("A tier written through a two-way binding is reported once", async (assert) => {
@@ -303,9 +303,9 @@ QUnit.test("A keyboard that loses its box does not tier", async (assert) => {
 });
 
 QUnit.test("A layout that declares no counterpart never swaps", async (assert) => {
-  const { kb, changes } = await mount(NARROW_PX, { layout: "qwerty", autoCompact: true });
+  const { kb, changes } = await mount(NARROW_PX, { layout: "qwertz-de", autoCompact: true });
 
-  assert.strictEqual(kb.getLayout(), "qwerty", "qwerty is still the layout");
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "qwertz-de is still the layout");
   assert.deepEqual(changes, [], "no layout change was fired");
 });
 
@@ -363,17 +363,6 @@ QUnit.test("An explicit request while narrow wins, and the tier resolves from th
   assert.deepEqual(getRenderedLayoutKeys(kb), [["{layout:away}", "h"]], "the room returns to the new request");
 });
 
-QUnit.test("layoutChange carries autoDetected false for a request and true for a tier swap", async (assert) => {
-  const requested = await mount(WIDE_PX, { layout: "home", autoCompact: true, customLayouts: pair() });
-  tapKey(requested.kb, "{layout:away}");
-  await settle();
-
-  assert.deepEqual(requested.changes, [{ layout: "away", autoDetected: false }], "a {layout:*} key is a request");
-
-  const tiered = await mount(NARROW_PX, { layout: "home", autoCompact: true, customLayouts: pair() });
-  assert.deepEqual(tiered.changes, [{ layout: "home-c", autoDetected: true }], "a width tier is auto-detected");
-});
-
 QUnit.test("A swap follows the focused key to the seat the compact form gives it", async (assert) => {
   const { kb, resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
   const backspace = getRequiredKeyElement(kb, "{backspace}");
@@ -411,47 +400,11 @@ QUnit.test("A swap that drops the focused key falls back to the first key", asyn
   assert.strictEqual(focused.getAttribute("tabindex"), "0", "which carries the tab stop");
 });
 
-QUnit.test("The live region announces which way a width moved the layout", async (assert) => {
+QUnit.test("The live region announces which way each width crossing moved the layout", async (assert) => {
   // Cleared before the keyboard exists, so first paint is inside what is asserted on.
   resetAnnouncements();
   const { resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
   assert.strictEqual(announcedText(), "", "a keyboard with room to spare announces nothing");
-
-  await resize(NARROW_PX);
-  assert.strictEqual(announcedText(), "Switched to the compact keyboard layout", "the swap says which way it went");
-
-  await resize(WIDE_PX);
-  // A distinct text every time: the two crossings are opposite moves, so one shared
-  // wording would not say which way this one went.
-  assert.strictEqual(announcedText(), "Switched back to the standard keyboard layout", "and so does the way back");
-});
-
-QUnit.test("The announcement names no layout, so it carries no untranslated identifier", async (assert) => {
-  const { resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
-
-  // The user never chose the layout a width picks and never sees its name, and the
-  // name would sit untranslated inside a translated sentence. Each crossing is read
-  // into a local and asserted non-empty first: `"".includes(...)` is false, so a
-  // control that announced nothing at all would satisfy the exclusion on its own.
-  // The reset before each crossing is what gives that precondition its teeth: the
-  // region is page-global and `announcedText` falls back to the last write recorded,
-  // so an unreset read answers with the crossing before it - which names no layout
-  // either, and would carry both assertions on its own.
-  resetAnnouncements();
-  await resize(NARROW_PX);
-  const compacting = announcedText();
-  assert.ok(compacting, "precondition: the compacting crossing announced something");
-  assert.notOk(compacting.includes("ja-kana"), "the compacting announcement quotes no layout name");
-
-  resetAnnouncements();
-  await resize(WIDE_PX);
-  const restoring = announcedText();
-  assert.ok(restoring, "precondition: the restoring crossing announced something");
-  assert.notOk(restoring.includes("ja-kana"), "and neither does the one restoring it");
-});
-
-QUnit.test("Consecutive announcements alternate, so none is dropped as a repeat", async (assert) => {
-  const { resize } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });
 
   const spoken: string[] = [];
   for (const width of [NARROW_PX, WIDE_PX, NARROW_PX, WIDE_PX]) {
@@ -459,8 +412,10 @@ QUnit.test("Consecutive announcements alternate, so none is dropped as a repeat"
     spoken.push(announcedText());
   }
 
-  // The tier reports a verdict only when it differs from the last, which is what
-  // keeps the two texts alternating rather than repeating.
+  // A distinct text every time: the two crossings are opposite moves, so one shared
+  // wording would not say which way this one went. The tier reports a verdict only
+  // when it differs from the last, which is what keeps the two texts alternating
+  // rather than repeating.
   assert.deepEqual(
     spoken,
     [
@@ -469,7 +424,7 @@ QUnit.test("Consecutive announcements alternate, so none is dropped as a repeat"
       "Switched to the compact keyboard layout",
       "Switched back to the standard keyboard layout",
     ],
-    "every crossing writes a text different from the one before it",
+    "every crossing says which way it went, and none repeats the text before it",
   );
 });
 

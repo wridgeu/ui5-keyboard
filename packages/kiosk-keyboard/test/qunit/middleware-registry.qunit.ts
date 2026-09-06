@@ -5,11 +5,6 @@ const BUILT_IN_LAYOUT = "ko-hangul";
 
 QUnit.module("middleware-registry - getMiddlewareFactory");
 
-QUnit.test("Returns the registered factory function for a built-in layout", (assert) => {
-  const factory = getMiddlewareFactory(BUILT_IN_LAYOUT);
-  assert.notStrictEqual(factory, null, "A factory is registered for the built-in layout");
-});
-
 QUnit.test("Each factory call creates a fresh instance", (assert) => {
   const factory = getMiddlewareFactory(BUILT_IN_LAYOUT)!;
   const a = factory();
@@ -59,6 +54,5 @@ QUnit.test("Falls through to built-in when instance map lacks the layout", (asse
     reset: () => {},
   });
   const factory = getMiddlewareFactory(BUILT_IN_LAYOUT, new Map([["other", otherFactory]]));
-  assert.notStrictEqual(factory, null, "Falls through to built-in factory");
   assert.strictEqual(factory, getMiddlewareFactory(BUILT_IN_LAYOUT), "Returns the exact registered built-in factory");
 });

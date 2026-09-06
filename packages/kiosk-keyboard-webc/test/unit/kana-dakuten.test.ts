@@ -10,23 +10,25 @@ describe("kana-dakuten middleware", () => {
     input.setSelectionRange(0, 0);
   });
 
-  it("is registered as a built-in for ja-kana layout", () => {
-    expect(getMiddlewareFactory("ja-kana")).not.toBeNull();
-  });
-
-  it("passes through regular kana (not dakuten/handakuten)", () => {
+  it("passes through keys other than dakuten/handakuten", () => {
     const mw = getMiddlewareFactory("ja-kana")!()!;
-    const consumed = mw.handleKey("\u304B", input); // か
-    expect(consumed).toBe(false);
+    for (const key of ["\u304B", "{backspace}", "{enter}"]) {
+      expect(mw.handleKey(key, input), key).toBe(false); // か, backspace, enter
+    }
   });
 
-  it("composes ka + dakuten into ga", () => {
+  it("composes a kana + dakuten into its voiced form", () => {
     const mw = getMiddlewareFactory("ja-kana")!()!;
     input.value = "\u304B"; // か
     input.setSelectionRange(1, 1);
     const consumed = mw.handleKey("\u309B", input); // ゛
     expect(consumed).toBe(true);
     expect(input.value).toBe("\u304C"); // が
+
+    input.value = "\u306F"; // は
+    input.setSelectionRange(1, 1);
+    mw.handleKey("\u309B", input); // ゛
+    expect(input.value).toBe("\u3070"); // ば
   });
 
   it("composes ha + handakuten into pa", () => {
@@ -36,14 +38,6 @@ describe("kana-dakuten middleware", () => {
     const consumed = mw.handleKey("\u309C", input); // ゜
     expect(consumed).toBe(true);
     expect(input.value).toBe("\u3071"); // ぱ
-  });
-
-  it("composes ha + dakuten into ba", () => {
-    const mw = getMiddlewareFactory("ja-kana")!()!;
-    input.value = "\u306F"; // は
-    input.setSelectionRange(1, 1);
-    mw.handleKey("\u309B", input); // ゛
-    expect(input.value).toBe("\u3070"); // ば
   });
 
   it("does not compose when preceding char has no dakuten form", () => {
@@ -57,18 +51,6 @@ describe("kana-dakuten middleware", () => {
   it("does not compose when input is empty", () => {
     const mw = getMiddlewareFactory("ja-kana")!()!;
     const consumed = mw.handleKey("\u309B", input); // ゛
-    expect(consumed).toBe(false);
-  });
-
-  it("passes through backspace without consuming", () => {
-    const mw = getMiddlewareFactory("ja-kana")!()!;
-    const consumed = mw.handleKey("{backspace}", input);
-    expect(consumed).toBe(false);
-  });
-
-  it("passes through enter without consuming", () => {
-    const mw = getMiddlewareFactory("ja-kana")!()!;
-    const consumed = mw.handleKey("{enter}", input);
     expect(consumed).toBe(false);
   });
 

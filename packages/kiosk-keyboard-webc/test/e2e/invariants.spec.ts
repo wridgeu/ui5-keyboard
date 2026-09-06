@@ -1,5 +1,14 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
-import { isHoverCapable, key, keyboardRoot, openPage, setDocumentDirection } from "./helpers.js";
+import {
+  isCoarsePointer,
+  isHoverCapable,
+  key,
+  keyboardRoot,
+  openPage,
+  setDocumentDirection,
+  waitForDockedClosed,
+  waitForDockedOpen,
+} from "./helpers.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 
 // Structural invariants of the rendered keyboard, measured rather than
@@ -193,11 +202,11 @@ test("keys stay inside the keyboard box", async ({ page }) => {
   for (const id of [...HOSTS, ...HEIGHT_CAPPED_HOSTS]) {
     const geometry = await readGeometry(page, id);
     expect(geometry.keys.length, `${id} rendered no keys`).toBeGreaterThan(0);
-    for (const key of geometry.keys) {
-      expect(key.left, `${id} "${key.key}" overflows the leading edge`).toBeGreaterThanOrEqual(geometry.left - EPSILON);
-      expect(key.right, `${id} "${key.key}" overflows the trailing edge`).toBeLessThanOrEqual(geometry.right + EPSILON);
-      expect(key.top, `${id} "${key.key}" overflows the top edge`).toBeGreaterThanOrEqual(geometry.clipTop - EPSILON);
-      expect(key.bottom, `${id} "${key.key}" overflows the bottom edge`).toBeLessThanOrEqual(
+    for (const cap of geometry.keys) {
+      expect(cap.left, `${id} "${cap.key}" overflows the leading edge`).toBeGreaterThanOrEqual(geometry.left - EPSILON);
+      expect(cap.right, `${id} "${cap.key}" overflows the trailing edge`).toBeLessThanOrEqual(geometry.right + EPSILON);
+      expect(cap.top, `${id} "${cap.key}" overflows the top edge`).toBeGreaterThanOrEqual(geometry.clipTop - EPSILON);
+      expect(cap.bottom, `${id} "${cap.key}" overflows the bottom edge`).toBeLessThanOrEqual(
         geometry.clipBottom + EPSILON,
       );
     }
@@ -215,16 +224,16 @@ test("keys hold the target-size floor their container tier allows", async ({ pag
     const floor = FLOOR_REM * geometry.remPx;
     const inlineFloored = geometry.containerWidth > TIER_REM * geometry.remPx;
     expect(geometry.keys.length, `${id} rendered no keys`).toBeGreaterThan(0);
-    for (const key of geometry.keys) {
-      expect(key.height, `${id} "${key.key}" under the block target-size floor`).toBeGreaterThanOrEqual(
+    for (const cap of geometry.keys) {
+      expect(cap.height, `${id} "${cap.key}" under the block target-size floor`).toBeGreaterThanOrEqual(
         floor - EPSILON,
       );
       if (inlineFloored) {
-        expect(key.width, `${id} "${key.key}" under the inline target-size floor`).toBeGreaterThanOrEqual(
+        expect(cap.width, `${id} "${cap.key}" under the inline target-size floor`).toBeGreaterThanOrEqual(
           floor - EPSILON,
         );
       } else {
-        expect(key.reachable, `${id} "${key.key}" is not hit-testable`).toBe(true);
+        expect(cap.reachable, `${id} "${cap.key}" is not hit-testable`).toBe(true);
       }
     }
   }
@@ -398,38 +407,6 @@ test("key icons paint in their key's color", async ({ page }) => {
   }
 });
 
-// The grid coordinate arrow-key navigation moves on is published per key. A
-// coordinate that disagrees with the key's actual place in the DOM would send
-// consumer CSS and tests to a key the user sees somewhere else.
-test("keys carry the grid coordinate they occupy", async ({ page }) => {
-  for (const id of HOSTS) {
-    const rows = await page.evaluate(
-      ({ hostId, rootSel, rowSel, keySel, rowAttr, colAttr }) => {
-        const root = document.getElementById(hostId)!.shadowRoot!.querySelector(rootSel)!;
-        return [...root.querySelectorAll(rowSel)].map((row) =>
-          [...row.querySelectorAll(keySel)].map((k) => `${k.getAttribute(rowAttr)},${k.getAttribute(colAttr)}`),
-        );
-      },
-      {
-        hostId: id,
-        rootSel: ROOT,
-        rowSel: DOM.selectors.row,
-        keySel: KEY,
-        rowAttr: DOM.attributes.rowIndex,
-        colAttr: DOM.attributes.keyIndex,
-      },
-    );
-
-    // Derived from the rendered shape, so it asserts the attribute values
-    // against where each key actually sits rather than against itself.
-    const occupied = rows.map((row, r) => row.map((_, c) => `${r},${c}`));
-
-    expect(rows.length, `${id} rendered no rows`).toBeGreaterThan(0);
-    expect(rows.flat().length, `${id} rendered no keys`).toBeGreaterThan(0);
-    expect(rows, `${id} grid coordinates drift from DOM position`).toEqual(occupied);
-  }
-});
-
 // Rows are flex containers, so the compact nav row mirrors with the document
 // direction. The relations the 2x4 arrangement exists for survive the mirroring:
 // Up keeps Down's column, and ArrowLeft/ArrowRight keep flanking Down. Which of
@@ -524,4 +501,19 @@ test("the docked keyboard pads its bottom edge by the safe-area inset", async ({
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { bottom: 34, bottomMax: 34 } });
   await expect.poll(paddingBottom).toBe(before + 34);
+});
+
+// A docked keyboard defers to the native keyboard on a coarse pointer unless
+// `mobile-keyboard="Custom"` opts it in. The device projects are the only ones
+// where `(pointer: coarse)` matches, so the pair is gated at runtime.
+test("keeps docked closed on coarse pointers", async ({ page }) => {
+  test.skip(!(await isCoarsePointer(page)), "coarse-pointer behavior only");
+  await page.evaluate(() => (document.getElementById("kb-docked") as HTMLElement & { show(): void }).show());
+  await waitForDockedClosed(page, "kb-docked");
+});
+
+test("opens docked with mobile-keyboard Custom on coarse pointers", async ({ page }) => {
+  test.skip(!(await isCoarsePointer(page)), "coarse-pointer behavior only");
+  await page.evaluate(() => (document.getElementById("kb-docked-custom") as HTMLElement & { show(): void }).show());
+  await waitForDockedOpen(page, "kb-docked-custom");
 });

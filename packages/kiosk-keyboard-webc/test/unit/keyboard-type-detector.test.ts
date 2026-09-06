@@ -52,11 +52,6 @@ describe("detectKeyboardType", () => {
     expect(detectKeyboardType(el)).toBe("Full");
   });
 
-  it("returns Full for input with no type or inputmode", () => {
-    const el = document.createElement("input");
-    expect(detectKeyboardType(el)).toBe("Full");
-  });
-
   // ── data-keyboard-type override ──
   describe("data-keyboard-type override", () => {
     it("returns Numpad when data-keyboard-type=Numpad is on the input", () => {

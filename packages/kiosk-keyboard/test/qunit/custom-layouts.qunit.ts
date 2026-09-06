@@ -126,23 +126,12 @@ QUnit.test("A custom layout shadows the built-in layout of the same name", async
 QUnit.test("A custom layout that does not match the active name falls through to built-in", async (assert) => {
   const { kb } = await mount({
     customLayouts: [new CustomLayout({ name: "unrelated", rows: makeLayout("x") })],
-    layout: "qwerty",
+    layout: "numeric",
   });
 
-  const qwerty = KioskKeyboard.getRegisteredLayout("qwerty")!;
-  const expected = qwerty.map((row) => row.map((k) => k.value));
-  assert.deepEqual(getRenderedLayoutKeys(kb), expected, "Falls through to built-in qwerty");
-});
-
-QUnit.test("Unknown layout falls through to built-in default qwerty", async (assert) => {
-  const { kb } = await mount({
-    customLayouts: [new CustomLayout({ name: "other", rows: makeLayout("o") })],
-    layout: "nonexistent",
-  });
-
-  const qwerty = KioskKeyboard.getRegisteredLayout("qwerty")!;
-  const expected = qwerty.map((row) => row.map((k) => k.value));
-  assert.deepEqual(getRenderedLayoutKeys(kb), expected, "Falls through to built-in qwerty");
+  const numeric = KioskKeyboard.getRegisteredLayout("numeric")!;
+  const expected = numeric.map((row) => row.map((k) => k.value));
+  assert.deepEqual(getRenderedLayoutKeys(kb), expected, "Falls through to built-in numeric");
 });
 
 QUnit.test("A custom layout overrides a built-in for one control without affecting another", async (assert) => {
@@ -166,9 +155,10 @@ QUnit.test("A custom layout overrides a built-in for one control without affecti
   await placeAndWait(kbDefault);
 
   assert.deepEqual(getRenderedLayoutKeys(kbWithOverride), [["1", "2"]], "Override wins for the controlling instance");
-  assert.notDeepEqual(
+  const qwerty = KioskKeyboard.getRegisteredLayout("qwerty")!;
+  assert.deepEqual(
     getRenderedLayoutKeys(kbDefault),
-    [["1", "2"]],
+    qwerty.map((row) => row.map((k) => k.value)),
     "Other instance still sees the original built-in qwerty",
   );
 
