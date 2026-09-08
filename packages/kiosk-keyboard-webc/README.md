@@ -1384,6 +1384,9 @@ npm run build
 # Unit tests (Vitest, jsdom)
 npm test
 
+# Unit tests in watch mode
+npm run test:watch
+
 # Component tests (Web Test Runner, Playwright)
 npm run test:component
 
