@@ -1,6 +1,7 @@
 # autoCompact: adversarial test-validation hypotheses
 
 Date: 2026-08-04
+Status: Shipped. Historical record; later code changes are not folded back in.
 Issue: #216 (custom layouts; the `autoCompact` width tier and the `ja-kana-compact` layout)
 
 Per CLAUDE.md section 7, a green suite can lie. This change adds a width tier that swaps a
@@ -15,7 +16,8 @@ Status legend: `CLEARED` = red seen and reverted. `NOT CLEARED` = the hypothesis
 gap is real and is recorded rather than papered over.
 
 Baselines the reds below are measured against: kiosk `testsuite.qunit` 46 pages, exit 0,
-`KioskKeyboard-autocompact` 8/8; webc vitest 30 files / 584 tests; webc component
+`KioskKeyboard-autocompact` 8/8 (the page has since grown to 21 tests, so every count below reads
+against the 8-test page of the time); webc vitest 30 files / 584 tests; webc component
 `317 passed, 6 failed` (the six are a pre-existing webc defect, see H3); kiosk e2e
 `invariants` 6 passed; webc e2e `invariants` 8 passed.
 

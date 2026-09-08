@@ -326,8 +326,8 @@ const library = Lib.init({
 export default library;
 
 /**
- * The built-in Latin-diacritic accent-variant table and its type, re-exported so
- * consumers can spread it to extend the defaults when supplying a variant table.
+ * The built-in Latin-diacritic accent-variant table and its type, re-exported for
+ * inspection: to read what the defaults are, or to build a table from them.
  *
  * @public
  * @since 0.1.0

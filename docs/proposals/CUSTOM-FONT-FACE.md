@@ -54,10 +54,12 @@ glyphs that exhibit rendering issues at small key sizes.
 
 ## Current workaround
 
-Extra-narrow non-numpad keyboards now reduce horizontal key padding from
-`0.25rem` to `0.125rem` by default. That gives wide glyphs like `@`, `%`, and
-`&` more room before the touch target itself needs to shrink, which improves
-the phone-width screenshots without introducing glyph-specific offsets.
+At a container width of 20rem or below, non-numpad keys take their padding from
+`--ui5KioskKeyboard-keyPaddingXs` (`--kiosk-keyboard-key-padding-xs` in the webc
+twin), whose default trims the inline inset from `0.25rem` to `0.125rem`. That
+gives wide glyphs like `@`, `%`, and `&` more room before the touch target itself
+needs to shrink, which improves the phone-width screenshots without introducing
+glyph-specific offsets.
 
 This proposal remains relevant if future visual review still finds optical
 centering issues that spacing alone cannot solve. A custom font face would be a

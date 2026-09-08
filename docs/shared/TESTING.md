@@ -4,12 +4,12 @@ Developer reference for the test infrastructure across all packages. For consume
 
 ## Test Stack
 
-| Layer            | Framework                       | Packages                    | Purpose                                                                  |
-| ---------------- | ------------------------------- | --------------------------- | ------------------------------------------------------------------------ |
-| **Unit**         | QUnit (via ui5-test-runner)     | `kiosk-keyboard`, `hotkeys` | UI5 control logic in real browser (puppeteer backend, chromium)          |
-| **Unit**         | Vitest (jsdom)                  | `kiosk-keyboard-webc`       | Pure logic (layout registry, grapheme, shift-state, etc.)                |
-| **Component**    | Web Test Runner + Playwright    | `kiosk-keyboard-webc`       | DOM integration, events, attributes, accessibility                       |
-| **E2E / Visual** | Playwright (`toHaveScreenshot`) | both kiosk packages         | Visual regression, focus flows, auto-type, RTL, accessibility media, FLP |
+| Layer            | Framework                       | Packages                    | Purpose                                                             |
+| ---------------- | ------------------------------- | --------------------------- | ------------------------------------------------------------------- |
+| **Unit**         | QUnit (via ui5-test-runner)     | `kiosk-keyboard`, `hotkeys` | UI5 control logic in real browser (puppeteer backend, chromium)     |
+| **Unit**         | Vitest (jsdom)                  | `kiosk-keyboard-webc`       | Pure logic (layout registry, grapheme, shift-state, etc.)           |
+| **Component**    | Web Test Runner + Playwright    | `kiosk-keyboard-webc`       | DOM integration, events, attributes, accessibility                  |
+| **E2E / Visual** | Playwright (`toHaveScreenshot`) | both kiosk packages         | Visual regression, focus, invariants, RTL, accessibility media, FLP |
 
 ## Component Tests (`kiosk-keyboard-webc`)
 
@@ -193,16 +193,17 @@ The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2
 
 Each package keeps its own minimal `test/e2e/helpers.ts`. There is no shared cross-package helper module, and native Playwright APIs cover most needs (web-first assertions, `emulateMedia`, `addStyleTag`, projects for the device matrix). Most of the helpers that remain are thin wrappers; the kiosk clip helper is the one substantial piece of logic:
 
-| Helper                                            | Package | Purpose                                                                                                           |
-| ------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
-| `openPage(page, path)`                            | both    | Navigate to a test page and wait for the keyboard root to attach; the path is optional in kiosk, required in webc |
-| `keyboardRoot(page, id)`                          | both    | `Locator` for the keyboard root (light DOM for kiosk; the host for webc)                                          |
-| `key(page, id, dataKey)`                          | both    | `Locator` for a specific key                                                                                      |
-| `setDocumentDirection(page, dir)`                 | both    | Set `dir`/`lang` for RTL snapshots                                                                                |
-| `expectVisualMatch` / `expectKeyboardVisualMatch` | kiosk   | Measure a document-coordinate clip and compare it as a full-page capture (see Capture above)                      |
-| `waitForKeys` / `waitForDocked*`                  | webc    | Await shadow-DOM render / docked open/closed/shown states                                                         |
-| `isCoarsePointer` / `isHoverCapable`              | webc    | Gate pointer/hover-dependent assertions on the active device project                                              |
-| `CLOSED_CLASS`, `VISUAL_PAGE`                     | kiosk   | Shared constants (the closed-state class and the visual page URL)                                                 |
+| Helper                               | Package | Purpose                                                                                                           |
+| ------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| `openPage(page, path)`               | both    | Navigate to a test page and wait for the keyboard root to attach; the path is optional in kiosk, required in webc |
+| `keyboardRoot(page, id)`             | both    | `Locator` for the keyboard root (light DOM for kiosk; the host for webc)                                          |
+| `key(page, id, dataKey)`             | both    | `Locator` for a specific key                                                                                      |
+| `setDocumentDirection(page, dir)`    | both    | Set `dir`/`lang` for RTL snapshots                                                                                |
+| `expectVisualMatch`                  | both    | kiosk: a document-coordinate clip compared as a full-page capture; webc: element screenshot (see Capture above)   |
+| `expectKeyboardVisualMatch`          | kiosk   | `expectVisualMatch` against the keyboard root inside a container                                                  |
+| `waitForKeys` / `waitForDocked*`     | webc    | Await shadow-DOM render / docked open/closed/shown states                                                         |
+| `isCoarsePointer` / `isHoverCapable` | webc    | Gate pointer/hover-dependent assertions on the active device project                                              |
+| `CLOSED_CLASS`, `VISUAL_PAGE`        | kiosk   | Shared constants (the closed-state class and the visual page URL)                                                 |
 
 Media features are emulated with Playwright's native `page.emulateMedia({ forcedColors, reducedMotion })` rather than a custom CDP helper.
 

@@ -85,6 +85,10 @@ firing on legitimate comments) and invalid ones.
 
 Run via `npm run test:lint-plugins` (also part of `check:base` and CI).
 
+## `oxlint-plugin.d.ts`
+
+Declares the plugin container and rule types the three plugins annotate against through JSDoc `@type`, derived from oxlint's own `RuleTester` signature and checked by `npm run typecheck:tools`.
+
 ## `check-package-smoke.mjs`
 
 Packaging smoke check for the publishable packages.

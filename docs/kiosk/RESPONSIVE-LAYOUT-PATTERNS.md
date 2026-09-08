@@ -236,7 +236,7 @@ At 320px, 6 tool keys in a row are cramped.
   }
 
   .ui5KioskRow:first-child > .ui5KioskKey {
-    flex: 1 0 calc((100% - 2 * var(--_ui5KioskKeyboard-keyGap)) / 3);
+    flex: 1 0 calc((100% - 2 * var(--ui5KioskKeyboard-keyGap)) / 3);
   }
 }
 ```

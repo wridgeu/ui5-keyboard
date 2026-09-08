@@ -20,7 +20,7 @@ flagged by the UI5 linter; do not use it for new development.
 ## Repo Web-Component Setup
 
 - The repo uses standard UI5 controls (`sap.m.Input`, `sap.m.StepInput`,
-  `sap.m.TextArea`) for inputIds targeting and carries no `sap.ui.webc.main`
+  `sap.m.TextArea`) for `controls` targeting and carries no `sap.ui.webc.main`
   dependency.
 - Interop examples use a native UI5 Web Component input in XML
   (`xmlns:webc="@ui5/webcomponents/dist"`) alongside custom-element bridge
@@ -34,10 +34,16 @@ flagged by the UI5 linter; do not use it for new development.
   demo-app README.
 - The interop e2e harness avoids deprecated/global-core access patterns.
 - Standalone web component pages live under
-  `packages/kiosk-keyboard-webc/test/pages/`: `index.html` (direct ESM imports,
-  native + UI5 Web Component inputs) plus `visual.html` / `visual-themes.html` for
-  visual regression and manual inspection. The main UI5 interop examples stay in
-  `packages/demo-app`.
+  `packages/kiosk-keyboard-webc/test/pages/`. The two consumption smoke tests cover
+  the entry points this document is about: `consume-bundle.html` loads
+  `dist/kiosk-keyboard.bundle.js` from a `<script>` tag with no bundler, import map
+  or dev server, and `consume-esm.html` imports `dist/bundle.esm.js` with bare
+  specifiers, which needs a dev server that resolves them. Both assert element
+  registration and rendering and report PASS/FAIL. The remaining pages are
+  `index.html` (direct ESM imports, native + UI5 Web Component inputs),
+  `key-style-demo.html` (key type comparison, source of the README screenshots) and
+  `visual.html` / `visual-themes.html` for visual regression and manual inspection.
+  The main UI5 interop examples stay in `packages/demo-app`.
 
 ## Middleware Configuration for CEM-Driven Web Components
 

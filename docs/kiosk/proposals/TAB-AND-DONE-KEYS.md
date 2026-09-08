@@ -38,34 +38,39 @@ Tap {tab}
 
 **Implementation approach:**
 
+`TargetInputSession` (`internal/target-input-session.ts`) owns the resolved DOM
+ref, so the walk lives there:
+
 ```ts
-private _handleTab(): void {
+moveFocus(backwards: boolean): void {
   const dom = this._getTargetDomRef();
   if (!dom) return;
 
   // Collect all focusable inputs/textareas in DOM order
   const inputs = Array.from(
     document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-      'input:not([disabled]):not([readonly]):not([type="hidden"]), textarea:not([disabled]):not([readonly])'
-    )
+      'input:not([disabled]):not([readonly]):not([type="hidden"]), textarea:not([disabled]):not([readonly])',
+    ),
   );
 
   const currentIndex = inputs.indexOf(dom);
   if (currentIndex === -1) return;
 
-  const direction = this.isShiftActive() ? -1 : 1;
-  const nextIndex = currentIndex + direction;
-
+  const nextIndex = currentIndex + (backwards ? -1 : 1);
   if (nextIndex >= 0 && nextIndex < inputs.length) {
     inputs[nextIndex].focus();
   }
-
-  // Auto-release shift like a normal character
-  if (this._shiftActive && !this._capsLock) {
-    this._shiftActive = false;
-    this.invalidate();
-  }
 }
+```
+
+`KioskKeyboard._handleKeyAction` reads the direction off the shift state and
+leaves the latch to the single spend site (`spendsOneShotShift(action.kind)`),
+which releases it once for the whole tick:
+
+```ts
+case "tab":
+  this._targetSession.moveFocus(this._isShiftActive());
+  break;
 ```
 
 **Layout integration:**
@@ -115,6 +120,8 @@ Tap {done}
 | `{enter}` | Fires `change`                  | Inserts `\n`                    |
 | `{done}`  | Fires `change`, closes keyboard | Fires `change`, closes keyboard |
 
+`{done}` on a `<textarea>` is a deliberate override: `TargetInputSession.fireChangeIfDirty()` skips textarea targets, because a physical keystroke never emits `change` there. The proposal keeps the override - the key exists precisely so a textarea gets a commit signal - so `{done}` must fire the event itself rather than reuse that path.
+
 `{done}` is useful when:
 
 - TextArea users need a "submit" button (not a newline)
@@ -123,21 +130,32 @@ Tap {done}
 
 **Implementation approach:**
 
+The change fires from the session, which holds both the element and the dirty
+flag. It cannot route through `fireChangeIfDirty()`: that skips textarea
+targets, and `{done}` fires on them by design (see the table above).
+
 ```ts
-private _handleDone(): void {
+// internal/target-input-session.ts
+handleDone(): void {
   const dom = this._getTargetDomRef();
   if (!dom) return;
 
-  this._fireTargetChange(dom.value);
-
-  // Close docked keyboard if auto-show is active
-  if (this.getDocked() && this.getAutoShow()) {
-    this.close();
-  }
+  const element = this._getTargetElement();
+  if (element) opsFireTargetChange(element, dom.value);
+  this._targetDirty = false;
 
   // Blur the target to signal completion
   dom.blur();
 }
+```
+
+```ts
+// KioskKeyboard._handleKeyAction
+case "done":
+  this._targetSession.handleDone();
+  // Close docked keyboard if auto-show is active
+  if (this.getDocked() && this.getAutoShow()) this.close();
+  break;
 ```
 
 **Layout example:**
@@ -151,10 +169,19 @@ private _handleDone(): void {
 
 ### In scope
 
-- `{tab}` and `{done}` as new special key values in `_handleKeyAction`
+- `parseKeyAction` arms for `{tab}` and `{done}`, and the matching `KeyAction`
+  variants (`internal/key-token.ts`)
+- `spendsOneShotShift` arms for both, in the same file: the switch is exhaustive
+  over `KeyActionKind`, so a new variant does not compile until it answers
+- `_handleKeyAction` branches for both, plus the `assertNever` guard staying exhaustive
 - Shift+Tab (reverse tab) support
 - `keyPress` event fires for both with `preventDefault()` support
-- `SpecialKeyValue` type updated to include `"{tab}"` and `"{done}"`
+- `SpecialKeyValue` type (`types.ts`) updated to include `"{tab}"` and `"{done}"`
+- `KeyName` members (`library.ts`) for the `keyPress` payload
+- `KEY_TAB` / `KEY_DONE` entries in all four `i18n/messagebundle*.properties`,
+  their message keys in `key-action-meta.ts` (`SPECIAL_KEY_I18N_KEYS`, and
+  `SPECIAL_KEY_ICON_NAMES` for a default icon), and the token-to-key rows in
+  `key-labels.ts`
 - Documentation in README
 - QUnit tests for both key actions
 

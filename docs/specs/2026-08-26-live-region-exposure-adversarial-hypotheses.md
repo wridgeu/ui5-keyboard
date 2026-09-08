@@ -1,5 +1,8 @@
 # The live region and the variant count: adversarial validation (#247, #254)
 
+**Date:** 2026-08-26
+**Status:** Shipped. Historical record; later code changes are not folded back in.
+
 Written before the new suites were trusted, per CLAUDE.md §7. Each hypothesis names
 a way the green run could have been lying; each is cleared only against a run that
 was **seen** to go red, then reverted.
@@ -55,6 +58,9 @@ The package stylesheet can still take the announcement out of the accessibility
 tree, from the other side, and the test catches it. (The variant-popup suite goes
 red too: the accent popover is a static-area Popover.)
 
+The quoted `its container is not display:none either` assertion was dropped in a
+later change; the test it belonged to no longer carries it.
+
 ## H2 — the repeat-announcement test could pass without the fix
 
 The webc live-region text is a reactive property. The claim is that re-announcing the
@@ -78,6 +84,9 @@ and injected with the real pre-fix body (`this._liveRegionText = text;` alone):
 Zero mutations, one failing test. Whether the _emptying_ specifically is what makes a
 screen reader speak again is not observable from a DOM test; it follows
 `InvisibleMessage`, which does the same thing for the same stated reason.
+
+The quoted `re-announces a text the region is already holding` test was dropped in a
+later change.
 
 ## H3 — the kiosk twin of that test was vacuous, and was deleted
 
@@ -139,8 +148,8 @@ do with the control.
 
 **Observed rather than injected**, twice, while migrating the suites:
 
-- Reading the node directly left `The live region announces which way a width moved
-the layout` red with `actual=""` — a three-second timer armed by an _earlier_ test
+- Reading the node directly left `The live region announces which way each width crossing
+moved the layout` red with `actual=""` — a three-second timer armed by an _earlier_ test
   in the same module wiping an identical text this one had just written.
 - Recording writes but reading only the recording left `Open and close announcements
 are spoken in turn` red: `MutationObserver` runs a microtask later, so a read taken
@@ -166,7 +175,7 @@ first paint is silent must go red.
 Against the suites as first written, three stayed **green**:
 
 - `Live region stays silent for a requested layout switch` (a11y)
-- `The live region announces which way a width moved the layout` (autoCompact)
+- `The live region announces which way each width crossing moved the layout` (autoCompact)
 - `A keyboard that was always narrow announces nothing on first paint` (autoCompact)
 
 Each cleared the region after mounting the keyboard and before reading it back. The

@@ -414,6 +414,8 @@ A misconfiguration is logged once per control per distinct complaint, naming the
 | `duplicate-middleware` | two custom layouts declare `middleware` for one name                   |
 | `duplicate-locale`     | two custom layouts claim one BCP-47 prefix for different layouts       |
 
+An eleventh code, `unknown-suppress` (a `suppress` token naming no facet), is reachable only in the web-component twin, which parses the attribute itself; here the `ui5.kiosk.LayoutFacet` `DataType` rejects the value first.
+
 A typo in `layoutRole` or `suppress` **throws** rather than being reported: they are closed enums, so `ManagedObject` rejects the value the way `mobileKeyboard="Bogus"` already does.
 
 ### In an XML view
@@ -753,7 +755,7 @@ The `defaultVariants` tier only ever adds; it has no suppression spelling. Turn 
 
 The five non-Latin built-in layouts (`ja-romaji`, `ja-kana`, `ja-kana-compact`, `arabic`, `ko-hangul`) resolve the built-in table to nothing, so `accentVariants` adds no popups there; supply a `variants` table on a custom layout (or a `defaultVariants` table) to opt one back in, and because there is no built-in tier to merge onto, those tiers stand alone. That exclusion list is only the shipped default for those built-ins; it never locks you out. A **custom** layout whose Latin-looking keys should _not_ surface accent popups (a transliteration IME, say) opts out with `suppress="Variants"`, which discards `defaultVariants` along with the built-in tier. Action, modifier, and space keys never take table variants even when a table is keyed to their value.
 
-`LATIN_DIACRITIC_VARIANTS` is re-exported from `ui5/kiosk/library` for inspection (to read what the defaults are, or to build a table from them); merging means you no longer need to spread it to extend the defaults.
+`LATIN_DIACRITIC_VARIANTS` is re-exported from `ui5/kiosk/library` for inspection (to read what the defaults are, or to build a table from them); a supplied table merges onto it per base letter rather than replacing it.
 
 Declaring a variant table while `accentVariants` is off applies nothing, and logs a warning saying so.
 
@@ -864,7 +866,7 @@ See [Custom F-key variant layouts](#custom-f-key-variant-layouts) for more detai
 
 ### Approach 3: Standalone fkeys layout
 
-Use the `fkeys` layout directly for an F-key keyboard. F1-F12 fill the first two rows; the bottom row carries an **ABC** key (returns to the base layout), a **Nav** key (switches to the navigation layout), and **Enter**:
+Use the `fkeys` layout directly for an F-key keyboard. F1-F12 fill the first two rows; the bottom row carries a **Shift** key (holds Shift for the next F-key, which `fKeyMode="Native"` carries into the synthetic `keydown`), an **ABC** key (returns to the base layout), a **Nav** key (switches to the navigation layout), and **Enter**:
 
 ```xml
 <kiosk:KioskKeyboard layout="fkeys" controls="myInput" />
@@ -1481,6 +1483,8 @@ These special keys render built-in icons by default (no need to set `icon`):
 | `{enter}`     | `sap-icon://accept`     | "Enter"                   |
 | `{backspace}` | `sap-icon://arrow-left` | "Backspace"               |
 
+The static `KioskKeyboard.SPECIAL_KEY_ICONS` holds these defaults keyed by key value, plus `{shift:capsLock}` for the Caps Lock form.
+
 Set `icon: ""` to suppress a built-in icon. Set `label: ""` to suppress the label (icon-only display).
 
 ### Caps Lock overrides
@@ -1555,6 +1559,8 @@ Pass `null` to clear:
 ```ts
 KioskKeyboard.setGlobalTargetResolver(null);
 ```
+
+The library clears the global resolver when the last live `KioskKeyboard` instance is destroyed.
 
 ### Resolver Precedence
 

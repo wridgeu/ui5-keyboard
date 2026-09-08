@@ -1,5 +1,8 @@
 # Adversarial validation of the twin-drift check (`tools/check-twin-drift.mjs`)
 
+**Date:** 2026-06-11
+**Status:** Shipped. Historical record; later code changes are not folded back in.
+
 Goal: prove the new twin-drift check FAILS on real drift between the kiosk twin
 packages (`packages/kiosk-keyboard/src` vs `packages/kiosk-keyboard-webc/src`)
 instead of only watching it pass. For each hypothesis we inject a fault, confirm
@@ -30,7 +33,7 @@ was SEEN red for it, then the corruption reverted.)
 - **H4 CONFIRMED.** Appended `export const twinDriftProbe = "see // not a comment" + "1";` to the kiosk `qwerty.ts` and the same line with `+ "2"` to the webc twin; the check exited 1 and the diff showed both full lines including the code after the `//`. The stripper is string-aware and does not eat code after `//` inside a literal. Reverted.
 - **H4b CONFIRMED (control).** With the probe line byte-identical in both twins (`+ "1"` on both sides), the `qwerty.ts` pair stayed green (zero `qwerty.ts` hunks in the output; only the pre-existing drifts reported). No spurious red and no parser desync from `//` inside strings. Reverted; `git status` clean for both files.
 - **H5 CONFIRMED.** The script asserts `PAIRS.length === 21` before comparing and prints `Comparing 21 twin pairs`. Temporarily deleting the `numpad` entry made the check exit 1 with `Pair manifest has 20 entries, expected 21` before any comparison. Reverted.
-  - **Re-validated 2026-06-13.** The manifest later dropped from 21 to 20 pairs: `action-registry` left `CORE_MODULES` when the action subsystem was removed (see `2026-06-11-extensible-keys-enriched-keypress.md`), so `EXPECTED_PAIR_COUNT` is now 20 (16 layouts + 4 core modules). Re-ran the same fault against the shipped 20-pair manifest: deleting `numpad` made the check exit 1 with `Pair manifest has 19 entries, expected 20` before any comparison. Reverted. The count-guard mechanism is unchanged.
+  - **Re-validated 2026-06-13.** The manifest later dropped from 21 to 20 pairs: `action-registry` left `CORE_MODULES` when the action subsystem was removed (see `2026-06-11-extensible-keys-enriched-keypress.md`), so `EXPECTED_PAIR_COUNT` was 20 at that point (16 layouts + 4 core modules) [the constant has grown since; the follow-ups below take it to its current 32]. Re-ran the same fault against the shipped 20-pair manifest: deleting `numpad` made the check exit 1 with `Pair manifest has 19 entries, expected 20` before any comparison. Reverted. The count-guard mechanism is unchanged.
 - **H6 CONFIRMED.** During the H1, H2, H3, H4, and H5 reds the captured exit
   code was `1` each time (`echo $?` after the run). Drift is reported via a
   non-zero exit code, not just text.

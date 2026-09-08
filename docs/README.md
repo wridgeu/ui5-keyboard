@@ -40,4 +40,5 @@ Each proposal doc should include a status line near the top:
 
 - Use `README.md` for folder entry points.
 - Use UPPERCASE kebab-case for topic files (for example `API-STABILITY.md`).
+- Name files in `specs/` `YYYY-MM-DD-<topic>.md` in lowercase; a spec is dated because it records a design at the time it was written, not a living topic.
 - Keep forward-looking design notes in `proposals/`, so active guidance is not mixed with work that has not been committed to.

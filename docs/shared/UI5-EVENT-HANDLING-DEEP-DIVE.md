@@ -145,7 +145,7 @@ F6 enables "fast navigation" between UI5 control groups: **F6** triggers `sapski
 
 ### Important for HotkeyManager
 
-**F6 is in the disallowed shortcuts list** (see section 7). Our HotkeyManager should warn if someone registers F6 as a hotkey since it conflicts with UI5's built-in fast navigation.
+**F6 is in the disallowed shortcuts list** (see section 7).
 
 ## 6. CommandExecution: UI5's Built-in Shortcut System
 
@@ -238,10 +238,10 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 | Aspect                        | Status                 | Notes                                                                                                                                                                                                                         |
 | ----------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Window-level capture listener | **Correct**            | Single `window` capture listener (via EventDispatcher), fires before UIArea, independent of focus, solves CommandExecution's focus limitation. `stopPropagation` prevents events from reaching `document` listeners entirely. |
-| F6 conflict                   | **Should warn**        | F6 is reserved for fast navigation. Registering F6 as a hotkey breaks accessibility                                                                                                                                           |
-| UI5 tool shortcuts            | **Should warn**        | Ctrl+Alt+Shift+P/S are disallowed; Ctrl+Alt+Shift+T is handled at runtime                                                                                                                                                     |
-| Browser-reserved shortcuts    | **Should warn**        | Ctrl+N/T/W etc. cannot be intercepted in Chrome                                                                                                                                                                               |
-| Fiori Elements conflict       | **Consider warning**   | Ctrl+S, Ctrl+E, Ctrl+D etc. are Fiori standard                                                                                                                                                                                |
+| F6 conflict                   | **Warns**              | F6 is reserved for fast navigation. `validateHotkey` (`internal/validate.ts`) flags it from both `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS`; `register` logs the warnings for a single hotkey, not for a sequence                |
+| UI5 tool shortcuts            | **Warns**              | Ctrl+Alt+Shift+P/S are disallowed and Ctrl+Alt+Shift+T is handled at runtime; all three are in `SAP_SHORTCUTS`                                                                                                                |
+| Browser-reserved shortcuts    | **Warns**              | Ctrl+N/T/W etc. cannot be intercepted in Chrome; they are in `BROWSER_SHORTCUTS`                                                                                                                                              |
+| Fiori Elements conflict       | **Warns**              | Ctrl+S, Ctrl+E, Ctrl+D etc. are Fiori standard; they are in `SAP_SHORTCUTS`                                                                                                                                                   |
 | `keypress` event              | **Not used (correct)** | `keypress` is deprecated per W3C; UI5 uses it only for `sapminus`/`sapplus`                                                                                                                                                   |
 | AltGr handling                | **Correct**            | Properly detected and skipped                                                                                                                                                                                                 |
 

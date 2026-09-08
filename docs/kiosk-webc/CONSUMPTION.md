@@ -167,13 +167,16 @@ which the demo-app README links to.
 
 The default entry (`kiosk-keyboard-webc`) includes the component class and all
 built-in layouts. There is no separate `./core` export: the class lives in a
-single file, so the default entry already is the lean entry.
+single file, so the default entry already is the lean entry. `Assets` is
+required alongside it because the bare `kiosk-keyboard-webc` entry exports the
+component class only.
 
 Consumers who want selective layout loading can import individual layouts via
 subpath imports and slot any custom layouts into the per-element
 `customLayouts` slot:
 
 ```typescript
+import "kiosk-keyboard-webc/Assets";
 import KioskKeyboard from "kiosk-keyboard-webc";
 import "kiosk-keyboard-webc/CustomLayout";
 import qwerty from "kiosk-keyboard-webc/layouts/qwerty";

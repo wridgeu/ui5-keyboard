@@ -6,7 +6,7 @@ This document describes the internal architecture, design decisions, and edge ca
 
 ### Library Initialization
 
-The library uses `Lib.init()` with `apiVersion: 2` and declares dependencies on both `sap.ui.core` and `sap.m`. Unlike the hotkeys library, this library **requires CSS** (`noLibraryCSS: false`), which is the hard blocker that forced it into a separate library from `ui5.hotkeys`.
+The library uses `Lib.init()` with `apiVersion: 2` and declares dependencies on both `sap.ui.core` and `sap.m`. Unlike the hotkeys library, this library ships its own CSS (`noLibraryCSS: false`).
 
 The `sap.m` dependency comes from the accent-variant popup: `KioskKeyboard.ts` imports `sap/m/Popover` and `sap/m/library`, and `internal/variant-popup-behavior.ts` imports `sap/m/FlexBox`, `sap/m/Button` and `sap/m/library`. Those runtime imports are what force `dependencies: ["sap.ui.core", "sap.m"]` in `library.ts`, the `.library` descriptor and the manifest. Target inputs are _typically_ `sap.m` controls but no control type is a hard dependency - `Element.closestTo()` is a static of `sap/ui/core/Element` and needs no `sap.m`.
 
@@ -31,10 +31,7 @@ init(): void {
 
 ### Renderer
 
-`KioskKeyboardRenderer` is a plain object (not a class) with `apiVersion: 4` (semantic rendering). This tells the framework the control's output depends only on its own properties, so re-rendering can be skipped when only the parent changes.
-
-> [!NOTE]
-> The UI5 linter does not recognize `apiVersion: 4`. This is a known gap, but the renderer works correctly at runtime.
+`KioskKeyboardRenderer` is a plain object (not a class) with `apiVersion: 4` (semantic rendering). This tells the framework the control's output depends only on its own properties, so re-rendering can be skipped when only the parent changes. `4` is a strict superset of `2`; no linter or modernization pass may downgrade it.
 
 ## Control Architecture
 
@@ -205,11 +202,11 @@ Caps Lock    Mode.CapsLock true      true
 
 **Auto-release**: After any key that acts on the target - a character, `{backspace}`, `{enter}`, an `{fkey:*}`, an unrecognized `{...}` token, a committed accent variant, or a key the composition middleware consumed - `autoRelease()` sets the mode back to `Off` and fires the `onChange` callback (which the owner wires to `_syncShiftState()`, announcing the transition before repainting) to update the display. `{shift}` and `{layout:*}` do not spend it (`{layout:*}` resets the whole typing context, Caps Lock included), and Caps Lock is sticky and never auto-releases.
 
-**A veto does not change the spending set** (#241). The latch is consumed to _produce_ the payload: `keyPress` already carries `key: "A"` by the time a consumer sees it, so what `preventDefault()` cancels is the insertion, not the spend. The alternative strands a consumer using the documented veto-and-`insertText()` pattern in Shift with no public API to release it. Both twins follow this rule, and both spend the latch on the same set of keys (#240) - the spending set is a pure function of the key.
+**A veto does not change the spending set**. The latch is consumed to _produce_ the payload: `keyPress` already carries `key: "A"` by the time a consumer sees it, so what `preventDefault()` cancels is the insertion, not the spend. The alternative strands a consumer using the documented veto-and-`insertText()` pattern in Shift with no public API to release it. Both twins follow this rule, and both spend the latch on the same set of keys - the spending set is a pure function of the key.
 
 **One key, one decision.** `_handleKeyAction` reads the spend off the parsed key once (`spendsOneShotShift(action.kind)`) rather than leaving it to whichever branch remembers to call `autoRelease()`, so the click path has a single spend site. `_commitVariant` and `_performBackspaceRepeatTick` are the two paths that do not run through it and carry their own. **Where in the tick the spend happens is immaterial**: nothing downstream of the fire reads the latch - the payload is resolved before the event is dispatched - and what `autoRelease()` triggers, a repaint and a live-region announcement, does not depend on the insertion having run.
 
-**Where announcements land**: `sap.ui.core.InvisibleMessage`, the framework's polite live region in the static area. The control renders no region of its own - one inside its root is hidden along with it when a docked keyboard closes, which is what #247 was. `InvisibleMessage` also empties its node before each write, so a repeat of the text already standing there still reads as a change. The queue that paces those writes (`AnnouncementQueue`) is a static on the control for the same reason the node is page-global: two keyboards on one page share one span, so a per-instance cadence would let them write over each other. It is torn down with the last instance, so no drain timer outlives the control. The singleton is primed from `onBeforeRendering`, so the node is in the page before the first write. That hook needs no `Core.ready` gate of its own - rendering cannot start before the core is ready, since `Control.placeAt` wraps its body in it - and it is where `sap.m` primes the same singleton; see the CLAUDE.md rule.
+**Where announcements land**: `sap.ui.core.InvisibleMessage`, the framework's polite live region in the static area. The control renders no region of its own - one inside its root is hidden along with it when a docked keyboard closes. `InvisibleMessage` also empties its node before each write, so a repeat of the text already standing there still reads as a change. The queue that paces those writes (`AnnouncementQueue`) is a static on the control for the same reason the node is page-global: two keyboards on one page share one span, so a per-instance cadence would let them write over each other. It is torn down with the last instance, so no drain timer outlives the control. The singleton is primed from `onBeforeRendering`, so the node is in the page before the first write. That hook needs no `Core.ready` gate of its own - rendering cannot start before the core is ready, since `Control.placeAt` wraps its body in it - and it is where `sap.m` primes the same singleton; see the CLAUDE.md rule.
 
 **Announcements**: `_syncShiftState()` writes one live-region text per transition: `ARIA_CAPS_LOCK_ON`, `ARIA_CAPS_LOCK_OFF`, `ARIA_SHIFT_ON`, `ARIA_SHIFT_OFF`. Caps Lock is settled before Shift because `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift release.
 
@@ -532,7 +529,7 @@ Keys use SAP button parameters for visual consistency with the rest of the UI:
 
 ### Responsive Sizing
 
-Keys use `flex: <grow> 1 0` for proportional sizing within rows. The `data-key-span` attribute (`[data-key-span="1.5"]`, `[data-key-span="2"]`, `[data-key-span="space"]`) sets the flex-grow factor. This makes the keyboard naturally responsive, and keys scale proportionally to the container width.
+Keys use `flex: <grow> 1 0` for proportional sizing within rows. The `data-key-span` attribute sets the flex-grow factor; its seven values are the `KeyWidth` union in `types.ts` (`1.25`, `1.5`, `1.75`, `2`, `2.25`, `2.75`, `space`). This makes the keyboard naturally responsive, and keys scale proportionally to the container width.
 
 Responsiveness is split into two axes: width (CSS styling, plus an opt-in JS layout tier) and height (JS-assisted).
 
@@ -606,6 +603,7 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 
 ```
 packages/kiosk-keyboard/
+  playwright.shared.ts        Chromium args, desktop viewport and ui5 serve web server, shared by the three configs
   playwright.config.ts        Playwright config: e2e + visual, desktop + device projects
   playwright.flp.config.ts    Playwright config for the FLP lifecycle suite
   playwright.docs.config.ts   Playwright config for README screenshot generation
@@ -623,6 +621,7 @@ packages/kiosk-keyboard/
     internal/layout-registry.ts  Layout registration and locale resolution
     internal/
       types.ts                Internal contracts (TargetElement)
+      restricted-modules.d.ts  Ambient declarations for the @ui5-restricted modules @openui5/types omits
       custom-layout-fold.ts   Folds the custom layouts into the per-facet lookup maps the
                                resolution paths read, plus the diagnostics it reports
       layout-fold-cache.ts    LayoutFoldCache: caches that fold against the aggregation's children
@@ -712,6 +711,8 @@ packages/kiosk-keyboard/
     *.qunit.ts                           One suite per module / feature
   test/e2e/
     helpers.ts                 Minimal shared Playwright helpers (openPage, keyboardRoot, ...)
+    focus/                     Fixture page for the focus/auto-show suite
+    visual/                    Fixture pages the visual and README-screenshot suites load
     focus.spec.ts              Focus/auto-show behavior
     flp-lifecycle.spec.ts      FLP lifecycle i18n auto-reset tests
     invariants.spec.ts         Structural assertions the device matrix runs on CI

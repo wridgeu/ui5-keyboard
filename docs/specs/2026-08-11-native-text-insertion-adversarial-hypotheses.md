@@ -66,6 +66,9 @@ input-operations - native handleBackspace ▶ Deletes an entire surrogate-pair e
 input-operations - native handleBackspace ▶ Deletes an entire ZWJ sequence
 ```
 
+Two of those eight are gone from the suite in later changes: `Deletes an entire ZWJ sequence` was
+deleted, and the undo test kept only its `Undo reverts the DOM value` half.
+
 That is hypothesis 4 cleared: the kiosk fixtures demonstrably reach the platform path rather than
 quietly measuring the old behaviour. It also clears 2 — an undo of some unrelated earlier edit would
 have kept the undo test green here.

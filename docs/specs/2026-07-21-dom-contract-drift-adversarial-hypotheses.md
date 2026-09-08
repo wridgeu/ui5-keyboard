@@ -1,6 +1,7 @@
 # DOM-contract drift guard: adversarial hypotheses
 
 - Date: 2026-07-21
+- Status: Shipped. Historical record; later code changes are not folded back in.
 - Guard under test: `tools/check-dom-contract-drift.mjs` (`npm run test:dom-contract`)
 - Method (CLAUDE.md §7): a green guard can lie. Each hypothesis below is a way a green run could be a false positive. Clear each only after SEEING the guard exit non-zero for it, then revert the perturbation.
 

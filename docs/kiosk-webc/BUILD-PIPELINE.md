@@ -25,12 +25,12 @@ npm run build -w packages/kiosk-keyboard-webc
 # Expands to: npm run build:dev && npm run build:bundle && npm run generateAPI
 ```
 
-| Step           | Command               | What it does                                                       |
-| -------------- | --------------------- | ------------------------------------------------------------------ |
-| 1. generate    | `ui5nps generate`     | Converts source assets into TypeScript (see data flow below)       |
-| 2. tsc         | `tsc --build --force` | Compiles all TypeScript (source + generated) to `dist/`            |
-| 3. bundle      | `vite build`          | Creates the standalone all-in-one bundle from the tsc output       |
-| 4. generateAPI | `ui5nps generateAPI`  | Analyzes the `.ts` sources to produce the Custom Elements Manifest |
+| Step           | Command               | What it does                                                                                                          |
+| -------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1. generate    | `ui5nps generate`     | Converts source assets into TypeScript (see data flow below)                                                          |
+| 2. tsc         | `tsc --build --force` | Compiles all TypeScript (source + generated) to `dist/`                                                               |
+| 3. bundle      | `vite build`          | Creates the standalone all-in-one bundle from the tsc output                                                          |
+| 4. generateAPI | `ui5nps generateAPI`  | Analyzes the `.ts` sources and validates the four [manifest artefacts](./CUSTOM-ELEMENTS-MANIFEST.md#generated-files) |
 
 Each step depends on the previous one's output. The `--force` flag on tsc is required because the `generate` step writes into `src/generated/` right before compilation, and the incremental build cache can miss those changes.
 
@@ -61,11 +61,16 @@ SOURCE FILES                         GENERATED OUTPUT                          C
                                                                                messagebundle_de.json.
 
 4. generate.jsonImports
-   (reads i18n + themes dirs)         src/generated/json-imports/              Assets.ts imports these.
-                                      i18n.ts                                  They call
-                                      Themes.ts                                registerI18nLoader() and
-                                      (loader stubs with dynamic               registerThemePropertiesLoader()
-                                       import() to JSON assets)                at module scope.
+   (reads i18n + themes dirs)         src/generated/json-imports/              Assets.ts imports i18n.ts and
+                                      i18n.ts, i18n-fetch.ts,                  Themes.ts. They call
+                                      i18n-node.ts, Themes.ts,                 registerI18nLoader() and
+                                      Themes-fetch.ts,                         registerThemePropertiesLoader()
+                                      Themes-node.ts                           at module scope. The -fetch
+                                      (loader stubs with dynamic               variant loads the same JSON
+                                       import() to JSON assets)                through fetch(), the -node one
+                                                                               through a JSON import
+                                                                               attribute; neither is imported
+                                                                               here.
 ```
 
 Steps 1-4 are standard UI5 Web Components framework requirements. The generated json-imports (step 4) load their JSON through relative `../assets/` paths, but the upstream tooling emits those JSONs only to `dist/generated/assets/`. A small Vite plugin (`vite-generated-assets.mjs`, shared by `vite.config.ts` and `vite.demo.config.ts`) resolves those `../assets/` imports straight from `dist/generated/assets/`, so the source tree keeps no copy of the generated assets. The upstream framework does not need this because it serves from `dist/`.
@@ -113,7 +118,7 @@ The CEM is consumed by:
 - **IDE tooling** uses it for autocomplete and validation of the `<kiosk-keyboard>` tag.
 - **Documentation generators** extract API tables from the manifest.
 
-The CEM analyzer reads the `.ts` source files and the `@customElement`, `@property`, and `@event` decorators to extract the public API surface. See [Custom Elements Manifest](./CUSTOM-ELEMENTS-MANIFEST.md) for the JSDoc rules that govern what it can extract.
+The CEM analyzer reads the `.ts` source files and the `@customElement`, `@property`, and `@event` decorators to extract the public API surface. See [Custom Elements Manifest](./CUSTOM-ELEMENTS-MANIFEST.md) for the JSDoc rules that govern what it can extract, and [Local Patch](./CUSTOM-ELEMENTS-MANIFEST.md#local-patch) for the five changes this repo makes to the CEM tooling.
 
 ### Tree shaking and sideEffects
 
