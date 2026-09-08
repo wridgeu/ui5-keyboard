@@ -35,17 +35,11 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 
 ## Keyboard Overview
 
-QWERTY (Full):
+The `keyboard-type` attribute selects the key set:
 
-![QWERTY keyboard](../../docs/kiosk-webc/images/webc-qwerty-sap_horizon.png)
-
-Numpad:
-
-![Numpad keyboard](../../docs/kiosk-webc/images/webc-numpad.png)
-
-Numeric:
-
-![Numeric keyboard](../../docs/kiosk-webc/images/webc-numeric.png)
+| `Full` (QWERTY layouts)                                                                                | `Numpad`                                                                                   | `Numeric`                                                                                    |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| <img src="../../docs/kiosk-webc/images/webc-qwerty-sap_horizon.png" alt="QWERTY keyboard" width="360"> | <img src="../../docs/kiosk-webc/images/webc-numpad.png" alt="Numpad keyboard" width="140"> | <img src="../../docs/kiosk-webc/images/webc-numeric.png" alt="Numeric keyboard" width="280"> |
 
 ### Key Types
 
