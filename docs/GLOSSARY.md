@@ -89,7 +89,7 @@ This means a scoped registration always shadows a global registration for the sa
 
 When `enableRouterIntegration(router)` is active, route changes automatically reset to global scope and push the new route name as the active scope; a hash that matches no route (the router's `bypassed` event) resets to global scope without pushing anything. Dialog scopes still require manual `pushScope`/`popScope`.
 
-## Suppression
+## Suppression (hotkeys)
 
 **Suppression** refers to conditions that prevent a matched hotkey from firing, even though the key combination and scope both match.
 
@@ -98,6 +98,15 @@ When `enableRouterIntegration(router)` is active, route changes automatically re
 - **Repeat suppression** (`ignoreRepeat`): Held-key repeat events are ignored. On by default.
 
 When a hotkey is suppressed, the unhandled callback fires with the corresponding reason (`InputSuppressed`, `PopupSuppressed`, `RepeatIgnored`).
+
+## Suppression (custom layout facets)
+
+A `CustomLayout`'s **`suppress`** property names the facets whose inherited value that custom layout discards. A listed facet resolves to nothing at the custom layout's position in the tier stack; a value the same custom layout declares still applies. The facets are the members of the `LayoutFacet` enum (`packages/kiosk-keyboard/src/library.ts`):
+
+- `Variants`: long-press accent variants. Suppressed, the layout's keys carry no long-press affordance.
+- `Middleware`: composition (IME / dead-key) middleware. Suppressed, the layout's keys type directly.
+
+In XML the facets are a comma-separated list (`suppress="Variants, Middleware"`). Whitespace around a name is not part of it, and a token naming no facet is rejected rather than ignored; the component `DataType` that trims each token is covered by `docs/specs/2026-08-05-token-list-attributes-design.md`. The web component takes the same list as a string attribute on `<kiosk-keyboard-custom-layout>`, accepting commas or spaces as separators.
 
 ## AltGr (Alternate Graphic)
 
@@ -181,3 +190,13 @@ When multiple nested elements have registrations for the same key, matching star
 - **Closed shadow roots**: `composedPath()` does not cross closed shadow DOM boundaries. Registrations on elements inside a closed shadow root will not match.
 - **Detached elements**: Elements not in the DOM are not part of any event's composed path. Registrations on detached targets are inactive until the element is reattached.
 - **Fallback**: If `composedPath()` returns an empty array (rare), we fall back to `[event.target, document, window]`.
+
+## Twin / Twin Drift
+
+A **twin** is a module kept as a hand-maintained duplicate in both keyboard packages. `packages/kiosk-keyboard/src` and `packages/kiosk-keyboard-webc/src` carry parallel copies of the framework-agnostic logic (the `layouts/*` tables, `grapheme`, `auto-repeat`, `shift-state`, `composition-utils`, `key-token`, the `middleware/*` modules and more), plus the two `dom-contract.ts` modules and the two stylesheets. There is no shared core package holding them: that was declined deliberately, because kiosk ships UI5 AMD resolved by namespace and so cannot carry a runtime npm dependency. See the "No shared-core package" section of `CLAUDE.md` for the full reasoning.
+
+**Twin drift** is the two copies diverging. Three checks guard it, each part of `check:base` and of CI:
+
+- `npm run test:twin-drift` (`tools/check-twin-drift.mjs`): compares an explicit manifest of duplicated source modules after normalization, and fails on a same-named pair that is registered in neither the checked nor the unchecked list.
+- `npm run test:style-twin-drift` (`tools/check-style-twin-drift.mjs`): compares the public custom-property surface of the two stylesheets, whose names differ by convention and so are compared as canonical tokens.
+- `npm run test:dom-contract` (`tools/check-dom-contract-drift.mjs`): compares the two `dom-contract.ts` modules structurally, by key set for the per-platform names and by key and value for the shared `data-*` attributes.

@@ -213,7 +213,7 @@ The demo app in this repository uses Path A (CEM-driven) for the `kiosk-keyboard
 
 #### 3b. `WebComponent.extend()` bridge (reference)
 
-For full control over the UI5 metadata surface, create a manual bridge using `WebComponent.extend()`. This gives explicit property/event/method/association mappings and typed UI5 events. Since UI5 >= 1.138, camelCase event names in `metadata.events` auto-convert to kebab-case DOM events (e.g. `keyPress` maps to `key-press`), so explicit `mapping: { to: "..." }` on events is not needed.
+For full control over the UI5 metadata surface, create a manual bridge using `WebComponent.extend()`. This gives explicit property/event/method/association mappings and typed UI5 events. Event names in `metadata.events` auto-convert from camelCase to kebab-case DOM events (e.g. `keyPress` maps to `key-press`), so explicit `mapping: { to: "..." }` on events is not needed.
 
 > [!IMPORTANT]
 > The bridge below binds `tag: "kiosk-keyboard"`, the canonical unscoped name. The module-system import registers that tag **only if scoping is off** (`pluginOptions.webcomponents.scoping: false`) on **both** the `ui5-tooling-modules` task and its middleware - the configuration in 3a above does not set it. With scoping left on, the middleware intercepts the import and registers `kiosk-keyboard-<hash>` instead; `customElements.get("kiosk-keyboard")` then finds nothing and the element stays unupgraded, with no error. Either turn scoping off, or load `dist/kiosk-keyboard.bundle.js` from a `<script>` tag outside `/resources/` so it registers the canonical tag without interception. See [CONSUMPTION.md](../../docs/kiosk-webc/CONSUMPTION.md#tag-scoping-and-the-manual-bridge).
@@ -291,6 +291,7 @@ import type {
   LayoutChangeEventDetail,
   KeyboardTypeChangeEventDetail,
   ActiveControlChangeEventDetail,
+  OpenStateChangeEventDetail,
   KeyDefinition,
   KeyRow,
   LayoutDefinition,
@@ -298,6 +299,7 @@ import type {
   KeyWidth,
   KeyType,
   SpecialKeyValue,
+  CompositionMiddleware,
 } from "kiosk-keyboard-webc/bundle";
 ```
 

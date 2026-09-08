@@ -782,7 +782,7 @@ tracker.setChangeCallback((keys) => {
 tracker.setChangeCallback(null);
 ```
 
-The tracker is owned by `HotkeyManager` and shares its lifecycle: it is created and destroyed automatically. Access it via `manager.getKeyStateTracker()`. The `KeyStateTracker` class is exported for type declarations but its constructor is internal.
+The tracker is owned by the manager's internal `EventDispatcher` and shares the manager's lifecycle: it is created and destroyed automatically. Access it via `manager.getKeyStateTracker()`. The `KeyStateTracker` class is exported for type declarations but its constructor is internal.
 
 > [!NOTE]
 > Includes a **macOS stuck-key fix**: when a modifier is released, all non-modifier keys are cleared. This prevents ghost keys when macOS swallows keyup events (e.g., Cmd+Tab).
@@ -859,12 +859,14 @@ const normalized = assertValidHotkey("Mod+S"); // returns "Control+S" (on Window
 assertValidHotkey(""); // throws Error
 ```
 
+The result object is typed as `HotkeyValidationResult`, exported from the same module.
+
 **Browser blocklist** (24 entries): Ctrl+L, Ctrl+N, Ctrl+T, Ctrl+W, F5, F11, F12, Tab, etc.
 
 **SAP blocklist** (15 entries): Ctrl+S (Save), Ctrl+E (Edit), Ctrl+D (Delete), F6, etc.
 
 > [!TIP]
-> Validation warnings are also automatically logged when calling `manager.register()`.
+> Validation warnings are also automatically logged when calling `manager.register()` with a single hotkey; sequence registrations are not validated.
 
 **Common validation messages for invalid hotkey strings** (the strings returned in `validateHotkey().errors`):
 
@@ -877,7 +879,7 @@ assertValidHotkey(""); // throws Error
 
 `assertValidHotkey` throws `Invalid hotkey "<input>": <errors joined by "; ">`; e.g. `assertValidHotkey("")` throws `Invalid hotkey "": Hotkey string must not be empty`.
 
-Unknown key names (e.g. `"Ctrl+Foo"`) produce a validation warning but do not throw; they are allowed for forward compatibility.
+Key names outside the exported `KNOWN_KEYS` set (e.g. `"Ctrl+Foo"`) produce a validation warning but do not throw; they are allowed for forward compatibility.
 
 ## Utility Functions
 

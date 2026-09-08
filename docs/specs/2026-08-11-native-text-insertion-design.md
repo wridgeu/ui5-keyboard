@@ -122,7 +122,7 @@ document.execCommand("insertText", false, "Q");
 // → g1.value === "Q", g2.value === ""   (g2 was the element we "meant")
 ```
 
-`execCommand` has no element parameter. It operates on the document's active editing host. Both packages' `insertText(dom, ...)` take the target as an argument and are called in paths where that element is not guaranteed focused — `kana-dakuten.ts:62`, `hangul-compose.ts:215`/`:252`, and the public `insertText()` API (`KioskKeyboard.ts:1767` webc, `:2371` kiosk) among them. Taking the native path without a focus check would silently edit whatever else holds focus.
+`execCommand` has no element parameter. It operates on the document's active editing host. Both packages' `insertText(dom, ...)` take the target as an argument and are called in paths where that element is not guaranteed focused — `kana-dakuten.ts:62`, `hangul-compose.ts:215`/`:252`, and the public `insertText()` API (`KioskKeyboard#insertText` in both twins) among them. Taking the native path without a focus check would silently edit whatever else holds focus.
 
 **Therefore the native path is guarded by an active-element check, and the guard must pierce shadow roots.** Measured: with an `<input>` inside an open shadow root focused, `document.activeElement` is the **host**, not the input (`shadowRoot.activeElement` is the input). A naive `document.activeElement === dom` test would reject a legitimately focused shadow-DOM target and silently fall back. The check walks `activeElement` through `shadowRoot` until it bottoms out.
 

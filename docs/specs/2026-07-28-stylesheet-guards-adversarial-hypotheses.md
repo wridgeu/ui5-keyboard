@@ -1,6 +1,7 @@
 # Stylesheet and CI-selection guards: adversarial hypotheses
 
 - Date: 2026-07-28
+- Status: Shipped. Historical record; later code changes are not folded back in.
 - Guards under test:
   - `tools/check-style-twin-drift.mjs` (`npm run test:style-twin-drift`)
   - `patches/less-openui5-test.mjs` (`npm run test:patches`), which took over the

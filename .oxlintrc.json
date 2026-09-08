@@ -105,11 +105,6 @@
             "object": "page",
             "property": "pause",
             "message": "Remove the debug pause; rely on web-first assertions (expect().toHaveClass etc.) instead."
-          },
-          {
-            "object": "browser",
-            "property": "pause",
-            "message": "Remove the debug pause; rely on web-first assertions (expect().toHaveClass etc.) instead."
           }
         ]
       }

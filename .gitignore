@@ -39,7 +39,6 @@ prompt*.txt
 
 # Local Claude/OpenCode workspace settings
 .claude/
-packages/**/.claude/
 .superpowers/
 .worktrees/
 

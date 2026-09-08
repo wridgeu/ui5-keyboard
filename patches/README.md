@@ -2,13 +2,13 @@
 
 Local patches applied via [patch-package](https://github.com/ds300/patch-package) to fix upstream issues in dependencies. These are applied automatically on `npm install` via the `postinstall` script.
 
-## @ui5/webcomponents-tools+2.22.0
+## @ui5/webcomponents-tools+2.26.0
 
 Fixes five bugs in the Custom Elements Manifest (CEM) generation tooling.
 
-**Pinned at 2.22.0:**
+**Pinned at 2.26.0:**
 
-The patch applies cleanly to the pristine `2.22.0` package as published on npm (patch-package warns when the filename version does not match the installed version, so a clean `npm install` confirms it); none of the five bugs were fixed upstream across the `2.20.0` → `2.22.0` bumps. The patch filename tracks the pinned version.
+The patch applies cleanly to the pristine `2.26.0` package as published on npm (patch-package warns when the filename version does not match the installed version, so a clean `npm install` confirms it); none of the five bugs were fixed upstream across the `2.20.0` → `2.26.0` bumps. The patch filename tracks the pinned version.
 
 **Note on upstream ownership:**
 
@@ -66,7 +66,7 @@ The `handleParametersAndReturnType` function builds parameter objects from the T
 
 The `processClass` function looks up TypeScript AST nodes by `name` only. When a class has both a `static` and a non-static method with the same name, `find()` always returns the first match. The instance method's AST node is never found, so its parameters, return type, and JSDoc enrichment are skipped entirely.
 
-The underlying issue in the CEM plugin is a real defect: any component that legitimately has both a static and instance method with the same name (which TypeScript and JavaScript allow) will produce incorrect CEM output. The patch remains in place for correctness.
+The underlying issue in the CEM plugin is a real defect: any component that legitimately has both a static and instance method with the same name (which TypeScript and JavaScript allow) will produce incorrect CEM output.
 
 **Fix:** Add a `static` modifier check to the `find()` predicate.
 
@@ -117,13 +117,13 @@ The same bug exists in both `handlers.js` (member descriptions) and `class-jsdoc
 
 Repository: https://github.com/UI5/webcomponents.
 
-These patches should be removed once the upstream issues are resolved. As of `@ui5/webcomponents-tools@2.22.0` all five bugs are still present upstream.
+These patches should be removed once the upstream issues are resolved. As of `@ui5/webcomponents-tools@2.26.0` all five bugs are still present upstream.
 
 ## less-openui5+0.11.6
 
 Adds `@container` and `@layer` at-rule support to the vendored LESS 1.6.3 parser, and resolves the parent selector inside conditional group rules.
 
-**Pinned at 0.11.6:** exact, like `@ui5/webcomponents-tools` above. A range would let `npm update` move the installed version in the lockfile alone, leaving the patch filename claiming a version that is no longer installed; patch-package would warn and apply anyway. The pin keeps any move off 0.11.6 a reviewable `package.json` diff. `@ui5/builder`'s own `^0.11.6` edge floats independently, which is what `apply-nested.mjs`'s vendored-fork-version gate exists to catch.
+**Pinned at 0.11.6:** exact, like `@ui5/webcomponents-tools` above. A range would let `npm update` move the installed version in the lockfile alone, leaving the patch filename claiming a version that is no longer installed; patch-package would warn and apply anyway. The pin keeps any move off 0.11.6 a reviewable `package.json` diff. `@ui5/builder`'s own edge (`^0.12.0`, installed nested as 0.12.0) floats independently, which is what `apply-nested.mjs`'s vendored-fork-version gate exists to catch: both copies vendor LESS 1.6.3, so the patch transfers. Moving the root pin onto the same major would dedupe the two and retire the nested copy along with `apply-nested.mjs`.
 
 **Files:**
 

@@ -1,6 +1,7 @@
 # KeyAction refactor: adversarial test-validation hypotheses
 
 Date: 2026-07-03
+Status: Shipped. Historical record; later code changes are not folded back in.
 Companion to: `2026-07-03-keyboard-key-action-model-design.md`
 
 Per CLAUDE.md section 7, a green suite can lie. This refactor is behavior-preserving,

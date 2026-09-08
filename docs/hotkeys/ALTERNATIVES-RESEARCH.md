@@ -1,8 +1,10 @@
 # ui5-lib-hotkeys: Review & Comparison
 
+> **Status: Research notes.** A point-in-time comparison against the alternatives listed under [References](#references); those projects are not tracked for changes.
+
 ## Executive Summary
 
-Compared with a production hand-rolled ShortcutHandler and UI5's built-in `CommandExecution`, this library provides a broader feature set: LIFO scope stack with two-pass matching, smart `ignoreInputs: "auto"`, lazy dialog detection, and router integration. TanStack Hotkeys also aligns with several design choices used here (conflict behaviors, cross-platform Mod).
+Compared with UI5's built-in `CommandExecution`, this library provides a broader feature set: LIFO scope stack with two-pass matching, smart `ignoreInputs: "auto"`, lazy dialog detection, and router integration. TanStack Hotkeys also aligns with several design choices used here (conflict behaviors, cross-platform Mod).
 
 ## 1. Comparison: UI5 CommandExecution
 
@@ -30,15 +32,12 @@ Compared with a production hand-rolled ShortcutHandler and UI5's built-in `Comma
 
 ### Key Differences
 
-| Aspect             | TanStack                          | ui5-lib-hotkeys                            |
-| ------------------ | --------------------------------- | ------------------------------------------ |
-| Scoping            | DOM-based (`target` option)       | Named scope stack (LIFO) + target elements |
-| `enabled`          | Static boolean only               | `boolean \| (() => boolean)`               |
-| Handle mutation    | `.callback = fn`, `.setOptions()` | `handle.setOptions()`                      |
-| Sequences          | `SequenceManager` with timeout    | `SequenceManager` with timeout             |
-| Key state tracking | `KeyStateTracker`                 | `KeyStateTracker`                          |
-| Hotkey recording   | `HotkeyRecorder`                  | `HotkeyRecorder`                           |
-| Type safety        | Template literal union type       | Template literal union type (`Hotkey`)     |
+| Aspect          | TanStack                          | ui5-lib-hotkeys                            |
+| --------------- | --------------------------------- | ------------------------------------------ |
+| Scoping         | DOM-based (`target` option)       | Named scope stack (LIFO) + target elements |
+| `enabled`       | Static boolean only               | `boolean \| (() => boolean)`               |
+| Handle mutation | `.callback = fn`, `.setOptions()` | `handle.setOptions()`                      |
+| Type safety     | Template literal union type       | Template literal union type (`Hotkey`)     |
 
 ## 3. FLP & Standalone Compatibility
 

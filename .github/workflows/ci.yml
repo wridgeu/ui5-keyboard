@@ -27,7 +27,7 @@ jobs:
       contents: read
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # commitlint below diffs base..head, so it needs full history.
           fetch-depth: 0
@@ -122,7 +122,7 @@ jobs:
       contents: read
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -168,7 +168,7 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: "1"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -208,12 +208,17 @@ jobs:
     permissions:
       contents: read
     timeout-minutes: 20
+    # Playwright only; this job never launches puppeteer, so skip its postinstall
+    # Chrome download on a node_modules cache miss (see the unit-webc job). Both
+    # matrix legs would otherwise pull ~170 MB each for a browser nothing starts.
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "1"
     strategy:
       fail-fast: false
       matrix:
         package: [kiosk-keyboard, kiosk-keyboard-webc]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -253,7 +258,7 @@ jobs:
     env:
       PUPPETEER_SKIP_DOWNLOAD: "1"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 

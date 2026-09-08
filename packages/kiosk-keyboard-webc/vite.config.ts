@@ -16,7 +16,7 @@ export default defineConfig({
       // Exclude generated/output directories from file watching so that
       // prior coverage or visual regression runs do not trigger Vite
       // page reloads during e2e tests.
-      ignored: ["**/coverage/**", "**/__screenshots__/**", "**/dist/**"],
+      ignored: ["**/coverage/**", "**/test-results/**", "**/dist/**"],
     },
   },
   build: {

@@ -8,7 +8,7 @@ The library is split into focused, single-responsibility modules. The primary so
 
 `HotkeyManager` is the primary entry point. The package also exposes additional public APIs (`RegistrationGroup`, `KeyStateTracker`, `HotkeyRecorder`, and selected utility modules). `KeyStateTracker` and `HotkeyRecorder` are accessed via factory methods (`manager.getKeyStateTracker()`, `manager.createRecorder()`). Their constructors are internal. Anything under `ui5/hotkeys/internal/*` remains internal-only.
 
-Some top-level entry points are importable but not part of the semver-stable consumer contract. This currently includes utility/helper modules (`parse.ts`, `match.ts`, `platform.ts`, `validate.ts`, `constants.ts`). `format.ts` is the supported exception and remains part of the stable consumer surface. Higher-level implementation modules (for example `SequenceManager.ts`) are consumed via `HotkeyManager` and are not a supported direct import surface.
+Some top-level entry points are importable but not part of the semver-stable consumer contract. This currently includes utility/helper modules (`parse.ts`, `match.ts`, `platform.ts`, `validate.ts`, `constants.ts`). `format.ts` is the supported exception and remains part of the stable consumer surface.
 
 ## UI5 Integration
 
@@ -77,6 +77,8 @@ keydown event (window capture)
 ### Suspend Guard
 
 `manager.suspendDispatch(reason?)` returns an RAII-style `KeyboardDispatchGuard`. While any guard is active, steps 5-7 are skipped and unhandled fires with `Suspended` reason. Guards are reference-counted; all must be released before dispatch resumes. `release()` is idempotent. Guards are invalidated on `destroy()`.
+
+### Per-registration Guards
 
 Each registration is checked against the following guards before the callback fires:
 
@@ -384,4 +386,4 @@ Records a single keyboard shortcut from user input for "press a key" settings UI
 
 ### validate.ts
 
-Validation utilities (`validateHotkey`, `assertValidHotkey`, `checkHotkey`) and blocklists for browser and SAP Fiori shortcuts. Validation warnings are automatically logged during `register()`.
+Validation utilities (`validateHotkey`, `assertValidHotkey`, `checkHotkey`) and blocklists for browser and SAP Fiori shortcuts. Validation warnings are automatically logged during `register()` for single hotkeys only; sequence registrations are not validated.

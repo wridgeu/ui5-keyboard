@@ -180,7 +180,7 @@ When the web component is used inside UI5, DOM-based resolution still works corr
 - `KioskKeyboard-focus.qunit.ts`: all 11 `inputIds` test cases rename to `controls`; `targetInput` assertions use `getActiveControl()`
 - `KioskKeyboard-autoshow.qunit.ts`: `inputIds` rebind test renames
 - `focus-claim-service.qunit.ts`: `inputIds` references rename to `controls`
-- `interop.test.ts` (e2e): `inputIds` attribute usage renames
+- `interop.test.ts` (e2e, shipped as `test/e2e/interop.spec.ts`; deleted in a later change): `inputIds` attribute usage renames
 - `kiosk-keyboard.test.ts` (webc): `for` and `inputIds` tests unify into `controls`
 
 ### New test cases
