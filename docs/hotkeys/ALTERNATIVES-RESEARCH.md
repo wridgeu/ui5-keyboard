@@ -4,29 +4,11 @@
 
 ## Executive Summary
 
-Compared with UI5's built-in `CommandExecution`, this library provides a broader feature set: LIFO scope stack with two-pass matching, smart `ignoreInputs: "auto"`, lazy dialog detection, and router integration. TanStack Hotkeys also aligns with several design choices used here (conflict behaviors, cross-platform Mod).
+UI5's built-in `CommandExecution` and this library differ mainly in scoping and lifecycle: a focus-bound control-tree scope against a LIFO scope stack with two-pass matching, `ignoreInputs: "auto"`, lazy dialog detection, and router integration. TanStack Hotkeys shares several design choices used here (conflict behaviors, cross-platform Mod).
 
 ## 1. Comparison: UI5 CommandExecution
 
-### Critical Limitations of CommandExecution
-
-1. **Focus requirement** (issue #2788, closed won't fix): If no element is focused, shortcuts don't fire. SAP's response: _"we can not provide a stable non confusing implementation of focus-free shortcuts."_
-2. **Key bombing**: No built-in repeat guard.
-3. **No scope stack**: Relies entirely on DOM focus traversal.
-4. **Manifest coupling**: Commands MUST exist in manifest.json. Dynamic registration impossible.
-5. **No dialog awareness**: No built-in handling for open dialogs.
-
-### What We Do Better
-
-| Aspect               | CommandExecution           | ui5-lib-hotkeys                        |
-| -------------------- | -------------------------- | -------------------------------------- |
-| Focus requirement    | Required (won't fix)       | Not needed (window capture)            |
-| Key repeat guard     | None                       | `ignoreRepeat: true` (default)         |
-| Scope management     | DOM focus traversal        | LIFO scope stack + two-pass matching   |
-| Dynamic registration | Impossible (manifest only) | Runtime `register()`                   |
-| Dialog awareness     | None                       | Lazy `InstanceManager.hasOpenDialog()` |
-| Router integration   | None                       | `enableRouterIntegration()`            |
-| Input suppression    | None                       | Smart `ignoreInputs: "auto"`           |
+See [Compared to `sap.ui.core.CommandExecution`](../../packages/hotkeys/README.md#compared-to-sapuicorecommandexecution) in the package README.
 
 ## 2. Comparison: TanStack Hotkeys
 
