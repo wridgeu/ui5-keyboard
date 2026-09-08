@@ -294,12 +294,13 @@ import type {
   KeyType,
   SpecialKeyValue,
   CompositionMiddleware,
+  KioskKeyboardDomContract,
 } from "kiosk-keyboard-webc/bundle";
 ```
 
 For most applications, prefer `kiosk-keyboard-webc/bundle`. The bare `kiosk-keyboard-webc` entry point is also supported for advanced setups when paired with `kiosk-keyboard-webc/Assets`. The bundle registers `<kiosk-keyboard-custom-layout>` alongside `<kiosk-keyboard>`; the bare entry registers `<kiosk-keyboard>` only, so import `kiosk-keyboard-webc/CustomLayout` next to it to use the `customLayouts` slot.
 
-Customization is per element via the `customLayouts` slot and the `defaultVariants` property. The static methods on `KioskKeyboard` are read-only inspectors (`getRegisteredLayout`, `getRegisteredLayoutNames`, `isBuiltInLayout`, `isSecondaryLayout`, `getLocaleLayout`), the global `setI18nResolver`, and `composeLayout` for splicing rows together. Import the class and call them directly:
+Customization is per element via the `customLayouts` slot and the `defaultVariants` property. The static methods on `KioskKeyboard` are read-only inspectors (`getRegisteredLayout`, `getRegisteredLayoutNames`, `isBuiltInLayout`, `isSecondaryLayout`, `getLocaleLayout`), the global `setI18nResolver`, and `composeLayout` for splicing rows together. `KioskKeyboard.DOM` is stable alongside them, see [DOM Contract](#dom-contract). Import the class and call them directly:
 
 ```js
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
@@ -308,7 +309,7 @@ const qwerty = KioskKeyboard.getRegisteredLayout("qwerty");
 KioskKeyboard.setI18nResolver((key) => undefined);
 ```
 
-Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. Individual layout files under `layouts/*` are likewise internal; layouts are consumed by name through the `layout` attribute or the `rows` of a `<kiosk-keyboard-custom-layout>`. The shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/fkey-row-compact`, `kiosk-keyboard-webc/layouts/nav-row`, `kiosk-keyboard-webc/layouts/nav-row-compact`) are stable imports for composing custom variant layouts. Their keys are declared as `type: "modifier"` (the transparent Lite button style); override `type` on individual keys if you want the default bordered style instead. `nav-row-compact` seats the same eight nav keys as two rows of four, for keyboards narrower than about 20rem where one row of eight leaves each key around 30px wide; `fkey-row-compact` does the same for the twelve function keys, as two rows of six.
+Internal modules under `core/*` (e.g. `shift-state`, `dom-utils`, `input-operations`, `layout-registry`) are implementation details and may change without notice. The one carve-out is `core/latin-variants`, published as the stable `kiosk-keyboard-webc/variants` subpath. Layout definitions under `layouts/*` and middleware factories under `middleware/*` are stable imports, for reading a built-in's rows or middleware into a `<kiosk-keyboard-custom-layout>`; built-ins are already bundled, so a layout you only want to render is asked for by name through the `layout` attribute. Their two composition helpers, `layouts/symbol-common` and `layouts/default-layout`, are internal. The shared row modules (`kiosk-keyboard-webc/layouts/fkey-row`, `kiosk-keyboard-webc/layouts/fkey-row-compact`, `kiosk-keyboard-webc/layouts/nav-row`, `kiosk-keyboard-webc/layouts/nav-row-compact`) are stable imports for composing custom variant layouts. Their keys are declared as `type: "modifier"` (the transparent Lite button style); override `type` on individual keys if you want the default bordered style instead. `nav-row-compact` seats the same eight nav keys as two rows of four, for keyboards narrower than about 20rem where one row of eight leaves each key around 30px wide; `fkey-row-compact` does the same for the twelve function keys, as two rows of six.
 
 > [!NOTE]
 > See the [API Stability Policy](../../docs/shared/API-STABILITY.md) for full details on stable vs internal import boundaries across all packages.
