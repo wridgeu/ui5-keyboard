@@ -32,7 +32,7 @@ on:
       - "docs/**"
       - ".github/workflows/ci.yml"
       - ".github/workflows/release.yml"
-      - ".github/actions/**"
+      - ".github/workflows/prune-pr-caches.yml"
   workflow_dispatch:
 
 permissions: {}
@@ -51,8 +51,14 @@ jobs:
     # Self-hosting SAPUI5 downloads + builds its ushell dependency closure on a
     # cold ~/.ui5 cache, which is heavier than the OpenUI5 build.
     timeout-minutes: 30
+    # This job launches no browser, so skip puppeteer's postinstall Chrome
+    # download on a node_modules cache miss; see ci.yml's unit-webc job for the
+    # full reasoning. The browser lands in ~/.cache/puppeteer, not node_modules,
+    # so skipping it leaves the shared node_modules cache identical.
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "1"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -156,4 +162,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
