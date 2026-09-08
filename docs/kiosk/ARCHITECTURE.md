@@ -621,7 +621,8 @@ packages/kiosk-keyboard/
     internal/layout-registry.ts  Layout registration and locale resolution
     internal/
       types.ts                Internal contracts (TargetElement)
-      restricted-modules.d.ts  Ambient declarations for the @ui5-restricted modules @openui5/types omits
+      restricted-modules.d.ts  Ambient sap/ui/dom/units/Rem declaration @openui5/types omits, plus the
+                               sap/m/Button augmentation for the framework-internal tab-chain flag
       custom-layout-fold.ts   Folds the custom layouts into the per-facet lookup maps the
                                resolution paths read, plus the diagnostics it reports
       layout-fold-cache.ts    LayoutFoldCache: caches that fold against the aggregation's children
