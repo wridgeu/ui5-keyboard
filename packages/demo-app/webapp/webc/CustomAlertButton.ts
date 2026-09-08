@@ -1,3 +1,27 @@
+// The app stylesheet cannot reach into a shadow root, so the button carries its
+// own sheet, shared by every instance. Custom properties do cross the boundary,
+// so the theme's button tokens size and colour it like the sap.m controls beside it.
+const style = new CSSStyleSheet();
+style.replaceSync(`
+  :host {
+    display: inline-block;
+    margin: 0.25rem 0;
+  }
+
+  button {
+    box-sizing: border-box;
+    height: var(--sapElement_Height);
+    padding: 0 0.6875rem;
+    border: var(--sapButton_BorderWidth) solid var(--sapButton_BorderColor);
+    border-radius: var(--sapButton_BorderCornerRadius);
+    background: var(--sapButton_Background);
+    color: var(--sapButton_TextColor);
+    font-family: var(--sapFontFamily);
+    font-size: var(--sapFontSize);
+    cursor: pointer;
+  }
+`);
+
 class CustomAlertButton extends HTMLElement {
   static get observedAttributes(): string[] {
     return ["text", "message"];
@@ -8,7 +32,7 @@ class CustomAlertButton extends HTMLElement {
 
   constructor() {
     super();
-    this.attachShadow({ mode: "open" });
+    this.attachShadow({ mode: "open" }).adoptedStyleSheets = [style];
   }
 
   connectedCallback(): void {
@@ -53,21 +77,6 @@ class CustomAlertButton extends HTMLElement {
     if (!this.shadowRoot) return;
 
     if (!this._button) {
-      const style = document.createElement("style");
-      style.textContent = [
-        ":host { display: inline-block; }",
-        "button {",
-        '  font: 400 0.875rem/1.2 "72", Arial, sans-serif;',
-        "  border: 1px solid #5b738b;",
-        "  border-radius: 0.5rem;",
-        "  background: #fff;",
-        "  color: #0a6ed1;",
-        "  padding: 0.5rem 0.875rem;",
-        "  cursor: pointer;",
-        "}",
-      ].join("\n");
-      this.shadowRoot.append(style);
-
       this._button = document.createElement("button");
       this.shadowRoot.append(this._button);
     }

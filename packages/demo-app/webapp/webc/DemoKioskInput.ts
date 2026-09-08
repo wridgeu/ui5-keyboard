@@ -88,12 +88,6 @@ class DemoKioskInput extends HTMLElement {
     const input = document.createElement("input");
     input.type = "text";
     input.id = this.id ? `${this.id}-inner` : "";
-    input.style.width = "100%";
-    input.style.padding = "0.625rem";
-    input.style.border = "1px solid #c8d0d8";
-    input.style.borderRadius = "0.5rem";
-    input.style.boxSizing = "border-box";
-    input.style.font = '400 1rem/1.4 "72", Arial, sans-serif';
 
     input.addEventListener("input", () => {
       const nextValue = input.value;

@@ -55,6 +55,7 @@ A UI5 TypeScript library (`ui5.hotkeys`) providing document-level keyboard short
 - [Type-safe Hotkey Strings](#type-safe-hotkey-strings)
 - [Further Reading](#further-reading)
 - [Troubleshooting](#troubleshooting)
+- [Compared to `sap.ui.core.CommandExecution`](#compared-to-sapuicorecommandexecution)
 - [When NOT to Use This Library](#when-not-to-use-this-library)
 - [License](#license)
 
@@ -1056,6 +1057,77 @@ Supported modifier prefixes: `Ctrl`, `Control`, `Shift`, `Alt`, `Meta`, `Mod`, `
 **`enabled()` guard function seems broken:**
 
 - If `enabled()` throws an error, the registration is silently treated as disabled. Check the browser console for `Log.warning` messages from `ui5.hotkeys.HotkeyManager`.
+
+## Compared to `sap.ui.core.CommandExecution`
+
+UI5 ships its own shortcut mechanism, and for a shortcut that belongs to one view and one action control it is the standard choice: nothing extra to install, and the key is declared next to the app's other metadata. `sap.ui.core.CommandExecution` (public, since 1.70) is the entry point; the `sap/ui/core/Shortcut` and `sap/ui/core/util/ShortcutHelper` modules behind it are marked private. A command is declared in the owner component's manifest, an execution goes into a control's `dependents` aggregation, and action controls are wired to it with the `cmd:` handler prefix.
+
+```json
+{
+  "sap.ui5": {
+    "commands": {
+      "Save": { "shortcut": "Ctrl+S" }
+    }
+  }
+}
+```
+
+```xml
+<Page>
+  <dependents>
+    <core:CommandExecution command="Save" execute=".onSave" enabled="{/isDirty}" />
+  </dependents>
+  <headerContent>
+    <Button text="Save" press="cmd:Save" />
+  </headerContent>
+</Page>
+```
+
+### How it dispatches
+
+Read from the OpenUI5 1.136.18 sources:
+
+- `CommandExecution.setParent()` calls `Shortcut.register(parent, ...)`, which adds an event delegate to the parent control. The keydown reaches the handler through that control's DOM, so a shortcut fires while focus is inside the scope control. Focus-free shortcuts are out of scope by design ([openui5#2788](https://github.com/UI5/openui5/issues/2788), closed as won't fix).
+- Scoping is the control tree. `CommandExecution.find()` walks `getDependents()` up the parent chain: `visible="false"` passes the key on to the ancestor, `enabled="false"` swallows it.
+- A shortcut is inactive while the scope control is busy or blocked, and skipped when a control already marked the event (`oEvent.isMarked()`).
+- Handlers run asynchronously. `Shortcut.register` wraps every callback in a focus round-trip: a `#sap-ui-shortcut-focus` span is appended to the static area and focused to force a blur (which commits a pending input value and fires `fieldGroupChange`), the previous focus is restored, and the callback runs after two nested `setTimeout`s. `preventDefault()`, `setMarked()` and `stopPropagation()` are applied before that.
+
+### Feature grid
+
+| Aspect                              | `CommandExecution`                                                                                           | ui5-lib-hotkeys                                        |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Focus requirement                   | Focus must be inside the scope control                                                                       | None (`window` capture-phase listener)                 |
+| Scoping model                       | `dependents` + parent chain traversal                                                                        | Named LIFO scope stack + two-pass matching             |
+| Registration                        | Manifest only; `command` applies initially and cannot be changed                                             | Runtime `register()`, live `handle.setOptions()`       |
+| Owner component                     | Required (the command is read from its manifest)                                                             | Not required                                           |
+| Key vocabulary                      | `Ctrl`/`Shift`/`Alt` + a fixed key list ending at `F12`                                                      | Adds `Mod`/`Meta`/`Cmd`/`Option`, `F1`-`F24`           |
+| Cross-platform modifier             | `Ctrl` maps to `Cmd` on macOS                                                                                | Explicit `Mod`, with `Ctrl` and `Meta` still literal   |
+| Sequences                           | Not supported                                                                                                | `"G E"` with configurable timeout                      |
+| Handler timing                      | Async, after a blur/refocus round-trip through the static area                                               | Synchronous inside the keydown handler                 |
+| `preventDefault`                    | Always applied                                                                                               | Per registration (`preventDefault`, `stopPropagation`) |
+| Duplicate shortcut                  | Throws on the same scope control                                                                             | `ConflictBehavior`: warn, error, replace, allow        |
+| Reserved combinations               | Throws; ~20-entry blocklist (`Ctrl+L`, `Ctrl+T`, `F6`, `F11`, `F12`, `Tab`, ...) plus `Shift` with `.,-+=*/` | Warns; `BROWSER_SHORTCUTS` / `SAP_SHORTCUTS` lists     |
+| Text-field suppression              | Arrow keys inside `input`/`textarea` only                                                                    | `ignoreInputs: "auto" \| boolean`                      |
+| Dialog awareness                    | None                                                                                                         | `suppressInPopups` via lazy `sap.m.InstanceManager`    |
+| Key repeat                          | No guard                                                                                                     | `ignoreRepeat: true` by default                        |
+| Router integration                  | None                                                                                                         | `enableRouterIntegration()`                            |
+| AltGr guard                         | Yes                                                                                                          | Yes                                                    |
+| Shortcut hint / `aria-keyshortcuts` | Automatic on `sap.m.Button`, `SplitButton`, `ListItemBase`                                                   | None; `formatForDisplay()` returns the label only      |
+| Flexibility customizing             | Commands are mergeable via `sap.ui.commands` customizing                                                     | None                                                   |
+
+### Choosing between the two
+
+Use `CommandExecution` when:
+
+- the shortcut belongs to one view and one action control, and focus is inside that view when it is pressed;
+- the shortcut should be discoverable without extra work: `ShortcutHintsMixin` gives `cmd:`-wired `sap.m.Button`, `SplitButton` and `ListItemBase` an `aria-keyshortcuts` attribute and an on-focus hint popup. This library has no equivalent, so the hint has to be rendered from `formatForDisplay()`;
+- the command should stay adaptable: `Component.getCommand()` merges `sap.ui.commands` flexibility customizing over the manifest, so an app variant can re-key it without code changes. The `$cmd` model that lets a button follow the execution's `enabled` state is documented as restricted to `sap.suite.ui.generic`, so app code binds both sides itself.
+
+Use this library when a requirement has no native counterpart: keys that fire regardless of focus, registration at runtime, sequences, dialog- or route-aware scoping, or per-registration control over `preventDefault`.
+
+Both can coexist in one app, with one ordering caveat: this library listens on `window` in the capture phase, so a matching registration with the default `stopPropagation: true` prevents a `CommandExecution` on the same key from seeing the event at all.
+
+A limitation applies to both: `Shortcut`'s own documentation states that no key combination is guaranteed to work across every browser, OS, keyboard layout and locale, and that bug reports about specific combinations will not be handled. Validate the combinations you ship either way (see [Validation](#validation)).
 
 ## When NOT to Use This Library
 
