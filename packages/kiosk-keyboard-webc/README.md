@@ -51,9 +51,9 @@ Numeric:
 
 Keys support different visual styles via the `type` property in `KeyDefinition`:
 
-| Default                                                       | Default (hovered)                                                           | Modifier (`type: "modifier"`)                                   | Modifier (hovered)                                                            |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| ![Default key](../../docs/shared/images/key-type-default.png) | ![Default key hovered](../../docs/shared/images/key-type-default-hover.png) | ![Modifier key](../../docs/shared/images/key-type-modifier.png) | ![Modifier key hovered](../../docs/shared/images/key-type-modifier-hover.png) |
+| Default                                                                                 | Default (hovered)                                                                                     | Modifier (`type: "modifier"`)                                                             | Modifier (hovered)                                                                                      |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| <img src="../../docs/shared/images/key-type-default.png" alt="Default key" width="180"> | <img src="../../docs/shared/images/key-type-default-hover.png" alt="Default key hovered" width="180"> | <img src="../../docs/shared/images/key-type-modifier.png" alt="Modifier key" width="180"> | <img src="../../docs/shared/images/key-type-modifier-hover.png" alt="Modifier key hovered" width="180"> |
 
 - **Default**: visible border, `--sapButton_Background`. Used for character keys.
 - **Modifier**: transparent background, no border (`--sapButton_Lite_Background`). Used for Shift, Caps Lock, layout switchers, F-keys (F1-F12), and navigation keys (Home, End, Arrows, PgUp, PgDn).
@@ -61,13 +61,13 @@ Keys support different visual styles via the `type` property in `KeyDefinition`:
 
 ### Theme Preview
 
-| `sap_horizon`                                                                      | `sap_horizon_dark`                                                                           |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| ![QWERTY in sap_horizon](../../docs/kiosk-webc/images/webc-qwerty-sap_horizon.png) | ![QWERTY in sap_horizon_dark](../../docs/kiosk-webc/images/webc-qwerty-sap_horizon_dark.png) |
+| `sap_horizon`                                                                                                | `sap_horizon_dark`                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| <img src="../../docs/kiosk-webc/images/webc-qwerty-sap_horizon.png" alt="QWERTY in sap_horizon" width="400"> | <img src="../../docs/kiosk-webc/images/webc-qwerty-sap_horizon_dark.png" alt="QWERTY in sap_horizon_dark" width="400"> |
 
-| `sap_horizon_hcb`                                                                          | `sap_horizon_hcw`                                                                          |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| ![QWERTY in sap_horizon_hcb](../../docs/kiosk-webc/images/webc-qwerty-sap_horizon_hcb.png) | ![QWERTY in sap_horizon_hcw](../../docs/kiosk-webc/images/webc-qwerty-sap_horizon_hcw.png) |
+| `sap_horizon_hcb`                                                                                                    | `sap_horizon_hcw`                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| <img src="../../docs/kiosk-webc/images/webc-qwerty-sap_horizon_hcb.png" alt="QWERTY in sap_horizon_hcb" width="400"> | <img src="../../docs/kiosk-webc/images/webc-qwerty-sap_horizon_hcw.png" alt="QWERTY in sap_horizon_hcw" width="400"> |
 
 ## Installation
 

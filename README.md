@@ -28,13 +28,13 @@ This repository bundles two complementary capabilities (keyboard shortcut manage
 
 Full-size inline keyboard:
 
-| `sap_horizon`                                                                                       | `sap_horizon_dark`                                                                                            |
-| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| ![Inline wide kiosk keyboard in sap_horizon](./docs/kiosk/images/kiosk-inline-wide-sap_horizon.png) | ![Inline wide kiosk keyboard in sap_horizon_dark](./docs/kiosk/images/kiosk-inline-wide-sap_horizon_dark.png) |
+| `sap_horizon`                                                                                                                 | `sap_horizon_dark`                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="./docs/kiosk/images/kiosk-inline-wide-sap_horizon.png" alt="Inline wide kiosk keyboard in sap_horizon" width="400"> | <img src="./docs/kiosk/images/kiosk-inline-wide-sap_horizon_dark.png" alt="Inline wide kiosk keyboard in sap_horizon_dark" width="400"> |
 
-| `sap_horizon_hcb`                                                                                           | `sap_horizon_hcw`                                                                                           |
-| ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| ![Inline wide kiosk keyboard in sap_horizon_hcb](./docs/kiosk/images/kiosk-inline-wide-sap_horizon_hcb.png) | ![Inline wide kiosk keyboard in sap_horizon_hcw](./docs/kiosk/images/kiosk-inline-wide-sap_horizon_hcw.png) |
+| `sap_horizon_hcb`                                                                                                                     | `sap_horizon_hcw`                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| <img src="./docs/kiosk/images/kiosk-inline-wide-sap_horizon_hcb.png" alt="Inline wide kiosk keyboard in sap_horizon_hcb" width="400"> | <img src="./docs/kiosk/images/kiosk-inline-wide-sap_horizon_hcw.png" alt="Inline wide kiosk keyboard in sap_horizon_hcw" width="400"> |
 
 ## Getting Started
 
