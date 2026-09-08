@@ -70,3 +70,27 @@
     --ui5KioskKeyboard-padding: 0.125rem;
   }
 }
+
+/* The demo custom elements render their input into the light DOM, so this
+   stylesheet reaches them. Sizing and colours come from the theme's field
+   tokens so they line up with the sap.m inputs beside them in every theme;
+   the 0.25rem vertical margin is the one sap.m.Input carries through
+   sapMInputBaseHeightMargin. The host is inline by default, which would
+   collapse the field box inside a layout container. */
+demo-kiosk-input {
+  display: block;
+  margin: 0.25rem 0;
+}
+
+demo-kiosk-input > input {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--sapElement_Height);
+  padding: 0 0.625rem;
+  border: var(--sapField_BorderWidth) solid var(--sapField_BorderColor);
+  border-radius: var(--sapField_BorderCornerRadius);
+  background: var(--sapField_Background);
+  color: var(--sapField_TextColor);
+  font-family: var(--sapFontFamily);
+  font-size: var(--sapFontSize);
+}

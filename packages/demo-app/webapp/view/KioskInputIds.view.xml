@@ -74,15 +74,15 @@
                                         demoAlert=".onDemoAlert" />
                                 </VBox>
                             </HBox>
-                            <HBox alignItems="Center" class="sapUiSmallMarginTop">
+                            <HBox class="sapUiSmallMarginTop">
                                 <VBox class="sapUiSmallMarginEnd">
                                     <Label text="StepInput (targeted)" labelFor="stepInputTarget" />
                                     <StepInput id="stepInputTarget" width="12rem" min="0" max="999" value="5" />
                                 </VBox>
-                                <HBox alignItems="Center">
-                                    <Label id="autoTypeLabel" text="autoType:" class="sapUiSmallMarginEnd" />
+                                <VBox justifyContent="Center">
+                                    <Label id="autoTypeLabel" text="autoType:" />
                                     <Switch state="{inputIds>/kioskAutoType}" ariaLabelledBy="autoTypeLabel" />
-                                </HBox>
+                                </VBox>
                             </HBox>
                         </VBox>
                     </HBox>
