@@ -47,7 +47,7 @@ export function validateKeyIcon(icon: string, kind: string): string {
   if (icon && IconPool.isIconURI(icon) && !IconPool.getIconInfo(icon)) {
     if (!warnedInvalidIcons.has(icon)) {
       warnedInvalidIcons.add(icon);
-      Log.warning(`KioskKeyboard: ${kind} "${icon}" not found, skipping`, undefined, "KioskKeyboard");
+      Log.warning(`KioskKeyboard: ${kind} "${icon}" not found, skipping`, undefined, "ui5.kiosk.KioskKeyboard");
     }
     return "";
   }

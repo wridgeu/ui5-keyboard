@@ -34,7 +34,7 @@ Eighteen `Log.warning` call sites, all under the `ui5.kiosk.KioskKeyboard` compo
   - a two-way bound `layout` that `autoCompact` writes back into the model
   - an unrecognized `{...}` key token
 - `packages/kiosk-keyboard/src/internal/layout-state.ts` (1)
-  - a layout name no `<kiosk:CustomLayout>` declares; the request no-ops
+  - a layout name that is neither a built-in nor declared by a `<kiosk:CustomLayout>`; the request no-ops
 - `packages/kiosk-keyboard/src/internal/layout-registry.ts` (2)
   - a layout **name** argument that is not a string, and one that is empty after trim. The layout and locale maps are sealed at module load with no mutation API, and locale resolution is silent: an unmatched locale falls through to `DEFAULT_LAYOUT`.
 - `packages/kiosk-keyboard/src/internal/layout-fold-cache.ts` (1)
@@ -83,7 +83,7 @@ Examples:
 Examples:
 
 - optional feature cannot be applied now but can become valid later
-- layout references naming a layout no `<kiosk:CustomLayout>` declares yet
+- layout references naming a layout that is neither a built-in nor declared yet
 - non-critical integration mismatches where control still works safely
 
 ### C) Silent fallback only for browser/platform variance
