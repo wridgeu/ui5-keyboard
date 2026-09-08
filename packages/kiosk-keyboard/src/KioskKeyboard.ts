@@ -512,7 +512,11 @@ export default class KioskKeyboard extends Control {
       },
     },
     associations: {
-      _activeTarget: { type: "sap.ui.core.Control", multiple: false },
+      _activeTarget: {
+        type: "sap.ui.core.Control",
+        multiple: false,
+        visibility: "hidden",
+      },
       ariaLabelledBy: {
         type: "sap.ui.core.Control",
         multiple: true,
@@ -667,6 +671,9 @@ export default class KioskKeyboard extends Control {
    * The callback receives the focus DOM ref (`HTMLElement`) and must return
    * the native input/textarea to type into, or `null` to fall back to
    * the built-in resolver.
+   *
+   * The library clears the global resolver when the last live `KioskKeyboard`
+   * instance is destroyed.
    *
    * @param fnResolver Custom resolver function, or `null` to clear.
    * @public

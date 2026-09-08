@@ -213,7 +213,6 @@ declare module "./KioskKeyboard" {
          * @since 0.1.0
          */
         customLayouts?: CustomLayout[] | CustomLayout | AggregationBindingInfo | `{${string}}`;
-        _activeTarget?: Control | string;
         ariaLabelledBy?: Control | string | (Control | string)[];
         ariaDescribedBy?: Control | string | (Control | string)[];
 
@@ -943,21 +942,6 @@ declare module "./KioskKeyboard" {
          * @returns Reference to "this" in order to allow method chaining
          */
         unbindCustomLayouts(): this;
-
-        // association: _activeTarget
-
-        /**
-         * ID of the element which is the current target of the association "_activeTarget", or "null".
-         */
-        get_activeTarget(): string;
-
-        /**
-         * Sets the associated _activeTarget.
-         *
-         * @param _activeTarget ID of an element which becomes the new target of this "_activeTarget" association; alternatively, an element instance may be given
-         * @returns Reference to "this" in order to allow method chaining
-         */
-        set_activeTarget(_activeTarget?: string | Control): this;
 
         // association: ariaLabelledBy
 
