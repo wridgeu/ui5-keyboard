@@ -4,6 +4,7 @@ demo-dist/
 .ui5/
 .ui5-tooling-modules/
 *.tsbuildinfo
+.tsbuild-test/
 coverage/
 **/src/generated/
 

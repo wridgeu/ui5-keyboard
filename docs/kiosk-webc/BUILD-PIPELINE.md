@@ -25,12 +25,12 @@ npm run build -w packages/kiosk-keyboard-webc
 # Expands to: npm run build:dev && npm run build:bundle && npm run generateAPI
 ```
 
-| Step           | Command               | What it does                                                                                                          |
-| -------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| 1. generate    | `ui5nps generate`     | Converts source assets into TypeScript (see data flow below)                                                          |
-| 2. tsc         | `tsc --build --force` | Compiles all TypeScript (source + generated) to `dist/`                                                               |
-| 3. bundle      | `vite build`          | Creates the standalone all-in-one bundle from the tsc output                                                          |
-| 4. generateAPI | `ui5nps generateAPI`  | Analyzes the `.ts` sources and validates the four [manifest artefacts](./CUSTOM-ELEMENTS-MANIFEST.md#generated-files) |
+| Step           | Command               | What it does                                                                                                                                                     |
+| -------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. generate    | `ui5nps generate`     | Converts source assets into TypeScript (see data flow below)                                                                                                     |
+| 2. tsc         | `tsc --build --force` | Compiles all TypeScript (source + generated) to `dist/`                                                                                                          |
+| 3. bundle      | `vite build`          | Creates the standalone all-in-one bundle from the tsc output                                                                                                     |
+| 4. generateAPI | `ui5nps generateAPI`  | Analyzes the `.ts` sources to produce the four [manifest artefacts](./CUSTOM-ELEMENTS-MANIFEST.md#generated-files), then schema-validates `custom-elements.json` |
 
 Each step depends on the previous one's output. The `--force` flag on tsc is required because the `generate` step writes into `src/generated/` right before compilation, and the incremental build cache can miss those changes.
 

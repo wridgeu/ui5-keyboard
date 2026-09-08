@@ -106,7 +106,7 @@ A `CustomLayout`'s **`suppress`** property names the facets whose inherited valu
 - `Variants`: long-press accent variants. Suppressed, the layout's keys carry no long-press affordance.
 - `Middleware`: composition (IME / dead-key) middleware. Suppressed, the layout's keys type directly.
 
-In XML the facets are a comma-separated list (`suppress="Variants, Middleware"`). Whitespace around a name is not part of it, and a token naming no facet is rejected rather than ignored; the component `DataType` that trims each token is covered by `docs/specs/2026-08-05-token-list-attributes-design.md`. The web component takes the same list as a string attribute on `<kiosk-keyboard-custom-layout>`, accepting commas or spaces as separators.
+In XML the facets are a comma-separated list (`suppress="Variants, Middleware"`). Whitespace around a name is not part of it, and a token naming no facet is rejected: the component `DataType` that trims each token also validates it, and an unknown token fails the whole property. That type is covered by `docs/specs/2026-08-05-token-list-attributes-design.md`. The web component takes the same list as a string attribute on `<kiosk-keyboard-custom-layout>`, accepting commas or spaces as separators; there an unknown token is reported as an `unknown-suppress` diagnostic and skipped, and the layout still renders.
 
 ## AltGr (Alternate Graphic)
 
@@ -199,4 +199,4 @@ A **twin** is a module kept as a hand-maintained duplicate in both keyboard pack
 
 - `npm run test:twin-drift` (`tools/check-twin-drift.mjs`): compares an explicit manifest of duplicated source modules after normalization, and fails on a same-named pair that is registered in neither the checked nor the unchecked list.
 - `npm run test:style-twin-drift` (`tools/check-style-twin-drift.mjs`): compares the public custom-property surface of the two stylesheets, whose names differ by convention and so are compared as canonical tokens.
-- `npm run test:dom-contract` (`tools/check-dom-contract-drift.mjs`): compares the two `dom-contract.ts` modules structurally, by key set for the per-platform names and by key and value for the shared `data-*` attributes.
+- `npm run test:dom-contract` (`tools/check-dom-contract-drift.mjs`): compares the two `dom-contract.ts` modules structurally: the `classes` and `selectors` groups by key set, since their string values differ per platform, and the shared `data-*` attributes by key and value.
