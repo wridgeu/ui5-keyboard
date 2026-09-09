@@ -13,6 +13,11 @@ style.replaceSync(`
     box-sizing: border-box;
     height: var(--demoField-height);
     padding: 0 0.6875rem;
+    /* The height is fixed, so a label that wraps would spill out of the box.
+       sap.m.Button keeps its own label on one line the same way. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     border: var(--sapButton_BorderWidth) solid var(--sapButton_BorderColor);
     border-radius: var(--sapButton_BorderCornerRadius);
     background: var(--sapButton_Background);

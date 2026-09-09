@@ -33,9 +33,9 @@
                         text="The keyboard targets inputs A, B, StepInput, and the Web Component inputs via controls. Focusing C or D does not switch the target. Toggle autoType to switch automatically to Numpad for StepInput and back to Full for text inputs."
                         type="Information"
                         showIcon="true" />
-                    <HBox class="sapUiSmallMarginTop">
+                    <HBox wrap="Wrap" class="sapUiSmallMarginTop demoFieldRow">
                         <VBox class="sapUiMediumMarginEnd">
-                            <HBox>
+                            <HBox wrap="Wrap" class="demoFieldRow">
                                 <VBox class="sapUiSmallMarginEnd">
                                     <Label text="Input A (targeted)" labelFor="inputA" />
                                     <Input id="inputA" placeholder="Targeted by keyboard" />
@@ -45,7 +45,7 @@
                                     <Input id="inputB" placeholder="Targeted by keyboard" />
                                 </VBox>
                             </HBox>
-                            <HBox class="sapUiSmallMarginTop">
+                            <HBox wrap="Wrap" class="sapUiSmallMarginTop demoFieldRow">
                                 <VBox class="sapUiSmallMarginEnd">
                                     <Label text="Input C (not targeted)" labelFor="inputC" />
                                     <Input id="inputC" placeholder="Not targeted" />
@@ -57,7 +57,7 @@
                             </HBox>
                         </VBox>
                         <VBox>
-                            <HBox>
+                            <HBox wrap="Wrap" class="demoFieldRow">
                                 <VBox class="sapUiSmallMarginEnd">
                                     <Label text="UI5 Web Component (targeted)" labelFor="ui5WebcInput" />
                                     <webc:Input id="ui5WebcInput" valueState="None" placeholder="UI5 Web Component Input" />
@@ -74,7 +74,7 @@
                                         demoAlert=".onDemoAlert" />
                                 </VBox>
                             </HBox>
-                            <HBox class="sapUiSmallMarginTop">
+                            <HBox wrap="Wrap" class="sapUiSmallMarginTop demoFieldRow">
                                 <VBox class="sapUiSmallMarginEnd">
                                     <Label text="StepInput (targeted)" labelFor="stepInputTarget" />
                                     <StepInput id="stepInputTarget" width="12rem" min="0" max="999" value="5" />
