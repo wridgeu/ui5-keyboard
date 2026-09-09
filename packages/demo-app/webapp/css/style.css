@@ -71,21 +71,37 @@
   }
 }
 
-/* The demo custom elements render their input into the light DOM, so this
-   stylesheet reaches them. Sizing and colours come from the theme's field
-   tokens so they line up with the sap.m inputs beside them in every theme;
-   the 0.25rem vertical margin is the one sap.m.Input carries through
-   sapMInputBaseHeightMargin. The host is inline by default, which would
-   collapse the field box inside a layout container. */
+/* Field metrics for the demo custom elements, which have no sap.m CSS to
+   inherit. They mirror what sap.m.InputBase applies per content density:
+   var(--sapElement_Height) with a 0.25rem margin, and under .sapUiSizeCompact
+   var(--sapElement_Compact_Height) with 0.1875rem. Both are declared on an
+   inherited scope so a density class on any ancestor switches them, and so
+   they cross into demo-alert-button's shadow root, which no selector reaches.
+   Condensed is not covered: sap.m scopes it to .sapUiTableCell and the demo
+   has no table. */
+:root {
+  --demoField-height: var(--sapElement_Height);
+  --demoField-margin: 0.25rem;
+}
+
+.sapUiSizeCompact {
+  --demoField-height: var(--sapElement_Compact_Height);
+  --demoField-margin: 0.1875rem;
+}
+
+/* demo-kiosk-input renders its input into the light DOM, so this stylesheet
+   reaches it. Colours come from the theme's field tokens so it matches the
+   sap.m inputs beside it in every theme. The host is inline by default, which
+   would collapse the field box inside a layout container. */
 demo-kiosk-input {
   display: block;
-  margin: 0.25rem 0;
+  margin: var(--demoField-margin) 0;
 }
 
 demo-kiosk-input > input {
   box-sizing: border-box;
   width: 100%;
-  height: var(--sapElement_Height);
+  height: var(--demoField-height);
   padding: 0 0.625rem;
   border: var(--sapField_BorderWidth) solid var(--sapField_BorderColor);
   border-radius: var(--sapField_BorderCornerRadius);
