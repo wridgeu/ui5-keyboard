@@ -72,13 +72,11 @@
 }
 
 /* Field metrics for the demo custom elements, which have no sap.m CSS to
-   inherit. They mirror what sap.m.InputBase applies per content density:
-   var(--sapElement_Height) with a 0.25rem margin, and under .sapUiSizeCompact
-   var(--sapElement_Compact_Height) with 0.1875rem. Both are declared on an
-   inherited scope so a density class on any ancestor switches them, and so
-   they cross into demo-alert-button's shadow root, which no selector reaches.
-   Condensed is not covered: sap.m scopes it to .sapUiTableCell and the demo
-   has no table. */
+   inherit and so must mirror what sap.m.InputBase applies per content density.
+   Declared on an inherited scope rather than on the elements: a density class
+   on any ancestor then switches them, and they cross into demo-alert-button's
+   shadow root, which no selector reaches. Condensed is not covered, since
+   sap.m scopes it to .sapUiTableCell and the demo has no table. */
 :root {
   --demoField-height: var(--sapElement_Height);
   --demoField-margin: 0.25rem;
