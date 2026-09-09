@@ -1,16 +1,17 @@
 // The app stylesheet cannot reach into a shadow root, so the button carries its
 // own sheet, shared by every instance. Custom properties do cross the boundary,
-// so the theme's button tokens size and colour it like the sap.m controls beside it.
+// so the theme's button tokens colour it and the demo field metrics from
+// css/style.css size it to whatever content density is in effect.
 const style = new CSSStyleSheet();
 style.replaceSync(`
   :host {
     display: inline-block;
-    margin: 0.25rem 0;
+    margin: var(--demoField-margin) 0;
   }
 
   button {
     box-sizing: border-box;
-    height: var(--sapElement_Height);
+    height: var(--demoField-height);
     padding: 0 0.6875rem;
     border: var(--sapButton_BorderWidth) solid var(--sapButton_BorderColor);
     border-radius: var(--sapButton_BorderCornerRadius);
