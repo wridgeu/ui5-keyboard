@@ -108,3 +108,10 @@ demo-kiosk-input > input {
   font-family: var(--sapFontFamily);
   font-size: var(--sapFontSize);
 }
+
+/* Field rows wrap rather than scroll when the viewport cannot hold them on one
+   line. row-gap applies only between flex lines, so it contributes nothing
+   until a row actually wraps and the unwrapped layout is unchanged. */
+.demoFieldRow {
+  row-gap: 1rem;
+}
