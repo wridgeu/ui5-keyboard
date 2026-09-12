@@ -1275,9 +1275,9 @@ export default class KioskKeyboard extends Control {
     // Abort (not commit) any in-progress composition: reset discards the
     // interaction rather than flushing a half-formed syllable to the target.
     this._dropComposition("reset");
-    // Both in-flight presses, pointer and keyboard: a fresh input context cannot
-    // leave a keycap painted, a blur listener armed, or a pending touchend still
-    // able to type. `_clearPressedKeyState` also stops the repeat and the popup.
+    // Drop both in-flight presses, pointer and keyboard: a fresh input context
+    // cannot leave a keycap painted, a blur listener armed, or a pending
+    // touchend still able to type.
     this._clearPressedKeyState();
     this._clearKeyboardPressedState();
     this._variantPopup.dismissOpen();
