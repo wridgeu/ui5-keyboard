@@ -5,6 +5,7 @@ import {
   placeAndWait,
   waitForRender,
   tapKey,
+  getRequiredKeyElement,
   freezeDoubleClickWindow,
   isShiftActive,
   isCapsLock,
@@ -121,6 +122,43 @@ QUnit.test("is chainable (returns the control)", async (assert) => {
   const { kb, input } = await makeKeyboard();
 
   assert.strictEqual(kb.reset(), kb, "reset() returns the control for chaining");
+
+  cleanup(kb, input);
+});
+
+QUnit.test("clears a key that is still held down", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const keyEl = getRequiredKeyElement(kb, "q");
+  const pressedClass = KioskKeyboard.DOM.classes.keyPressed;
+
+  const start = new Event("touchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: keyEl, writable: false });
+  kb.ontouchstart(start);
+  assert.ok(keyEl.classList.contains(pressedClass), "precondition: the held keycap is painted pressed");
+
+  kb.reset();
+  assert.notOk(keyEl.classList.contains(pressedClass), "reset unpaints the held keycap");
+
+  const end = new Event("touchend", { bubbles: true });
+  Object.defineProperty(end, "target", { value: keyEl, writable: false });
+  kb.ontouchend(end);
+  assert.strictEqual(input.getValue(), "", "the interrupted press does not type after reset");
+
+  cleanup(kb, input);
+});
+
+QUnit.test("clears a keycap left pressed by a physical-keyboard activation", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const keyEl = getRequiredKeyElement(kb, "q");
+  const pressedClass = KioskKeyboard.DOM.classes.keyPressed;
+
+  const keydown = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+  Object.defineProperty(keydown, "target", { value: keyEl, writable: false });
+  kb.onsapselect(keydown);
+  assert.ok(keyEl.classList.contains(pressedClass), "precondition: the held keycap is painted pressed");
+
+  kb.reset();
+  assert.notOk(keyEl.classList.contains(pressedClass), "reset unpaints the keycap the keyup never released");
 
   cleanup(kb, input);
 });
