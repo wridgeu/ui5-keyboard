@@ -5,7 +5,6 @@ import { captureConsole } from "../helpers/console.js";
 
 const DOM = KioskKeyboard.DOM;
 
-/** Wait for the UI5Element async render cycle. */
 const nextRender = renderFinished;
 
 function makeKeyboard(): KioskKeyboard {

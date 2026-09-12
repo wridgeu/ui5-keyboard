@@ -44,10 +44,8 @@ const packages = [
       "dist/bundle.esm.js",
       "dist/custom-elements.json",
       "dist/kiosk-keyboard.bundle.js",
-      // The locale and theme payloads `ui5nps generate` writes. They are the only
-      // copies, reached by relative dynamic import from dist/generated/json-imports,
-      // and `prebuild` deletes dist - so a build that skipped `generate` publishes a
-      // package whose translations and theme parameters 404 at runtime.
+      // Only `generate` writes these, and `prebuild` deletes dist: without them
+      // the published translations and theme parameters 404 at runtime.
       "dist/generated/assets/i18n/messagebundle_de.json",
       "dist/generated/assets/themes/sap_horizon/parameters-bundle.css.json",
     ],
