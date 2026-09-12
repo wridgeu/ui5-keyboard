@@ -91,4 +91,22 @@ describe("connect lifecycle", () => {
     detached.querySelector<HTMLElement>(DOM.selectors.key)!.dispatchEvent(event);
     expect(event.defaultPrevented, "teardown removed every armed listener").to.equal(false);
   });
+
+  it("opens once when connect runs twice without a disconnect", async () => {
+    const kb = makeKeyboard();
+    kb.docked = true;
+    kb.open = true;
+
+    let opened = 0;
+    kb.addEventListener("after-open", () => opened++);
+
+    const from = container();
+    const to = container();
+    from.append(kb);
+    to.append(kb);
+    await nextRender();
+
+    expect(kb.open, "the keyboard is open").to.equal(true);
+    expect(opened, "the second onEnterDOM does not re-open an open keyboard").to.equal(1);
+  });
 });
