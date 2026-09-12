@@ -99,6 +99,7 @@ export default class Component extends UIComponent {
     // declared with a `uri`, and JSONModel.loadData replaces the whole object,
     // so any controller onInit that ran first would have its writes discarded.
     // Starting late is what makes a deep link show the same state a click does.
+    // A failed fixture still routes, just with an empty model.
     const startRouting = (): void => {
       if (this.isDestroyed()) return;
       this.getRouter().initialize();
@@ -107,7 +108,7 @@ export default class Component extends UIComponent {
       .dataLoaded()
       .then(startRouting)
       // Annotated because `Promise.catch` declares its reason `any`; the `instanceof Error` check
-      // below is the parse. The app still routes on a failed fixture, just with an empty model.
+      // below is the parse.
       .catch((err: unknown) => {
         Log.warning(
           "State model fixture failed to load",
