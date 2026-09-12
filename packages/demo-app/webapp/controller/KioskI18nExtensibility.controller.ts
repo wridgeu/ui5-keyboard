@@ -57,7 +57,7 @@ function declares<Table extends object>(table: Table, key: string): key is strin
 export default class KioskI18nExtensibility extends BaseController {
   private static readonly _MODEL_NAME = "i18nDemo";
   private _active = false;
-  private _inspectorDelegate: { onAfterRendering: () => void } | null = null;
+  private _inspectorDelegate: { onAfterRendering: () => void; canSkipRendering: true } | null = null;
 
   override onInit(): void {
     this.getView()!.setModel(
@@ -78,6 +78,10 @@ export default class KioskI18nExtensibility extends BaseController {
 
     this._inspectorDelegate = {
       onAfterRendering: () => this._updateAriaInspector(),
+      // The keyboard's renderer is apiVersion 4. A delegate carrying a rendering
+      // hook forfeits the skip-rendering optimization unless it declares that it
+      // reads nothing outside the control's own output, which this one does not.
+      canSkipRendering: true,
     };
     this.byId("i18nKeyboard")!.addEventDelegate(this._inspectorDelegate, this);
 

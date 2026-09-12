@@ -9,7 +9,7 @@
         afterClose=".onDialogAfterClose">
         <content>
             <VBox class="sapUiSmallMargin">
-                <Label text="Dialog Input" />
+                <Label text="Dialog Input" labelFor="dialogBInput" />
                 <Input id="dialogBInput" placeholder="Type in dialog..." width="100%" />
                 <kiosk:KioskKeyboard id="dialogBKeyboard" controls="dialogBInput" ariaLabel="Dialog Keyboard" />
             </VBox>

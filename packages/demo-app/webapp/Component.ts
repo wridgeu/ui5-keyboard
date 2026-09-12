@@ -62,24 +62,6 @@ export default class Component extends UIComponent {
     this.getRouter().attachRouteMatched(this._routeMatchedHandler, this);
     this.getRouter().attachBypassed(this._routeMatchedHandler, this);
 
-    // Re-apply the live active scope once the JSONModel fixture finishes async
-    // loading, since the fixture would otherwise overwrite /activeScope.
-    void stateModel
-      .dataLoaded()
-      .then(() => {
-        if (this.isDestroyed()) return;
-        this._routeMatchedHandler();
-      })
-      // Annotated because `Promise.catch` declares its reason `any`; the `instanceof Error` check
-      // below is the parse.
-      .catch((err: unknown) => {
-        Log.warning(
-          "State model fixture failed to load",
-          err instanceof Error ? err : String(err),
-          "demo.hotkeys.Component",
-        );
-      });
-
     // Register global shortcuts (active across all views).
     // Global scope is the default - no need to specify scope explicitly.
     this._hotkeys.register(
@@ -113,7 +95,27 @@ export default class Component extends UIComponent {
       document.title = event.getParameter("title") as string;
     });
 
-    this.getRouter().initialize();
+    // Routing starts only once the state fixture has landed. The model is
+    // declared with a `uri`, and JSONModel.loadData replaces the whole object,
+    // so any controller onInit that ran first would have its writes discarded.
+    // Starting late is what makes a deep link show the same state a click does.
+    const startRouting = (): void => {
+      if (this.isDestroyed()) return;
+      this.getRouter().initialize();
+    };
+    void stateModel
+      .dataLoaded()
+      .then(startRouting)
+      // Annotated because `Promise.catch` declares its reason `any`; the `instanceof Error` check
+      // below is the parse. The app still routes on a failed fixture, just with an empty model.
+      .catch((err: unknown) => {
+        Log.warning(
+          "State model fixture failed to load",
+          err instanceof Error ? err : String(err),
+          "demo.hotkeys.Component",
+        );
+        startRouting();
+      });
   }
 
   /**
