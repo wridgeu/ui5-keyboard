@@ -1,4 +1,4 @@
-import { parseHotkey, formatParsed } from "./parse";
+import { parseHotkey, formatParsed, parseSequenceSteps } from "./parse";
 import type { Platform } from "../library";
 
 /**
@@ -126,7 +126,11 @@ export const KNOWN_KEYS: ReadonlySet<string> = new Set([
 /**
  * Validate a hotkey string for structural correctness and potential conflicts.
  *
- * @param hotkey - The hotkey string to validate (e.g., "Ctrl+S", "F5").
+ * Multi-step sequences ("Ctrl+K Ctrl+S") are split the way
+ * `HotkeyManager.register` splits them and validated step by step, so a string
+ * that validates here is a string that registers.
+ *
+ * @param hotkey - The hotkey string to validate (e.g., "Ctrl+S", "F5", "Ctrl+K Ctrl+S").
  * @param platform - Override platform for Mod resolution.
  * @returns Validation result with errors, warnings, and normalized form.
  * @since 0.1.0
@@ -139,30 +143,36 @@ export function validateHotkey(hotkey: string, platform?: Platform): HotkeyValid
     return { valid: false, errors: ["Hotkey string must not be empty"], warnings };
   }
 
-  let parsed;
-  try {
-    parsed = parseHotkey(hotkey, platform);
-  } catch (e) {
-    return { valid: false, errors: [e instanceof Error ? e.message : String(e)], warnings };
+  const steps = parseSequenceSteps(hotkey) ?? [hotkey];
+  const normalizedSteps: string[] = [];
+
+  for (const step of steps) {
+    let parsed;
+    try {
+      parsed = parseHotkey(step, platform);
+    } catch (e) {
+      return { valid: false, errors: [e instanceof Error ? e.message : String(e)], warnings };
+    }
+
+    const normalized = formatParsed(parsed);
+    normalizedSteps.push(normalized);
+
+    if (!KNOWN_KEYS.has(parsed.key)) {
+      warnings.push(`Unknown key "${parsed.key}" - may not match keyboard events correctly`);
+    }
+
+    const browserConflict = BROWSER_SHORTCUTS.get(normalized);
+    if (browserConflict) {
+      warnings.push(`Conflicts with browser shortcut: ${browserConflict} (${normalized})`);
+    }
+
+    const sapConflict = SAP_SHORTCUTS.get(normalized);
+    if (sapConflict) {
+      warnings.push(`Conflicts with SAP shortcut: ${sapConflict} (${normalized})`);
+    }
   }
 
-  const normalized = formatParsed(parsed);
-
-  if (!KNOWN_KEYS.has(parsed.key)) {
-    warnings.push(`Unknown key "${parsed.key}" - may not match keyboard events correctly`);
-  }
-
-  const browserConflict = BROWSER_SHORTCUTS.get(normalized);
-  if (browserConflict) {
-    warnings.push(`Conflicts with browser shortcut: ${browserConflict} (${normalized})`);
-  }
-
-  const sapConflict = SAP_SHORTCUTS.get(normalized);
-  if (sapConflict) {
-    warnings.push(`Conflicts with SAP shortcut: ${sapConflict} (${normalized})`);
-  }
-
-  return { valid: true, warnings, errors, normalizedHotkey: normalized };
+  return { valid: true, warnings, errors, normalizedHotkey: normalizedSteps.join(" ") };
 }
 
 /**

@@ -2047,3 +2047,20 @@ QUnit.test("Target callback: unhandled reports TargetMismatch for off-path callb
   fireKey("F5");
   assert.strictEqual(reason, "target_mismatch", "TargetMismatch reported for off-path callback target");
 });
+
+QUnit.test("Target element: setOptions to untargeted runs conflict detection", (assert) => {
+  const manager = createHotkeyManager();
+
+  const div = document.createElement("div");
+  div.tabIndex = 0;
+  fixture.appendChild(div);
+
+  manager.register("F11", () => {});
+  const targeted = manager.register("F11", () => {}, { target: div, conflictBehavior: ConflictBehavior.Error });
+
+  assert.throws(
+    () => targeted.setOptions({ target: null }),
+    /already registered/,
+    "Dropping the target collides with the existing untargeted registration",
+  );
+});

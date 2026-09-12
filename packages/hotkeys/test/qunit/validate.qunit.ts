@@ -63,6 +63,21 @@ QUnit.test("No warnings for conflict-free hotkey", (assert) => {
   assert.strictEqual(result.warnings.length, 0, "No warnings");
 });
 
+QUnit.test("Multi-step sequence validates step by step", (assert) => {
+  const result = validateHotkey("Ctrl+K Ctrl+S", Platform.Windows);
+  assert.ok(result.valid, "a whitespace-separated sequence is valid");
+  assert.strictEqual(result.normalizedHotkey, "Control+K Control+S", "each step is normalized");
+});
+
+QUnit.test("Spaces around + are step separators, not padding", (assert) => {
+  const result = validateHotkey("Ctrl + S", Platform.Windows);
+  assert.notOk(result.valid, "the modifier-only first step makes the whole string invalid");
+  assert.ok(
+    result.errors.some((e) => e.includes("no non-modifier key found")),
+    "the error names the offending step",
+  );
+});
+
 QUnit.module("validate - assertValidHotkey");
 
 QUnit.test("Returns normalized string for valid hotkey", (assert) => {

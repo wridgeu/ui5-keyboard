@@ -63,3 +63,20 @@ QUnit.test("Mod+S on Mac matches Meta+S event", (assert) => {
   const event = mockKeyEvent({ key: "s", metaKey: true });
   assert.ok(matchesKeyboardEvent(event, parsed));
 });
+
+QUnit.test("Non-US layout: the typed letter wins over the physical key", (assert) => {
+  // QWERTZ swaps Y and Z: the physical Z key types "y".
+  const event = mockKeyEvent({ key: "y", code: "KeyZ", ctrlKey: true });
+  assert.notOk(
+    matchesKeyboardEvent(event, parseHotkey("Ctrl+Z", Platform.Windows)),
+    "Ctrl+Z does not fire for the key that typed 'y'",
+  );
+  assert.ok(matchesKeyboardEvent(event, parseHotkey("Ctrl+Y", Platform.Windows)), "Ctrl+Y fires");
+});
+
+QUnit.test("Non-US layout: an unshifted digit key that types a symbol does not match the digit", (assert) => {
+  // AZERTY types "&" from Digit1 without Shift; the digit needs Shift.
+  const event = mockKeyEvent({ key: "&", code: "Digit1" });
+  assert.notOk(matchesKeyboardEvent(event, parseHotkey("1", Platform.Windows)), "hotkey 1 does not fire");
+  assert.ok(matchesKeyboardEvent(event, parseHotkey("&", Platform.Windows)), "the typed symbol still matches");
+});
