@@ -969,7 +969,10 @@ class KioskKeyboard extends UI5Element {
   set open(value: boolean) {
     if (this._openValue === value) return;
     this._openValue = value;
-    if (!this.isConnected) return; // handled in onEnterDOM
+    // Not `isConnected`: a custom-element upgrade of already-parsed markup runs
+    // the attribute setters while connected but long before UI5Element's async
+    // connectedCallback reaches onEnterDOM, which applies the pending value.
+    if (!this._fullyConnected) return;
     if (value) {
       this._performOpen();
     } else {
@@ -1025,6 +1028,11 @@ class KioskKeyboard extends UI5Element {
     // Touch events need { passive: false } for preventDefault() which JSX can't express.
     // touchstart prevents input blur; touchend processes the key press (because
     // preventDefault on touchstart suppresses the browser's synthesized click).
+    //
+    // Abort first: connectedCallback is async, so a reparent inside that window
+    // reaches this hook twice with no onExitDOM between, and an overwritten
+    // controller can never release the listeners it armed.
+    this._hostAbort?.abort();
     this._hostAbort = new AbortController();
     const { signal } = this._hostAbort;
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false, signal });
