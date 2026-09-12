@@ -37,7 +37,6 @@ This app is a scenario catalog for keyboard-heavy UX in UI5. It shows:
 
 - cross-view and route-scoped hotkeys
 - conflict strategies and target-element scoped shortcuts
-- input-safe behavior (`ignoreInputs: "auto"`) and conditional hotkeys (`enabled()`)
 - virtual keyboard patterns for docked, popover, dialog, multi-instance, and programmatic control
 - integration with native UI5 web components and custom web components
 
