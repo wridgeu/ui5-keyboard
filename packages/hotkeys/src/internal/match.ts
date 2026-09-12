@@ -8,8 +8,8 @@ import type { ParsedHotkey } from "../types";
  * fallback keys extracted from `event.code`. The fallback covers:
  * - macOS Option+letter: `event.key` may produce a dead/special char
  *   while `event.code` still reports the physical letter key.
- * - Shift+digit: `event.key` reports the symbol (e.g., "$") while
- *   `event.code` still reports the digit (e.g., "Digit4").
+ * - Shift+digit and macOS Option+digit: `event.key` reports the symbol
+ *   (e.g., "$") while `event.code` still reports the digit (e.g., "Digit4").
  *
  * Both are gated: a non-US layout maps a physical key to a different character
  * (QWERTZ types "y" from `KeyZ`), so admitting the physical key alongside the
@@ -30,9 +30,11 @@ export function getCandidateKeys(event: KeyboardEvent): string[] {
     }
   }
 
-  // Fallback: digit from event.code (Shift+digit). Shift is what turns a digit
-  // key into a symbol on a US layout; unshifted, the layout put it there.
-  if (event.shiftKey && event.code?.startsWith("Digit")) {
+  // Fallback: digit from event.code, only while a modifier that rewrites the
+  // typed character is down. Shift turns "4" into "$" and Option turns "3" into
+  // "£"; with neither held it is the layout that put the character there
+  // (AZERTY types "&" from `Digit1`), so the digit is not what was pressed.
+  if ((event.shiftKey || event.altKey) && event.code?.startsWith("Digit")) {
     const codeDigit = event.code.slice(5);
     if (codeDigit.length === 1 && /^[0-9]$/.test(codeDigit) && codeDigit !== primary) {
       keys.push(codeDigit);
@@ -52,8 +54,8 @@ export function getCandidateKeys(event: KeyboardEvent): string[] {
  *    characters, exact match for special keys (Escape, F5, etc.).
  * 3. **Fallback to `event.code`** - For letter keys (KeyA-KeyZ) only when `event.key`
  *    returned something other than a letter (e.g., macOS Option+D produces "∂"),
- *    and for digit keys (Digit0-Digit9) only while Shift is held (e.g., Shift+4
- *    produces "$").
+ *    and for digit keys (Digit0-Digit9) only while Shift or Alt is held (e.g.,
+ *    Shift+4 produces "$", macOS Option+3 produces "£").
  *
  * @since 0.1.0
  */

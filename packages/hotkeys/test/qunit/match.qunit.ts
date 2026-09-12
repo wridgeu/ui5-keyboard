@@ -80,3 +80,20 @@ QUnit.test("Non-US layout: an unshifted digit key that types a symbol does not m
   assert.notOk(matchesKeyboardEvent(event, parseHotkey("1", Platform.Windows)), "hotkey 1 does not fire");
   assert.ok(matchesKeyboardEvent(event, parseHotkey("&", Platform.Windows)), "the typed symbol still matches");
 });
+
+QUnit.test("macOS Option+digit matches the digit hotkey", (assert) => {
+  // Option+3 on a US Mac layout types "£" from Digit3, with no Shift held.
+  const event = mockKeyEvent({ key: "\u00a3", code: "Digit3", altKey: true });
+  assert.ok(matchesKeyboardEvent(event, parseHotkey("Alt+3", Platform.Mac)), "Alt+3 fires");
+  assert.notOk(
+    matchesKeyboardEvent(event, parseHotkey("Alt+4", Platform.Mac)),
+    "a different digit on the same row does not fire",
+  );
+});
+
+QUnit.test("macOS Option+letter matches the letter hotkey", (assert) => {
+  // Option+D on a US Mac layout types "∂" from KeyD.
+  const event = mockKeyEvent({ key: "\u2202", code: "KeyD", altKey: true });
+  assert.ok(matchesKeyboardEvent(event, parseHotkey("Alt+D", Platform.Mac)), "Alt+D fires");
+  assert.notOk(matchesKeyboardEvent(event, parseHotkey("Alt+E", Platform.Mac)), "a neighbouring letter does not fire");
+});
