@@ -1662,6 +1662,13 @@ export default class KioskKeyboard extends Control {
   close(): this {
     if (!this.getDocked()) return this;
     if (!this._open) return this;
+    // Drop both in-flight presses and any open accent popup before the session
+    // closes: a keyboard sliding out of view cannot leave a keycap painted, a
+    // blur listener armed, a popup floating over the page, or a pending touchend
+    // still able to type into the target it just left.
+    this._clearPressedKeyState();
+    this._clearKeyboardPressedState();
+    this._variantPopup.dismissOpen();
     this._targetSession.fireChangeIfDirty();
     this._open = false;
     this._nativeKbSuppression.restore();

@@ -162,3 +162,27 @@ QUnit.test("clears a keycap left pressed by a physical-keyboard activation", asy
 
   cleanup(kb, input);
 });
+
+QUnit.test("close() drops a key that is still held down", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  kb.setDocked(true);
+  kb.show();
+  await waitForRender();
+  const keyEl = getRequiredKeyElement(kb, "q");
+  const pressedClass = KioskKeyboard.DOM.classes.keyPressed;
+
+  const start = new Event("touchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: keyEl, writable: false });
+  kb.ontouchstart(start);
+  assert.ok(keyEl.classList.contains(pressedClass), "precondition: the held keycap is painted pressed");
+
+  kb.close();
+  assert.notOk(keyEl.classList.contains(pressedClass), "close unpaints the held keycap");
+
+  const end = new Event("touchend", { bubbles: true });
+  Object.defineProperty(end, "target", { value: keyEl, writable: false });
+  kb.ontouchend(end);
+  assert.strictEqual(input.getValue(), "", "the interrupted press does not type after close");
+
+  cleanup(kb, input);
+});

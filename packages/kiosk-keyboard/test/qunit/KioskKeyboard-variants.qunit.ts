@@ -1658,3 +1658,19 @@ QUnit.test("the popup declares no language for keycaps in the UI language", asyn
   release(kb, key);
   cleanup(kb, input);
 });
+
+QUnit.test("close() leaves no open variant popup behind", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  kb.setDocked(true);
+  kb.show();
+  const aKey = getRequiredKeyElement(kb, "a");
+
+  await holdOpen(kb, aKey);
+  assert.ok(variantPopup(kb).isOpen(), "precondition: the variant popup is open");
+
+  kb.close();
+  assert.notOk(variantPopup(kb).isOpen(), "close dismissed the variant popup");
+
+  release(kb, aKey);
+  cleanup(kb, input);
+});
