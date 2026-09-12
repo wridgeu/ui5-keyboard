@@ -36,6 +36,7 @@
   "main": "dist/KioskKeyboard.js",
   "types": "dist/KioskKeyboard.d.ts",
   "exports": {
+    "./package.json": "./package.json",
     ".": {
       "types": "./dist/KioskKeyboard.d.ts",
       "default": "./dist/KioskKeyboard.js"
