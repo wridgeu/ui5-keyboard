@@ -10,9 +10,6 @@ import type { CanonicalModifier, ParsedHotkey } from "../types";
  * tinykeys / @github/hotkey convention), so `"Ctrl+K Ctrl+S"` is two steps and
  * `"Ctrl + S"` is three. Returns `null` for a single-step hotkey.
  *
- * Shared by registration and validation so both surfaces agree on what a
- * string means before either one parses a step.
- *
  * @param hotkey - The hotkey string to split.
  * @returns The steps, or `null` when the string is a single-key hotkey.
  * @since 0.1.0
