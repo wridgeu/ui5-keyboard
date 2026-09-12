@@ -145,7 +145,8 @@ export function normalizeKeyName(key: string): string {
     return alias;
   }
 
-  // Case-insensitive fallback for multi-character keys (e.g., "ESCAPE", "DELETE", "ARROWUP")
+  // Case-insensitive fallback for keys spelled in another case (e.g., "ESCAPE",
+  // "Del", "PGUP"). Only names KEY_ALIASES carries are reachable this way.
   const lowerAlias = KEY_ALIASES[key.toLowerCase()];
   if (lowerAlias) {
     return lowerAlias;
