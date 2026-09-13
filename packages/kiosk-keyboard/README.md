@@ -74,8 +74,8 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a themed, accessible virtual ke
 
 **Core**
 
-- Pure UI5 Control with flat DOM and event delegation (no child controls)
-- Types into any UI5 input control (`sap.m.Input`, `sap.m.TextArea`, etc.) via association
+- Pure UI5 Control with flat-DOM keys and event delegation (no control per key)
+- Types into any UI5 input control (`sap.m.Input`, `sap.m.TextArea`, etc.) named in `controls`
 - Cursor-aware text insertion, backspace, and selection replacement
 - Fires `liveChange` on the target for proper data binding integration
 - Shift toggle (single tap) and Caps Lock (double tap) with auto-release
@@ -504,6 +504,16 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 | `afterClose`          | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                                                                                    |
 | `activeControlChange` | `controlId: string`                                                             | Fired when the active control changes (auto-show focus switch or programmatic target change).                                                                                                                  |
 
+Each event has a generated TypeScript alias, exported from `ui5/kiosk/KioskKeyboard`: `KioskKeyboard$KeyPressEvent`, `KioskKeyboard$LayoutChangeEvent`, `KioskKeyboard$KeyboardTypeChangeEvent`, `KioskKeyboard$AfterOpenEvent`, `KioskKeyboard$AfterCloseEvent` and `KioskKeyboard$ActiveControlChangeEvent`. Type a handler with the alias rather than a hand-written `Event<{ ... }>`, which asserts a parameter shape nothing checks (see [UI5 TypeScript Event Typing](../../docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)):
+
+```ts
+import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
+
+onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
+  const key = event.getParameter("key"); // string | undefined, from the event metadata
+}
+```
+
 ### Public Methods
 
 KioskKeyboard-specific public instance methods (excluding inherited UI5 base class methods):
@@ -783,15 +793,21 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import CustomLayout from "ui5/kiosk/CustomLayout";
 import type { CompositionMiddleware } from "ui5/kiosk/types";
 
-function createMyMiddleware(): CompositionMiddleware {
+function createMyMiddleware(kb: KioskKeyboard): CompositionMiddleware {
   return {
     handleKey(key, target) {
       // Return true if consumed (keyboard skips default handling).
       // Return false to pass through to default behavior.
+      const caret = target.selectionStart ?? target.value.length;
+      if (key === "~" && target.value[caret - 1] === "n") {
+        kb.deleteBackward();
+        kb.insertText("ñ");
+        return true;
+      }
       return false;
     },
     commit() {
-      // Force-commit any in-progress composition. Return committed text or null.
+      // Finalize any in-progress composition.
       return null;
     },
     reset() {
@@ -800,10 +816,9 @@ function createMyMiddleware(): CompositionMiddleware {
   };
 }
 
-const kb = new KioskKeyboard({
-  customLayouts: [new CustomLayout({ name: "my-layout", rows: myRows, middleware: createMyMiddleware })],
-  layout: "my-layout",
-});
+const kb = new KioskKeyboard({ controls: ["myInput"] });
+kb.addCustomLayout(new CustomLayout({ name: "my-layout", rows: myRows, middleware: () => createMyMiddleware(kb) }));
+kb.setLayout("my-layout");
 ```
 
 The `handleKey` method receives:
@@ -811,7 +826,11 @@ The `handleKey` method receives:
 - `key`: the raw key value from the layout definition (e.g., `"a"`, `"{backspace}"`, `"{enter}"`)
 - `target`: the DOM input element the keyboard is typing into
 
-When `handleKey` returns `true`, the keyboard skips default handling. The middleware is responsible for modifying the target's value. Use the control's public `keyboard.insertText(text)` and `keyboard.deleteBackward()` methods to do so: they update the caret/selection and fire UI5 `liveChange` so the control's model binding stays in sync. (Do not reach into `ui5/kiosk/internal/*`, which is unstable, see [API stability](#api-stability).)
+When `handleKey` returns `true`, the keyboard skips default handling and the middleware owns the edit. The factory takes no arguments, so close over the control, as above, and write through its public `insertText(text)` and `deleteBackward()`: they take the same path a key does, so `maxlength` and the browser undo stack hold and UI5 `liveChange` keeps the model binding in sync. Assigning `target.value` yourself skips all of that. Replacing the character before the caret is a `deleteBackward()` followed by an `insertText()`, which the target sees as two edits. (Do not reach into `ui5/kiosk/internal/*`, which is unstable, see [API stability](#api-stability).)
+
+A factory referenced from XML through `core:require` has no control to close over; build a middleware that needs one in the controller and add its custom layout there.
+
+The keyboard never reads the string `commit()` returns. Whatever a middleware shows as in-progress text has to be in the target already, so `commit()` finalizes it rather than handing text back to be inserted.
 
 Middleware lifecycle:
 
@@ -943,7 +962,9 @@ All other F-keys (F1-F4, F6-F10, F12) dispatch the synthetic `keydown` to the ta
 Handle other F-keys via the `keyPress` event:
 
 ```typescript
-onKeyPress(event: Event<{ key: string }>): void {
+import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
+
+onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
   if (event.getParameter("key") === KeyName.F1) {
     event.preventDefault(); // optional: suppress default key-press behavior
     this.showHelpDialog();
@@ -1840,17 +1861,29 @@ packages/kiosk-keyboard/src/i18n/messagebundle_fr.properties
 KIOSK_KEYBOARD_LABEL=Clavier virtuel
 KIOSK_KEYBOARD_ROLEDESCRIPTION=clavier
 KEY_SHIFT=Maj
-KEY_ENTER=Entrée
-KEY_BACKSPACE=Retour arrière
+KEY_ENTER=Entr\u00e9e
+KEY_BACKSPACE=Retour arri\u00e8re
 KEY_SPACE=Espace
+ARIA_RETURN_TO_NUMBERS=Retour aux chiffres
 ARIA_CAPS_LOCK=Verrouillage majuscules
-ARIA_CAPS_LOCK_ON=Verrouillage majuscules activé
-ARIA_CAPS_LOCK_OFF=Verrouillage majuscules désactivé
-ARIA_SHIFT_ON=Majuscules activées
-ARIA_SHIFT_OFF=Majuscules désactivées
+ARIA_CAPS_LOCK_ON=Verrouillage majuscules activ\u00e9
+ARIA_CAPS_LOCK_OFF=Verrouillage majuscules d\u00e9sactiv\u00e9
+ARIA_SHIFT_ON=Majuscule activ\u00e9e
+ARIA_SHIFT_OFF=Majuscule d\u00e9sactiv\u00e9e
 ARIA_KEYBOARD_OPENED=Clavier virtuel ouvert
-ARIA_KEYBOARD_CLOSED=Clavier virtuel fermé
+ARIA_KEYBOARD_CLOSED=Clavier virtuel ferm\u00e9
+ARIA_LAYOUT_COMPACTED=Disposition compacte du clavier activ\u00e9e
+ARIA_LAYOUT_UNCOMPACTED=Disposition standard du clavier r\u00e9tablie
+ARIA_VARIANTS_OPENED=Variantes de {1} : {0}
+ARIA_VARIANTS_CLOSED=Variantes ferm\u00e9es
 ```
+
+`npm run test:i18n-bundles` (part of `check:base` and CI) holds a new bundle to four rules:
+
+- **ASCII only.** Write every non-ASCII character as a `\uXXXX` escape, as above. A raw UTF-8 value reads correctly in the editor and turns into mojibake wherever the bundle is not served as UTF-8.
+- **Every key of the default bundle**, and no others. A missing key silently falls back to English.
+- **The same locale in the web component**: add `packages/kiosk-keyboard-webc/src/i18n/messagebundle_fr.properties` too, declaring that package's keys.
+- **The same text in both** for every key the two bundles share.
 
 The UI5 resource bundle mechanism (`Lib.getResourceBundleFor("ui5.kiosk")`) automatically resolves the correct bundle based on the active UI5 locale.
 

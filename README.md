@@ -238,7 +238,7 @@ ui5-keyboard/
 │   └── demo-app/              # Demo application
 │       ├── ui5.yaml           # OpenUI5 dev server config (default)
 │       └── ui5-flp.yaml       # SAPUI5 + FLP sandbox config (preview-middleware)
-├── tools/                     # Custom oxlint JS plugins (code-quality, comment-quality, test-guardrails) and shared test infrastructure
+├── tools/                     # Custom oxlint JS plugins, twin-drift / i18n / packaging checks, and build helper scripts
 ├── patches/                   # Local dependency patches (patch-package), applied on npm install
 └── docs/                      # Architecture & design documents
 ```
@@ -254,7 +254,7 @@ ui5-keyboard/
 | [Consumption Research](./docs/shared/UI5-WEBCOMPONENT-CONSUMPTION-RESEARCH.md) | UI5 vs standalone consumption comparison              |
 | [Docs Index](./docs/README.md)                                                 | Entry point to the per-area doc indexes               |
 | [Patches](./patches/README.md)                                                 | Local dependency patches applied via patch-package    |
-| [Tools](./tools/README.md)                                                     | Custom oxlint plugins, shared test infra, dev scripts |
+| [Tools](./tools/README.md)                                                     | Custom oxlint plugins, drift checks, dev scripts      |
 
 ## Contributing
 

@@ -6,7 +6,7 @@ The KioskKeyboard adapts to its container size automatically via CSS container q
 
 ## Built-In Responsive Behavior
 
-The keyboard uses `container-type: inline-size` on its root element with `container-name: keyboard`. All width-responsive behavior is pure CSS with no JavaScript involved.
+The keyboard uses `container-type: inline-size` on its root element with `container-name: keyboard`. Width-responsive styling is pure CSS with no JavaScript involved. The one width behavior that runs JavaScript is the opt-in `autoCompact` layout swap (see [Switching Layouts Per Device Size](#switching-layouts-per-device-size)).
 
 ### Width Breakpoints
 
@@ -196,12 +196,12 @@ Three things this shape gets right, and `autoCompact` gets right for you. It obs
 | Hide labels, change icon size            | CSS custom properties (`--ui5KioskKeyboard-dualDirection`, etc.) |
 | Change which keys exist                  | `customLayouts` + `setLayout()`                                  |
 | Change row structure (key count per row) | `customLayouts` + `setLayout()`                                  |
-| Wrap a row at narrow widths, same order  | CSS `flex-wrap` on `data-row-kind` (if applicable)               |
+| Wrap a row at narrow widths, same order  | CSS `flex-wrap`, if vertical arrows need not follow the wrap     |
 | Regroup a row's keys at narrow widths    | A second layout named by `compact` + `autoCompact`               |
 
 ## Worked Example: Custom Row Wrapping
 
-Wrapping a row in CSS is the right tool when the wrapped arrangement is the row's own order, read left to right and top to bottom. The row stays one logical row, and the keys a user sees adjacent stay adjacent to arrow-key navigation.
+Wrapping a row in CSS is the right tool when the wrapped arrangement is the row's own order, read left to right and top to bottom, and the row is not one users move through with the vertical arrows. The row stays one logical row: reading order and ArrowLeft/ArrowRight still walk the keys in the order they appear, but ArrowUp/ArrowDown step between logical rows and skip the wrap, for the reason given under [Rows: Choose the Arrangement](#rows-choose-the-arrangement-dont-reflow-it).
 
 Reach for a second layout instead, as [`nav-row-compact`](#rows-choose-the-arrangement-dont-reflow-it) does, when the arrangement you want moves keys past one another. `order` inside a `@container` query would achieve it visually, but navigation follows the resolved layout, so focus would jump against the visual order.
 
@@ -241,6 +241,6 @@ At 320px, 6 tool keys in a row are cramped.
 }
 ```
 
-This wraps `toolRow` into Cut/Copy/Paste over Undo/Redo/Find - the row's own order, so nothing moves past anything else and arrow-key navigation still walks the keys in the order they appear.
+This wraps `toolRow` into Cut/Copy/Paste over Undo/Redo/Find - the row's own order, so nothing moves past anything else and ArrowLeft/ArrowRight still walk the keys in the order they appear. ArrowDown from Cut does not reach Undo: the toolbar is still one logical row, so it moves on to the first QWERTY row. When that matters, split the toolbar into two rows in the layout data instead.
 
 If you want a different grouping in the wrapped form, express it as a second layout rather than adding `order` here. `order` would place the keys visually, but arrow-key navigation moves on the resolved layout's coordinates and would keep walking the source order, so focus and sight would disagree.

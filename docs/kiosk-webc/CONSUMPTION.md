@@ -171,9 +171,9 @@ single file, so the default entry already is the lean entry. `Assets` is
 required alongside it because the bare `kiosk-keyboard-webc` entry exports the
 component class only.
 
-Consumers who want selective layout loading can import individual layouts via
-subpath imports and slot any custom layouts into the per-element
-`customLayouts` slot:
+Built-in layouts cannot be left out: the element's layout registry imports all of
+them. The layout subpaths are for building custom layouts from the built-in rows,
+slotted into the per-element `customLayouts` slot:
 
 ```typescript
 import "kiosk-keyboard-webc/Assets";

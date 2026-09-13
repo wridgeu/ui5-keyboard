@@ -7,7 +7,7 @@ name: Deploy Pages
 # The demo is fully self-hosted with NO external CDN: `build:pages` builds the
 # demo with the SAPUI5 framework (ui5-pages.yaml) via `ui5 build --all`, bundling
 # the UI5 runtime + ushell shell into the artifact, then trims it down with
-# tools/trim-pages-dist.mjs (~560 MB -> ~150 MB).
+# tools/trim-pages-dist.mjs (~525 MB -> ~140 MB).
 #
 # The deploy job's Setup Pages step provisions the Pages site on first run
 # (configure-pages enablement: true, source "GitHub Actions"), so no manual repo

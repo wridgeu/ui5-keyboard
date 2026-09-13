@@ -176,6 +176,8 @@ Hotkey strings use `+` as the separator between modifiers and key:
 "Escape"          -> single key
 ```
 
+Whitespace separates sequence steps, and `register()` and `validateHotkey()` split on it through the same `parseSequenceSteps()`: `"Ctrl+K Ctrl+S"` is a two-step sequence, and `"Ctrl + S"` is the three steps `Ctrl`, `+`, `S`, rejected because `Ctrl` names no key.
+
 ### Modifier Normalization
 
 All modifier names are normalized to their canonical form:
@@ -217,15 +219,17 @@ The primary match uses `event.key`:
 - Single characters: case-insensitive comparison
 - Special keys (Escape, Enter, F1-F12, etc.): exact match
 
-When `event.key` does not match, the matcher falls back to `event.code`. This handles two specific cross-platform issues:
+`getCandidateKeys(event)` adds a key from `event.code` alongside `event.key`, and only in the two cases where a modifier rewrote the character the key would otherwise type:
 
 **macOS Option+letter:**
 
-Pressing Option+D on macOS produces `event.key = "∂"` (partial derivative symbol), but `event.code = "KeyD"`. The code fallback allows Alt+D to match correctly.
+Pressing Option+D on macOS produces `event.key = "∂"` (partial derivative symbol), but `event.code = "KeyD"`. The letter from `event.code` is added only when `event.key` is not itself a letter, which lets Alt+D match.
 
-**Shift+digit:**
+**Shift or Option + digit:**
 
-Pressing Shift+4 produces `event.key = "$"`, but `event.code = "Digit4"`. The code fallback allows Shift+4 to match correctly regardless of keyboard layout.
+Pressing Shift+4 produces `event.key = "$"` and macOS Option+3 produces `"£"`, while `event.code` still reports `Digit4` / `Digit3`. The digit from `event.code` is added only while Shift or Alt is held, which lets Shift+4 and Alt+3 match.
+
+Both fallbacks are gated because a non-US layout maps a physical key to a different character. An ungated fallback turns one press into two candidates and fires two hotkeys: on QWERTZ the physical `KeyZ` types `y` and would match both Mod+Y and Mod+Z, and on AZERTY the unshifted `Digit1` types `&` and would match the hotkey `1`. Outside the two gated cases, matching follows the typed character alone.
 
 ## Input Element Detection
 
@@ -305,8 +309,9 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 
 | Edge Case                                      | How It Is Handled                                                               |
 | ---------------------------------------------- | ------------------------------------------------------------------------------- |
-| macOS Option+letter produces special character | Fallback to `event.code` for letter keys                                        |
-| Shift+digit produces symbol                    | Fallback to `event.code` for digit keys                                         |
+| macOS Option+letter produces special character | `event.code` letter fallback, only when `event.key` is not a letter             |
+| Shift/Option+digit produces symbol             | `event.code` digit fallback, only while Shift or Alt is held                    |
+| Non-US layout moves a character to another key | Matching follows `event.key`; the gated fallbacks never add a second candidate  |
 | IME composition (CJK input methods)            | Guard on `event.isComposing` and `keyCode === 229`                              |
 | Key repeat from holding a key                  | `ignoreRepeat: true` checks `event.repeat`                                      |
 | Extra modifiers beyond what is registered      | Exact modifier match prevents false positives                                   |

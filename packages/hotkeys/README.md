@@ -349,6 +349,18 @@ manager.register(
 );
 ```
 
+The callback receives the `KeyboardEvent` and a `HotkeyCallbackDetails` object:
+
+| Field          | Type           | Description                                                                   |
+| -------------- | -------------- | ----------------------------------------------------------------------------- |
+| `hotkey`       | `string`       | The hotkey string as registered (for a sequence, its steps joined by a space) |
+| `parsedHotkey` | `ParsedHotkey` | The parsed key and modifier flags (for a sequence, those of its last step)    |
+| `scope`        | `string`       | The scope of the registration that fired                                      |
+
+Whitespace separates the steps of a [sequence](#sequences), so it cannot appear inside a single combination: `"Ctrl+S"` is one hotkey, `"Ctrl+K Ctrl+S"` is a two-step sequence, and `"Ctrl + S"` splits into the steps `Ctrl`, `+` and `S`, which `register()` rejects because the step `Ctrl` names no key.
+
+**Keyboard layouts.** Matching follows the character the key types (`event.key`), not its position on the board. On a German QWERTZ keyboard `Mod+Z` fires on the key labelled Z, and on a French AZERTY keyboard the unshifted digit-row key that types `&` does not fire the hotkey `"1"`. The physical key (`event.code`) is consulted only where a modifier rewrites the character: macOS Option+letter (Option+D types `∂`, and still matches `Alt+D`), and a digit with Shift or Option held (Shift+4 types `$`, and still matches `Shift+4`).
+
 ### Registration Options
 
 | Option             | Type                                         | Default        | Description                                                                                      |
@@ -655,6 +667,17 @@ manager.setUnhandledHandler(null);
 
 Reasons: `NoMatch`, `Disabled`, `InputSuppressed`, `PopupSuppressed`, `RepeatIgnored`, `TargetMismatch`, `Suspended`.
 
+The callback receives a read-only `UnhandledContext`:
+
+| Field                 | Type                     | Description                                                                         |
+| --------------------- | ------------------------ | ----------------------------------------------------------------------------------- |
+| `event`               | `KeyboardEvent`          | The event that was not handled                                                      |
+| `reason`              | `UnhandledReason`        | Why it was not handled                                                              |
+| `activeScope`         | `string`                 | The top of the scope stack when the event arrived                                   |
+| `isInput`             | `boolean`                | Whether the event target was an editable field                                      |
+| `isPopupOpen`         | `boolean`                | Whether a UI5 dialog or popover was open                                            |
+| `skippedRegistration` | `HotkeyRegistrationInfo` | The registration that matched but was skipped; absent for `NoMatch` and `Suspended` |
+
 ### Target Elements
 
 Bind a hotkey to a specific DOM element instead of the entire document:
@@ -749,7 +772,7 @@ manager.register(
 );
 ```
 
-**Options**: `description`, `timeout` (default 1000ms; must be a finite number > 0, otherwise `register()` and `setOptions()` throw), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `preventDefault` and `stopPropagation` (both default `true`, applied to the event that completes the sequence), `suppressInPopups` (suppress when a UI5 dialog/popover is open), `onPending` (per-registration progress callback).
+**Options**: `description`, `timeout` (default 1000ms; must be a finite number > 0, otherwise `register()` and `setOptions()` throw), `scope`, `enabled`, `ignoreInputs` (default `"auto"`, suppresses single-key steps in text fields, but allows Ctrl/Meta combos and Escape), `preventDefault` and `stopPropagation` (both default `true`, applied to the event that completes the sequence), `suppressInPopups` (suppress when a UI5 dialog/popover is open), `onPending` (per-registration progress callback, called after each matched intermediate key with `sequence` (the steps), `completedSteps`, `totalSteps` and `nextKey`).
 
 The remaining registration options do not apply to sequences. `target` is rejected with a warning at registration time and silently ignored by `setOptions()`. `conflictBehavior` is not evaluated at all, so a duplicate sequence registers without a warning and only one of the two ever fires - a completed sequence dispatches a single winner, preferring the active scope over the global one. `ignoreRepeat` is fixed at `true`, since a held key never starts or advances a sequence. In `getRegistrations()` a sequence therefore always reports `hasTarget: false`, `ignoreRepeat: true`, and `conflictBehavior: "warn"` regardless of what was passed.
 
@@ -834,6 +857,9 @@ recorder.destroy();
 > Not a singleton: create one per settings row via `manager.createRecorder()`. The `HotkeyRecorder` class is exported for type declarations but its constructor is internal.
 
 ## Validation
+
+> [!NOTE]
+> `ui5/hotkeys/validate` is importable but not part of the stable API (see [API Stability](#api-stability)), and neither are the `parse`, `match` and `platform` modules under [Utility Functions](#utility-functions). They carry no compatibility guarantee; `ui5/hotkeys/format` is the stable exception.
 
 Validate hotkey strings for correctness and check for conflicts with browser or SAP shortcuts:
 
