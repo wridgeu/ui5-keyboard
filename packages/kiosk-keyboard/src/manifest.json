@@ -13,7 +13,12 @@
   },
   "sap.ui": {
     "technology": "UI5",
-    "supportedThemes": ["sap_horizon", "sap_horizon_dark", "sap_horizon_hcb", "sap_horizon_hcw"],
+    "supportedThemes": [
+      "sap_horizon",
+      "sap_horizon_dark",
+      "sap_horizon_hcb",
+      "sap_horizon_hcw"
+    ],
     "deviceTypes": {
       "desktop": true,
       "tablet": true,
@@ -40,12 +45,21 @@
       "i18n": {
         "bundleUrl": "i18n/messagebundle.properties",
         "fallbackLocale": "",
-        "supportedLocales": ["", "ar", "de", "ja"]
+        "supportedLocales": [
+          "",
+          "ar",
+          "de",
+          "ja"
+        ]
       },
       "css": true,
       "content": {
-        "controls": ["ui5.kiosk.KioskKeyboard"],
-        "elements": ["ui5.kiosk.CustomLayout"],
+        "controls": [
+          "ui5.kiosk.KioskKeyboard"
+        ],
+        "elements": [
+          "ui5.kiosk.CustomLayout"
+        ],
         "types": [
           "ui5.kiosk.KeyboardLayout",
           "ui5.kiosk.KeyboardType",
