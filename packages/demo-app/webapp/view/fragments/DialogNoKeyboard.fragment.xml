@@ -6,8 +6,8 @@
         afterClose=".onDialogAfterClose">
         <content>
             <VBox class="sapUiSmallMargin">
-                <Label text="Dialog Input" />
-                <Input placeholder="Type in dialog..." width="100%" />
+                <Label text="Dialog Input" labelFor="dialogAInput" />
+                <Input id="dialogAInput" placeholder="Type in dialog..." width="100%" />
             </VBox>
         </content>
         <beginButton>

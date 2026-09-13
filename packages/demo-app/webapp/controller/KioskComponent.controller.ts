@@ -13,6 +13,8 @@ import BaseController from "./BaseController";
 export default class KioskComponent extends BaseController {
   private _keyboard: KioskKeyboard | null = null;
   private _returnNavTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Route the app is on, so the round-trip timer can tell the hub from a later choice. */
+  private _lastRouteName: string | null = null;
 
   override onInit(): void {
     const stateModel = this.getStateModel();
@@ -72,6 +74,10 @@ export default class KioskComponent extends BaseController {
     }
     this._returnNavTimer = setTimeout(() => {
       this._returnNavTimer = null;
+      // Only finish the round trip from the hub it navigated to. Router targets
+      // keep this view alive, so onExit never runs on a navigation; without this
+      // the timer would yank the user back out of whatever they opened instead.
+      if (this._lastRouteName !== Scope.KioskHub) return;
       router.navTo(Scope.KioskComponent);
     }, 2000);
   }
@@ -87,7 +93,8 @@ export default class KioskComponent extends BaseController {
   }
 
   private _onRouteMatched(event: Router$RouteMatchedEvent): void {
-    if (event.getParameter("name") !== Scope.KioskComponent) return;
+    this._lastRouteName = event.getParameter("name") ?? null;
+    if (this._lastRouteName !== Scope.KioskComponent) return;
 
     // Re-wire the keyboard to this view's input whenever we navigate back
     const kb = this._keyboard;

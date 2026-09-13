@@ -50,6 +50,9 @@ class CustomAlertButton extends HTMLElement {
       this._button.removeEventListener("click", this._onClick);
     }
     this._onClick = null;
+    // Remove the node, not just the reference: _render() recreates a button
+    // whenever _button is null, so a reconnect would append a second one.
+    this._button?.remove();
     this._button = null;
   }
 
