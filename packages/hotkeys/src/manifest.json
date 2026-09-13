@@ -39,7 +39,11 @@
       "content": {
         "controls": [],
         "elements": [],
-        "types": ["ui5.hotkeys.ConflictBehavior", "ui5.hotkeys.UnhandledReason", "ui5.hotkeys.Platform"],
+        "types": [
+          "ui5.hotkeys.ConflictBehavior",
+          "ui5.hotkeys.UnhandledReason",
+          "ui5.hotkeys.Platform"
+        ],
         "interfaces": []
       }
     }
