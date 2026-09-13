@@ -300,9 +300,8 @@ export type KeyRow = KeyDefinition[];
  * from the visible text. For icon-only keys (where `label` is `""`), the
  * renderer sets an `aria-label` using i18n translations for built-in special
  * keys (`{backspace}`, `{enter}`, `{shift}`, `" "`). For custom icon-only
- * keys with non-standard values, ensure the `value` is human-readable
- * (e.g. `"Delete"` rather than `"del"`) since it will be used as the
- * accessible name.
+ * keys with non-standard values, set {@link KeyDefinition.ariaLabel}: the
+ * renderer warns and falls back to the raw `value` when it finds neither.
  *
  * @example Minimal custom layout
  * ```ts

@@ -1275,8 +1275,11 @@ export default class KioskKeyboard extends Control {
     // Abort (not commit) any in-progress composition: reset discards the
     // interaction rather than flushing a half-formed syllable to the target.
     this._dropComposition("reset");
-    this._backspaceRepeat.stop();
-    this._variantPopup.stop();
+    // Drop both in-flight presses, pointer and keyboard: a fresh input context
+    // cannot leave a keycap painted, a blur listener armed, or a pending
+    // touchend still able to type.
+    this._clearPressedKeyState();
+    this._clearKeyboardPressedState();
     this._variantPopup.dismissOpen();
     this._shiftState.reset();
     // Returns to the base layout and re-renders; fires layoutChange only on a
@@ -1659,6 +1662,13 @@ export default class KioskKeyboard extends Control {
   close(): this {
     if (!this.getDocked()) return this;
     if (!this._open) return this;
+    // Drop both in-flight presses and any open accent popup before the session
+    // closes: a keyboard sliding out of view cannot leave a keycap painted, a
+    // blur listener armed, a popup floating over the page, or a pending touchend
+    // still able to type into the target it just left.
+    this._clearPressedKeyState();
+    this._clearKeyboardPressedState();
+    this._variantPopup.dismissOpen();
     this._targetSession.fireChangeIfDirty();
     this._open = false;
     this._nativeKbSuppression.restore();
