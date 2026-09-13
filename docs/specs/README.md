@@ -9,8 +9,6 @@ A spec is kept while something still points at it - CLAUDE.md, a config, a test,
 | [Unified `controls` Attribute](./2026-04-08-unified-controls-attribute.md)                              | A single `controls` attribute for targeting input controls.                                 |
 | [Extensible Custom Keys](./2026-06-11-extensible-keys-enriched-keypress.md)                             | Custom key tokens via an enriched `keyPress` contract.                                      |
 | [Twin-Drift Check](./2026-06-11-twin-drift-check-adversarial-hypotheses.md)                             | Adversarial validation of the twin-drift checker (`tools/check-twin-drift.mjs`).            |
-| [Key-Action Model Design](./2026-07-03-keyboard-key-action-model-design.md)                             | A parse-once typed action for buttons, layouts, and special functions.                      |
-| [Key-Action Adversarial Hypotheses](./2026-07-03-key-action-adversarial-hypotheses.md)                  | Adversarial validation of the behavior-preserving `KeyAction` refactor.                     |
 | [DOM-Contract Modernization (#173)](./2026-07-21-dom-contract-modernization-design.md)                  | The `dom-contract.ts` class/attribute redesign across both twins; partly superseded.        |
 | [DOM-Contract Light-DOM Specificity](./2026-07-21-dom-contract-kiosk-lightdom-specificity.md)           | Why the key category reverted to classes on kiosk, then on webc for symmetry.               |
 | [DOM-Contract Drift Guard](./2026-07-21-dom-contract-drift-adversarial-hypotheses.md)                   | Adversarial validation of `tools/check-dom-contract-drift.mjs`.                             |

@@ -20,7 +20,7 @@ Native web component variant of the kiosk on-screen keyboard, built on the [UI5 
 
 - **Standards-based custom element** (`<kiosk-keyboard>`) usable in any framework: plain HTML, React, Vue, Angular
 - **SAP theming**: Horizon light/dark, HCB, HCW via CSS variables (automatic theme switching)
-- **UI5 app integration**: consumable inside UI5 apps via the existing `WebComponent.extend()` bridge pattern
+- **UI5 app integration**: consumable inside UI5 apps through the wrapper `ui5-tooling-modules` generates from the Custom Elements Manifest, or a hand-written `WebComponent.extend()` bridge
 - **Multiple layouts**: QWERTY, QWERTZ-DE, Japanese Romaji, Japanese Kana (plus a narrow-width compact form), Arabic, Korean Hangul, Spanish, Numeric, Numpad, Special, F-keys, Navigation. Composite variants (e.g., QWERTY + F-key row) are trivial to compose from building block rows.
 - **Locale-aware**: auto-selects layout based on browser locale (e.g. `de` → `qwertz-de`, `ja` → `ja-romaji`, `ar` → `arabic`, `ko` → `ko-hangul`, `es` → `qwerty-es`). Slot a `<kiosk-keyboard-custom-layout slot="customLayouts" name="ja-kana" locales="ja">` into an element to switch the Japanese default to kana input for that instance.
 - **Shift / Caps Lock**: single-click for one-shot shift, double-click for caps lock
@@ -254,6 +254,7 @@ Event naming follows platform conventions: `keyPress` (camelCase) in the UI5 con
 | Composition middleware      | runs before the key event, so a consumed key never reaches a handler | runs after it, so the handler sees every key                          |
 | Active-control event        | `activeControlChange` with `controlId`                               | `active-control-change` with `activeElement`                          |
 | Open / close events         | `afterOpen` / `afterClose`, no parameters                            | `after-open` / `after-close` with `activeElement`                     |
+| `change` on the target      | on Enter, on close, and on a target switch (modified inputs only)    | on Enter only                                                         |
 
 One-shot Shift is spent on the same set of keys on both: any key that acts on the target - a character, an unknown `{...}` token, `{backspace}`, `{enter}`, an `{fkey:*}`, a committed accent variant, or a key the composition middleware consumed. A latched modifier is spent by the next non-modifier key, which is also what XKB, AccessX and Sticky Keys do.
 
@@ -294,6 +295,8 @@ import type {
   KeyType,
   SpecialKeyValue,
   CompositionMiddleware,
+  I18nResolver,
+  TargetResolver,
   KioskKeyboardDomContract,
 } from "kiosk-keyboard-webc/bundle";
 ```
@@ -399,6 +402,44 @@ The platform path needs a focused target **whose input type supports selection**
 | `input` event      | One, dispatched by the platform | One synthesized `InputEvent` (`inputType` of `insertText`, `insertLineBreak` or `deleteContentBackward`) |
 
 Either path produces exactly one `input` event per edit, so a listener on the target sees every edit regardless. An edit that a saturated `maxlength` leaves empty writes nothing and dispatches nothing. Read-only and disabled targets are never written to.
+
+## Docked Mode and Auto-Show
+
+With `docked` set, the keyboard is fixed to the bottom of the viewport and slides in and out. `open`, `show()` and `close()` drive it; `after-open` and `after-close` fire as the state changes, not when the transition ends. Pressing Escape anywhere on the page closes an open docked keyboard, unless an accent-variant popup is open, which takes the Escape first.
+
+`show()` on a keyboard with no active target focuses and targets the element `controls` names, when it names exactly one. With several ids there is nothing to pick, and the keyboard opens without a target until one of them takes focus.
+
+### Auto-show
+
+`auto-show` (with `docked`, and while not `disabled`) listens for `focusin` and `focusout` on the whole document, in the capture phase:
+
+1. **Opens** when focus lands on an element an `<input>` or `<textarea>` resolves from: the element itself, one in its light DOM, or one up to three shadow roots down (through `setTargetResolver()` when one is set). The input becomes the active target. Any `<input>` qualifies, so set `controls` on a page with checkboxes or other non-text inputs.
+2. **Filters by `controls`** when it is set: only a focused element that carries one of the listed ids, or has an ancestor within five levels that does, opens the keyboard. A UI5 view prefix (`container-app---view--`) is stripped before comparing, so `controls="myInput"` matches a UI5-rendered id.
+3. **Leaves another keyboard's input alone.** An input is skipped when another live keyboard already targets it or lists it in its own `controls`. A keyboard that is disabled, disconnected, not rendered, or docked and closed never blocks another.
+4. **Closes** one animation frame after focus leaves, unless focus has moved into the keyboard or onto another input this keyboard would open for. A `show()` in that frame cancels the close.
+
+### Auto-type
+
+With `auto-type` on, each auto-show target is inspected, first match wins:
+
+1. `data-keyboard-type="Full"` or `"Numpad"` on the input or any ancestor, across shadow roots (see [Keyboard type override](#keyboard-type-override-via-data-keyboard-type))
+2. `inputmode` of `numeric`, `decimal` or `tel` (case-insensitive) → `Numpad`
+3. `type` of `number` or `tel` → `Numpad`
+4. Otherwise `Full`
+
+A `keyboard-type` set explicitly switches detection off until `resetKeyboardType()`. Refocusing the input the open keyboard already targets does not re-detect: that input carries the `inputmode="none"` written on its previous focus, which would hide an authored `numeric`.
+
+### Native keyboard
+
+`mobile-keyboard` decides whether the element opens at all:
+
+| Value      | Behavior                                                                                           |
+| ---------- | -------------------------------------------------------------------------------------------------- |
+| `"Auto"`   | Defers to the native on-screen keyboard while `(pointer: coarse)` matches; opens otherwise.        |
+| `"Custom"` | Always opens.                                                                                      |
+| `"Native"` | Never opens: `show()`, `open` and auto-show all leave it closed and the native keyboard in charge. |
+
+While it is open, the keyboard writes `inputmode="none"` on the target so the native keyboard stays down, and restores the original value on close, on a target switch and on disconnect. The restore is reference-counted per input, so two keyboards targeting one input do not clobber each other's saved value.
 
 ## Methods
 
@@ -597,6 +638,41 @@ Any other element in the slot is ignored with a warning naming its tag, so a str
 
 The string attributes work the same in every framework; only the three object-typed properties need the framework's escape hatch for setting a DOM property rather than an attribute.
 
+**TypeScript** - the package ships no tag typings, so `document.createElement("kiosk-keyboard")` returns a plain `HTMLElement` and a TSX template does not know the tags. Declare them once in the app:
+
+```ts
+// kiosk-keyboard.d.ts
+import type { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+import type CustomLayout from "kiosk-keyboard-webc/CustomLayout";
+import type { DetailedHTMLProps, HTMLAttributes } from "react";
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "kiosk-keyboard": KioskKeyboard;
+    "kiosk-keyboard-custom-layout": CustomLayout;
+  }
+}
+
+// React 19 types; with React 18 types, augment the global `JSX` namespace instead.
+declare module "react" {
+  namespace JSX {
+    interface IntrinsicElements {
+      "kiosk-keyboard": DetailedHTMLProps<HTMLAttributes<KioskKeyboard>, KioskKeyboard> & {
+        layout?: string;
+        controls?: string;
+      };
+      "kiosk-keyboard-custom-layout": DetailedHTMLProps<HTMLAttributes<CustomLayout>, CustomLayout> & {
+        name?: string;
+        locales?: string;
+        suppress?: string;
+      };
+    }
+  }
+}
+```
+
+Drop the `react` half outside React. Hyphenated attributes such as `keycap-lang` and `auto-show` need no entry: TypeScript does not check JSX attribute names that contain a dash.
+
 **React** - reach the element with a ref and assign the property in an effect:
 
 ```tsx
@@ -626,7 +702,14 @@ export function Keyboard() {
 }
 ```
 
-**Vue** - the `.prop` modifier binds a DOM property; `markRaw` keeps the rows out of Vue's reactivity system, since the element reads them by identity and would otherwise receive a proxy:
+**Vue** - tell the template compiler the two tags are custom elements, or it warns that it cannot resolve them as components:
+
+```ts
+// vite.config.ts
+vue({ template: { compilerOptions: { isCustomElement: (tag) => tag.startsWith("kiosk-keyboard") } } });
+```
+
+The `.prop` modifier binds a DOM property; `markRaw` keeps the rows out of Vue's reactivity system, since the element reads them by identity and would otherwise receive a proxy:
 
 ```vue
 <script setup lang="ts">
@@ -704,7 +787,7 @@ polish.variants = { s: ["ś", "š"], z: ["ż", "ź", "ž"] };
 kb.appendChild(polish);
 ```
 
-Base letters must be **lowercase**; a mis-keyed letter is logged and the entry skipped, rather than silently arming nothing.
+Base letters must be **lowercase**; a table with an uppercased or padded letter is rejected as a whole and reported as `invalid-variants`, rather than silently arming nothing.
 
 Three levels of opt-out, narrowest first:
 
@@ -731,8 +814,8 @@ The `f-key-mode` attribute controls how function key presses are handled:
 | Value       | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `"Virtual"` | (default) F-key press fires the `key-press` event only. No keyboard event is sent to the target input. Navigation keys move the caret in the target input (`ArrowLeft`/`ArrowRight`, `ArrowUp`/`ArrowDown`, `Home`/`PageUp` to the start, `End`/`PageDown` to the end). With Shift active they extend the selection from its anchor instead: a one-shot `{shift}` extends by a single press, Caps Lock extends continuously. |
-| `"Native"`  | F-key press dispatches a synthetic `KeyboardEvent("keydown")` to the target input, then fires `key-press`. The component also provides built-in workarounds for F5 and F11 (see below).                                                                                                                                                                                                                                      |
-| `"None"`    | F-key and navigation presses are ignored (silent no-op); the row is still rendered.                                                                                                                                                                                                                                                                                                                                          |
+| `"Native"`  | F-key press fires the cancelable `key-press` event, then, unless it was cancelled, dispatches a synthetic `KeyboardEvent("keydown")` to the target input. The component also provides built-in workarounds for F5 and F11 (see below).                                                                                                                                                                                       |
+| `"None"`    | F-key press fires the `key-press` event only: no keydown is dispatched, no built-in action runs, and navigation keys leave the caret where it is. The row is still rendered.                                                                                                                                                                                                                                                 |
 
 ### Native mode: synthetic keydown events
 
@@ -856,19 +939,25 @@ The `kiosk-keyboard-webc/middleware/*` subpaths export the middleware **factorie
 Implement the `CompositionMiddleware` interface and supply the factory on the custom layout for that layout:
 
 ```ts
-import type { CompositionMiddleware } from "kiosk-keyboard-webc";
+import type { CompositionMiddleware, KioskKeyboard } from "kiosk-keyboard-webc/bundle";
 import type CustomLayout from "kiosk-keyboard-webc/CustomLayout";
 import "kiosk-keyboard-webc/bundle";
 
-function createMyMiddleware(): CompositionMiddleware {
+function createMyMiddleware(kb: KioskKeyboard): CompositionMiddleware {
   return {
     handleKey(key, target) {
       // Return true if consumed (keyboard skips default handling).
       // Return false to pass through to default behavior.
+      const caret = target.selectionStart ?? target.value.length;
+      if (key === "~" && target.value[caret - 1] === "n") {
+        kb.deleteBackward();
+        kb.insertText("ñ");
+        return true;
+      }
       return false;
     },
     commit() {
-      // Force-commit any in-progress composition. Return committed text or null.
+      // Finalize any in-progress composition.
       return null;
     },
     reset() {
@@ -877,12 +966,12 @@ function createMyMiddleware(): CompositionMiddleware {
   };
 }
 
-const el = document.createElement("kiosk-keyboard");
+const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
 const custom = document.createElement("kiosk-keyboard-custom-layout") as CustomLayout;
 custom.slot = "customLayouts";
 custom.name = "my-layout";
 custom.rows = myRows;
-custom.middleware = createMyMiddleware;
+custom.middleware = () => createMyMiddleware(el);
 el.appendChild(custom);
 el.setAttribute("layout", "my-layout");
 document.body.appendChild(el);
@@ -893,7 +982,9 @@ The `handleKey` method receives:
 - `key`: the raw key value from the layout definition (e.g., `"a"`, `"{backspace}"`, `"{enter}"`)
 - `target`: the input element the keyboard is typing into
 
-When `handleKey` returns `true`, the keyboard skips its default text insertion, backspace, and enter handling. The middleware is responsible for modifying the target's value.
+When `handleKey` returns `true`, the keyboard skips its default text insertion, backspace, and enter handling. The factory takes no arguments, so close over the element, as above, and edit through its `insertText()` and `deleteBackward()`, which keep `maxlength`, the browser undo stack and one `input` event per edit; assigning `target.value` skips all three. Replacing the character before the caret takes a `deleteBackward()` and an `insertText()`, so the target sees two edits.
+
+The keyboard ignores the string `commit()` returns: in-progress text must already be in the target, and `commit()` only finalizes it.
 
 Middleware lifecycle:
 
@@ -1062,7 +1153,7 @@ On `{shift}` keys, the Caps Lock state can override both icon and label independ
 
 By default, the keyboard finds the native `<input>` or `<textarea>` inside a host element by traversing light DOM and up to 3 levels of shadow DOM. This covers standard HTML inputs, UI5 web components (`<ui5-input>`, `<ui5-step-input>`, `<ui5-textarea>`), and similar.
 
-For custom controls with non-standard DOM structures, set a **target resolver** callback:
+For custom controls with non-standard DOM structures, set a **target resolver** callback. Its type is `TargetResolver`, exported from `kiosk-keyboard-webc/bundle`:
 
 ```ts
 const kb = document.querySelector("kiosk-keyboard");
@@ -1124,7 +1215,7 @@ The two `auto-compact` announcements name no layout on purpose: the layout a wid
 
 ### Custom i18n Resolver
 
-Use `KioskKeyboard.setI18nResolver()` to override or extend translations at runtime without modifying the library. The resolver receives the i18n key, the current locale (from the configured UI5 Web Components locale via `getLocale()`), and the text resolved from the built-in bundle:
+Use `KioskKeyboard.setI18nResolver()` to override or extend translations at runtime without modifying the library. The resolver receives the i18n key, the current locale (from the configured UI5 Web Components locale via `getLocale()`), and the text resolved from the built-in bundle. Its type is `I18nResolver`, exported from `kiosk-keyboard-webc/bundle`:
 
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
@@ -1178,6 +1269,8 @@ KioskKeyboard.setI18nResolver((key, locale) => {
 
 To add a new locale to the library itself, create a properties file in `src/i18n/` following the naming convention `messagebundle_<locale>.properties` (e.g. `messagebundle_fr.properties`). The UI5 Web Components build pipeline picks it up automatically.
 
+`npm run test:i18n-bundles` (part of `check:base` and CI) holds the new bundle to four rules: every non-ASCII character written as a `\uXXXX` escape; exactly the keys of the default bundle; the same locale added to `packages/kiosk-keyboard/src/i18n/` as well; and the same text in both packages for every key they share. The [kiosk-keyboard README](../kiosk-keyboard/README.md#internationalization-i18n) has a complete French bundle to start from.
+
 > [!NOTE]
 > Both the UI5 native control and the web component use the same `setI18nResolver()` callback pattern for i18n customization. The resolver receives the key, current locale, and base text, and returns a string override or `undefined` to keep the default. The UI5 control additionally resolves base text from a UI5 ResourceBundle, while the web component uses built-in EN/DE/JA/AR strings.
 
@@ -1194,7 +1287,7 @@ The component exposes CSS shadow parts for structural styling from outside the s
 | `action`         | Action keys (Enter, Backspace)     | Combined with `key`, ahead of any per-key name: `part="key action key-enter"`                                                                                    |
 | `fkey`           | Function/navigation keys           | Combined with `key`: `part="key modifier fkey"`. Targets keys with `{fkey:*}` values (Home, End, PgUp, PgDn, Arrow keys) independently from other modifier keys. |
 | `key-label`      | Text label inside a key            | The `<span>` rendering the key's text                                                                                                                            |
-| `key-icon`       | Icon inside a key                  | The `<ui5-icon>` rendering built-in icons                                                                                                                        |
+| `key-icon`       | Icon inside a key                  | The `<ui5-icon>` for a `sap-icon://` icon, or the `<span>` for a Unicode or emoji icon                                                                           |
 | `variant-popup`  | Accent-variant option row          | The button toolbar slotted inside the long-press `ui5-popover`                                                                                                   |
 | `variant-option` | Each accent-variant option         | The `ui5-button` for a single variant glyph                                                                                                                      |
 
@@ -1364,6 +1457,14 @@ Compact density is activated via the `data-ui5-compact-size` attribute (set auto
 <kiosk-keyboard data-ui5-compact-size></kiosk-keyboard>
 ```
 
+## Further Reading
+
+- [Architecture & Internals](../../docs/kiosk-webc/ARCHITECTURE.md): component design, target resolution, auto-show, keyboard navigation, theming
+- [Web Component Consumption](../../docs/kiosk-webc/CONSUMPTION.md): tag scoping, the manual bridge, height responsiveness, tooling limitations
+- [Build Pipelines](../../docs/kiosk-webc/BUILD-PIPELINE.md) and [Custom Elements Manifest](../../docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md): generation, distribution formats, CEM rules
+- [CSS Sizing Reference](../../docs/shared/CSS-SIZING-REFERENCE.md): every custom property, its default, and the rationale behind it
+- [Testing](../../docs/shared/TESTING.md): suites, visual baselines, and what CI runs
+
 ## Development
 
 ```bash
@@ -1437,7 +1538,7 @@ src/
 ├── bundle.esm.ts              # ESM entry point with re-exports
 ├── types.ts                   # Public type definitions
 ├── jsx.d.ts                   # JSX type augmentations
-├── core/
+├── core/                      # Internal modules; a selection below, the full list is in docs/kiosk-webc/ARCHITECTURE.md
 │   ├── dom-utils.ts           # DOM helpers (ID generation, input resolution)
 │   ├── grapheme.ts            # Grapheme-aware cursor utilities
 │   ├── i18n.ts                # i18n module (UI5 WC + custom resolver)

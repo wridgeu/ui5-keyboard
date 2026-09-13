@@ -9,6 +9,22 @@ import type { VariantTable } from "../../src/KioskKeyboard.js";
 
 export type VariantTableIsReExported = VariantTable;
 
+// Compile-time only, like the import above. Each `@ts-expect-error` fails
+// `typecheck:kiosk-webc:test` if its line starts to compile, as it would once a
+// resolver type loosens to `any`.
+import type { I18nResolver, TargetResolver } from "../../src/bundle.esm.js";
+import type KioskKeyboardElement from "../../src/KioskKeyboard.js";
+
+export const installTargetResolver = (kb: KioskKeyboardElement, resolver: TargetResolver): void =>
+  kb.setTargetResolver(resolver);
+export const installI18nResolver = (element: typeof KioskKeyboardElement, resolver: I18nResolver): void =>
+  element.setI18nResolver(resolver);
+
+// @ts-expect-error a target resolver returns a text field or null, not any element
+export const returnsHost: TargetResolver = (el) => el;
+// @ts-expect-error an i18n resolver returns text or undefined, not a number
+export const returnsLength: I18nResolver = (_key, _locale, defaultText) => defaultText.length;
+
 // The bundle entry boots the UI5 WC style engine, which reads
 // `document.adoptedStyleSheets`. jsdom ships no constructable stylesheets, so
 // the array is supplied here before the entry loads.

@@ -20,7 +20,7 @@ bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all b
                           as data for a custom layout's `middleware`.
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, FKeyMode,
                           LayoutRole, LayoutFacet, SpecialKeyValue, KeyWidth, KeyType,
-                          event detail types
+                          I18nResolver, TargetResolver, event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>, <ui5-button>, <ui5-popover>
 core/
   dom-utils.ts            Key grid coordinates + element IDs, per-key ::part() names, input/textarea resolver (shadow DOM aware)
@@ -130,9 +130,9 @@ The framework requires specific compiler flags (`experimentalDecorators`, `useDe
 
 ## Component Architecture
 
-### Flat DOM, No Child Controls
+### Flat DOM, No Per-Key Components
 
-The keyboard renders as a flat shadow DOM structure: a root `<div>` containing row `<div>`s containing key `<div>`s. Each key is a plain element with `role="button"` and `tabindex`.
+The keyboard renders as a flat shadow DOM structure: a root `<div>` containing row `<div>`s containing key `<div>`s. Each key is a plain element with `role="button"` and `tabindex`; the only UI5 Web Components inside are a key's `<ui5-icon>` and the accent-variant `<ui5-popover>` with its `<ui5-button>` options.
 
 This design was chosen for:
 
@@ -196,7 +196,8 @@ click / touchend
   +-- Guard: disabled, readOnly, no target
   |
   +-- Route by key value:
-  |     {shift}         -> toggle shift state machine, fire key-press
+  |     {shift}         -> fire key-press (cancelable; a veto skips the toggle),
+  |                        toggle shift state machine
   |     {backspace}     -> fire key-press, handle backspace on target
   |     {enter}         -> fire key-press, insert newline (textarea) / fire change (input)
   |     {layout:name}   -> fire key-press (cancelable; a veto skips the switch),
@@ -206,7 +207,6 @@ click / touchend
   |     (character)     -> resolve shift value, fire key-press, insert text
   |
   +-- Auto-release shift (if one-shot, not caps lock)
-  +-- Announce key via ARIA live region
 ```
 
 ### Custom Keys
@@ -221,7 +221,7 @@ The repeater fires the first delete after an initial hold delay, then accelerate
 
 A held key would otherwise also fire the trailing release `click` (real for mouse, synthesized by `_boundTouchEnd` for touch), deleting one extra character on lift-off. The controller sets a one-shot suppression flag once a repeat occurs and swallows that one click via `consumeClick` (called from `_onKeyClick`). The flag resets on the next Backspace `pointerdown` and clears on pointer-leave, so a fresh tap, or a later keyboard- or programmatically-activated Backspace click, deletes normally.
 
-The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard` package rather than shared (the two packages deliberately do not share code), so the two copies must be kept in sync by hand.
+The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard` package rather than shared (the two packages deliberately do not share code). `core/auto-repeat.ts` is a checked pair in `tools/check-twin-drift.mjs`, so the two copies cannot drift apart unnoticed.
 
 ### Focus Steal Prevention
 
@@ -337,14 +337,15 @@ interface KeyDefinition {
 
 ### Layout Resolution
 
-`_getResolvedLayout()` resolves the effective layout:
+`_getResolvedLayout()` resolves the effective layout through `LayoutState.resolvedName()`:
 
 ```
-keyboardType    Resolved layout
-────────────    ───────────────
-"Numpad"        numpad layout (always)
-"Numeric"       numeric layout (always)
-"Full"          current layout from user switch, or base layout
+source        keyboardType    Resolved layout
+──────────    ────────────    ───────────────
+"user"        (any)           the layout a {layout:*} key picked (overrides the constraint)
+"external"    "Numpad"        numpad layout
+"external"    "Numeric"       numeric layout
+"external"    "Full"          current layout, else the base, else the layout attribute, else the locale layout
 ```
 
 `LayoutState.seed()` runs once on connect: the `layout` attribute becomes the requested layout, and the base layout - what `{layout:base}` and `reset()` return to - is that attribute unless it names a secondary layout, in which case the base falls through to the locale layout so both still land on an alphabetic surface. A `keyboardType` change drops a user `{layout:*}` pick (`clearUserOverride()`), so lifting a Numpad/Numeric constraint lands on the base layout rather than on the pick.
@@ -478,7 +479,9 @@ F-keys use the `{fkey:name}` value format. Behavior depends on `fKeyMode`:
 
 - **Virtual** (default): Fires `key-press` event with fkey detail. Built-in actions for cursor movement keys (ArrowLeft/Right moves caret). With Shift active the navigation keys extend the selection instead: the focus end moves and the anchor is kept, the anchor being the browser's `selectionDirection` rather than stored state.
 - **Native**: Dispatches a real `KeyboardEvent("keydown")` on the target input. Built-in browser actions for F5 (reload) and F11 (fullscreen).
-- **None**: Silent no-op.
+- **None**: Fires `key-press` only; no keydown, no built-in action, no caret movement.
+
+In every mode `key-press` fires first, and `FKeyController.handle()` runs only when it was not cancelled.
 
 Unsupported F-key names trigger a warn-once console warning.
 

@@ -49,7 +49,7 @@ private _openValue = false;
 set open(value: boolean) {
   if (this._openValue === value) return;
   this._openValue = value;
-  if (!this.isConnected) return; // deferred to onEnterDOM
+  if (!this._fullyConnected) return; // applied by onEnterDOM
   if (value) {
     this._performOpen();
   } else {
@@ -66,10 +66,10 @@ Key points:
 
 - The `@property()` decorator goes on the **setter** (not the getter).
 - The backing field (`_openValue`) is a plain class field that holds the actual state.
-- The setter guards against no-ops (`=== value`) and handles pre-connection state (`!this.isConnected`).
+- The setter guards against no-ops (`=== value`) and defers its side effects until `UI5Element` has run `onEnterDOM`, which it marks with `_fullyConnected`. `isConnected` is the wrong guard: upgrading markup that is already parsed runs the attribute setters while the element is connected, long before the asynchronous `connectedCallback` reaches `onEnterDOM`.
 - Side effects (event dispatch, inputmode suppression) live in dedicated methods called from the setter.
 - `onEnterDOM` checks the backing field and runs side effects for values set before DOM connection.
-- `onExitDOM` manipulates the backing field directly (since `isConnected` is `false` at that point).
+- `onExitDOM` releases the open state by hand (restoring `inputmode`, firing `after-close`, clearing the backing field) instead of assigning `open = false`, which would run `_performClose()` and queue a "keyboard closed" announcement for a live region that is leaving the page.
 
 ### `@event()` declarations
 

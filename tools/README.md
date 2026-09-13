@@ -189,7 +189,7 @@ Run via `npm run test:dom-contract` (also part of `check:base` and CI).
 
 ## `check-i18n-bundles.mjs`
 
-Three invariants over `src/i18n/messagebundle*.properties` in both keyboard packages,
+Four invariants over `src/i18n/messagebundle*.properties` in both keyboard packages,
 none of which is visible in a diff and all of which fail silently at runtime.
 
 - **ASCII only.** Non-ASCII is written as `\uXXXX`. A raw UTF-8 value reads correctly
@@ -206,9 +206,16 @@ none of which is visible in a diff and all of which fail silently at runtime.
   fallback and `bIgnoreKeyFallback`, so a key absent from every bundle returns
   plausible text rather than failing. The scan reads literal `getText("KEY"` calls
   over `src/` and skips `generated/`; a key built from a variable is invisible to it.
+- **Twin parity.** Every locale bundle exists in both packages, and a key the two
+  packages share carries the same text in the same locale. The first three
+  invariants are per package and `check-twin-drift.mjs` lists no i18n path, so a
+  wording fix applied to one twin and forgotten in the other would pass everything
+  else. Only the shared keys are compared: the two surfaces name a few things
+  differently (`ARIA_CAPS_LOCK` against `KEY_CAPS_LOCK`).
 
-Values are not compared: translations differ by definition, and the placeholder
-counts that matter are already asserted by the tests over the rendered text.
+Values are otherwise not compared: a locale differs from the default by definition,
+and the placeholder counts that matter are already asserted by the tests over the
+rendered text.
 
 Run via `npm run test:i18n-bundles` (also part of `check:base` and CI).
 
@@ -233,7 +240,7 @@ serving. Each package's `test:qunit` prefixes the check: `hotkeys` on 8081,
 
 ## `trim-pages-dist.mjs`
 
-Prunes the self-hosted GitHub Pages demo dist (`packages/demo-app/dist`) after a `ui5 build --all` with the SAPUI5 framework (`ui5-pages.yaml`). `--all` bundles the entire `sap.ushell` dependency closure (~560 MB); this trims it to the subset the keyboard launchpad actually loads (~150 MB) via three production trims:
+Prunes the self-hosted GitHub Pages demo dist (`packages/demo-app/dist`) after a `ui5 build --all` with the SAPUI5 framework (`ui5-pages.yaml`). `--all` bundles the entire `sap.ushell` dependency closure (~525 MB); this trims it to the subset the keyboard launchpad actually loads (~140 MB) via three production trims:
 
 - **Minified-only**: drop `*-dbg.js` debug duplicates, `*.js.map` source maps, and `*.less` sources (the compiled `library.css` is shipped).
 - **Single theme**: keep `sap_horizon` (plus the required `base`); drop the unused `sap_hcb` / `sap_horizon_dark` / `_hcb` / `_hcw` variants.

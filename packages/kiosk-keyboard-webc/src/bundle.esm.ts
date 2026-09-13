@@ -19,5 +19,7 @@ export type {
   KeyType,
   SpecialKeyValue,
   CompositionMiddleware,
+  I18nResolver,
+  TargetResolver,
 } from "./types.js";
 export type { KioskKeyboardDomContract } from "./KioskKeyboard.js";

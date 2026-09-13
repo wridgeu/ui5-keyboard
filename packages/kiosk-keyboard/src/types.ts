@@ -399,6 +399,26 @@ export interface CustomLayoutSpec {
  */
 export type I18nResolver = (key: string, locale: string, resolvedText: string) => string | undefined;
 
+/**
+ * Locates the native `<input>` or `<textarea>` inside a target control whose focus
+ * DOM ref is not one itself, for `setTargetResolver()` and
+ * `KioskKeyboard.setGlobalTargetResolver()`.
+ *
+ * Receives the control's focus DOM ref and returns the text field inside it, or
+ * `null` to use the built-in resolver, which searches the light DOM and up to three
+ * levels of shadow DOM. A resolver that throws is logged and treated as `null`.
+ *
+ * @example
+ * ```ts
+ * const resolver: TargetResolver = (el) => el.querySelector<HTMLInputElement>(".my-editor input");
+ * KioskKeyboard.setGlobalTargetResolver(resolver);
+ * ```
+ *
+ * @public
+ * @since 0.1.0
+ */
+export type TargetResolver = (el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null;
+
 // ── Composition middleware types ──────────────────
 
 /**

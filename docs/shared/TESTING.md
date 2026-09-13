@@ -11,6 +11,15 @@ Developer reference for the test infrastructure across all packages. For consume
 | **Component**    | Web Test Runner + Playwright    | `kiosk-keyboard-webc`       | DOM integration, events, attributes, accessibility                  |
 | **E2E / Visual** | Playwright (`toHaveScreenshot`) | both kiosk packages         | Visual regression, focus, invariants, RTL, accessibility media, FLP |
 
+## Prerequisites
+
+The suites drive two browser stacks, and `npm install` provisions only one of them:
+
+- **QUnit** (`test:qunit`, `test:hotkeys`, the QUnit half of `test:kiosk`) runs on the Chrome that `puppeteer`'s install script downloads during `npm install`. If that download was skipped (a cached `node_modules`, `PUPPETEER_SKIP_DOWNLOAD`), run `node node_modules/puppeteer/install.mjs`.
+- **Playwright** runs the kiosk and webc e2e/visual suites and the webc component suite (`test:kiosk-webc:component`, through `@web/test-runner-playwright`). Its browser is not installed by `npm install`: run `npx playwright install chromium` once. The webc unit suite (`test:kiosk-webc`, Vitest on jsdom) needs no browser.
+- **Free ports.** Each suite serves on a fixed port (see [Port Map](#port-map)); a dev server left running on one fails the QUnit port check or collides with a Playwright `webServer`.
+- **The FLP suite** (`test:kiosk:e2e:flp`) serves the demo app through `packages/demo-app/ui5-flp.yaml`, whose SAPUI5 framework UI5 Tooling downloads into `~/.ui5` on first use, which takes minutes.
+
 ## Component Tests (`kiosk-keyboard-webc`)
 
 Uses `@open-wc/testing` fixtures backed by Playwright via `@web/test-runner-playwright`.

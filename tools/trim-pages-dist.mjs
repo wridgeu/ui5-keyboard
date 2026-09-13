@@ -1,7 +1,7 @@
 // Trims the self-hosted GitHub Pages demo dist (packages/demo-app/dist) after a
 // `ui5 build --all` with the SAPUI5 framework (ui5-pages.yaml). `--all` bundles
-// the entire sap.ushell dependency closure (~560 MB); this prunes it down to the
-// subset the keyboard launchpad actually loads (~150 MB) using three production
+// the entire sap.ushell dependency closure (~525 MB); this prunes it down to the
+// subset the keyboard launchpad actually loads (~140 MB) using three production
 // trims, each scoped to assets the running FLP never requests:
 //
 //  1. Minified-only: drop *-dbg.js debug duplicates and *.js.map source maps

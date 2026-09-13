@@ -35,9 +35,9 @@ init(): void {
 
 ## Control Architecture
 
-### Flat DOM, No Child Controls
+### Flat DOM, No Per-Key Controls
 
-The keyboard renders as a flat DOM structure: a root `<div>` containing row `<div>`s containing key `<div>`s. There are no child UI5 controls; every key is a plain DOM element with `role="button"`.
+The keyboard renders as a flat DOM structure: a root `<div>` containing row `<div>`s containing key `<div>`s. No key is a UI5 control; every key is a plain DOM element with `role="button"`. The one child control is the accent-variant popup, a `sap.m.Popover` held in the hidden `_variantPopover` aggregation and rendered into the static area rather than into the keyboard.
 
 This avoids per-key control overhead for the 30-50 keys, keeps the control on one renderer and one invalidation cycle, and routes every key through a single set of `ontouchstart`/`ontouchend`/`onsapselect`/`onsapselectmodifiers` handlers on the control root.
 
@@ -176,7 +176,7 @@ The repeater fires the first delete after an initial hold delay, then accelerate
 
 Because the existing single delete fires on release (`ontouchend`), a held key would otherwise delete one extra character on lift-off. The behavior records that a repeat occurred, and `ontouchend` consults `shouldSuppressRelease` to skip its trailing delete. A quick tap (released before the initial delay) never repeats, so it deletes exactly once on release as before.
 
-The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard-webc` package rather than shared (the two packages deliberately do not share code), so the two copies must be kept in sync by hand.
+The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard-webc` package rather than shared (the two packages deliberately do not share code). `internal/auto-repeat.ts` is a checked pair in `tools/check-twin-drift.mjs`, so the two copies cannot drift apart unnoticed.
 
 ### Cursor Initialization
 
@@ -617,7 +617,7 @@ packages/kiosk-keyboard/
                                LayoutRole/LayoutFacet enums, the ControlID / LayoutRows /
                                VariantOverrideTable property types, plus KeyName constants and
                                the LATIN_DIACRITIC_VARIANTS / VariantTable re-exports
-    types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, I18nResolver
+    types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, I18nResolver, TargetResolver
     internal/layout-registry.ts  Layout registration and locale resolution
     internal/
       types.ts                Internal contracts (TargetElement)

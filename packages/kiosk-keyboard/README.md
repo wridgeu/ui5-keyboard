@@ -74,8 +74,8 @@ A UI5 TypeScript library (`ui5.kiosk`) providing a themed, accessible virtual ke
 
 **Core**
 
-- Pure UI5 Control with flat DOM and event delegation (no child controls)
-- Types into any UI5 input control (`sap.m.Input`, `sap.m.TextArea`, etc.) via association
+- Pure UI5 Control with flat-DOM keys and event delegation (no control per key)
+- Types into any UI5 input control (`sap.m.Input`, `sap.m.TextArea`, etc.) named in `controls`
 - Cursor-aware text insertion, backspace, and selection replacement
 - Fires `liveChange` on the target for proper data binding integration
 - Shift toggle (single tap) and Caps Lock (double tap) with auto-release
@@ -504,6 +504,16 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 | `afterClose`          | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                                                                                    |
 | `activeControlChange` | `controlId: string`                                                             | Fired when the active control changes (auto-show focus switch or programmatic target change).                                                                                                                  |
 
+Each event has a generated TypeScript alias, exported from `ui5/kiosk/KioskKeyboard`: `KioskKeyboard$KeyPressEvent`, `KioskKeyboard$LayoutChangeEvent`, `KioskKeyboard$KeyboardTypeChangeEvent`, `KioskKeyboard$AfterOpenEvent`, `KioskKeyboard$AfterCloseEvent` and `KioskKeyboard$ActiveControlChangeEvent`. Type a handler with the alias rather than a hand-written `Event<{ ... }>`, whose parameter shape nothing checks (see [UI5 TypeScript Event Typing](../../docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)):
+
+```ts
+import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
+
+onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
+  const key = event.getParameter("key"); // string | undefined, from the event metadata
+}
+```
+
 ### Public Methods
 
 KioskKeyboard-specific public instance methods (excluding inherited UI5 base class methods):
@@ -529,7 +539,7 @@ KioskKeyboard-specific public instance methods (excluding inherited UI5 base cla
 | `isOpen()`                 | `boolean`                                         | Whether the docked keyboard is currently open.                                                                                                                                                                                                                   |
 | `refreshResponsiveState()` | `this`                                            | Recompute responsive width/height classes after runtime `--ui5KioskKeyboard-*` sizing changes inside a fixed-height host, where the rendered outer size does not change so no `ResizeObserver` callback fires. Usually not needed for normal container resizing. |
 | `setTargetResolver(fn)`    | `this`                                            | Set an instance-level custom resolver for locating native inputs. Pass `null` to clear.                                                                                                                                                                          |
-| `getTargetResolver()`      | `Function\|null`                                  | Returns the instance-level target resolver, or `null`.                                                                                                                                                                                                           |
+| `getTargetResolver()`      | `TargetResolver \| null`                          | Returns the instance-level target resolver, or `null`.                                                                                                                                                                                                           |
 | `getFocusDomRef()`         | `Element \| null`                                 | Returns the keycap that currently holds the roving tab stop, or `null` while the keyboard is disabled or renders no keys.                                                                                                                                        |
 | `getFocusInfo()`           | `object`                                          | Returns focus state snapshot for UI5 focus restoration.                                                                                                                                                                                                          |
 | `applyFocusInfo(info)`     | `this`                                            | Restores focus state snapshot previously returned by `getFocusInfo()`.                                                                                                                                                                                           |
@@ -543,18 +553,18 @@ The generated file above covers UI5 metadata accessors. The convenience/runtime 
 
 The static surface carries no layout registration; custom layouts come from the per-control `customLayouts` aggregation (see [Custom Layouts](#custom-layouts)).
 
-| Method                        | Returns             | Description                                                                                                            |
-| ----------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `getRegisteredLayout(name)`   | `LayoutDefinition?` | Get the definition for a built-in layout name, or `undefined`.                                                         |
-| `getRegisteredLayoutNames()`  | `string[]`          | List all built-in layout names.                                                                                        |
-| `isBuiltInLayout(name)`       | `boolean`           | Whether the given name is a built-in layout.                                                                           |
-| `isSecondaryLayout(name)`     | `boolean`           | Whether the layout is secondary (non-alphabetic, e.g. `numeric`, `fkeys`).                                             |
-| `getLocaleLayout()`           | `string`            | Detect the best built-in layout for the current UI5 locale. Falls back to `"qwerty"`.                                  |
-| `composeLayout(...sources)`   | `LayoutDefinition`  | Splice rows from built-in layout names and row arrays, in order. A name no built-in has contributes nothing and warns. |
-| `getKeyIcon(keyValue)`        | `string?`           | Default icon URI for a special key value, or `undefined` if none.                                                      |
-| `setI18nResolver(fn)`         | `void`              | Set a resolver callback for i18n text overrides, or `null` to clear.                                                   |
-| `setGlobalTargetResolver(fn)` | `void`              | Set a global custom resolver for locating native inputs. Pass `null` to clear.                                         |
-| `getGlobalTargetResolver()`   | `Function \| null`  | Returns the global target resolver, or `null`.                                                                         |
+| Method                        | Returns                  | Description                                                                                                            |
+| ----------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `getRegisteredLayout(name)`   | `LayoutDefinition?`      | Get the definition for a built-in layout name, or `undefined`.                                                         |
+| `getRegisteredLayoutNames()`  | `string[]`               | List all built-in layout names.                                                                                        |
+| `isBuiltInLayout(name)`       | `boolean`                | Whether the given name is a built-in layout.                                                                           |
+| `isSecondaryLayout(name)`     | `boolean`                | Whether the layout is secondary (non-alphabetic, e.g. `numeric`, `fkeys`).                                             |
+| `getLocaleLayout()`           | `string`                 | Detect the best built-in layout for the current UI5 locale. Falls back to `"qwerty"`.                                  |
+| `composeLayout(...sources)`   | `LayoutDefinition`       | Splice rows from built-in layout names and row arrays, in order. A name no built-in has contributes nothing and warns. |
+| `getKeyIcon(keyValue)`        | `string?`                | Default icon URI for a special key value, or `undefined` if none.                                                      |
+| `setI18nResolver(fn)`         | `void`                   | Set a resolver callback for i18n text overrides, or `null` to clear.                                                   |
+| `setGlobalTargetResolver(fn)` | `void`                   | Set a global custom resolver for locating native inputs. Pass `null` to clear.                                         |
+| `getGlobalTargetResolver()`   | `TargetResolver \| null` | Returns the global target resolver, or `null`.                                                                         |
 
 ### DOM Contract
 
@@ -783,15 +793,21 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import CustomLayout from "ui5/kiosk/CustomLayout";
 import type { CompositionMiddleware } from "ui5/kiosk/types";
 
-function createMyMiddleware(): CompositionMiddleware {
+function createMyMiddleware(kb: KioskKeyboard): CompositionMiddleware {
   return {
     handleKey(key, target) {
       // Return true if consumed (keyboard skips default handling).
       // Return false to pass through to default behavior.
+      const caret = target.selectionStart ?? target.value.length;
+      if (key === "~" && target.value[caret - 1] === "n") {
+        kb.deleteBackward();
+        kb.insertText("ñ");
+        return true;
+      }
       return false;
     },
     commit() {
-      // Force-commit any in-progress composition. Return committed text or null.
+      // Finalize any in-progress composition.
       return null;
     },
     reset() {
@@ -800,10 +816,9 @@ function createMyMiddleware(): CompositionMiddleware {
   };
 }
 
-const kb = new KioskKeyboard({
-  customLayouts: [new CustomLayout({ name: "my-layout", rows: myRows, middleware: createMyMiddleware })],
-  layout: "my-layout",
-});
+const kb = new KioskKeyboard({ controls: ["myInput"] });
+kb.addCustomLayout(new CustomLayout({ name: "my-layout", rows: myRows, middleware: () => createMyMiddleware(kb) }));
+kb.setLayout("my-layout");
 ```
 
 The `handleKey` method receives:
@@ -811,7 +826,11 @@ The `handleKey` method receives:
 - `key`: the raw key value from the layout definition (e.g., `"a"`, `"{backspace}"`, `"{enter}"`)
 - `target`: the DOM input element the keyboard is typing into
 
-When `handleKey` returns `true`, the keyboard skips default handling. The middleware is responsible for modifying the target's value. Use the control's public `keyboard.insertText(text)` and `keyboard.deleteBackward()` methods to do so: they update the caret/selection and fire UI5 `liveChange` so the control's model binding stays in sync. (Do not reach into `ui5/kiosk/internal/*`, which is unstable, see [API stability](#api-stability).)
+When `handleKey` returns `true`, the keyboard skips default handling. The factory takes no arguments, so close over the control, as above, and edit through its public `insertText(text)` and `deleteBackward()`, which keep `maxlength` and the browser undo stack and fire UI5 `liveChange` for the model binding; assigning `target.value` skips all of that. Replacing the character before the caret takes a `deleteBackward()` and an `insertText()`, so the target sees two edits. (Do not reach into `ui5/kiosk/internal/*`, which is unstable, see [API stability](#api-stability).)
+
+A factory referenced from XML through `core:require` has no control to close over; add a custom layout whose middleware needs one from the controller.
+
+The keyboard ignores the string `commit()` returns: in-progress text must already be in the target, and `commit()` only finalizes it.
 
 Middleware lifecycle:
 
@@ -943,7 +962,9 @@ All other F-keys (F1-F4, F6-F10, F12) dispatch the synthetic `keydown` to the ta
 Handle other F-keys via the `keyPress` event:
 
 ```typescript
-onKeyPress(event: Event<{ key: string }>): void {
+import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
+
+onKeyPress(event: KioskKeyboard$KeyPressEvent): void {
   if (event.getParameter("key") === KeyName.F1) {
     event.preventDefault(); // optional: suppress default key-press behavior
     this.showHelpDialog();
@@ -1519,7 +1540,7 @@ Override these in a custom renderer to restructure the icon/label composition en
 
 By default, the keyboard calls `getFocusDomRef()` on the target control and checks whether the returned element is a native `<input>` or `<textarea>`. For standard UI5 controls (`sap.m.Input`, `sap.m.StepInput`, `sap.m.TextArea`), this already returns the native input directly, so no further traversal is needed.
 
-For custom controls with non-standard DOM structures, you can set a **target resolver** callback, either per instance or globally for all instances.
+For custom controls with non-standard DOM structures, you can set a **target resolver** callback, either per instance or globally for all instances. Its type is `TargetResolver` from `ui5/kiosk/types`, for a resolver declared apart from the call that sets it.
 
 ### Instance Resolver
 
@@ -1840,17 +1861,29 @@ packages/kiosk-keyboard/src/i18n/messagebundle_fr.properties
 KIOSK_KEYBOARD_LABEL=Clavier virtuel
 KIOSK_KEYBOARD_ROLEDESCRIPTION=clavier
 KEY_SHIFT=Maj
-KEY_ENTER=Entrée
-KEY_BACKSPACE=Retour arrière
+KEY_ENTER=Entr\u00e9e
+KEY_BACKSPACE=Retour arri\u00e8re
 KEY_SPACE=Espace
+ARIA_RETURN_TO_NUMBERS=Retour aux chiffres
 ARIA_CAPS_LOCK=Verrouillage majuscules
-ARIA_CAPS_LOCK_ON=Verrouillage majuscules activé
-ARIA_CAPS_LOCK_OFF=Verrouillage majuscules désactivé
-ARIA_SHIFT_ON=Majuscules activées
-ARIA_SHIFT_OFF=Majuscules désactivées
+ARIA_CAPS_LOCK_ON=Verrouillage majuscules activ\u00e9
+ARIA_CAPS_LOCK_OFF=Verrouillage majuscules d\u00e9sactiv\u00e9
+ARIA_SHIFT_ON=Majuscule activ\u00e9e
+ARIA_SHIFT_OFF=Majuscule d\u00e9sactiv\u00e9e
 ARIA_KEYBOARD_OPENED=Clavier virtuel ouvert
-ARIA_KEYBOARD_CLOSED=Clavier virtuel fermé
+ARIA_KEYBOARD_CLOSED=Clavier virtuel ferm\u00e9
+ARIA_LAYOUT_COMPACTED=Disposition compacte du clavier activ\u00e9e
+ARIA_LAYOUT_UNCOMPACTED=Disposition standard du clavier r\u00e9tablie
+ARIA_VARIANTS_OPENED=Variantes de {1} : {0}
+ARIA_VARIANTS_CLOSED=Variantes ferm\u00e9es
 ```
+
+`npm run test:i18n-bundles` (part of `check:base` and CI) holds a new bundle to four rules:
+
+- **ASCII only.** Write every non-ASCII character as a `\uXXXX` escape, as above. A raw UTF-8 value reads correctly in the editor and turns into mojibake wherever the bundle is not served as UTF-8.
+- **Every key of the default bundle**, and no others. A missing key silently falls back to English.
+- **The same locale in the web component**: add `packages/kiosk-keyboard-webc/src/i18n/messagebundle_fr.properties` too, declaring that package's keys.
+- **The same text in both** for every key the two bundles share.
 
 The UI5 resource bundle mechanism (`Lib.getResourceBundleFor("ui5.kiosk")`) automatically resolves the correct bundle based on the active UI5 locale.
 

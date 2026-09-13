@@ -1,7 +1,8 @@
 import BaseObject from "sap/ui/base/Object";
 import Control from "sap/ui/core/Control";
 import { detectKeyboardType as detectKbType } from "./detect-keyboard-type";
-import { isParticipating, type TargetResolverFn } from "./dom";
+import { isParticipating } from "./dom";
+import type { TargetResolver } from "../types";
 import type { KeyboardType } from "../library";
 import type { KioskKeyboard$KeyboardTypeChangeEventParameters } from "../KioskKeyboard";
 
@@ -30,7 +31,7 @@ interface AutoShowBehaviorHost extends Pick<Control, "getDomRef" | "getVisible" 
   isOpen(): boolean;
 
   _getActiveTargetId(): string;
-  _getEffectiveResolver(): TargetResolverFn | null;
+  _getEffectiveResolver(): TargetResolver | null;
   _setActiveTarget(target?: string | Control): void;
   _syncControls(): void;
   _resolveClaimableControl(target: EventTarget | null): Control | null;

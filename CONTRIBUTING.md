@@ -61,7 +61,21 @@ Common types:
 
 Scope is optional but encouraged. Use the package name (`hotkeys`, `kiosk`, `kiosk-webc`, `demo`) or a shared area (`deps`, `ci`, `tools`).
 
-Versioning and changelogs are automated via [release-please](https://github.com/googleapis/release-please).
+The rules are `@commitlint/config-conventional`'s. Three of them fail commits most often:
+
+- The subject starts lowercase: `docs: add QA notes` passes, while `docs: QA notes` and `docs: Add notes` fail `subject-case`.
+- The header and every body line stay within 100 characters.
+- A breaking change carries `!` after the type or scope (`feat(kiosk)!: drop ...`) or a `BREAKING CHANGE:` footer. release-please picks the version bump from that marker, so an unmarked breaking change ships as an ordinary release.
+
+## Releases
+
+[release-please](https://github.com/googleapis/release-please) automates versioning, changelogs and publishing (`.github/workflows/release.yml`, configured by `release-please-config.json`):
+
+1. Every push to `main` runs the full CI workflow, then release-please, which keeps one release pull request open. For each package it collects the unreleased `feat`, `fix`, `refactor` and `perf` commits into `CHANGELOG.md` and bumps the `package.json` version, and for the two UI5 libraries `sap.app.applicationVersion.version` in `src/manifest.json`.
+2. Merging that pull request tags each changed package (`<package-name>-v<version>`, e.g. `ui5-lib-hotkeys-v0.2.0`) and creates its GitHub release.
+3. A publish job per released package runs `npm publish --provenance --access public`, which builds through the package's `prepublishOnly` script. It authenticates with npm trusted publishing (OIDC) and no token secret, so each package needs this repository's `release.yml` registered as its trusted publisher on npmjs.com.
+
+Below 1.0 a breaking change bumps the minor version, not the major; see [Versioning Before 1.0](./docs/shared/API-STABILITY.md#versioning-before-10). To retry a failed publish, run the Release workflow manually with `force-publish`, which publishes all three packages whether or not release-please created a release.
 
 ## Code Quality
 
