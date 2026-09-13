@@ -1072,8 +1072,9 @@ class KioskKeyboard extends UI5Element {
     this._hostAbort?.abort();
     this._hostAbort = null;
     // Fire after-close before disconnecting so direct listeners still see it.
-    // Cannot use `this.open = false` here - isConnected is already false,
-    // so the setter skips side effects. Handle cleanup manually.
+    // Not `this.open = false`: _performClose() would queue a "keyboard closed"
+    // announcement onto a queue the last instance out has just torn down, for a
+    // live region that leaves the page with this element.
     if (this._openValue) {
       const activeElement = this._targetElement;
       this._openValue = false;
