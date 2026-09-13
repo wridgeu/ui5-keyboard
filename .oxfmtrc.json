@@ -1,6 +1,12 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["*.gen.d.ts"],
+  "ignorePatterns": [
+    "*.gen.d.ts",
+    "CHANGELOG.md",
+    ".release-please-manifest.json",
+    "packages/hotkeys/src/manifest.json",
+    "packages/kiosk-keyboard/src/manifest.json"
+  ],
   "printWidth": 120,
   "tabWidth": 2,
   "useTabs": false,
