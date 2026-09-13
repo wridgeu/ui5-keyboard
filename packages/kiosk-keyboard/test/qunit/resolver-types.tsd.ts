@@ -1,11 +1,10 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { I18nResolver, TargetResolver } from "ui5/kiosk/types";
 
-// Compile-time contract for the resolver types `ui5/kiosk/types` exports, which a
-// consumer names when a resolver is declared apart from the call that installs it.
-// Nothing here runs: the file is not registered in testsuite.qunit.ts. The imports fail
-// the build if either type stops being exported, and each `@ts-expect-error` fails it if
-// the line it guards starts to compile, which is what a type loosened to `any` would do.
+// Compile-time contract for the resolver types `ui5/kiosk/types` exports. Nothing here
+// runs: the file is not registered in testsuite.qunit.ts. The import fails the build if
+// either type stops being exported, and each `@ts-expect-error` fails it if its line
+// starts to compile, as it would once a resolver type loosens to `any`.
 
 const byHost: TargetResolver = (el) => el.querySelector("input");
 const kb = new KioskKeyboard();

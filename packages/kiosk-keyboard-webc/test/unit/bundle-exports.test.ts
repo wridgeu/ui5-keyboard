@@ -9,10 +9,9 @@ import type { VariantTable } from "../../src/KioskKeyboard.js";
 
 export type VariantTableIsReExported = VariantTable;
 
-// The resolver types a consumer names when a resolver is declared apart from the call
-// that installs it, taken from the bundle entry like any other public type. Compile-time
-// only, like the import above: each `@ts-expect-error` fails `typecheck:kiosk-webc:test`
-// if the line it guards starts to compile, which is what a type loosened to `any` would do.
+// Compile-time only, like the import above. Each `@ts-expect-error` fails
+// `typecheck:kiosk-webc:test` if its line starts to compile, as it would once a
+// resolver type loosens to `any`.
 import type { I18nResolver, TargetResolver } from "../../src/bundle.esm.js";
 import type KioskKeyboardElement from "../../src/KioskKeyboard.js";
 
