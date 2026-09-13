@@ -31,9 +31,9 @@ Use [GitHub Issues](https://github.com/wridgeu/ui5-keyboard/issues) to report bu
    npm run check
    ```
 
-   This runs formatting, linting, UI5 linting, typechecking, all tests, smoke checks, the e2e device matrix, and the FLP lifecycle suite.
+   This runs formatting, linting, UI5 linting, typechecking, all tests, smoke checks, the e2e device matrix, and the FLP lifecycle suite. The device matrix runs with `--ignore-snapshots`, so `check` compares no pixels and passes on any OS.
 
-   The device-matrix half (`test:e2e:all-devices:sequential`) compares the committed visual baselines, so it fails on any OS other than the one they were generated on - see [End-to-end & visual tests](#end-to-end--visual-tests) below. CI compares none of them.
+   Pixel comparison is a separate step (`npm run visual:check`), gated neither locally nor on CI. See [End-to-end & visual tests](#end-to-end--visual-tests) below.
 
 4. Open a PR against `main`.
 
@@ -87,6 +87,11 @@ npm run test:kiosk-webc:e2e
 # Run the full device matrix (desktop + phone-sm/md/lg + tablet)
 npm run test:e2e:all-devices               # both packages, one after the other
 npm run test:e2e:all-devices:sequential    # same, with one Playwright worker per package
+npm run test:e2e:no-pixels                 # same, without comparing baselines (what `check` runs)
+
+# Visual baselines (never part of `check` or CI)
+npm run visual:check                       # compare both packages, every project, against the baselines
+npm run visual:update                      # regenerate them all
 
 # Debug interactively in the Playwright UI
 npm run test:kiosk:e2e:open
@@ -102,7 +107,9 @@ npm run report:visual:kiosk
 npm run report:visual:webc
 ```
 
-Visual baselines live under each package's `test/e2e/__baselines__/<project>/` and are committed. When a visual change is intentional, regenerate the affected baselines with the `*:update` scripts (e.g. `npm run test:kiosk:e2e:update`, or `npm run test:e2e:update:all` for every package + device), then review the diff before committing. Baselines carry no platform suffix and are compared against the Chromium bundled with `@playwright/test` (pinned at the repo root): a baseline is only valid for the OS it was generated on, so regenerate on whatever platform runs the comparison.
+Visual baselines live under each package's `test/e2e/__baselines__/<project>/` and are committed. Nothing in `npm run check` or in CI compares them. Run `npm run visual:check` for the comparison, and `npm run visual:update` (or a narrower `*:update` script such as `npm run test:kiosk:e2e:update`) when a visual change is intentional, then review the diff before committing.
+
+Baselines carry no platform suffix and are compared against the Chromium bundled with `@playwright/test` (pinned at the repo root), so a baseline is only valid for the OS it was generated on - today, Windows. On any other OS `visual:check` reports font-rendering differences, not regressions: read its output as a diff, not a pass/fail.
 
 ## Project Structure
 
