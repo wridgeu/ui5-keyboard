@@ -1,5 +1,6 @@
 import type { TargetElement } from "./types";
-import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
+import { resolveWithCustomResolver } from "./dom";
+import type { TargetResolver } from "../types";
 import {
   insertText as opsInsertText,
   handleBackspace as opsHandleBackspace,
@@ -15,12 +16,12 @@ export default class TargetInputSession {
   private _lastKnownValue: string | null = null;
   private _targetDirty = false;
 
-  private _customResolver: TargetResolverFn | null = null;
+  private _customResolver: TargetResolver | null = null;
   private _cursorSyncFrame: number | null = null;
 
   constructor(private readonly _getTargetElement: () => TargetElement | null) {}
 
-  setTargetResolver(resolver: TargetResolverFn | null): void {
+  setTargetResolver(resolver: TargetResolver | null): void {
     this._customResolver = resolver;
   }
 

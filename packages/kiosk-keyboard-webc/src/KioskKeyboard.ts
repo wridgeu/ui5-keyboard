@@ -70,6 +70,8 @@ import {
   type KeyboardTypeChangeEventDetail,
   type ActiveControlChangeEventDetail,
   type OpenStateChangeEventDetail,
+  type I18nResolver,
+  type TargetResolver,
 } from "./types.js";
 
 import KioskKeyboardTemplate from "./KioskKeyboardTemplate.js";
@@ -398,7 +400,7 @@ class KioskKeyboard extends UI5Element {
    * @public
    * @since 0.1.0
    */
-  static setI18nResolver(fn: ((key: string, locale: string, defaultText: string) => string | undefined) | null): void {
+  static setI18nResolver(fn: I18nResolver | null): void {
     setI18nResolver(fn);
     KioskKeyboard._queueI18nRefresh();
   }
@@ -734,7 +736,7 @@ class KioskKeyboard extends UI5Element {
   private _fKeyModeValue: `${FKeyMode}` = "Virtual";
   private _targetElementValue: HTMLInputElement | HTMLTextAreaElement | null = null;
   private _targetSource: TargetSource = "explicit";
-  private _targetResolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null = null;
+  private _targetResolver: TargetResolver | null = null;
   /** Accessed by the JSX template for highlight class binding - not private. */
   _highlightedKey: string | null = null;
   /** Accessed by the JSX template for pressed class binding - not private. */
@@ -1283,7 +1285,7 @@ class KioskKeyboard extends UI5Element {
    * @public
    * @since 0.1.0
    */
-  setTargetResolver(resolver: ((el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null) | null): void {
+  setTargetResolver(resolver: TargetResolver | null): void {
     this._targetResolver = resolver;
   }
 

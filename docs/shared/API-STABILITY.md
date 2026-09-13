@@ -51,7 +51,7 @@ Customization is per control via the `customLayouts` aggregation of `ui5.kiosk.C
 - `getLocaleLayout`
 - `getKeyIcon` and the `SPECIAL_KEY_ICONS` map - default icon for a special key value
 - `setI18nResolver`
-- `setGlobalTargetResolver` / `getGlobalTargetResolver` - global resolver for locating native inputs
+- `setGlobalTargetResolver` / `getGlobalTargetResolver` - global resolver for locating native inputs, typed by `TargetResolver` from `ui5/kiosk/types`
 
 Stable runtime hooks on the `KioskKeyboard` class include:
 
@@ -81,7 +81,7 @@ Stable exports from the bundle entry:
 - `KioskKeyboard` class (custom element, tag `<kiosk-keyboard>`)
 - `CustomLayout` class (custom element, tag `<kiosk-keyboard-custom-layout>`)
 - Enum exports: `FKeyMode`, `KeyboardType`, `LayoutFacet`, `LayoutRole`, `MobileKeyboard`
-- Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `CustomLayoutSpec`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`
+- Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `CustomLayoutSpec`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`, `I18nResolver`, `TargetResolver`
 
 Customization is per element via the `customLayouts` slot of `<kiosk-keyboard-custom-layout>` elements, plus the `defaultVariants` property for the accent table applied under every layout. The static surface is read-only:
 

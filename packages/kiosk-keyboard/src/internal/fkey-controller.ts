@@ -1,6 +1,7 @@
 import Log from "sap/base/Log";
 import { FKeyMode, NativeDispatchableKeyNames } from "../library";
-import { resolveWithCustomResolver, type TargetResolverFn } from "./dom";
+import { resolveWithCustomResolver } from "./dom";
+import type { TargetResolver } from "../types";
 
 /**
  * Bridge to the host keyboard's target state and navigation handling. Kept as
@@ -11,7 +12,7 @@ export interface FKeyHost {
   getFKeyMode(): FKeyMode;
   /** Focus DOM ref of the active target, or null when there is none. */
   getTargetFocusDomRef(): Element | null;
-  getEffectiveResolver(): TargetResolverFn | null;
+  getEffectiveResolver(): TargetResolver | null;
   /**
    * Moves the caret in the target input for a navigation/function key, or
    * extends the selection from its anchor when `extend` is set.

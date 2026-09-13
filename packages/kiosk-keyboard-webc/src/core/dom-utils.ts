@@ -1,7 +1,7 @@
 import { assertNever, parseKeyAction, type KeyAction } from "./key-token.js";
 import { NAV_KEY_NAMES } from "./key-action-meta.js";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
-import type { KeyType } from "../types.js";
+import type { KeyType, TargetResolver } from "../types.js";
 
 /** A key's place in the resolved layout: zero-based row and column. */
 export interface KeyPosition {
@@ -144,9 +144,6 @@ export function keyPart(action: KeyAction, type: KeyType | undefined): string {
   return names.join(" ");
 }
 
-/** Callback type for custom target resolution. */
-type TargetResolverFn = (el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null;
-
 /**
  * Resolve using a custom resolver first, falling back to the built-in resolver.
  *
@@ -155,7 +152,7 @@ type TargetResolverFn = (el: HTMLElement) => HTMLInputElement | HTMLTextAreaElem
  */
 export function resolveWithCustomResolver(
   el: HTMLElement,
-  customResolver: TargetResolverFn | null,
+  customResolver: TargetResolver | null,
 ): HTMLInputElement | HTMLTextAreaElement | null {
   if (customResolver) {
     try {

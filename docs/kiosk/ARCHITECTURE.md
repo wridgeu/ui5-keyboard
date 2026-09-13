@@ -617,7 +617,7 @@ packages/kiosk-keyboard/
                                LayoutRole/LayoutFacet enums, the ControlID / LayoutRows /
                                VariantOverrideTable property types, plus KeyName constants and
                                the LATIN_DIACRITIC_VARIANTS / VariantTable re-exports
-    types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, I18nResolver
+    types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, I18nResolver, TargetResolver
     internal/layout-registry.ts  Layout registration and locale resolution
     internal/
       types.ts                Internal contracts (TargetElement)

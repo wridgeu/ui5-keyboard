@@ -20,7 +20,7 @@ bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all b
                           as data for a custom layout's `middleware`.
 types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, FKeyMode,
                           LayoutRole, LayoutFacet, SpecialKeyValue, KeyWidth, KeyType,
-                          event detail types
+                          I18nResolver, TargetResolver, event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>, <ui5-button>, <ui5-popover>
 core/
   dom-utils.ts            Key grid coordinates + element IDs, per-key ::part() names, input/textarea resolver (shadow DOM aware)

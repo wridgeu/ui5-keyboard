@@ -21,13 +21,7 @@ import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
-import {
-  resolveWithCustomResolver,
-  isParticipating,
-  keyPositionOf,
-  type KeyPosition,
-  type TargetResolverFn,
-} from "./internal/dom";
+import { resolveWithCustomResolver, isParticipating, keyPositionOf, type KeyPosition } from "./internal/dom";
 import {
   applyVariantDefaults,
   resolveVariantTable,
@@ -54,7 +48,7 @@ import {
   clearIconWarnings as iconsClearWarnings,
 } from "./internal/key-icons";
 import { setI18nResolver as registrySetResolver } from "./internal/i18n-registry";
-import type { I18nResolver } from "./types";
+import type { I18nResolver, TargetResolver } from "./types";
 import FocusClaimService from "./internal/focus-claim-service";
 import { ShiftState } from "./internal/shift-state";
 import TargetInputSession from "./internal/target-input-session";
@@ -181,7 +175,7 @@ export default class KioskKeyboard extends Control {
   private _focusClaimService!: FocusClaimService;
   private _targetSession!: TargetInputSession;
   private _rendererApi!: RendererInternalApi | null;
-  private _targetResolverInstance!: TargetResolverFn | null;
+  private _targetResolverInstance!: TargetResolver | null;
   /**
    * Owns the folded view of `customLayouts` and its diagnostics.
    *
@@ -657,7 +651,7 @@ export default class KioskKeyboard extends Control {
   });
 
   /** Global target resolver applied to all instances (lowest priority). */
-  private static _globalTargetResolver: TargetResolverFn | null = null;
+  private static _globalTargetResolver: TargetResolver | null = null;
 
   // ── Static delegates: target resolver ──
 
@@ -680,7 +674,7 @@ export default class KioskKeyboard extends Control {
    * @static
    * @since 0.1.0
    */
-  static setGlobalTargetResolver(fnResolver: TargetResolverFn | null): void {
+  static setGlobalTargetResolver(fnResolver: TargetResolver | null): void {
     KioskKeyboard._globalTargetResolver = fnResolver;
     // Propagate to existing instances that don't have an instance-level override
     for (const instance of KioskKeyboard._instances) {
@@ -696,7 +690,7 @@ export default class KioskKeyboard extends Control {
    * @static
    * @since 0.1.0
    */
-  static getGlobalTargetResolver(): TargetResolverFn | null {
+  static getGlobalTargetResolver(): TargetResolver | null {
     return KioskKeyboard._globalTargetResolver;
   }
 
@@ -1563,13 +1557,14 @@ export default class KioskKeyboard extends Control {
    *
    * The callback receives the focus DOM ref (`HTMLElement`) and must
    * return the native input/textarea to type into, or `null` to fall
-   * back to the next resolver in the chain.
+   * back to the built-in resolver. A `null` from this resolver does not
+   * reach the global one.
    *
    * @param fnResolver Custom resolver function, or `null` to clear.
    * @public
    * @since 0.1.0
    */
-  setTargetResolver(fnResolver: TargetResolverFn | null): this {
+  setTargetResolver(fnResolver: TargetResolver | null): this {
     this._targetResolverInstance = fnResolver;
     this._targetSession.setTargetResolver(this._getEffectiveResolver());
     return this;
@@ -1580,7 +1575,7 @@ export default class KioskKeyboard extends Control {
    * @public
    * @since 0.1.0
    */
-  getTargetResolver(): TargetResolverFn | null {
+  getTargetResolver(): TargetResolver | null {
     return this._targetResolverInstance;
   }
 
@@ -1588,7 +1583,7 @@ export default class KioskKeyboard extends Control {
    * Returns the effective resolver: instance-level first, then global, then `null`.
    * @private
    */
-  _getEffectiveResolver(): TargetResolverFn | null {
+  _getEffectiveResolver(): TargetResolver | null {
     return this._targetResolverInstance ?? KioskKeyboard._globalTargetResolver;
   }
 

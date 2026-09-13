@@ -539,7 +539,7 @@ KioskKeyboard-specific public instance methods (excluding inherited UI5 base cla
 | `isOpen()`                 | `boolean`                                         | Whether the docked keyboard is currently open.                                                                                                                                                                                                                   |
 | `refreshResponsiveState()` | `this`                                            | Recompute responsive width/height classes after runtime `--ui5KioskKeyboard-*` sizing changes inside a fixed-height host, where the rendered outer size does not change so no `ResizeObserver` callback fires. Usually not needed for normal container resizing. |
 | `setTargetResolver(fn)`    | `this`                                            | Set an instance-level custom resolver for locating native inputs. Pass `null` to clear.                                                                                                                                                                          |
-| `getTargetResolver()`      | `Function\|null`                                  | Returns the instance-level target resolver, or `null`.                                                                                                                                                                                                           |
+| `getTargetResolver()`      | `TargetResolver \| null`                          | Returns the instance-level target resolver, or `null`.                                                                                                                                                                                                           |
 | `getFocusDomRef()`         | `Element \| null`                                 | Returns the keycap that currently holds the roving tab stop, or `null` while the keyboard is disabled or renders no keys.                                                                                                                                        |
 | `getFocusInfo()`           | `object`                                          | Returns focus state snapshot for UI5 focus restoration.                                                                                                                                                                                                          |
 | `applyFocusInfo(info)`     | `this`                                            | Restores focus state snapshot previously returned by `getFocusInfo()`.                                                                                                                                                                                           |
@@ -553,18 +553,18 @@ The generated file above covers UI5 metadata accessors. The convenience/runtime 
 
 The static surface carries no layout registration; custom layouts come from the per-control `customLayouts` aggregation (see [Custom Layouts](#custom-layouts)).
 
-| Method                        | Returns             | Description                                                                                                            |
-| ----------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `getRegisteredLayout(name)`   | `LayoutDefinition?` | Get the definition for a built-in layout name, or `undefined`.                                                         |
-| `getRegisteredLayoutNames()`  | `string[]`          | List all built-in layout names.                                                                                        |
-| `isBuiltInLayout(name)`       | `boolean`           | Whether the given name is a built-in layout.                                                                           |
-| `isSecondaryLayout(name)`     | `boolean`           | Whether the layout is secondary (non-alphabetic, e.g. `numeric`, `fkeys`).                                             |
-| `getLocaleLayout()`           | `string`            | Detect the best built-in layout for the current UI5 locale. Falls back to `"qwerty"`.                                  |
-| `composeLayout(...sources)`   | `LayoutDefinition`  | Splice rows from built-in layout names and row arrays, in order. A name no built-in has contributes nothing and warns. |
-| `getKeyIcon(keyValue)`        | `string?`           | Default icon URI for a special key value, or `undefined` if none.                                                      |
-| `setI18nResolver(fn)`         | `void`              | Set a resolver callback for i18n text overrides, or `null` to clear.                                                   |
-| `setGlobalTargetResolver(fn)` | `void`              | Set a global custom resolver for locating native inputs. Pass `null` to clear.                                         |
-| `getGlobalTargetResolver()`   | `Function \| null`  | Returns the global target resolver, or `null`.                                                                         |
+| Method                        | Returns                  | Description                                                                                                            |
+| ----------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `getRegisteredLayout(name)`   | `LayoutDefinition?`      | Get the definition for a built-in layout name, or `undefined`.                                                         |
+| `getRegisteredLayoutNames()`  | `string[]`               | List all built-in layout names.                                                                                        |
+| `isBuiltInLayout(name)`       | `boolean`                | Whether the given name is a built-in layout.                                                                           |
+| `isSecondaryLayout(name)`     | `boolean`                | Whether the layout is secondary (non-alphabetic, e.g. `numeric`, `fkeys`).                                             |
+| `getLocaleLayout()`           | `string`                 | Detect the best built-in layout for the current UI5 locale. Falls back to `"qwerty"`.                                  |
+| `composeLayout(...sources)`   | `LayoutDefinition`       | Splice rows from built-in layout names and row arrays, in order. A name no built-in has contributes nothing and warns. |
+| `getKeyIcon(keyValue)`        | `string?`                | Default icon URI for a special key value, or `undefined` if none.                                                      |
+| `setI18nResolver(fn)`         | `void`                   | Set a resolver callback for i18n text overrides, or `null` to clear.                                                   |
+| `setGlobalTargetResolver(fn)` | `void`                   | Set a global custom resolver for locating native inputs. Pass `null` to clear.                                         |
+| `getGlobalTargetResolver()`   | `TargetResolver \| null` | Returns the global target resolver, or `null`.                                                                         |
 
 ### DOM Contract
 
@@ -1540,7 +1540,7 @@ Override these in a custom renderer to restructure the icon/label composition en
 
 By default, the keyboard calls `getFocusDomRef()` on the target control and checks whether the returned element is a native `<input>` or `<textarea>`. For standard UI5 controls (`sap.m.Input`, `sap.m.StepInput`, `sap.m.TextArea`), this already returns the native input directly, so no further traversal is needed.
 
-For custom controls with non-standard DOM structures, you can set a **target resolver** callback, either per instance or globally for all instances.
+For custom controls with non-standard DOM structures, you can set a **target resolver** callback, either per instance or globally for all instances. Its type is `TargetResolver` from `ui5/kiosk/types`, for a resolver declared apart from the call that sets it.
 
 ### Instance Resolver
 

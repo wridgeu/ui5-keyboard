@@ -1,4 +1,5 @@
-import { resolveInputOrTextarea, resolveWithCustomResolver, type TargetResolverFn } from "ui5/kiosk/internal/dom";
+import { resolveInputOrTextarea, resolveWithCustomResolver } from "ui5/kiosk/internal/dom";
+import type { TargetResolver } from "ui5/kiosk/types";
 
 const fixture = document.getElementById("qunit-fixture")!;
 
@@ -196,7 +197,7 @@ QUnit.test("Uses custom resolver result when it returns a valid input", (assert)
   host.appendChild(customInput);
   fixture.appendChild(host);
 
-  const resolver: TargetResolverFn = () => customInput;
+  const resolver: TargetResolver = () => customInput;
   assert.strictEqual(resolveWithCustomResolver(host, resolver), customInput);
 });
 
@@ -206,7 +207,7 @@ QUnit.test("Falls back to default when custom resolver returns null", (assert) =
   host.appendChild(input);
   fixture.appendChild(host);
 
-  const resolver: TargetResolverFn = () => null;
+  const resolver: TargetResolver = () => null;
   assert.strictEqual(resolveWithCustomResolver(host, resolver), input, "fell back to default");
 });
 
@@ -216,7 +217,7 @@ QUnit.test("Falls back to default when custom resolver throws", (assert) => {
   host.appendChild(input);
   fixture.appendChild(host);
 
-  const resolver: TargetResolverFn = () => {
+  const resolver: TargetResolver = () => {
     throw new Error("resolver error");
   };
   assert.strictEqual(resolveWithCustomResolver(host, resolver), input, "fell back after throw");
@@ -236,7 +237,7 @@ QUnit.test("Passes the host element to the custom resolver", (assert) => {
   fixture.appendChild(host);
 
   let receivedEl: HTMLElement | null = null;
-  const resolver: TargetResolverFn = (el) => {
+  const resolver: TargetResolver = (el) => {
     receivedEl = el;
     return null;
   };

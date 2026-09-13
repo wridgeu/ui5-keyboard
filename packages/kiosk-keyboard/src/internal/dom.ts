@@ -2,6 +2,7 @@ import Log from "sap/base/Log";
 import { parseKeyAction } from "./key-token";
 import { NAV_KEY_NAMES } from "./key-action-meta";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract";
+import type { TargetResolver } from "../types";
 
 /** A key's place in the resolved layout: zero-based row and column. */
 export interface KeyPosition {
@@ -78,9 +79,6 @@ export function isParticipating(host: ParticipationHost): boolean {
   return dom.getClientRects().length > 0;
 }
 
-/** Callback type for custom target resolution. */
-export type TargetResolverFn = (el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null;
-
 /**
  * Resolve an editable input/textarea element from a control's focus DOM ref.
  *
@@ -136,7 +134,7 @@ export function resolveInputOrTextarea(
  */
 export function resolveWithCustomResolver(
   el: EventTarget | null | undefined,
-  customResolver: TargetResolverFn | null,
+  customResolver: TargetResolver | null,
 ): HTMLInputElement | HTMLTextAreaElement | null {
   if (customResolver && el instanceof HTMLElement) {
     try {

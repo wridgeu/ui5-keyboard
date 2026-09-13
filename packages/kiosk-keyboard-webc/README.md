@@ -295,6 +295,8 @@ import type {
   KeyType,
   SpecialKeyValue,
   CompositionMiddleware,
+  I18nResolver,
+  TargetResolver,
   KioskKeyboardDomContract,
 } from "kiosk-keyboard-webc/bundle";
 ```
@@ -1151,7 +1153,7 @@ On `{shift}` keys, the Caps Lock state can override both icon and label independ
 
 By default, the keyboard finds the native `<input>` or `<textarea>` inside a host element by traversing light DOM and up to 3 levels of shadow DOM. This covers standard HTML inputs, UI5 web components (`<ui5-input>`, `<ui5-step-input>`, `<ui5-textarea>`), and similar.
 
-For custom controls with non-standard DOM structures, set a **target resolver** callback:
+For custom controls with non-standard DOM structures, set a **target resolver** callback. Its type is `TargetResolver`, exported from `kiosk-keyboard-webc/bundle`:
 
 ```ts
 const kb = document.querySelector("kiosk-keyboard");
@@ -1213,7 +1215,7 @@ The two `auto-compact` announcements name no layout on purpose: the layout a wid
 
 ### Custom i18n Resolver
 
-Use `KioskKeyboard.setI18nResolver()` to override or extend translations at runtime without modifying the library. The resolver receives the i18n key, the current locale (from the configured UI5 Web Components locale via `getLocale()`), and the text resolved from the built-in bundle:
+Use `KioskKeyboard.setI18nResolver()` to override or extend translations at runtime without modifying the library. The resolver receives the i18n key, the current locale (from the configured UI5 Web Components locale via `getLocale()`), and the text resolved from the built-in bundle. Its type is `I18nResolver`, exported from `kiosk-keyboard-webc/bundle`:
 
 ```ts
 import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";

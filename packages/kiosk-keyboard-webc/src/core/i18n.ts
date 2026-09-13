@@ -16,10 +16,9 @@ import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
 import getLocale from "@ui5/webcomponents-base/dist/locale/getLocale.js";
 
 import * as I18N from "../generated/i18n/i18n-defaults.js";
+import type { I18nResolver } from "../types.js";
 
 const I18N_NAMESPACE = "kiosk-keyboard-webc";
-
-type I18nResolver = (key: string, locale: string, defaultText: string) => string | undefined;
 
 let _resolver: I18nResolver | null = null;
 let _bundle: I18nBundle | null = null;

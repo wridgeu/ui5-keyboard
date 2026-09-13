@@ -234,6 +234,32 @@ export interface CompositionMiddleware {
   reset(): void;
 }
 
+/**
+ * Overrides the keyboard's translatable texts, for `KioskKeyboard.setI18nResolver()`.
+ *
+ * Receives the message key, the active locale and the text the built-in bundle
+ * resolved. Return a string to replace that text, or `undefined` to keep it. A
+ * resolver that throws is logged and the default text is used.
+ *
+ * @public
+ * @since 0.1.0
+ */
+export type I18nResolver = (key: string, locale: string, defaultText: string) => string | undefined;
+
+/**
+ * Locates the native `<input>` or `<textarea>` inside a host element, for
+ * `setTargetResolver()`.
+ *
+ * Receives the focused or `controls`-named element and returns the text field to
+ * type into, or `null` to use the built-in resolver, which searches the light DOM
+ * and up to three levels of shadow DOM. A resolver that throws is logged and the
+ * built-in resolver is used.
+ *
+ * @public
+ * @since 0.1.0
+ */
+export type TargetResolver = (el: HTMLElement) => HTMLInputElement | HTMLTextAreaElement | null;
+
 // ── Enum types for constrained properties ──
 
 /**
