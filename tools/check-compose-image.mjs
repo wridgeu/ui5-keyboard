@@ -14,8 +14,8 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url);
-const installed = require("@playwright/test/package.json").version;
+const nodeRequire = createRequire(import.meta.url);
+const installed = nodeRequire("@playwright/test/package.json").version;
 
 const compose = readFileSync(new URL("../compose.yaml", import.meta.url), "utf8");
 const match = compose.match(/image:\s*mcr\.microsoft\.com\/playwright:v([\d.]+)-noble@sha256:[0-9a-f]{64}\s*$/m);
