@@ -92,7 +92,7 @@ interface ActiveMatch {
  * Not intended for direct use - access sequence functionality through
  * {@link HotkeyManager.register} with space-separated key format (e.g. `"g i"`).
  *
- * Receives pre-filtered key events from HotkeyManager's document listener
+ * Receives pre-filtered key events from the EventDispatcher's `window` listener
  * (no own listener) and matches multi-key sequences (e.g., ["G", "E"]
  * for go-to-editor).
  *

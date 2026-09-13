@@ -11,7 +11,7 @@ import { INTERNAL_TOKEN } from "./internal/internal-token";
 import { GLOBAL_SCOPE } from "./internal/constants";
 import FocusFallbackTracker from "./internal/FocusFallbackTracker";
 import { getEventTarget, isInputElement } from "./internal/dom";
-import { parseHotkey, formatParsed } from "./internal/parse";
+import { parseHotkey, formatParsed, parseSequenceSteps } from "./internal/parse";
 import RegistrationIndex from "./internal/registration-index";
 import ConflictResolver from "./internal/conflict-resolver";
 import HotkeyMatcher from "./internal/hotkey-matcher";
@@ -142,21 +142,12 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
 }
 
 /**
- * Split a hotkey string into sequence steps.
- * Returns null if the string is a single-key hotkey.
- * Whitespace between key descriptors separates steps (matching tinykeys/@github/hotkey convention).
- */
-function parseSequenceSteps(hotkey: string): string[] | null {
-  const steps = hotkey.trim().split(/\s+/);
-  return steps.length > 1 ? steps : null;
-}
-
-/**
  * Keyboard shortcut manager for UI5 applications.
  *
- * Owns an internal EventDispatcher that attaches a single `window`-level
- * `keydown` listener and dispatches matching hotkeys to registered callbacks
- * based on scope, input state, and dialog state.
+ * Owns an internal EventDispatcher that attaches `keydown`, `keyup` and `blur`
+ * listeners to `window` and dispatches matching hotkeys to registered callbacks
+ * based on scope, input state, and dialog state. Focus tracking adds two more
+ * on `document`, owned by FocusFallbackTracker.
  *
  * Extends `sap.ui.base.Object` for proper UI5 lifecycle integration
  * (metadata, destroy pattern).
@@ -336,14 +327,14 @@ export default class HotkeyManager extends BaseObject {
         if (newOptions.target !== undefined) {
           const nextTarget = resolveTarget(newOptions.target);
           if (!sameTarget(opts.target, nextTarget)) {
-            if (nextTarget) {
-              this._conflictResolver.resolve(
-                registration.normalizedHotkey,
-                opts.scope,
-                nextTarget,
-                opts.conflictBehavior,
-              );
-            }
+            // A null target is a move into the scope's untargeted bucket,
+            // which collides the same way an element bucket does.
+            this._conflictResolver.resolve(
+              registration.normalizedHotkey,
+              opts.scope,
+              nextTarget,
+              opts.conflictBehavior,
+            );
             this._registrationIndex.deindex(registration);
             opts.target = nextTarget;
             this._registrationIndex.index(registration);
@@ -806,7 +797,8 @@ export default class HotkeyManager extends BaseObject {
    * clear all registrations, and reset internal state.
    *
    * Call from `Component.exit()` to ensure proper cleanup.
-   * After destruction, all methods throw via `_assertAlive`.
+   * After destruction, every method that mutates state throws via `_assertAlive`;
+   * the read-only getters keep answering from the cleared state.
    *
    * @since 0.1.0
    */

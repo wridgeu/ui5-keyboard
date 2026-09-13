@@ -4,6 +4,22 @@ import { detectPlatform, resolveModifier } from "./platform";
 import type { CanonicalModifier, ParsedHotkey } from "../types";
 
 /**
+ * Split a hotkey string into sequence steps.
+ *
+ * Whitespace between key descriptors separates steps (matching the
+ * tinykeys / @github/hotkey convention), so `"Ctrl+K Ctrl+S"` is two steps and
+ * `"Ctrl + S"` is three. Returns `null` for a single-step hotkey.
+ *
+ * @param hotkey - The hotkey string to split.
+ * @returns The steps, or `null` when the string is a single-key hotkey.
+ * @since 0.1.0
+ */
+export function parseSequenceSteps(hotkey: string): string[] | null {
+  const steps = hotkey.trim().split(/\s+/);
+  return steps.length > 1 ? steps : null;
+}
+
+/**
  * Parse a hotkey string into its constituent parts.
  *
  * Supports formats like:

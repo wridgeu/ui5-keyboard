@@ -45,7 +45,7 @@ manager.register(
 1. On each keydown, check if the key matches the _first key_ of any registered sequence or the _next expected key_ in an in-progress sequence.
 2. If it matches the first key, start a timer (default 1000ms) and add to active matches. Fire the pending callback to inform the UI.
 3. If the next key arrives within the timeout and matches, advance the pointer. Fire the pending callback again.
-4. If the full sequence completes, fire the callback, call `preventDefault()` and `stopPropagation()` as the registration's flags allow, and clear all active matches.
+4. If the full sequence completes, clear all active matches, then call `preventDefault()` and `stopPropagation()` as the registration's flags allow and fire the callback.
 5. If the timeout expires or a non-matching key is pressed, the active match is dropped.
 
 ### Scope Integration

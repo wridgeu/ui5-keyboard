@@ -32,7 +32,7 @@ The library uses the modern `Lib.init()` API with `apiVersion: 2`, not the depre
 
 ### Listener Setup
 
-All DOM listeners are owned by a centralized `EventDispatcher` (internal class, created by `HotkeyManager`). Three listeners are attached to `window`:
+Key and blur listeners are owned by a centralized `EventDispatcher` (internal class, created by `HotkeyManager`). Three listeners are attached to `window`:
 
 ```ts
 window.addEventListener("keydown", handler, true); // capture phase

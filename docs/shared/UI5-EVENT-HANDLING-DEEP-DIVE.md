@@ -169,7 +169,7 @@ From [GitHub Issue #2788](https://github.com/UI5/openui5/issues/2788):
 
 > "We can not provide a stable non-confusing implementation of focus-free shortcuts."
 
-**This is exactly why our HotkeyManager exists.** It uses a single `window`-level `keydown` listener in capture phase (via the centralized EventDispatcher), making it focus-independent and able to handle global shortcuts that CommandExecution cannot.
+**This is exactly why our HotkeyManager exists.** It uses a `window`-level `keydown` listener in capture phase (via the centralized EventDispatcher), making it focus-independent and able to handle global shortcuts that CommandExecution cannot.
 
 ### Shortcut Validation
 
@@ -235,15 +235,15 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 
 ### HotkeyManager (`ui5.hotkeys`)
 
-| Aspect                        | Status                 | Notes                                                                                                                                                                                                                         |
-| ----------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Window-level capture listener | **Correct**            | Single `window` capture listener (via EventDispatcher), fires before UIArea, independent of focus, solves CommandExecution's focus limitation. `stopPropagation` prevents events from reaching `document` listeners entirely. |
-| F6 conflict                   | **Warns**              | F6 is reserved for fast navigation. `validateHotkey` (`internal/validate.ts`) flags it from both `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS`; `register` logs the warnings for a single hotkey, not for a sequence                |
-| UI5 tool shortcuts            | **Warns**              | Ctrl+Alt+Shift+P/S are disallowed and Ctrl+Alt+Shift+T is handled at runtime; all three are in `SAP_SHORTCUTS`                                                                                                                |
-| Browser-reserved shortcuts    | **Warns**              | Ctrl+N/T/W etc. cannot be intercepted in Chrome; they are in `BROWSER_SHORTCUTS`                                                                                                                                              |
-| Fiori Elements conflict       | **Warns**              | Ctrl+S, Ctrl+E, Ctrl+D etc. are Fiori standard; they are in `SAP_SHORTCUTS`                                                                                                                                                   |
-| `keypress` event              | **Not used (correct)** | `keypress` is deprecated per W3C; UI5 uses it only for `sapminus`/`sapplus`                                                                                                                                                   |
-| AltGr handling                | **Correct**            | Properly detected and skipped                                                                                                                                                                                                 |
+| Aspect                        | Status                 | Notes                                                                                                                                                                                                                  |
+| ----------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Window-level capture listener | **Correct**            | `window` capture listener (via EventDispatcher), fires before UIArea, independent of focus, solves CommandExecution's focus limitation. `stopPropagation` prevents events from reaching `document` listeners entirely. |
+| F6 conflict                   | **Warns**              | F6 is reserved for fast navigation. `validateHotkey` (`internal/validate.ts`) flags it from both `BROWSER_SHORTCUTS` and `SAP_SHORTCUTS`; `register` logs the warnings for a single hotkey, not for a sequence         |
+| UI5 tool shortcuts            | **Warns**              | Ctrl+Alt+Shift+P/S are disallowed and Ctrl+Alt+Shift+T is handled at runtime; all three are in `SAP_SHORTCUTS`                                                                                                         |
+| Browser-reserved shortcuts    | **Warns**              | Ctrl+N/T/W etc. cannot be intercepted in Chrome; they are in `BROWSER_SHORTCUTS`                                                                                                                                       |
+| Fiori Elements conflict       | **Warns**              | Ctrl+S, Ctrl+E, Ctrl+D etc. are Fiori standard; they are in `SAP_SHORTCUTS`                                                                                                                                            |
+| `keypress` event              | **Not used (correct)** | `keypress` is deprecated per W3C; UI5 uses it only for `sapminus`/`sapplus`                                                                                                                                            |
+| AltGr handling                | **Correct**            | Properly detected and skipped                                                                                                                                                                                          |
 
 ### KioskKeyboard (`ui5.kiosk`)
 

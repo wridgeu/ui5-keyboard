@@ -8,8 +8,12 @@ import type { ParsedHotkey } from "../types";
  * fallback keys extracted from `event.code`. The fallback covers:
  * - macOS Option+letter: `event.key` may produce a dead/special char
  *   while `event.code` still reports the physical letter key.
- * - Shift+digit: `event.key` reports the symbol (e.g., "$") while
- *   `event.code` still reports the digit (e.g., "Digit4").
+ * - Shift+digit and macOS Option+digit: `event.key` reports the symbol
+ *   (e.g., "$") while `event.code` still reports the digit (e.g., "Digit4").
+ *
+ * Both are gated: a non-US layout maps a physical key to a different character
+ * (QWERTZ types "y" from `KeyZ`), so admitting the physical key alongside the
+ * typed one would fire two hotkeys for one press.
  */
 export function getCandidateKeys(event: KeyboardEvent): string[] {
   const keys: string[] = [];
@@ -17,20 +21,23 @@ export function getCandidateKeys(event: KeyboardEvent): string[] {
   const primary = normalizeKeyName(event.key);
   keys.push(primary);
 
-  // Fallback: letter from event.code (macOS Option+letter)
-  if (event.code?.startsWith("Key")) {
+  // Fallback: letter from event.code (macOS Option+letter), only when the
+  // event did not already type a letter of its own.
+  if (event.code?.startsWith("Key") && !/^[A-Za-z]$/.test(primary)) {
     const codeLetter = event.code.slice(3);
     if (codeLetter.length === 1 && /^[A-Za-z]$/.test(codeLetter)) {
-      const upper = codeLetter.toUpperCase();
-      if (upper !== primary) keys.push(upper);
+      keys.push(codeLetter.toUpperCase());
     }
   }
 
-  // Fallback: digit from event.code (Shift+digit)
-  if (event.code?.startsWith("Digit")) {
+  // Fallback: digit from event.code, only while a modifier that rewrites the
+  // typed character is down. Shift turns "4" into "$" and Option turns "3" into
+  // "£"; with neither held it is the layout that put the character there
+  // (AZERTY types "&" from `Digit1`), so the digit is not what was pressed.
+  if ((event.shiftKey || event.altKey) && event.code?.startsWith("Digit")) {
     const codeDigit = event.code.slice(5);
-    if (codeDigit.length === 1 && /^[0-9]$/.test(codeDigit)) {
-      if (codeDigit !== primary) keys.push(codeDigit);
+    if (codeDigit.length === 1 && /^[0-9]$/.test(codeDigit) && codeDigit !== primary) {
+      keys.push(codeDigit);
     }
   }
 
@@ -45,10 +52,10 @@ export function getCandidateKeys(event: KeyboardEvent): string[] {
  *    state. Ctrl+Shift+S does NOT match a hotkey registered for Ctrl+S.
  * 2. **Primary key via `event.key`** - Case-insensitive comparison for single
  *    characters, exact match for special keys (Escape, F5, etc.).
- * 3. **Fallback to `event.code`** - For letter keys (KeyA-KeyZ) when `event.key`
- *    returns a special character (e.g., macOS Option+D produces "\u2202"), and for
- *    digit keys (Digit0-Digit9) when Shift changes the key (e.g., Shift+4
- *    produces "$").
+ * 3. **Fallback to `event.code`** - For letter keys (KeyA-KeyZ) only when `event.key`
+ *    returned something other than a letter (e.g., macOS Option+D produces "∂"),
+ *    and for digit keys (Digit0-Digit9) only while Shift or Alt is held (e.g.,
+ *    Shift+4 produces "$", macOS Option+3 produces "£").
  *
  * @since 0.1.0
  */
