@@ -17,7 +17,7 @@
   "author": "Marco Beier",
   "repository": {
     "type": "git",
-    "url": "https://github.com/wridgeu/ui5-keyboard.git",
+    "url": "git+https://github.com/wridgeu/ui5-keyboard.git",
     "directory": "packages/kiosk-keyboard"
   },
   "files": [
