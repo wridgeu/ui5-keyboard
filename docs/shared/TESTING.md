@@ -56,6 +56,17 @@ npm run visual:check    # compare both packages, every project, against the comm
 npm run visual:update   # regenerate them all
 ```
 
+Both compare on the host, so the baselines are Windows baselines. To capture or compare in the pinned Playwright image instead - the only way pixels agree across machines - prefix the script with `visual:docker` (`compose.yaml`; needs Docker):
+
+```bash
+npm run visual:docker visual:check
+npm run visual:docker visual:update
+npm run visual:docker -- test:e2e -w packages/kiosk-keyboard -- --project=desktop   # a script with flags needs the `--`
+docker compose down -v          # drop the cached installs
+```
+
+The container runs as uid 1001, keeps `node_modules`, the npm cache and the OpenUI5 download in named volumes, and pins the image by digest; `npm run test:compose-image` (part of `check` and CI) fails when that pin drifts from the installed `@playwright/test`.
+
 Visual tests use Playwright's built-in `toHaveScreenshot()` assertion. Baselines are committed without a platform suffix and are generated on Windows, so a baseline is valid only for the OS that produced it. On CI the visual specs run as render smoke tests and the device projects are gated on `invariants.spec.ts` alone. Baselines are also tied to the Chromium build bundled with `@playwright/test` (pinned at the repo root); bumping that version can shift rendering, so regenerate ALL baselines across both packages when it changes.
 
 ### How it works

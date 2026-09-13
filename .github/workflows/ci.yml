@@ -109,6 +109,13 @@ jobs:
       - name: Message-bundle check
         run: npm run test:i18n-bundles
 
+      # Asserts compose.yaml's Playwright image carries the same version as the
+      # installed @playwright/test and is pinned by digest. Nothing updates
+      # either pin automatically, and a drifted tag only fails for whoever next
+      # runs the container; see tools/check-compose-image.mjs.
+      - name: Compose image check
+        run: npm run test:compose-image
+
   # QUnit for the two UI5 libraries, on the puppeteer backend ui5-test-runner
   # drives. Split from the web-component suites below so each leg provisions one
   # browser stack instead of both: this job never touches ~/.cache/ms-playwright.
