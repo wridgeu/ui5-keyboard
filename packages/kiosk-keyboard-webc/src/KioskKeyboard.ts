@@ -969,7 +969,10 @@ class KioskKeyboard extends UI5Element {
   set open(value: boolean) {
     if (this._openValue === value) return;
     this._openValue = value;
-    if (!this.isConnected) return; // handled in onEnterDOM
+    // Not `isConnected`: a custom-element upgrade of already-parsed markup runs
+    // the attribute setters while connected but long before UI5Element's async
+    // connectedCallback reaches onEnterDOM, which applies the pending value.
+    if (!this._fullyConnected) return;
     if (value) {
       this._performOpen();
     } else {
@@ -1003,6 +1006,12 @@ class KioskKeyboard extends UI5Element {
   // ── Lifecycle ──
 
   override onEnterDOM(): void {
+    // connectedCallback is async, so a reparent inside that window reaches this
+    // hook twice with no onExitDOM between. An armed host session is what says a
+    // previous entry already ran: everything below is either idempotent or
+    // re-armed against a fresh signal, except the one-shot open side effects.
+    const reEntered = this._hostAbort !== null;
+
     KioskKeyboard._instances.add(this);
     this._autoShow.register();
 
@@ -1017,14 +1026,19 @@ class KioskKeyboard extends UI5Element {
 
     // Handle open=true set before DOM connection (same pattern as ui5-dialog).
     // Delegate unconditionally - _performOpen() already resets _openValue when
-    // !docked or native-deferred, preventing stale open state.
-    if (this._openValue) {
+    // !docked or native-deferred, preventing stale open state. Not on a re-entry:
+    // the keyboard is already open, and opening it again would fire a second
+    // after-open and announce the opening to a screen reader twice.
+    if (this._openValue && !reEntered) {
       this._performOpen();
     }
 
     // Touch events need { passive: false } for preventDefault() which JSX can't express.
     // touchstart prevents input blur; touchend processes the key press (because
     // preventDefault on touchstart suppresses the browser's synthesized click).
+    //
+    // Abort first: an overwritten controller can never release what it armed.
+    this._hostAbort?.abort();
     this._hostAbort = new AbortController();
     const { signal } = this._hostAbort;
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false, signal });

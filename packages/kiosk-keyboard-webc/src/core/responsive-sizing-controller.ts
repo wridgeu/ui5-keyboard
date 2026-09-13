@@ -55,6 +55,9 @@ export class ResponsiveSizingController {
 
   /** Attaches a ResizeObserver to the host element for responsive class updates. */
   setup(): void {
+    // Same re-entry as the host's listener arming: drop the previous observer
+    // rather than orphan it.
+    this._resizeObserver?.disconnect();
     this._resizeObserver = new ResizeObserver(() => {
       this.scheduleClassUpdate();
     });

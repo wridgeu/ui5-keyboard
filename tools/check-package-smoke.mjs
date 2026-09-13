@@ -44,6 +44,10 @@ const packages = [
       "dist/bundle.esm.js",
       "dist/custom-elements.json",
       "dist/kiosk-keyboard.bundle.js",
+      // Only `generate` writes these, and `prebuild` deletes dist: without them
+      // the published translations and theme parameters 404 at runtime.
+      "dist/generated/assets/i18n/messagebundle_de.json",
+      "dist/generated/assets/themes/sap_horizon/parameters-bundle.css.json",
     ],
   },
 ];
