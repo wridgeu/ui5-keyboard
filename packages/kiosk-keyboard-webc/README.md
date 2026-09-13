@@ -409,14 +409,12 @@ With `docked` set, the keyboard is fixed to the bottom of the viewport and slide
 
 ### Auto-show
 
-`auto-show` (with `docked`) listens for `focusin` and `focusout` on the whole document, in the capture phase:
+`auto-show` (with `docked`, and while not `disabled`) listens for `focusin` and `focusout` on the whole document, in the capture phase:
 
 1. **Opens** when focus lands on an element an `<input>` or `<textarea>` resolves from: the element itself, one in its light DOM, or one up to three shadow roots down (through `setTargetResolver()` when one is set). The input becomes the active target. Any `<input>` qualifies, so set `controls` on a page with checkboxes or other non-text inputs.
 2. **Filters by `controls`** when it is set: only a focused element that carries one of the listed ids, or has an ancestor within five levels that does, opens the keyboard. A UI5 view prefix (`container-app---view--`) is stripped before comparing, so `controls="myInput"` matches a UI5-rendered id.
 3. **Leaves another keyboard's input alone.** An input is skipped when another live keyboard already targets it or lists it in its own `controls`. A keyboard that is disabled, disconnected, not rendered, or docked and closed never blocks another.
 4. **Closes** one animation frame after focus leaves, unless focus has moved into the keyboard or onto another input this keyboard would open for. A `show()` in that frame cancels the close.
-
-A disabled keyboard does not auto-show.
 
 ### Auto-type
 
@@ -982,9 +980,9 @@ The `handleKey` method receives:
 - `key`: the raw key value from the layout definition (e.g., `"a"`, `"{backspace}"`, `"{enter}"`)
 - `target`: the input element the keyboard is typing into
 
-When `handleKey` returns `true`, the keyboard skips its default text insertion, backspace, and enter handling, and the middleware owns the edit. The factory takes no arguments, so close over the element, as above, and write through its `insertText()` and `deleteBackward()`: they take the same path a key does, so `maxlength`, the browser undo stack and the one `input` event per edit all hold. Assigning `target.value` yourself skips all three. Replacing the character before the caret is a `deleteBackward()` followed by an `insertText()`, which the target sees as two edits.
+When `handleKey` returns `true`, the keyboard skips its default text insertion, backspace, and enter handling. The factory takes no arguments, so close over the element, as above, and edit through its `insertText()` and `deleteBackward()`, which keep `maxlength`, the browser undo stack and one `input` event per edit; assigning `target.value` skips all three. Replacing the character before the caret takes a `deleteBackward()` and an `insertText()`, so the target sees two edits.
 
-The keyboard never reads the string `commit()` returns. Whatever a middleware shows as in-progress text has to be in the target already, so `commit()` finalizes it rather than handing text back to be inserted.
+The keyboard ignores the string `commit()` returns: in-progress text must already be in the target, and `commit()` only finalizes it.
 
 Middleware lifecycle:
 

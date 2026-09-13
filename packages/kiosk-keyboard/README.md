@@ -504,7 +504,7 @@ A complete layout extension is declarable with no controller code. `rows` and `v
 | `afterClose`          | -                                                                               | Fired when `close()` closes the docked keyboard (state/event hook, not CSS transition end).                                                                                                                    |
 | `activeControlChange` | `controlId: string`                                                             | Fired when the active control changes (auto-show focus switch or programmatic target change).                                                                                                                  |
 
-Each event has a generated TypeScript alias, exported from `ui5/kiosk/KioskKeyboard`: `KioskKeyboard$KeyPressEvent`, `KioskKeyboard$LayoutChangeEvent`, `KioskKeyboard$KeyboardTypeChangeEvent`, `KioskKeyboard$AfterOpenEvent`, `KioskKeyboard$AfterCloseEvent` and `KioskKeyboard$ActiveControlChangeEvent`. Type a handler with the alias rather than a hand-written `Event<{ ... }>`, which asserts a parameter shape nothing checks (see [UI5 TypeScript Event Typing](../../docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)):
+Each event has a generated TypeScript alias, exported from `ui5/kiosk/KioskKeyboard`: `KioskKeyboard$KeyPressEvent`, `KioskKeyboard$LayoutChangeEvent`, `KioskKeyboard$KeyboardTypeChangeEvent`, `KioskKeyboard$AfterOpenEvent`, `KioskKeyboard$AfterCloseEvent` and `KioskKeyboard$ActiveControlChangeEvent`. Type a handler with the alias rather than a hand-written `Event<{ ... }>`, whose parameter shape nothing checks (see [UI5 TypeScript Event Typing](../../docs/shared/UI5-TYPESCRIPT-EVENT-TYPING.md)):
 
 ```ts
 import type { KioskKeyboard$KeyPressEvent } from "ui5/kiosk/KioskKeyboard";
@@ -826,11 +826,11 @@ The `handleKey` method receives:
 - `key`: the raw key value from the layout definition (e.g., `"a"`, `"{backspace}"`, `"{enter}"`)
 - `target`: the DOM input element the keyboard is typing into
 
-When `handleKey` returns `true`, the keyboard skips default handling and the middleware owns the edit. The factory takes no arguments, so close over the control, as above, and write through its public `insertText(text)` and `deleteBackward()`: they take the same path a key does, so `maxlength` and the browser undo stack hold and UI5 `liveChange` keeps the model binding in sync. Assigning `target.value` yourself skips all of that. Replacing the character before the caret is a `deleteBackward()` followed by an `insertText()`, which the target sees as two edits. (Do not reach into `ui5/kiosk/internal/*`, which is unstable, see [API stability](#api-stability).)
+When `handleKey` returns `true`, the keyboard skips default handling. The factory takes no arguments, so close over the control, as above, and edit through its public `insertText(text)` and `deleteBackward()`, which keep `maxlength` and the browser undo stack and fire UI5 `liveChange` for the model binding; assigning `target.value` skips all of that. Replacing the character before the caret takes a `deleteBackward()` and an `insertText()`, so the target sees two edits. (Do not reach into `ui5/kiosk/internal/*`, which is unstable, see [API stability](#api-stability).)
 
-A factory referenced from XML through `core:require` has no control to close over; build a middleware that needs one in the controller and add its custom layout there.
+A factory referenced from XML through `core:require` has no control to close over; add a custom layout whose middleware needs one from the controller.
 
-The keyboard never reads the string `commit()` returns. Whatever a middleware shows as in-progress text has to be in the target already, so `commit()` finalizes it rather than handing text back to be inserted.
+The keyboard ignores the string `commit()` returns: in-progress text must already be in the target, and `commit()` only finalizes it.
 
 Middleware lifecycle:
 

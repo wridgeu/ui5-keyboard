@@ -229,7 +229,7 @@ Pressing Option+D on macOS produces `event.key = "∂"` (partial derivative symb
 
 Pressing Shift+4 produces `event.key = "$"` and macOS Option+3 produces `"£"`, while `event.code` still reports `Digit4` / `Digit3`. The digit from `event.code` is added only while Shift or Alt is held, which lets Shift+4 and Alt+3 match.
 
-Both fallbacks are gated because a non-US layout maps a physical key to a different character. An ungated fallback turns one press into two candidates and fires two hotkeys: on QWERTZ the physical `KeyZ` types `y` and would match both Mod+Y and Mod+Z, and on AZERTY the unshifted `Digit1` types `&` and would match the hotkey `1`. Outside the two gated cases, matching follows the typed character alone.
+Both fallbacks are gated because a non-US layout maps a physical key to a different character. An ungated fallback turns one press into two candidates and fires two hotkeys: on QWERTZ the physical `KeyZ` types `y` and would match both Mod+Y and Mod+Z, and on AZERTY the unshifted `Digit1` types `&` and would match the hotkey `1`.
 
 ## Input Element Detection
 
@@ -311,7 +311,7 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 | ---------------------------------------------- | ------------------------------------------------------------------------------- |
 | macOS Option+letter produces special character | `event.code` letter fallback, only when `event.key` is not a letter             |
 | Shift/Option+digit produces symbol             | `event.code` digit fallback, only while Shift or Alt is held                    |
-| Non-US layout moves a character to another key | Matching follows `event.key`; the gated fallbacks never add a second candidate  |
+| Non-US layout moves a character to another key | Matching follows `event.key`                                                    |
 | IME composition (CJK input methods)            | Guard on `event.isComposing` and `keyCode === 229`                              |
 | Key repeat from holding a key                  | `ignoreRepeat: true` checks `event.repeat`                                      |
 | Extra modifiers beyond what is registered      | Exact modifier match prevents false positives                                   |

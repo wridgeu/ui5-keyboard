@@ -41,7 +41,7 @@ The app ships one `ui5.yaml` per way it runs. The two SAPUI5 ones exist because 
 | `ui5-flp.yaml`   | SAPUI5 1.149.0 | `npm run start:flp`, `npm run test:kiosk:e2e:flp` | The app inside a launchpad sandbox that `@sap-ux/preview-middleware` generates at `/test/flp.html`            |
 | `ui5-pages.yaml` | SAPUI5 1.149.0 | `npm run build:pages`, the Deploy Pages workflow  | A self-hosted build: `ui5 build --all` bundles the UI5 runtime and the shell into `dist/`, next to `flp.html` |
 
-The first run of either SAPUI5 config downloads the framework into `~/.ui5`, which takes minutes. Like `npm start`, both need the web component built first: the root `start:flp` script does not build it for you, so run `npm run build:kiosk-webc` before it on a fresh clone.
+The first run of either SAPUI5 config downloads the framework into `~/.ui5`, which takes minutes.
 
 ### Fiori Launchpad sandbox
 
@@ -50,7 +50,7 @@ npm run build:kiosk-webc
 npm run start:flp
 ```
 
-Opens `http://localhost:8080/test/flp.html`, a launchpad with a tile for this app. The same sandbox hosts the kiosk keyboard's FLP lifecycle suite, which leaves the app for the launchpad home and re-enters it through the tile to check that customized keyboard labels reset.
+Unlike `npm start`, `start:flp` does not build the web component first, hence the first command. It opens `http://localhost:8080/test/flp.html`, a launchpad with a tile for this app. The same sandbox hosts the kiosk keyboard's FLP lifecycle suite, which leaves the app for the launchpad home and re-enters it through the tile to check that customized keyboard labels reset.
 
 ### GitHub Pages build
 
@@ -59,7 +59,7 @@ npm run build:pages
 npm run build:demo-page -w packages/kiosk-keyboard-webc
 ```
 
-`build:pages` builds the libraries, then the app through `ui5-pages.yaml`, then trims the output with `tools/trim-pages-dist.mjs` from roughly 525 MB to 140 MB. `webapp/flp.html` (with `flp-config.js` and `flp-init.js`) is a static launchpad for that artifact: unlike the sandbox above, nothing generates it at request time, so it runs from a plain file server. The second command builds the framework-free web component page the launchpad's "Raw Web Components Demo" tile opens. The [Deploy Pages workflow](../../.github/workflows/deploy-pages.yml) runs both on pushes to `main` and assembles `_site/` from `dist/` and `kiosk-keyboard-webc/demo-dist/`.
+`build:pages` builds the libraries, then the app through `ui5-pages.yaml`, then trims the output with `tools/trim-pages-dist.mjs` from roughly 525 MB to 140 MB. `webapp/flp.html` (with `flp-config.js` and `flp-init.js`) is the launchpad for that artifact, static where the sandbox above is generated per request, so it runs from a plain file server. The second command builds the framework-free web component page the launchpad's "Raw Web Components Demo" tile opens. The [Deploy Pages workflow](../../.github/workflows/deploy-pages.yml) runs both on pushes to `main` and assembles `_site/` from `dist/` and `kiosk-keyboard-webc/demo-dist/`.
 
 ## Purpose
 

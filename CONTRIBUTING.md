@@ -61,21 +61,21 @@ Common types:
 
 Scope is optional but encouraged. Use the package name (`hotkeys`, `kiosk`, `kiosk-webc`, `demo`) or a shared area (`deps`, `ci`, `tools`).
 
-The rules are `@commitlint/config-conventional`'s. The ones that trip people up:
+The rules are `@commitlint/config-conventional`'s. Three of them fail commits most often:
 
-- **The subject starts lowercase.** `docs: add QA notes` passes; `docs: QA notes` and `docs: Add notes` fail `subject-case`, an acronym at the start included.
-- **The header stays within 100 characters**, and so does every body line.
-- **A breaking change is marked** with `!` after the type or scope (`feat(kiosk)!: drop ...`) or a `BREAKING CHANGE:` footer. release-please reads the marker to pick the version bump, so an unmarked breaking change ships as an ordinary release.
+- The subject starts lowercase: `docs: add QA notes` passes, while `docs: QA notes` and `docs: Add notes` fail `subject-case`.
+- The header and every body line stay within 100 characters.
+- A breaking change carries `!` after the type or scope (`feat(kiosk)!: drop ...`) or a `BREAKING CHANGE:` footer. release-please picks the version bump from that marker, so an unmarked breaking change ships as an ordinary release.
 
 ## Releases
 
-Versioning, changelogs and publishing are automated via [release-please](https://github.com/googleapis/release-please) (`.github/workflows/release.yml`, configured by `release-please-config.json`):
+[release-please](https://github.com/googleapis/release-please) automates versioning, changelogs and publishing (`.github/workflows/release.yml`, configured by `release-please-config.json`):
 
-1. **Every push to `main`** runs the full CI workflow, then release-please. It keeps one release pull request open that collects the unreleased `feat`, `fix`, `refactor` and `perf` commits of each package into its `CHANGELOG.md` and bumps its `package.json` version. For the two UI5 libraries it bumps `sap.app.applicationVersion.version` in `src/manifest.json` too.
-2. **Merging that pull request** tags each changed package (`<package-name>-v<version>`, e.g. `ui5-lib-hotkeys-v0.2.0`) and creates its GitHub release.
-3. **A publish job per released package** then runs `npm publish --provenance --access public`; the package's `prepublishOnly` script builds it first. Authentication is npm trusted publishing (OIDC), with no token secret, so each package needs this repository's `release.yml` registered as its trusted publisher on npmjs.com.
+1. Every push to `main` runs the full CI workflow, then release-please, which keeps one release pull request open. For each package it collects the unreleased `feat`, `fix`, `refactor` and `perf` commits into `CHANGELOG.md` and bumps the `package.json` version, and for the two UI5 libraries `sap.app.applicationVersion.version` in `src/manifest.json`.
+2. Merging that pull request tags each changed package (`<package-name>-v<version>`, e.g. `ui5-lib-hotkeys-v0.2.0`) and creates its GitHub release.
+3. A publish job per released package runs `npm publish --provenance --access public`, which builds through the package's `prepublishOnly` script. It authenticates with npm trusted publishing (OIDC) and no token secret, so each package needs this repository's `release.yml` registered as its trusted publisher on npmjs.com.
 
-Below 1.0 a breaking change bumps the minor version, not the major (`bump-minor-pre-major`); see [Versioning Before 1.0](./docs/shared/API-STABILITY.md#versioning-before-10). To retry a failed publish without a new release, run the Release workflow manually with `force-publish`, which publishes all three packages regardless of what release-please created.
+Below 1.0 a breaking change bumps the minor version, not the major; see [Versioning Before 1.0](./docs/shared/API-STABILITY.md#versioning-before-10). To retry a failed publish, run the Release workflow manually with `force-publish`, which publishes all three packages whether or not release-please created a release.
 
 ## Code Quality
 

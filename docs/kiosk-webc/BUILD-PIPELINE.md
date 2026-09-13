@@ -110,7 +110,7 @@ The upstream `@ui5/webcomponents` packages only produce the individual ESM modul
 
 ### Custom Elements Manifest (CEM)
 
-The `generateAPI` step runs at the end of the build (after `tsc`) to produce `dist/custom-elements.json`. This is the [Custom Elements Manifest](https://github.com/webcomponents/custom-elements-manifest), a standardized JSON format that describes the component's public API (tag name, attributes, properties, events, methods, slots). The schema also has room for CSS parts and custom properties, but this manifest carries neither: the class JSDoc declares no `@csspart`, so the styling API is documented in the [package README](../../packages/kiosk-keyboard-webc/README.md#css-parts) only, and tooling that reads the manifest does not offer it.
+The `generateAPI` step runs at the end of the build (after `tsc`) to produce `dist/custom-elements.json`. This is the [Custom Elements Manifest](https://github.com/webcomponents/custom-elements-manifest), a standardized JSON format that describes the component's public API (tag name, attributes, properties, events, methods, slots). It carries no CSS parts or custom properties: the class JSDoc declares no `@csspart`, so tooling that reads the manifest does not see the styling API, which only the [package README](../../packages/kiosk-keyboard-webc/README.md#css-parts) documents.
 
 The CEM is consumed by:
 
@@ -137,6 +137,6 @@ The `package.json` declares which modules have side effects:
 
 These modules execute code at import time: `KioskKeyboard.js` and `CustomLayout.js` each call `.define()` at module scope to register their custom element, and the rest cover theme/i18n asset registration and the two bundle entries. Bundlers preserve them even when no explicit export is consumed. Layouts and middleware are pure data/factory modules and are intentionally not listed (see issue #108).
 
-The remaining modules (core utilities, types, layouts, middleware) are side-effect free, but that does not make the built-in layouts optional: `core/layout-registry` and `core/middleware-registry` import every built-in statically, and the element imports both, so any entry that registers `<kiosk-keyboard>` carries all built-in layouts and middleware. Tree shaking drops exports nothing uses; it cannot drop a built-in layout.
+The remaining modules (core utilities, types, layouts, middleware) are side-effect free, but tree shaking cannot drop a built-in layout: `core/layout-registry` and `core/middleware-registry` import every built-in statically, and the element imports both, so any entry that registers `<kiosk-keyboard>` carries all built-in layouts and middleware.
 
 The standalone bundle (`kiosk-keyboard.bundle.js`) includes everything and is not tree-shakeable. Tree shaking only applies to consumers who import individual ESM modules.
