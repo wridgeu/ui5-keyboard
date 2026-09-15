@@ -58,7 +58,25 @@ wrapper.remove(); // ← fixtureCleanup will fail
 
 ## Visual Regression Tests
 
-Visual tests use Playwright's built-in `toHaveScreenshot()` assertion, and the pixel comparison happens locally only. Baselines are committed without a platform suffix and are generated on Windows, so a baseline is valid only for the OS that produced it. CI compares none of them: `test:e2e:ci` passes `--ignore-snapshots`, so the visual specs run there as render smoke tests and the device projects are gated on `invariants.spec.ts` alone. Baselines are also tied to the Chromium build bundled with `@playwright/test` (pinned at the repo root); bumping that version can shift rendering, so regenerate ALL baselines across both packages when it changes.
+Pixel comparison is gated nowhere: `npm run check` and CI both run the device matrix with `--ignore-snapshots`. Two commands own it ([#281](https://github.com/wridgeu/ui5-keyboard/issues/281)):
+
+```bash
+npm run visual:check    # compare both packages, every project, against the committed baselines
+npm run visual:update   # regenerate them all
+```
+
+Both compare on the host, so the baselines are Windows baselines. To capture or compare in the pinned Playwright image instead - the only way pixels agree across machines - prefix the script with `visual:docker` (`compose.yaml`; needs Docker):
+
+```bash
+npm run visual:docker visual:check
+npm run visual:docker visual:update
+npm run visual:docker -- test:e2e -w packages/kiosk-keyboard -- --project=desktop   # a script with flags needs the `--`
+docker compose down -v          # drop the cached installs
+```
+
+The container runs as uid 1001, keeps `node_modules`, the npm cache and the OpenUI5 download in named volumes, and pins the image by digest; `npm run test:compose-image` (part of `check` and CI) fails when that pin drifts from the installed `@playwright/test`.
+
+Visual tests use Playwright's built-in `toHaveScreenshot()` assertion. Baselines are committed without a platform suffix and are generated on Windows, so a baseline is valid only for the OS that produced it. On CI the visual specs run as render smoke tests and the device projects are gated on `invariants.spec.ts` alone. Baselines are also tied to the Chromium build bundled with `@playwright/test` (pinned at the repo root); bumping that version can shift rendering, so regenerate ALL baselines across both packages when it changes.
 
 ### How it works
 
@@ -91,7 +109,7 @@ Within `playwright.config.ts`, projects share a single `webServer` and differ on
 - The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores `flp-lifecycle` and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
 - The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs; the behavioral specs (kiosk: `focus.spec.ts`; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
 
-On CI the device projects narrow to `invariants.spec.ts` (`CI_DEVICE_SPECS` in both configs), since the rest of their matrix captures nothing there; the non-pixel assertions those specs carry still run through the desktop project, which keeps the full spec list. Both configs throw when `invariants.spec.ts` no longer exists, since a project whose `testMatch` selects nothing still exits 0. Locally every project runs every spec and compares pixels.
+On CI the device projects narrow to `invariants.spec.ts` (`CI_DEVICE_SPECS` in both configs), since the rest of their matrix captures nothing there; the non-pixel assertions those specs carry still run through the desktop project, which keeps the full spec list. Both configs throw when `invariants.spec.ts` no longer exists, since a project whose `testMatch` selects nothing still exits 0. Locally every project runs every spec; pixels are compared unless `--ignore-snapshots` is passed (`test:e2e:no-pixels`, and therefore `check`).
 
 The webc fixtures are viewport-relative or `max-width` wrappers and run on every profile ungated. The kiosk container fixtures are pinned to a fixed width, so `visual-container.spec.ts` skips them below 420px and `kb-wide` below 620px - which is why the container fixtures have no `phone-sm`/`phone-md` baseline and `kb-wide` has one only on `desktop` and `tablet`.
 
@@ -158,7 +176,7 @@ npm run test:kiosk:e2e:update:all-devices
 npm run test:kiosk-webc:e2e:update:all-devices
 
 # All baselines across both packages (nuclear option for Chromium bumps / theme changes)
-npm run test:e2e:update:all
+npm run visual:update
 
 # Desktop only
 npm run test:kiosk:e2e:update
@@ -244,8 +262,10 @@ The UI5 QUnit suites are served by `ui5 serve` (via each package's `test:qunit` 
 npm test                      # Hotkeys QUnit, kiosk QUnit + desktop e2e, webc unit + component tests
 npm run test:e2e:all-devices  # All E2E across both packages, all devices (one package after the other)
 npm run test:e2e:all-devices:sequential # Same device matrix, with a single Playwright worker per package
+npm run test:e2e:no-pixels    # Same device matrix without baseline comparison (what `check` runs)
+npm run visual:check          # Compare the committed baselines (local only)
 npm run test:packages:smoke   # Build + npm pack dry-run smoke for publishable packages, plus the demo WebC consumption build
-npm run check                 # Full quality gate with smoke checks + sequential multi-device matrix
+npm run check                 # Full quality gate with smoke checks + device matrix, no pixel comparison
 ```
 
 Both packages are always run one after the other: they are CPU-bound Playwright matrices, and running them at the same time oversubscribes the machine and produces nondeterministic failures unrelated to the code under test. `npm run check` goes further and pins each package to a single worker, trading wall-clock time for a stable result.
@@ -277,6 +297,6 @@ npm run test:coverage -w packages/kiosk-keyboard-webc # Coverage (webc only)
 | `e2e`        | `test:e2e:ci` per package, as two matrix legs; behavioral only (`--ignore-snapshots`)                                                                                                                     |
 | `smoke`      | `test:packages:smoke`: `build:all` plus an `npm pack` dry run per published package                                                                                                                       |
 
-CI deliberately does not call `npm run check:base`; it re-implements the same chain as jobs so the legs run in parallel and report separately, and it uses the stricter `lint:ci` (`--deny-warnings`) in place of `lint`. What it does not cover is the pixel comparison: visual baselines carry no platform suffix, so `e2e` runs the visual specs as render smoke tests only. Compare baselines locally with `npm run check`.
+CI deliberately does not call `npm run check:base`; it re-implements the same chain as jobs so the legs run in parallel and report separately, and it uses the stricter `lint:ci` (`--deny-warnings`) in place of `lint`. What it does not cover is the pixel comparison: visual baselines carry no platform suffix, so `e2e` runs the visual specs as render smoke tests only. Compare baselines locally with `npm run visual:check`.
 
 `release.yml` gates the release on this same workflow through `workflow_call`, so nothing is release-only.
