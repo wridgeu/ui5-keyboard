@@ -572,8 +572,12 @@ QUnit.test("A 13-key custom row stays inside the keyboard", async (assert) => {
 });
 
 QUnit.test("Keys hold the 24px floor where a full row fits it", async (assert) => {
+  // A 6x spacebar leaves the ten 1x keys a flex share under 24px (22.75px at 400px),
+  // so only the floor holds them there; the eleven floored keys still fit the row.
+  const row = [...Array.from("abcdefghij", (value) => ({ value })), { value: " ", width: "space" as const }];
   const kb = new KioskKeyboard({
-    layout: "ja-kana-compact",
+    customLayouts: [new CustomLayout({ name: "spacebar", rows: [row] })],
+    layout: "spacebar",
     autoCompact: false,
   });
   const dom = await placeAtWidth(kb, 400);
@@ -582,7 +586,7 @@ QUnit.test("Keys hold the 24px floor where a full row fits it", async (assert) =
     dom.querySelectorAll<HTMLElement>(DOM.selectors.key),
     (k) => k.getBoundingClientRect().width,
   );
-  assert.ok(widths.length >= 12, "keys rendered");
+  assert.strictEqual(widths.length, 11, "the custom row renders 11 keys");
   const narrowest = Math.min(...widths);
   assert.ok(narrowest >= floor - 0.01, `narrowest key ${narrowest.toFixed(2)}px holds the ${floor}px floor`);
   kb.destroy();

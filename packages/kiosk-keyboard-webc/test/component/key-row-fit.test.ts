@@ -53,9 +53,14 @@ describe("key floor vs. row width", () => {
   });
 
   it("keys hold the 24px floor where a full row fits it", async () => {
-    const el = await fixture<KioskKeyboard>(
-      html`<kiosk-keyboard layout="ja-kana-compact" style="width: 400px"></kiosk-keyboard>`,
-    );
+    // A 6x spacebar leaves the ten 1x keys a flex share under 24px (22.75px at 400px),
+    // so only the floor holds them there; the eleven floored keys still fit the row.
+    const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+    el.setAttribute("layout", "spacebar");
+    el.style.width = "400px";
+    const row = [...Array.from("abcdefghij", (value) => ({ value })), { value: " ", width: "space" as const }];
+    el.appendChild(customLayout({ name: "spacebar", rows: [row] }));
+    await fixture(el);
     await renderFinished();
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
     const floor = Math.max(1.5 * rem, 24);
@@ -63,7 +68,7 @@ describe("key floor vs. row width", () => {
       el.shadowRoot!.querySelectorAll<HTMLElement>(DOM.selectors.key),
       (k) => k.getBoundingClientRect().width,
     );
-    expect(widths.length).to.be.at.least(12);
+    expect(widths.length).to.equal(11);
     expect(Math.min(...widths)).to.be.at.least(floor - 0.01);
   });
 });
