@@ -1,7 +1,7 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { $KioskKeyboardSettings } from "ui5/kiosk/KioskKeyboard";
 import CustomLayout from "ui5/kiosk/CustomLayout";
-import { KeyboardType } from "ui5/kiosk/library";
+import { KeyboardType, LayoutRole } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
 import Log from "sap/base/Log";
 import JSONModel from "sap/ui/model/json/JSONModel";
@@ -462,6 +462,103 @@ QUnit.test("A request drops a tier announcement that has not reached the live re
   assert.strictEqual(kb.getLayout(), "qwerty", "the request took effect");
   assert.strictEqual(announcedText(), "", "the superseded announcement never reaches the region");
 });
+
+QUnit.test(
+  "Requests, width, keyboardType, user picks and a late counterpart resolve in one sequence",
+  async (assert) => {
+    const { kb, changes, resize } = await mount(WIDE_PX, {
+      layout: "home",
+      autoCompact: true,
+      customLayouts: [
+        new CustomLayout({ name: "home", rows: home, compact: "home-c" }),
+        new CustomLayout({ name: "home-c", rows: [[{ value: "{layout:away}" }, { value: "hc" }]] }),
+        new CustomLayout({ name: "away", rows: [[{ value: "{layout:pick}" }, { value: "a" }]], compact: "away-c" }),
+        new CustomLayout({ name: "away-c", rows: [[{ value: "ac" }]] }),
+        new CustomLayout({
+          name: "pick",
+          rows: [[{ value: "{layout:base}" }, { value: "p" }]],
+          layoutRole: LayoutRole.Secondary,
+        }),
+        new CustomLayout({ name: "solo", rows: [[{ value: "s" }]], compact: "solo-c" }),
+      ],
+    });
+    /**
+     * Per step: the `layout` property, the first rendered key, and the events and
+     * announcement since the last step.
+     */
+    const trace: unknown[] = [];
+    const step = (name: string): void => {
+      trace.push([name, kb.getLayout(), getRenderedLayoutKeys(kb)[0]?.[0], changes.splice(0), announcedText()]);
+      resetAnnouncements();
+    };
+
+    step("request A");
+    await resize(NARROW_PX);
+    step("narrow");
+    tapKey(kb, "{layout:away}");
+    await settle();
+    step("request B while narrow");
+    kb.setKeyboardType(KeyboardType.Numpad);
+    await settle();
+    step("Numpad");
+    kb.resetKeyboardType();
+    await settle();
+    step("reset");
+    await resize(WIDE_PX);
+    step("widen");
+    tapKey(kb, "{layout:pick}");
+    await settle();
+    step("{layout:pick}");
+    tapKey(kb, "{layout:base}");
+    await settle();
+    step("{layout:base}");
+    kb.setLayout("solo");
+    await resize(NARROW_PX);
+    step("request solo, narrow");
+    kb.addCustomLayout(new CustomLayout({ name: "solo-c", rows: [[{ value: "sc" }]] }));
+    await settle();
+    step("solo-c declared");
+
+    assert.deepEqual(trace, [
+      ["request A", "home", "{layout:away}", [], ""],
+      [
+        "narrow",
+        "home-c",
+        "{layout:away}",
+        [{ layout: "home-c", autoDetected: true }],
+        "Switched to the compact keyboard layout",
+      ],
+      // The request lands first, then the tier resolves against it, unannounced.
+      [
+        "request B while narrow",
+        "away-c",
+        "ac",
+        [
+          { layout: "away", autoDetected: false },
+          { layout: "away-c", autoDetected: true },
+        ],
+        "",
+      ],
+      // The key pick was a user override, which a keyboardType change drops to the base;
+      // the constraint wins, and lifting it re-tiers the base.
+      ["Numpad", "away", "7", [{ layout: "away", autoDetected: false }], ""],
+      ["reset", "away-c", "ac", [{ layout: "away-c", autoDetected: true }], ""],
+      [
+        "widen",
+        "away",
+        "{layout:pick}",
+        [{ layout: "away", autoDetected: true }],
+        "Switched back to the standard keyboard layout",
+      ],
+      ["{layout:pick}", "pick", "{layout:base}", [{ layout: "pick", autoDetected: false }], ""],
+      ["{layout:base}", "away", "{layout:pick}", [{ layout: "away", autoDetected: false }], ""],
+      // solo-c is not declared yet, so the crossing swaps nothing...
+      ["request solo, narrow", "solo", "s", [{ layout: "solo", autoDetected: false }], ""],
+      // ...and the counterpart arriving applies without a resize, unannounced.
+      ["solo-c declared", "solo-c", "sc", [{ layout: "solo-c", autoDetected: true }], ""],
+    ]);
+  },
+);
 
 QUnit.test("The tier follows the threshold custom property, not a fixed width", async (assert) => {
   const { kb, changes, resize } = await mount(WIDE_PX, {
