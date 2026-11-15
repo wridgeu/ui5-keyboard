@@ -194,7 +194,10 @@ export const NativeDispatchableKeyNames = Object.freeze([
  * @since 0.2.0
  */
 export enum LayoutChangeReason {
-  /** A `{layout:*}` key, or a new input the user moved to dropping their pick. */
+  /**
+   * A `{layout:*}` key, or focus moving to another input, which drops a secondary
+   * `{layout:*}` pick the user made on the previous one.
+   */
   User = "user",
   /** `setLayout()`, a binding, `resetLayout()` or `reset()`. */
   Api = "api",
