@@ -33,7 +33,7 @@ export interface LayoutDiagnostic {
   readonly code: DiagnosticCode;
   /** The layout the offending custom layout names; `""` for an unnamed one, or for the host's own table. */
   readonly layout: string;
-  /** The other layout in a collision. */
+  /** The other layout in a collision; for `empty-icon`, the key property holding the URI. */
   readonly other?: string;
   /** The offending token or value. */
   readonly value?: string;
@@ -50,7 +50,9 @@ export type DiagnosticCode =
   | "unknown-compact"
   | "duplicate-rows"
   | "duplicate-middleware"
-  | "duplicate-locale";
+  | "duplicate-locale"
+  | "unnamed-key"
+  | "empty-icon";
 
 /** How one twin spells the surface names a message has to quote. */
 export interface DiagnosticVocabulary {
@@ -258,16 +260,33 @@ function foldVariants(spec: CustomLayoutSpec, name: string, suppressed: boolean,
 }
 
 /**
+ * Reports, once per key value, a key the folded rows would render with no accessible name:
+ * icon-only (`label: ""`), no `ariaLabel`, and no built-in name for its value.
+ */
+function reportUnnamedKeys(state: FoldState, hasBuiltInName: (value: string) => boolean): void {
+  const seen = new Set<string>();
+  for (const [layout, rows] of state.layouts) {
+    for (const key of rows.flat()) {
+      if (key.label !== "" || key.ariaLabel || hasBuiltInName(key.value) || seen.has(key.value)) continue;
+      seen.add(key.value);
+      state.diagnostics.push({ code: "unnamed-key", layout, value: key.value });
+    }
+  }
+}
+
+/**
  * Folds `specs`, in order, into the maps the resolution paths read. Later declarations
  * of a facet win; long-press variants accumulate per base letter instead, and a facet a
  * custom layout suppresses resolves to nothing at that custom layout's position.
  *
  * `isBuiltIn` is injected rather than imported so this module stays clear of the layout
- * registry, whose normalization logs.
+ * registry, whose normalization logs. `hasBuiltInName` is injected because each twin keeps
+ * the accessible names of its special keys beside its own i18n.
  */
 export function foldCustomLayouts(
   specs: readonly CustomLayoutSpec[],
   isBuiltIn: (name: string) => boolean,
+  hasBuiltInName: (value: string) => boolean,
 ): CustomLayoutFold {
   if (specs.length === 0) return EMPTY_FOLD;
 
@@ -315,6 +334,8 @@ export function foldCustomLayouts(
       diagnostics.push({ code: "unknown-compact", layout, value: target });
     }
   }
+
+  reportUnnamedKeys(state, hasBuiltInName);
 
   return {
     ...(layouts.size > 0 && { layouts }),
@@ -383,5 +404,10 @@ export function describeDiagnostic(d: LayoutDiagnostic, vocab: DiagnosticVocabul
       return `Two custom layouts declare "middleware" for "${d.layout}"; the later one wins. Remove one, or give them different names.`;
     case "duplicate-locale":
       return `Both "${d.layout}" and "${d.other}" claim the locale "${d.value}"; "${d.other}" wins. Remove the prefix from one of them.`;
+    case "unnamed-key":
+      return `Icon-only key "${d.value}" has no accessible name; set ariaLabel on the KeyDefinition.`;
+    // Raised by the web component only: the UI5 control resolves every `sap-icon://` through IconPool.
+    case "empty-icon":
+      return `empty SAP icon URI for ${d.other ? `${d.other} on ` : ""}key "${d.value}", skipping icon`;
   }
 }

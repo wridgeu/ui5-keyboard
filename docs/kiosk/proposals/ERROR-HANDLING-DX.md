@@ -98,8 +98,10 @@ distinct complaint. The pattern is a set of already-reported keys, held per
 control (`layout-fold-cache.ts` `_reported`,
 `controls-delegation-controller.ts` `_reportedUnresolvedIds`) or module-global
 and cleared with the last instance (`fkey-controller.ts`
-`_WARNED_UNSUPPORTED_NATIVE_FKEYS`, `key-icons.ts` `warnedInvalidIcons`,
-`key-labels.ts` `warnedMissingLabels`).
+`_WARNED_UNSUPPORTED_NATIVE_FKEYS`, `key-icons.ts` `warnedInvalidIcons`). A
+complaint whose input is known when the app writes it is checked once per
+distinct input instead: in the fold build (an unnamed icon-only key) or on a
+changed property value (`defaultVariants`).
 
 ## Suggested Decision Matrix
 

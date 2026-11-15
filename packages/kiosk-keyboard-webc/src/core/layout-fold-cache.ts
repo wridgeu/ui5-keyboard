@@ -30,6 +30,25 @@ interface LayoutFoldCacheHost {
    * counterpart slotted after first paint is the ordinary case.
    */
   onRebuilt(): void;
+  /** Whether a key value has a built-in accessible name. */
+  hasBuiltInName(value: string): boolean;
+}
+
+/** The URI of a SAP icon that names no icon, which the template drops. */
+const EMPTY_SAP_ICON = "sap-icon://";
+
+/** Every folded key whose `icon`, or Shift's `capsLockIcon`, is a SAP icon URI naming no icon. */
+function emptyIcons(fold: CustomLayoutFold): LayoutDiagnostic[] {
+  const found: LayoutDiagnostic[] = [];
+  for (const [layout, rows] of fold.layouts ?? []) {
+    for (const key of rows.flat()) {
+      if (key.icon === EMPTY_SAP_ICON) found.push({ code: "empty-icon", layout, value: key.value });
+      if (key.value === "{shift}" && key.capsLockIcon === EMPTY_SAP_ICON) {
+        found.push({ code: "empty-icon", layout, value: key.value, other: "capsLockIcon" });
+      }
+    }
+  }
+  return found;
 }
 
 /**
@@ -78,8 +97,8 @@ export class LayoutFoldCache {
           `[kiosk-keyboard] Ignoring <${child.localName}> in the customLayouts slot: not a <kiosk-keyboard-custom-layout>.`,
         );
     }
-    this._fold = foldCustomLayouts(specs, isBuiltInLayout);
-    this.report(this._fold.diagnostics);
+    this._fold = foldCustomLayouts(specs, isBuiltInLayout, (value) => this._host.hasBuiltInName(value));
+    this.report([...this._fold.diagnostics, ...emptyIcons(this._fold)]);
     this._host.onRebuilt();
     return this._fold;
   }

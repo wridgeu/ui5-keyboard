@@ -152,18 +152,6 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
 };
 
 /**
- * Key values already warned about for a missing accessible name, so re-renders
- * do not repeat the warning. Module-level by design, matching the sibling
- * `core/fkey-controller.ts` `warnedUnsupportedFKeys`: a custom element has no
- * FLP-style "last instance destroyed" hook (`onExitDOM` fires on every detach,
- * including transient reattach), so per-page deduplication is the correct
- * lifetime. Intentionally NOT cleared on disconnect, unlike `kiosk-keyboard`'s
- * `clearLabelWarnings`, which the UI5 control clears on last-instance exit
- * because UI5 controls have a meaningful destroy boundary.
- */
-const warnedMissingLabels = new Set<string>();
-
-/**
  * `<kiosk-keyboard>` - Native web component for on-screen virtual keyboard.
  *
  * Built on the UI5 Web Components framework (`UI5Element`) for automatic SAP
@@ -743,8 +731,12 @@ class KioskKeyboard extends UI5Element {
   _pressedKey: KeyPosition | null = null;
   /** Whether the next render must put DOM focus back on the re-seated roving tab stop. */
   private _restoreKeyFocus = false;
-  /** Caps the disarmed-variants diagnostic at one emission per element. */
-  private _warnedDisarmedVariants = false;
+  /** The `defaultVariants` value last validated, compared by identity per the property's contract. */
+  private _checkedDefaultVariants: unknown = undefined;
+  /** `_checkedDefaultVariants` when it is a valid table, else `null`. */
+  private _validDefaultVariants: VariantTable | null = null;
+  /** Whether the last resolution declared a variant table with `accentVariants` off. */
+  private _disarmedVariants = false;
   /**
    * Paces every instance's writes to the ARIA live region and holds the drain timer.
    *
@@ -1396,33 +1388,37 @@ class KioskKeyboard extends UI5Element {
     // keys so any layout gains the long-press variants. Author-declared
     // `variants` are preserved (applyVariantDefaults never overrides them).
     const defaults = this._defaultVariants();
-    if (!this.accentVariants) {
-      this._warnDisarmedVariants(fold.variants !== undefined || defaults !== null);
-      return base;
-    }
+    const armed = this.accentVariants;
+    this._noteDisarmedVariants(!armed && (fold.variants !== undefined || defaults !== null));
+    if (!armed) return base;
     const table = resolveVariantTable(layoutName, fold.variants, defaults);
     return table ? applyVariantDefaults(base, table) : base;
   }
 
   /**
    * The table applied under every layout, validated here rather than in the fold
-   * because it never enters the slot.
+   * because it never enters the slot. Validated and reported once per value, which
+   * the property reads by identity.
    */
   private _defaultVariants(): VariantTable | null {
     const table = this.defaultVariants;
-    if (table === null) return null;
-    if (isValidVariantTable(table)) return table;
-    this._foldCache.report([{ code: "invalid-variants", layout: "" }]);
-    return null;
+    if (table !== this._checkedDefaultVariants) {
+      this._checkedDefaultVariants = table;
+      const valid = table === null || isValidVariantTable(table);
+      if (!valid) this._foldCache.report([{ code: "invalid-variants", layout: "" }]);
+      this._validDefaultVariants = valid ? table : null;
+    }
+    return this._validDefaultVariants;
   }
 
   /**
-   * Warns once when a variant table is declared while `accentVariants` is off, the
-   * combination in which the tables resolve but nothing applies them.
+   * Warns on entering the state in which a variant table is declared while
+   * `accentVariants` is off: the tables resolve but nothing applies them.
    */
-  private _warnDisarmedVariants(hasEntries: boolean): void {
-    if (this._warnedDisarmedVariants || !hasEntries) return;
-    this._warnedDisarmedVariants = true;
+  private _noteDisarmedVariants(disarmed: boolean): void {
+    const was = this._disarmedVariants;
+    this._disarmedVariants = disarmed;
+    if (!disarmed || was) return;
     console.warn(
       "[kiosk-keyboard] A variant table is declared but accentVariants is false, so no variant table is applied. Set accent-variants to arm the long-press popups.",
     );
@@ -1434,6 +1430,7 @@ class KioskKeyboard extends UI5Element {
   private readonly _foldCache = new LayoutFoldCache({
     getCustomLayouts: () => this.customLayouts,
     onRebuilt: () => this._autoCompact.reapply(),
+    hasBuiltInName: (value) => SPECIAL_KEY_LABELS[value] !== undefined,
   });
   private _middlewareFactory: (() => CompositionMiddleware) | null = null;
 
@@ -1471,9 +1468,9 @@ class KioskKeyboard extends UI5Element {
    *
    * Resolution order: the Caps Lock state of the shift key -> per-key
    * `ariaLabel` -> visible label (`_getKeyLabel`) -> built-in i18n entry. For an
-   * icon-only key (`label: ""`) with none of these, a dev-time warning is logged
-   * and the raw `value` is used as a last resort, so a custom icon-only token
-   * never silently announces with no accessible name.
+   * icon-only key (`label: ""`) with none of these, the raw `value` is used as
+   * a last resort, so a custom icon-only token never announces nothing. The fold
+   * reports such a key when its custom layout is folded.
    */
   _getKeyAriaLabel(key: KeyDefinition): string {
     // Caps Lock outranks even a declared `ariaLabel` / `capsLockLabel` on the
@@ -1492,17 +1489,6 @@ class KioskKeyboard extends UI5Element {
     const i18nKey = SPECIAL_KEY_LABELS[key.value];
     if (i18nKey) return getText(i18nKey, key.value);
 
-    // Icon-only key (label suppressed) with no ariaLabel and no i18n entry:
-    // warn so the consumer adds a localizable accessible name, and fall back
-    // to the raw value rather than announcing nothing. Warn once per key value
-    // (this runs on every re-render).
-    if (key.label === "" && !warnedMissingLabels.has(key.value)) {
-      warnedMissingLabels.add(key.value);
-      console.warn(
-        `[kiosk-keyboard] Icon-only key "${key.value}" has no accessible name; set ariaLabel on the KeyDefinition.`,
-      );
-    }
-
     return key.value;
   }
 
@@ -1511,14 +1497,11 @@ class KioskKeyboard extends UI5Element {
    * Returns null if no icon should render.
    */
   _resolveKeyIcon(key: KeyDefinition): { value: string; sap: boolean } | null {
-    const parseSapIcon = (raw: string, where: string): { value: string; sap: boolean } | null => {
+    const parseSapIcon = (raw: string): { value: string; sap: boolean } | null => {
       if (raw.startsWith(SAP_ICON_PREFIX)) {
+        // An empty name is reported by the fold.
         const name = raw.slice(SAP_ICON_PREFIX.length);
-        if (!name) {
-          console.warn(`[kiosk-keyboard] empty SAP icon URI for ${where}, skipping icon`);
-          return null;
-        }
-        return { value: name, sap: true };
+        return name ? { value: name, sap: true } : null;
       }
       // Unicode / emoji
       return { value: raw, sap: false };
@@ -1529,7 +1512,7 @@ class KioskKeyboard extends UI5Element {
       const clIcon = key.capsLockIcon;
       if (clIcon !== undefined) {
         if (!clIcon) return null; // capsLockIcon: "" suppresses icon
-        return parseSapIcon(clIcon, `capsLockIcon on key "${key.value}"`);
+        return parseSapIcon(clIcon);
       }
       return { value: SPECIAL_KEY_ICON_NAMES.capsLock, sap: true };
     }
@@ -1538,7 +1521,7 @@ class KioskKeyboard extends UI5Element {
 
     const customIcon = key.icon;
     if (customIcon) {
-      return parseSapIcon(customIcon, `key "${key.value}"`);
+      return parseSapIcon(customIcon);
     }
 
     const builtIn = ICON_MAP[key.value];
