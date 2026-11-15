@@ -150,7 +150,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
  */
 export default class HotkeyManager extends BaseObject {
   private _registrations: Map<string, HotkeyRegistration> = new Map();
-  private _registrationIndex: RegistrationIndex = new RegistrationIndex((id) => this._registrations.get(id));
+  private _registrationIndex: RegistrationIndex = new RegistrationIndex();
   private _scopeStack: string[] = [GLOBAL_SCOPE];
   private _platform: Platform;
   private _groups: Set<RegistrationGroup> = new Set();
@@ -532,20 +532,20 @@ export default class HotkeyManager extends BaseObject {
     const bucket = this._registrationIndex.getBucket(normalizedScope);
     if (!bucket) return [];
 
-    // The three bucket sections are disjoint: the index files each id under
-    // exactly one of them, and target swaps deindex before reindexing.
+    // The three bucket sections are disjoint: the index files each registration
+    // under exactly one of them, and target swaps deindex before reindexing.
     const result: HotkeyRegistrationInfo[] = [];
-    const addFromIds = (ids: Set<string>) => {
-      for (const reg of this._registrationIndex.getRegistrationsFromIds(ids)) {
+    const add = (regs: Set<HotkeyRegistration>) => {
+      for (const reg of regs) {
         result.push(this._toRegistrationInfo(reg));
       }
     };
 
-    addFromIds(bucket.untargetedIds);
-    for (const ids of bucket.targets.values()) {
-      addFromIds(ids);
+    add(bucket.untargeted);
+    for (const regs of bucket.targets.values()) {
+      add(regs);
     }
-    addFromIds(bucket.callbackTargetIds);
+    add(bucket.callbackTargets);
 
     if (this._sequenceManager) {
       result.push(...this._sequenceManager.getRegistrations().filter((r) => r.scope === normalizedScope));

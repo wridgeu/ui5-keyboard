@@ -160,6 +160,40 @@ QUnit.test("Repeated keydown does not duplicate held set", (assert) => {
   assert.ok(held.includes("a"), "Key 'a' is held");
 });
 
+QUnit.test("Held keys keep first-press order across overlapping presses and releases", (assert) => {
+  const tracker = createHotkeyManager().getKeyStateTracker();
+  const changes: string[][] = [];
+  tracker.setChangeCallback((keys) => changes.push([...keys]));
+
+  fireKey("Shift", { code: "ShiftLeft", shiftKey: true });
+  fireKey("A", { code: "KeyA", shiftKey: true });
+  fireKey("b", { code: "KeyB", shiftKey: true });
+  fireKey("Shift", { code: "ShiftRight", shiftKey: true }); // second Shift: count 2, no change
+  fireKey("A", { code: "KeyA", shiftKey: true, repeat: true }); // auto-repeat: no change
+  fireKeyUp("Shift", { code: "ShiftLeft", shiftKey: true }); // count 1, still held
+  fireKeyUp("a", { code: "KeyA" });
+  fireKey("a", { code: "KeyA" });
+  fireKeyUp("Shift", { code: "ShiftRight" });
+  fireKey("Shift", { code: "ShiftLeft", shiftKey: true });
+
+  assert.deepEqual(
+    changes,
+    [
+      ["Shift"],
+      ["Shift", "A"],
+      ["Shift", "A", "b"],
+      ["Shift", "b"],
+      ["Shift", "b", "a"],
+      ["b", "a"],
+      ["b", "a", "Shift"],
+    ],
+    "Each change reports keys in first-press order; releases and re-presses move only the affected key",
+  );
+  assert.deepEqual(tracker.getHeldKeys(), ["b", "a", "Shift"], "getHeldKeys matches the last change");
+  assert.ok(tracker.isKeyHeld("Shift"), "Re-pressed Shift is held");
+  assert.notOk(tracker.isKeyHeld("A"), "Released shifted key is not held");
+});
+
 QUnit.test("Keyup removes held key by code when key value changed", (assert) => {
   const tracker = createHotkeyManager().getKeyStateTracker();
 

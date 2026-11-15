@@ -9,7 +9,7 @@ const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 /**
  * Resolves registration conflicts (same normalized hotkey, same scope, same
  * target) according to the requested {@link ConflictBehavior}. Operates on the
- * shared registration index and registration map.
+ * shared registration index.
  */
 export default class ConflictResolver {
   constructor(
@@ -42,17 +42,16 @@ export default class ConflictResolver {
     // Use scope-bucket lookup instead of iterating all registrations
     const bucket = this._index.getBucket(scope);
     if (!bucket) return;
-    const ids = target === null ? bucket.untargetedIds : this._index.getTargetRegistrationIds(bucket, target.el);
-    if (!ids || ids.size === 0) return;
+    const regs = target === null ? bucket.untargeted : this._index.getTargetRegistrations(bucket, target.el);
+    if (!regs || regs.size === 0) return;
 
     const isConflicting = (reg: HotkeyRegistration): boolean => reg.normalizedHotkey === normalizedHotkey;
 
     if (conflictBehavior === ConflictBehavior.Replace) {
       // Collect ALL matches so we remove every conflicting registration
       const conflicts: HotkeyRegistration[] = [];
-      for (const id of ids) {
-        const reg = this._index.getRegistration(id);
-        if (reg && isConflicting(reg)) {
+      for (const reg of regs) {
+        if (isConflicting(reg)) {
           conflicts.push(reg);
         }
       }
@@ -69,9 +68,8 @@ export default class ConflictResolver {
 
     // For "warn" and "error", first match is sufficient
     let conflicting: HotkeyRegistration | null = null;
-    for (const id of ids) {
-      const reg = this._index.getRegistration(id);
-      if (reg && isConflicting(reg)) {
+    for (const reg of regs) {
+      if (isConflicting(reg)) {
         conflicting = reg;
         break;
       }

@@ -21,7 +21,7 @@ const LOG_COMPONENT = "ui5.hotkeys.KeyStateTracker";
  * @since 0.1.0
  */
 export default class KeyStateTracker {
-  private _heldKeys: Set<string> = new Set();
+  /** Held key → press count. An entry exists only while held; insertion order is first-press order. */
   private _heldKeyCounts: Map<string, number> = new Map();
   private _heldByCode: Map<string, string> = new Map();
   private _platform: Platform;
@@ -46,7 +46,7 @@ export default class KeyStateTracker {
    * @since 0.1.0
    */
   getHeldKeys(): readonly string[] {
-    return Array.from(this._heldKeys);
+    return Array.from(this._heldKeyCounts.keys());
   }
 
   /**
@@ -56,7 +56,7 @@ export default class KeyStateTracker {
    * @since 0.1.0
    */
   isKeyHeld(key: string): boolean {
-    return this._heldKeys.has(key);
+    return this._heldKeyCounts.has(key);
   }
 
   /**
@@ -91,7 +91,7 @@ export default class KeyStateTracker {
       this._heldByCode.set(code, key);
       changed = this._incrementHeldKey(key) || changed;
     } else {
-      if (this._heldKeys.has(key)) return;
+      if (this._heldKeyCounts.has(key)) return;
       changed = this._incrementHeldKey(key);
     }
 
@@ -140,8 +140,7 @@ export default class KeyStateTracker {
    * @internal
    */
   processBlur(): void {
-    if (this._heldKeys.size > 0) {
-      this._heldKeys.clear();
+    if (this._heldKeyCounts.size > 0) {
       this._heldKeyCounts.clear();
       this._heldByCode.clear();
       this._notifyChange();
@@ -156,7 +155,6 @@ export default class KeyStateTracker {
    * @internal - Called by EventDispatcher.destroy(), not by consumers.
    */
   destroy(): void {
-    this._heldKeys.clear();
     this._heldKeyCounts.clear();
     this._heldByCode.clear();
     this._changeCallback = null;
@@ -178,9 +176,9 @@ export default class KeyStateTracker {
   private _clearNonModifierKeys(): boolean {
     let changed = false;
 
-    for (const held of this._heldKeys) {
+    for (const held of this._heldKeyCounts.keys()) {
       if (MODIFIER_KEYS.has(held)) continue;
-      changed = this._clearHeldKeyCompletely(held) || changed;
+      changed = this._heldKeyCounts.delete(held) || changed;
     }
 
     for (const [code, held] of this._heldByCode) {
@@ -192,22 +190,10 @@ export default class KeyStateTracker {
     return changed;
   }
 
-  private _clearHeldKeyCompletely(key: string): boolean {
-    const removed = this._heldKeys.delete(key);
-    this._heldKeyCounts.delete(key);
-    return removed;
-  }
-
   private _incrementHeldKey(key: string): boolean {
     const current = this._heldKeyCounts.get(key) ?? 0;
     this._heldKeyCounts.set(key, current + 1);
-
-    if (current === 0) {
-      this._heldKeys.add(key);
-      return true;
-    }
-
-    return false;
+    return current === 0;
   }
 
   private _decrementHeldKey(key: string): boolean {
@@ -219,8 +205,7 @@ export default class KeyStateTracker {
       return false;
     }
 
-    this._heldKeyCounts.delete(key);
-    return this._heldKeys.delete(key);
+    return this._heldKeyCounts.delete(key);
   }
 
   private _notifyChange(): void {

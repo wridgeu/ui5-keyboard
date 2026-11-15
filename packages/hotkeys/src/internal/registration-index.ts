@@ -2,39 +2,34 @@ import type { HotkeyRegistration } from "./types";
 
 /**
  * Per-scope index bucket for hotkey registrations, keyed by target mode.
+ * Each set iterates in registration order.
  */
 interface ScopeRegistrationBucket {
-  untargetedIds: Set<string>;
-  targets: Map<EventTarget, Set<string>>;
+  untargeted: Set<HotkeyRegistration>;
+  targets: Map<EventTarget, Set<HotkeyRegistration>>;
   /**
-   * Secondary index: element id → registration ids. Enables O(1) fallback
+   * Secondary index: element id → registrations. Enables O(1) fallback
    * when DOM nodes are replaced during rerendering. Deindex locates a
    * registration by value (it appears under at most one id key), so a
    * post-registration `id` mutation cannot orphan its entry.
    */
-  targetIdIndex: Map<string, Set<string>>;
+  targetIdIndex: Map<string, Set<HotkeyRegistration>>;
   /** Registrations with callback-based targets, resolved lazily at dispatch time. */
-  callbackTargetIds: Set<string>;
+  callbackTargets: Set<HotkeyRegistration>;
 }
 
 /**
  * Scope/target index over hotkey registrations.
  *
- * Maintains per-scope buckets of registration ids keyed by target mode
+ * Maintains per-scope buckets of registrations keyed by target mode
  * (untargeted, element target, callback target) plus a secondary element-id
  * index for rerender-safe target matching. The owning HotkeyManager keeps
- * the id → registration map; the index stores ids only and resolves them
- * through the lookup callback provided at construction.
+ * the id → registration map for by-id lookups.
  *
  * @internal - owned by HotkeyManager, not part of the public API.
  */
 export default class RegistrationIndex {
   private _byScope: Map<string, ScopeRegistrationBucket> = new Map();
-  private _lookup: (id: string) => HotkeyRegistration | undefined;
-
-  constructor(lookup: (id: string) => HotkeyRegistration | undefined) {
-    this._lookup = lookup;
-  }
 
   /**
    * Get the bucket for a scope, or undefined if no registration is indexed there.
@@ -51,31 +46,31 @@ export default class RegistrationIndex {
     const target = registration.options.target;
 
     if (target === null) {
-      bucket.untargetedIds.add(registration.id);
+      bucket.untargeted.add(registration);
       return;
     }
 
     if (target.kind === "callback") {
-      bucket.callbackTargetIds.add(registration.id);
+      bucket.callbackTargets.add(registration);
       return;
     }
 
     const el = target.el;
-    let ids = bucket.targets.get(el);
-    if (!ids) {
-      ids = new Set<string>();
-      bucket.targets.set(el, ids);
+    let regs = bucket.targets.get(el);
+    if (!regs) {
+      regs = new Set<HotkeyRegistration>();
+      bucket.targets.set(el, regs);
     }
-    ids.add(registration.id);
+    regs.add(registration);
 
     // Maintain secondary index by element id for stale-reference fallback
     if (el.id) {
-      let idxIds = bucket.targetIdIndex.get(el.id);
-      if (!idxIds) {
-        idxIds = new Set<string>();
-        bucket.targetIdIndex.set(el.id, idxIds);
+      let idxRegs = bucket.targetIdIndex.get(el.id);
+      if (!idxRegs) {
+        idxRegs = new Set<HotkeyRegistration>();
+        bucket.targetIdIndex.set(el.id, idxRegs);
       }
-      idxIds.add(registration.id);
+      idxRegs.add(registration);
     }
   }
 
@@ -90,14 +85,14 @@ export default class RegistrationIndex {
     const target = registration.options.target;
 
     if (target === null) {
-      bucket.untargetedIds.delete(registration.id);
+      bucket.untargeted.delete(registration);
     } else if (target.kind === "callback") {
-      bucket.callbackTargetIds.delete(registration.id);
+      bucket.callbackTargets.delete(registration);
     } else {
-      const ids = bucket.targets.get(target.el);
-      if (ids) {
-        ids.delete(registration.id);
-        if (ids.size === 0) {
+      const regs = bucket.targets.get(target.el);
+      if (regs) {
+        regs.delete(registration);
+        if (regs.size === 0) {
           bucket.targets.delete(target.el);
         }
       }
@@ -106,21 +101,21 @@ export default class RegistrationIndex {
       // the element's id may have changed since index() recorded it, and a
       // registration appears under at most one id key. deindex is not a hot
       // path, so the small scan beats maintaining a reverse map.
-      for (const [idKey, idxIds] of bucket.targetIdIndex) {
-        if (idxIds.delete(registration.id)) {
-          if (idxIds.size === 0) bucket.targetIdIndex.delete(idKey);
+      for (const [idKey, idxRegs] of bucket.targetIdIndex) {
+        if (idxRegs.delete(registration)) {
+          if (idxRegs.size === 0) bucket.targetIdIndex.delete(idKey);
           break;
         }
       }
     }
 
-    if (bucket.untargetedIds.size === 0 && bucket.targets.size === 0 && bucket.callbackTargetIds.size === 0) {
+    if (bucket.untargeted.size === 0 && bucket.targets.size === 0 && bucket.callbackTargets.size === 0) {
       this._byScope.delete(scope);
     }
   }
 
   /**
-   * Resolve registration IDs for a composedPath node.
+   * Resolve the target registrations for a composedPath node.
    *
    * Merges object-identity hits with id-based index hits so that both
    * fresh and stale DOM references for the same element id contribute
@@ -128,7 +123,7 @@ export default class RegistrationIndex {
    * node already has its own registrations while the old (stale) node's
    * registrations are still indexed by id.
    */
-  getTargetRegistrationIds(bucket: ScopeRegistrationBucket, node: EventTarget): Set<string> | null {
+  getTargetRegistrations(bucket: ScopeRegistrationBucket, node: EventTarget): ReadonlySet<HotkeyRegistration> | null {
     const direct = bucket.targets.get(node);
     const indexed = node instanceof Element && node.id ? bucket.targetIdIndex.get(node.id) : undefined;
 
@@ -138,32 +133,10 @@ export default class RegistrationIndex {
   }
 
   /**
-   * Resolve the untargeted registrations of a scope.
+   * Snapshot the untargeted registrations of a scope.
    */
   getUntargetedRegistrations(scope: string): ReadonlyArray<HotkeyRegistration> {
-    const ids = this._byScope.get(scope)?.untargetedIds;
-    if (!ids || ids.size === 0) return [];
-
-    return this.getRegistrationsFromIds(ids);
-  }
-
-  /**
-   * Look up a single registration by its id.
-   */
-  getRegistration(id: string): HotkeyRegistration | undefined {
-    return this._lookup(id);
-  }
-
-  /**
-   * Look up registrations by their IDs.
-   */
-  getRegistrationsFromIds(ids: Set<string>): ReadonlyArray<HotkeyRegistration> {
-    const registrations: HotkeyRegistration[] = [];
-    for (const id of ids) {
-      const registration = this.getRegistration(id);
-      if (registration) registrations.push(registration);
-    }
-    return registrations;
+    return [...(this._byScope.get(scope)?.untargeted ?? [])];
   }
 
   /**
@@ -177,10 +150,10 @@ export default class RegistrationIndex {
     let bucket = this._byScope.get(scope);
     if (!bucket) {
       bucket = {
-        untargetedIds: new Set<string>(),
-        targets: new Map<EventTarget, Set<string>>(),
-        targetIdIndex: new Map<string, Set<string>>(),
-        callbackTargetIds: new Set<string>(),
+        untargeted: new Set<HotkeyRegistration>(),
+        targets: new Map<EventTarget, Set<HotkeyRegistration>>(),
+        targetIdIndex: new Map<string, Set<HotkeyRegistration>>(),
+        callbackTargets: new Set<HotkeyRegistration>(),
       };
       this._byScope.set(scope, bucket);
     }
