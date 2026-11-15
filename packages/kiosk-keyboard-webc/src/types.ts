@@ -378,9 +378,22 @@ export interface KeyPressEventDetail {
  * @since 0.1.0
  */
 export interface LayoutChangeEventDetail {
-  /** The name of the newly active layout. */
+  /** The name of the layout that now renders. */
   layout: string;
-  /** Whether this change was the `autoCompact` width tier resolving, rather than a request. */
+  /**
+   * The name of the layout last requested - by the `layout` attribute, a
+   * `{layout:*}` key or the session reset - which `layout` differs from while the
+   * `autoCompact` width tier renders its compact counterpart. Persist this one to
+   * restore a user's choice.
+   *
+   * @since 0.2.0
+   */
+  requestedLayout: string;
+  /**
+   * Whether this change was not exactly a request: the `autoCompact` width tier
+   * resolving, a lifted `keyboardType` constraint or a newly declared layout, or a
+   * request the width tier rendered as its compact counterpart.
+   */
   autoDetected: boolean;
 }
 

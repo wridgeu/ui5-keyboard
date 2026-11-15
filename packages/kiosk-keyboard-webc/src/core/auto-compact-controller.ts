@@ -12,7 +12,7 @@ export interface AutoCompactHost {
   /** Whether `autoCompact` is on. */
   isEnabled(): boolean;
   /**
-   * Applies the tier. The host owns which layout that resolves to. `crossed` is
+   * Reports the tier verdict. The host owns which layout that resolves to. `crossed` is
    * whether this verdict replaces a known previous one, which is what separates a
    * width the user just crossed from the first resolution of a keyboard that was
    * always this wide.
@@ -100,22 +100,6 @@ export class AutoCompactController {
       this._syncFrame = null;
       this._applyTier();
     });
-  }
-
-  /**
-   * Re-evaluates the tier against the last observed width. The host calls this
-   * whenever an input the tier resolves through changes - the requested layout, the
-   * `keyboardType` constraint, the folded layout table - none of which a resize
-   * reports, because the box never moved.
-   *
-   * Free to call before there is anything to re-evaluate: with no observation on
-   * record the first one still to come carries the verdict, so this costs no frame
-   * while `autoCompact` is off.
-   */
-  reapply(): void {
-    if (this._observedInline === null) return;
-    this._appliedNarrow = null;
-    this.scheduleTierUpdate();
   }
 
   /** Disconnects and releases the observer. */
