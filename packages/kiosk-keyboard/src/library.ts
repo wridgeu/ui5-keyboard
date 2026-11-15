@@ -186,10 +186,31 @@ export const NativeDispatchableKeyNames = Object.freeze([
   KeyName.PageDown,
 ] as const);
 
+/**
+ * What changed the layout, carried by the `layoutChange` event's `reason` parameter.
+ *
+ * @enum {string}
+ * @public
+ * @since 0.2.0
+ */
+export enum LayoutChangeReason {
+  /** A `{layout:*}` key, or a new input the user moved to dropping their pick. */
+  User = "user",
+  /** `setLayout()`, a binding, `resetLayout()` or `reset()`. */
+  Api = "api",
+  /** The `autoCompact` width tier swapping in or out a compact counterpart. */
+  Width = "width",
+  /** The `keyboardType` constraint taking effect or lifting. */
+  KeyboardTypeChange = "keyboardType",
+  /** The declared layouts changed: the requested layout or its counterpart arrived or left. */
+  Layouts = "layouts",
+}
+
 DataType.registerEnum("ui5.kiosk.KeyboardLayout", KeyboardLayout);
 DataType.registerEnum("ui5.kiosk.KeyboardType", KeyboardType);
 DataType.registerEnum("ui5.kiosk.MobileKeyboard", MobileKeyboard);
 DataType.registerEnum("ui5.kiosk.FKeyMode", FKeyMode);
+DataType.registerEnum("ui5.kiosk.LayoutChangeReason", LayoutChangeReason);
 
 /**
  * Whether a layout is an auxiliary surface or a base alphabetic layout. A secondary
@@ -310,6 +331,7 @@ const library = Lib.init({
     "ui5.kiosk.KeyboardType",
     "ui5.kiosk.MobileKeyboard",
     "ui5.kiosk.FKeyMode",
+    "ui5.kiosk.LayoutChangeReason",
     "ui5.kiosk.LayoutRole",
     "ui5.kiosk.LayoutFacet",
     "ui5.kiosk.LayoutRows",

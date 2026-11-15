@@ -319,7 +319,7 @@ QUnit.test("qwerty bottom row has Fn button that switches to fkeys", async (asse
   tapKey(kb, "{layout:fkeys}");
   await waitForRender();
 
-  assert.strictEqual(kb.getLayout(), "fkeys", "Layout switched to fkeys");
+  assert.strictEqual(kb.getEffectiveLayout(), "fkeys", "Layout switched to fkeys");
 
   // Verify fkeys layout is rendered
   const f1 = getKeyElement(kb, "{fkey:F1}");
@@ -336,7 +336,7 @@ QUnit.test("{layout:base} returns from fkeys and nav to the qwertz-de base layou
 
   tapKey(kb, "{layout:fkeys}");
   await waitForRender();
-  assert.strictEqual(kb.getLayout(), "fkeys", "Switched to fkeys");
+  assert.strictEqual(kb.getEffectiveLayout(), "fkeys", "Switched to fkeys");
 
   tapKey(kb, "{layout:base}");
   await waitForRender();
@@ -344,7 +344,7 @@ QUnit.test("{layout:base} returns from fkeys and nav to the qwertz-de base layou
 
   kb.setLayout("nav");
   await waitForRender();
-  assert.strictEqual(kb.getLayout(), "nav", "Switched to nav");
+  assert.strictEqual(kb.getEffectiveLayout(), "nav", "Switched to nav");
 
   tapKey(kb, "{layout:base}");
   await waitForRender();

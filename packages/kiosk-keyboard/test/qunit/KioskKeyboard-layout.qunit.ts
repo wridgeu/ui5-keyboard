@@ -342,7 +342,7 @@ QUnit.test(
 
     const events: string[] = [];
     kb.attachEvent("layoutChange", (e: { getParameter(name: string): string }) => {
-      events.push(e.getParameter("layout"));
+      events.push(e.getParameter("effectiveLayout"));
     });
 
     const switchToNumeric = createFakeKeyElement("{layout:numeric}", "fake-numeric");
@@ -350,7 +350,7 @@ QUnit.test(
     await waitForRender();
 
     assert.deepEqual(events, ["numeric"], "Switch fires layoutChange in Numpad mode");
-    assert.strictEqual(kb.getLayout(), "numeric", "Layout property reflects user pick");
+    assert.strictEqual(kb.getEffectiveLayout(), "numeric", "The effective layout reflects the user pick");
     assert.strictEqual(
       getRowKeyValues(kb, 0)[0],
       "1",
@@ -429,7 +429,7 @@ QUnit.test("setKeyboardType round trip (Numpad -> Full) returns a user pick to t
   await placeAndWait(kb);
   const events: string[] = [];
   kb.attachLayoutChange((e) => {
-    events.push(e.getParameter("layout") ?? "");
+    events.push(e.getParameter("effectiveLayout") ?? "");
   });
 
   simulateTap(kb, createFakeKeyElement("{layout:numeric}", "fake-numeric"));
@@ -444,7 +444,11 @@ QUnit.test("setKeyboardType round trip (Numpad -> Full) returns a user pick to t
   await waitForRender();
   assert.strictEqual(kb.getLayout(), "qwertz-de", "The lifted constraint lands on the base layout");
   assert.ok(getKeyElement(kb, "z"), "The base surface renders");
-  assert.deepEqual(events, ["numeric", "qwertz-de"], "One layoutChange for the pick, one for its drop");
+  assert.deepEqual(
+    events,
+    ["numeric", "numpad", "qwertz-de"],
+    "One layoutChange each for the pick, the constraint and its lift",
+  );
 
   kb.destroy();
 });
@@ -636,7 +640,7 @@ QUnit.test("Base layout roundtrip: qwertz-de -> numeric -> special -> base", asy
   tapKey(kb, "{layout:special}");
   await waitForRender();
 
-  assert.strictEqual(kb.getLayout(), "special", "Now on special layout");
+  assert.strictEqual(kb.getEffectiveLayout(), "special", "Now on special layout");
 
   // Go back via ABC ({layout:base})
   tapKey(kb, "{layout:base}");
@@ -691,7 +695,7 @@ QUnit.test("Custom layout works as base layout for {layout:base} roundtrip", asy
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
 
-  assert.strictEqual(kb.getLayout(), "numeric", "On numeric now");
+  assert.strictEqual(kb.getEffectiveLayout(), "numeric", "On numeric now");
 
   // Switch back via {layout:base}
   tapKey(kb, "{layout:base}");
@@ -1061,7 +1065,7 @@ QUnit.test("Locale layout used as base layout for {layout:base} roundtrip", asyn
     // Switch to numeric
     tapKey(kb, "{layout:numeric}");
     await waitForRender();
-    assert.strictEqual(kb.getLayout(), "numeric", "Switched to numeric");
+    assert.strictEqual(kb.getEffectiveLayout(), "numeric", "Switched to numeric");
 
     // Switch back via {layout:base}
     tapKey(kb, "{layout:base}");

@@ -84,7 +84,8 @@ export default class KioskFocusScenarios extends BaseController {
   }
 
   onLayoutChange(event: KioskKeyboard$LayoutChangeEvent): void {
-    this._addLogEntry("layoutChange", event.getParameter("layout") ?? "", "Information");
+    const effective = event.getParameter("effectiveLayout") ?? "";
+    this._addLogEntry("layoutChange", `${effective} (${event.getParameter("reason") ?? ""})`, "Information");
   }
 
   // Scenario handlers

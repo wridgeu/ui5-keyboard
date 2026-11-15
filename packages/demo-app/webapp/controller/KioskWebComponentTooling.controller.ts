@@ -56,8 +56,8 @@ export default class KioskWebComponentTooling extends BaseController {
     this._getViewModel().setProperty("/lastKey", shift ? `${key} (Shift)` : key);
   }
 
-  onLayoutChange(event: Event<{ layout: string }>): void {
-    const layout = event.getParameter("layout") ?? "";
+  onLayoutChange(event: Event<{ effectiveLayout: string }>): void {
+    const layout = event.getParameter("effectiveLayout") ?? "";
     this._getViewModel().setProperty("/layout", layout);
   }
 

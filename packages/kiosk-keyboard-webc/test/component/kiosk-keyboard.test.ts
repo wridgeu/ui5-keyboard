@@ -725,7 +725,7 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       const changes: string[] = [];
       el.addEventListener("layout-change", (e) => {
-        changes.push((e as CustomEvent<{ layout: string }>).detail.layout);
+        changes.push((e as CustomEvent<{ effectiveLayout: string }>).detail.effectiveLayout);
       });
 
       queryKey(el, "{layout:numeric}")!.click();
@@ -741,7 +741,7 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       expect(el.effectiveLayout, "the lifted constraint lands on the base").to.equal("qwerty");
       expect(queryKey(el, "q"), "the base surface renders").to.not.be.null;
-      expect(changes).to.deep.equal(["numeric", "qwerty"]);
+      expect(changes).to.deep.equal(["numeric", "numpad", "qwerty"]);
     });
 
     // The latch is consumed to *produce* the payload - `key-press` already
@@ -990,7 +990,7 @@ describe("kiosk-keyboard", () => {
       });
       const changes: string[] = [];
       el.addEventListener("layout-change", (e: Event) => {
-        changes.push((e as CustomEvent<{ layout: string }>).detail.layout);
+        changes.push((e as CustomEvent<{ effectiveLayout: string }>).detail.effectiveLayout);
       });
 
       el.addEventListener("key-press", (e: Event) => e.preventDefault(), { once: true });
@@ -1083,7 +1083,7 @@ describe("kiosk-keyboard", () => {
       layoutChange = oneEvent(el, "layout-change");
       numericKey!.click();
       detail = (await layoutChange).detail;
-      expect(detail.layout).to.equal("numeric");
+      expect(detail.effectiveLayout).to.equal("numeric");
       await nextRender();
 
       // Step 3: return to base; should be ja-kana, NOT ja-romaji
@@ -1093,7 +1093,7 @@ describe("kiosk-keyboard", () => {
       layoutChange = oneEvent(el, "layout-change");
       baseKey!.click();
       detail = (await layoutChange).detail;
-      expect(detail.layout).to.equal(
+      expect(detail.effectiveLayout).to.equal(
         "ja-kana",
         "base layout should track the last primary layout (ja-kana), not the initial layout (ja-romaji)",
       );
@@ -1135,13 +1135,17 @@ describe("kiosk-keyboard", () => {
 
       const layoutChange = oneEvent(el, "layout-change");
       fakeKey.click();
-      expect((await layoutChange).detail.layout, "mixed-case name normalized to lowercase").to.equal("numeric");
+      expect((await layoutChange).detail.effectiveLayout, "mixed-case name normalized to lowercase").to.equal(
+        "numeric",
+      );
       fakeKey.remove();
       await nextRender();
 
       const layoutChangeBack = oneEvent(el, "layout-change");
       queryKey(el, "{layout:base}")!.click();
-      expect((await layoutChangeBack).detail.layout, "base returns to qwerty (base not corrupted)").to.equal("qwerty");
+      expect((await layoutChangeBack).detail.effectiveLayout, "base returns to qwerty (base not corrupted)").to.equal(
+        "qwerty",
+      );
     });
 
     it("filters {layout:base} from the auto-forced layout in Numeric mode", async () => {

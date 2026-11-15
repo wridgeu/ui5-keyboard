@@ -1,7 +1,5 @@
 import Control from "sap/ui/core/Control";
 import type ManagedObject from "sap/ui/base/ManagedObject";
-import BindingMode from "sap/ui/model/BindingMode";
-import type PropertyBinding from "sap/ui/model/PropertyBinding";
 import Element from "sap/ui/core/Element";
 import type { MetadataOptions } from "sap/ui/core/Element";
 import syncStyleClass from "sap/ui/core/syncStyleClass";
@@ -30,7 +28,7 @@ import {
   type VariantTable,
 } from "./internal/latin-variants";
 import VariantPopupBehavior from "./internal/variant-popup-behavior";
-import { KeyboardType, type ControlID } from "./library"; // side-effect: ensures Lib.init() runs
+import { KeyboardType, LayoutChangeReason, type ControlID } from "./library"; // side-effect: ensures Lib.init() runs
 import {
   getRegisteredLayout as registryGetLayout,
   getLayoutOrDefault as registryGetLayoutOrDefault,
@@ -194,8 +192,6 @@ export default class KioskKeyboard extends Control {
   private _validDefaultVariants!: VariantTable | null;
   /** Whether the last resolution declared a variant table with `accentVariants` off. */
   private _disarmedVariants!: boolean;
-  /** Caps the two-way tier write-back diagnostic at one emission per control. */
-  private _warnedWriteBack!: boolean;
   /** Owns the ResizeObserver-driven height-responsive class application. */
   private _responsiveSizing!: ResponsiveSizingController;
   private _autoCompact!: AutoCompactBehavior;
@@ -205,15 +201,19 @@ export default class KioskKeyboard extends Control {
     library: "ui5.kiosk",
     properties: {
       /**
-       * Active layout name. Only effective when keyboardType is "Full".
-       * Auto-detected from the UI5 locale when omitted.
+       * The layout asked for. Auto-detected from the UI5 locale when omitted.
        *
-       * This holds the layout on screen, not the last one asked for: a `{layout:*}` key
-       * and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
-       * writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
-       * when it holds a stored preference, or a detected value travels back into the
-       * model; take the layout to persist from the `requestedLayout` parameter of
-       * `layoutChange`, which every change carries.
+       * This is the intent, not the layout on screen: a secondary `{layout:*}` pick
+       * (numbers, symbols, F-keys, navigation), a `keyboardType` constraint, an
+       * `autoCompact` width swap and the registry fallback all change what renders
+       * without writing here, the way `sap.f.FlexibleColumnLayout` keeps its `layout`
+       * while the columns shown follow the width. Read `getEffectiveLayout()` for
+       * the one that rendered. A `{layout:*}` key naming a primary layout is the user
+       * choosing one, and is written here, so a two-way binding persists that choice
+       * and nothing else.
+       *
+       * Setting the value it already holds is a no-op, so a binding refresh does not
+       * undo a secondary pick; `resetLayout()` returns to the base layout.
        *
        * @example <caption>XML view</caption>
        * <kiosk:KioskKeyboard layout="qwertz-de" controls="myInput" />
@@ -340,9 +340,10 @@ export default class KioskKeyboard extends Control {
        * `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
        * with the `compact` property of a `customLayouts` entry.
        *
-       * The swap fires `layoutChange` with `autoDetected: true` and never overrides an
-       * explicit choice: the layout you set stays the one it resolves against, so a
-       * `setLayout` or a `{layout:*}` key still wins and is re-tiered from there.
+       * The swap fires `layoutChange` with `reason: "width"`, changes
+       * `getEffectiveLayout()` only, and never overrides an explicit choice: the layout
+       * you set stays the one it resolves against, so a `setLayout` or a `{layout:*}`
+       * key still wins and is re-tiered from there.
        *
        * The width is taken from the keyboard's own box, so an embedded keyboard tiers
        * on the room it was granted rather than on the viewport. Override the threshold
@@ -558,34 +559,33 @@ export default class KioskKeyboard extends Control {
         },
       },
       /**
-       * Fired when the active layout changes (via a `{layout:name}` key
-       * or programmatic `setLayout()` call).
+       * Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+       * one event when both change together. Not fired for the layout the control
+       * starts on.
        *
        * @example <caption>TypeScript</caption>
        * keyboard.attachLayoutChange((event) => {
-       *   console.log("Switched to:", event.getParameter("layout"));
+       *   console.log("Renders:", event.getParameter("effectiveLayout"));
        * });
        *
        * @since 0.1.0
        */
       layoutChange: {
         parameters: {
-          /** The name of the layout that now renders, which the `layout` property holds. */
+          /** The layout asked for, which the `layout` property holds. Persist this one. */
           layout: { type: "string" },
           /**
-           * The name of the layout last requested - by `setLayout()` or a `{layout:*}`
-           * key - which `layout` differs from while the `autoCompact` width tier
-           * renders its compact counterpart. Persist this one to restore a user's choice.
+           * The layout that now renders, which `getEffectiveLayout()` returns.
            *
            * @since 0.2.0
            */
-          requestedLayout: { type: "string" },
+          effectiveLayout: { type: "string" },
           /**
-           * Whether this change was not exactly a request: the `autoCompact` width tier
-           * resolving, a lifted `keyboardType` constraint or a newly declared layout, or a
-           * request the width tier rendered as its compact counterpart.
+           * What changed it.
+           *
+           * @since 0.2.0
            */
-          autoDetected: { type: "boolean" },
+          reason: { type: "ui5.kiosk.LayoutChangeReason" },
         },
       },
       /**
@@ -966,7 +966,7 @@ export default class KioskKeyboard extends Control {
       // Deferred: a rebuild runs inside whatever read the fold, which can be a render.
       onRebuilt: () =>
         queueMicrotask(() => {
-          if (!this.isDestroyed()) this._layoutState.refresh();
+          if (!this.isDestroyed()) this._layoutState.refresh(LayoutChangeReason.Layouts);
         }),
     });
     this._middlewareFactory = null;
@@ -975,6 +975,7 @@ export default class KioskKeyboard extends Control {
       setLayoutProperty: (name) => {
         this.setProperty("layout", name);
       },
+      invalidate: () => this.invalidate(),
       getKeyboardType: () => this.getKeyboardType(),
       getFold: () => this._foldCache.get(),
       fireLayoutChange: (parameters) => {
@@ -989,12 +990,10 @@ export default class KioskKeyboard extends Control {
       endComposition: () => this._dropComposition("commit"),
       focusAnchorValue: () => this._focusAnchorValue(),
       reseatFocusAnchor: (value) => this._reseatFocusAnchor(value),
-      warnTierWriteBack: () => this._warnTierWriteBack(),
     });
     this._checkedDefaultVariants = undefined;
     this._validDefaultVariants = null;
     this._disarmedVariants = false;
-    this._warnedWriteBack = false;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
     this._rendererApi = null;
@@ -1194,14 +1193,16 @@ export default class KioskKeyboard extends Control {
   /**
    * Custom setter for layout - tracks the base (alphabetic) layout so
    * that `{layout:base}` in numeric/special layouts can return to it.
-   * Fires `layoutChange` when the layout actually changes.
+   * Fires `layoutChange` when the layout actually changes. The value the
+   * property already holds is a no-op.
    *
    * @public
    * @since 0.1.0
    */
   setLayout(sLayout: string): this {
+    if (sLayout.trim().toLowerCase() === this.getLayout()) return this;
     // Programmatic change is external-sourced and re-engages keyboardType constraints.
-    this._layoutState.perform(sLayout, "external", "passed to setLayout()");
+    this._layoutState.perform(sLayout, "external", "passed to setLayout()", LayoutChangeReason.Api);
     return this;
   }
 
@@ -1271,13 +1272,34 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Restores the active layout to the tracked base layout.
+   * Returns the layout that renders: the `layout` property after a secondary
+   * `{layout:*}` pick, the `keyboardType` constraint, the `autoCompact` width tier
+   * and the registry fallback have been applied. Read-only and derived, the way
+   * `<img>` reports `currentSrc` beside `src`; every change fires `layoutChange`.
+   *
+   * @returns The name of the layout on screen.
+   * @public
+   * @since 0.2.0
+   */
+  getEffectiveLayout(): string {
+    return this._layoutState.resolvedName();
+  }
+
+  /**
+   * Restores the active layout to the tracked base layout, makes it the `layout`
+   * property and drops a secondary `{layout:*}` pick.
    *
    * @public
    * @since 0.1.0
    */
   resetLayout(): this {
-    return this.setLayout(this._layoutState.getBaseLayout());
+    this._layoutState.perform(
+      this._layoutState.getBaseLayout(),
+      "external",
+      "held as the base layout",
+      LayoutChangeReason.Api,
+    );
+    return this;
   }
 
   /**
@@ -1360,7 +1382,7 @@ export default class KioskKeyboard extends Control {
     // on the base under its keyboardType. A same-input refocus (caret
     // reposition) keeps the pick.
     if (isRealSwitch && this._layoutState.getSource() === "user") {
-      this._layoutState.clearUserOverride();
+      this._layoutState.clearUserOverride(LayoutChangeReason.User);
       this.invalidate();
     }
 
@@ -1451,7 +1473,7 @@ export default class KioskKeyboard extends Control {
     // A keyboardType change (explicit, reset, or auto-detected) invalidates
     // any prior user-driven layout switch; the resolved layout must follow
     // the new constraint context.
-    this._layoutState.clearUserOverride();
+    this._layoutState.clearUserOverride(LayoutChangeReason.KeyboardTypeChange);
     // A keyboardType change swaps the rendered surface exactly as `{layout:*}`
     // does, so it ends the typing context the same way: shift and Caps Lock
     // included (webc parity).
@@ -1461,7 +1483,7 @@ export default class KioskKeyboard extends Control {
     this._dropComposition("commit");
     // A constraint suspends the width tier, so lifting one re-derives the layout that
     // surfaces from under it.
-    this._layoutState.refresh();
+    this._layoutState.refresh(LayoutChangeReason.KeyboardTypeChange);
   }
 
   /**
@@ -1988,44 +2010,6 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Warns once when a width the `autoCompact` tier resolved is about to travel back
-   * into a two-way bound `layout`.
-   *
-   * `layout` holds the effective layout, so the tier writes it the way
-   * `sap.f.DynamicPage` writes `headerExpanded` on a scroll-driven collapse. That is
-   * the UI5 contract and it stays; what it cannot do is stay quiet, because two-way is
-   * every model's default binding mode, so an app binding a stored preference gets the
-   * write-back without asking for it. There is no supported way to write a property
-   * while skipping the model update - suspending the binding would push the model value
-   * straight back on resume, undoing the tier - so the remedy is the caller's to apply.
-   *
-   * Only the tier is reported. A `{layout:*}` tap is the user choosing, and an app that
-   * persists that choice is doing the right thing.
-   *
-   * `keyboardType` needs no counterpart: `autoType`'s detection is gated on the type
-   * not having been set explicitly, and a property binding delivers its value through
-   * `setKeyboardType`, which marks it exactly that. Binding the property is therefore
-   * what turns the detection off, so it can never write through the binding.
-   */
-  private _warnTierWriteBack(): void {
-    if (this._warnedWriteBack) return;
-    // SAFETY: `layout` is a property, and `ManagedObject.bindProperty` is what creates a
-    // binding for one, so a binding registered under that name is a PropertyBinding -
-    // narrower than the `Binding` base `getBinding` reports for properties and
-    // aggregations alike.
-    const binding = this.getBinding("layout") as PropertyBinding | undefined;
-    if (binding?.getBindingMode() !== BindingMode.TwoWay) return;
-    this._warnedWriteBack = true;
-    Log.warning(
-      `"layout" is bound two-way, so the layout autoCompact resolved for the keyboard's own width is written back ` +
-        `into the model. Bind it { path: "...", mode: "OneWay" } if it holds a stored preference, and take ` +
-        `the layout to persist from the layoutChange event's "requestedLayout" parameter instead.`,
-      undefined,
-      "ui5.kiosk.KioskKeyboard",
-    );
-  }
-
-  /**
    * Resolves the effective, Shift/Caps-mapped variants for a rendered key from
    * its grid position, or `null` when the key declares none. Used by the popup
    * behavior to build the option listbox.
@@ -2542,7 +2526,7 @@ export default class KioskKeyboard extends Control {
         // user-driven and overrides it (webc parity).
         const name = action.target === LAYOUT_BASE ? this._layoutState.getBaseLayout() : action.target;
         const source = action.target === LAYOUT_BASE ? "external" : "user";
-        this._layoutState.perform(name, source, "referenced by a {layout:*} key");
+        this._layoutState.perform(name, source, "referenced by a {layout:*} key", LayoutChangeReason.User);
         return;
       }
 
