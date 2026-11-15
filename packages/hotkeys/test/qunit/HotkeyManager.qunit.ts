@@ -775,6 +775,45 @@ QUnit.test("Conflict behavior: allow silently registers duplicate", (assert) => 
   );
 });
 
+QUnit.test("Allowed duplicates match in registration order, and removal promotes the next", (assert) => {
+  const manager = createHotkeyManager();
+  const fired: string[] = [];
+  const allow = { conflictBehavior: ConflictBehavior.Allow };
+
+  const a = manager.register("Escape", () => fired.push("a"), allow);
+  manager.register("Escape", () => fired.push("b"), allow);
+  manager.register("Escape", () => fired.push("c"), allow);
+
+  fireKey("Escape");
+  a.unregister();
+  fireKey("Escape");
+  manager.register("Escape", () => fired.push("a2"), allow);
+  fireKey("Escape");
+
+  assert.deepEqual(fired, ["a", "b", "b"], "Earliest live registration wins; a re-registration goes last");
+});
+
+QUnit.test("Element-id fallback: the live node's registration wins over the stale node's", (assert) => {
+  const manager = createHotkeyManager();
+  const fired: string[] = [];
+
+  const original = document.createElement("div");
+  original.id = "priority-rerender-test";
+  fixture.appendChild(original);
+  manager.register("F8", () => fired.push("stale"), { target: original });
+
+  original.remove();
+  const replacement = document.createElement("div");
+  replacement.id = "priority-rerender-test";
+  fixture.appendChild(replacement);
+
+  fireKeyOn(replacement, "F8");
+  manager.register("F8", () => fired.push("live"), { target: replacement, conflictBehavior: ConflictBehavior.Allow });
+  fireKeyOn(replacement, "F8");
+
+  assert.deepEqual(fired, ["stale", "live"], "Stale registration matches by id until the live node has its own");
+});
+
 // ──────────────────────────────────────────────
 // Validation warnings during register()
 // ──────────────────────────────────────────────
