@@ -110,6 +110,26 @@ QUnit.test("toggle after autoRelease activates shift, not caps lock", (assert) =
   assert.strictEqual(state.isCapsLock, false, "not caps lock: autoRelease closed the double-click window");
 });
 
+QUnit.test("a key typed while shift is already off still closes the double-tap window", (assert) => {
+  const stub = sinon.stub(performance, "now");
+  try {
+    stub.returns(1000);
+    state.toggle();
+    stub.returns(1100);
+    state.toggle(); // caps lock
+    stub.returns(2000);
+    state.toggle(); // caps lock -> off, opens a window at t=2000
+    stub.returns(2100);
+    state.autoRelease(); // typed a letter with shift off
+    stub.returns(2200);
+    state.toggle(); // inside 400 ms of the last tap, but a key came between
+    assert.ok(state.isShifted, "one-shot shift");
+    assert.strictEqual(state.isCapsLock, false, "not caps lock: the typed key broke the double-tap");
+  } finally {
+    stub.restore();
+  }
+});
+
 QUnit.test("autoRelease is a no-op (no onChange) when already off", (assert) => {
   state.autoRelease();
   assert.ok(onChange.notCalled, "nothing to release");
@@ -196,6 +216,26 @@ QUnit.test("syncFromPhysical: resets double-click window so next toggle starts f
   state.toggle(); // should start fresh shift, not jump to caps lock
   assert.ok(state.isShifted, "shifted after toggle following sync");
   assert.strictEqual(state.isCapsLock, false, "not caps lock: double-click window was reset");
+});
+
+QUnit.test("syncFromPhysical: closes the double-tap window even when the mode does not change", (assert) => {
+  const stub = sinon.stub(performance, "now");
+  try {
+    stub.returns(1000);
+    state.toggle();
+    stub.returns(1100);
+    state.toggle(); // caps lock
+    stub.returns(2000);
+    state.toggle(); // caps lock -> off, opens a window at t=2000
+    stub.returns(2100);
+    state.syncFromPhysical(false, false); // physical keystroke, mode stays Off
+    stub.returns(2200);
+    state.toggle();
+    assert.ok(state.isShifted, "one-shot shift");
+    assert.strictEqual(state.isCapsLock, false, "not caps lock: the physical key broke the double-tap");
+  } finally {
+    stub.restore();
+  }
 });
 
 QUnit.test("peekToggle: predicts each arm of toggle()", (assert) => {
