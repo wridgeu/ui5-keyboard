@@ -148,7 +148,6 @@ export default class KeyStateTracker {
       return;
     }
 
-    this._heldKeyCounts.clear();
     this._heldByCode.clear();
   }
 

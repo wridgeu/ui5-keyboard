@@ -924,7 +924,7 @@ export default class HotkeyManager extends BaseObject {
       popupOpen = context.popupOpen;
       const skipInfo = context.skipInfo;
       reason = skipInfo?.reason ?? UnhandledReason.NoMatch;
-      skippedRegistration = skipInfo && skipInfo.reason !== UnhandledReason.NoMatch ? skipInfo.registration : undefined;
+      skippedRegistration = skipInfo?.registration;
     }
 
     const context: UnhandledContext = {

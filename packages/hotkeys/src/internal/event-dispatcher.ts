@@ -183,7 +183,6 @@ export default class EventDispatcher {
    * Whether dispatch is currently suspended (any guard active).
    */
   isDispatchSuspended(): boolean {
-    if (this._destroyed) return false;
     return this._guards.size > 0;
   }
 
@@ -204,7 +203,6 @@ export default class EventDispatcher {
    * Set the active interceptor. Replaces any existing interceptor.
    */
   setInterceptor(interceptor: KeyEventInterceptor): void {
-    if (this._destroyed) return;
     if (this._interceptor && this._interceptor !== interceptor) {
       Log.warning("Replacing active interceptor - previous interceptor will be detached", undefined, LOG_COMPONENT);
       this._interceptor.onDetached();
@@ -217,7 +215,6 @@ export default class EventDispatcher {
    * Prevents one recorder from accidentally clearing another's interceptor.
    */
   clearInterceptor(owner: KeyEventInterceptor): void {
-    if (this._destroyed) return;
     if (this._interceptor === owner) {
       this._interceptor = null;
     }
@@ -272,8 +269,6 @@ export default class EventDispatcher {
     this._trackedRecorders.clear();
 
     this._keyStateTracker.destroy();
-
-    this._lastAltLocation = 0;
   }
 
   // ──────────────────────────────────────────────

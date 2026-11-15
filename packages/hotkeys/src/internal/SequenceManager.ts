@@ -124,10 +124,6 @@ export default class SequenceManager {
     callback: HotkeyCallback,
     options?: SequenceOptions,
   ): SequenceRegistrationHandle {
-    if (sequence.length < 2) {
-      throw new Error("A sequence must have at least 2 steps");
-    }
-
     const id = `seq_${++idSeq}`;
     const parsedSteps = sequence.map((s, i) => {
       try {
@@ -184,8 +180,7 @@ export default class SequenceManager {
       unregister: () => {
         if (!registration.active) return;
         registration.active = false;
-        const reg = this._registrations.get(id);
-        if (reg) this._deindexRegistration(reg);
+        this._deindexRegistration(registration);
         this._registrations.delete(id);
         this._activeMatches = this._activeMatches.filter((m) => {
           if (m.registration.id === id) {
@@ -202,10 +197,8 @@ export default class SequenceManager {
         if ("scope" in newOptions) {
           throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
         }
-        const reg = this._registrations.get(id);
-        if (!reg) return;
-        if (newOptions.timeout !== undefined) reg.timeout = assertValidTimeout(newOptions.timeout);
-        applyUpdatableOptions(reg, newOptions);
+        if (newOptions.timeout !== undefined) registration.timeout = assertValidTimeout(newOptions.timeout);
+        applyUpdatableOptions(registration, newOptions);
       },
     };
   }
