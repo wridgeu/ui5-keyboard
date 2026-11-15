@@ -6,7 +6,7 @@
  * in the output. Run after `npm install` to confirm the patch is applied.
  *
  * Runs against the hoisted copy (patched by patch-package) and every nested
- * copy under an `@ui5/cli` install (synced by apply-nested.mjs), so a broken
+ * copy under `@ui5/builder` or `@ui5/cli` (synced by apply-nested.mjs), so a broken
  * nested sync fails this test instead of failing a theme build.
  *
  * Usage: node patches/less-openui5-test.mjs
@@ -53,7 +53,7 @@ const SCOPED_OCCURRENCES = 4;
 const UNSCOPED_SELECTOR = /^\s*\[data-flag\]::after\s*\{/m;
 
 /**
- * Finds every nested less-openui5 copy under an `@ui5/cli` install (the root
+ * Finds every nested less-openui5 copy under `@ui5/builder` or `@ui5/cli` (the root
  * node_modules or any workspace's), mirroring apply-nested.mjs's search so the
  * suite covers each copy apply-nested.mjs syncs.
  *
@@ -67,21 +67,18 @@ function findNestedLessEntries() {
       nodeModulesDirs.push(join(packagesDir, pkg, "node_modules"));
     }
   }
+  const nestedPaths = [
+    ["@ui5", "cli", "node_modules", "less-openui5"],
+    ["@ui5", "builder", "node_modules", "less-openui5"],
+    ["@ui5", "cli", "node_modules", "@ui5", "builder", "node_modules", "less-openui5"],
+  ];
   const entries = [];
   for (const nodeModules of nodeModulesDirs) {
-    const entry = join(
-      nodeModules,
-      "@ui5",
-      "cli",
-      "node_modules",
-      "less-openui5",
-      "lib",
-      "thirdparty",
-      "less",
-      "index.js",
-    );
-    if (existsSync(entry)) {
-      entries.push(entry);
+    for (const nested of nestedPaths) {
+      const entry = join(nodeModules, ...nested, "lib", "thirdparty", "less", "index.js");
+      if (existsSync(entry)) {
+        entries.push(entry);
+      }
     }
   }
   return entries;
@@ -157,5 +154,5 @@ if (nestedEntries.length > 0) {
     await runSuite(`nested ${relative(repoRoot, nestedEntry)}`, nodeRequire(nestedEntry));
   }
 } else {
-  console.log("No nested @ui5/cli less-openui5 copy found; skipped the nested check.");
+  console.log("No nested @ui5/builder or @ui5/cli less-openui5 copy found; skipped the nested check.");
 }

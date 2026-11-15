@@ -147,7 +147,7 @@ The approach follows the modern LESS 4.x parser (PRs #4337, #4340, #4349, #4351)
 
 **Note:**
 
-`patch-package` only patches the hoisted `node_modules/less-openui5/`. The UI5 builder resolves additional nested copies under each `@ui5/cli` install (currently one, at `node_modules/@ui5/cli/node_modules/less-openui5/`) that `patch-package` cannot reach. The `postinstall` script runs `patches/apply-nested.mjs` to sync the patched files into every nested copy it finds; it skips (with a warning) any nested copy whose vendored LESS fork version differs from the hoisted one. That gate reads the fork version from `lib/thirdparty/less/index.js` rather than the `less-openui5` package version, which moves independently of the parser the patch rewrites. `npm dedupe` does not eliminate the duplication.
+`patch-package` only patches the hoisted `node_modules/less-openui5/`. `@ui5/builder` resolves its own nested copy that `patch-package` cannot reach: under `@ui5/builder` or `@ui5/cli`, depending on hoisting (currently `node_modules/@ui5/builder/node_modules/less-openui5/`). The `postinstall` script runs `patches/apply-nested.mjs` to sync the patched files into every nested copy it finds; it skips (with a warning) any nested copy whose vendored LESS fork version differs from the hoisted one. That gate reads the fork version from `lib/thirdparty/less/index.js` rather than the `less-openui5` package version, which moves independently of the parser the patch rewrites. `npm dedupe` does not eliminate the duplication.
 
 **Why not patch-package's native nested patches (verdict, 2026-06-11):**
 

@@ -44,8 +44,8 @@ const sourceVersion = readVendoredLessVersion(source);
 // Exactly the files the less-openui5 patch modifies.
 const patchedFiles = ["lib/thirdparty/less/parser.js", "lib/thirdparty/less/tree/directive.js"];
 
-// Every node_modules tree in the workspace: the root plus each package. @ui5/cli
-// nests its less-openui5 under whichever of these it was installed into.
+// Every node_modules tree in the workspace: the root plus each package. @ui5/builder's
+// less-openui5 nests under @ui5/builder or under @ui5/cli, depending on where npm hoists them.
 const nodeModulesDirs = [join(root, "node_modules")];
 const packagesDir = join(root, "packages");
 if (existsSync(packagesDir)) {
@@ -54,9 +54,14 @@ if (existsSync(packagesDir)) {
   }
 }
 
+const nestedPaths = [
+  ["@ui5", "cli", "node_modules", "less-openui5"],
+  ["@ui5", "builder", "node_modules", "less-openui5"],
+  ["@ui5", "cli", "node_modules", "@ui5", "builder", "node_modules", "less-openui5"],
+];
+
 let synced = 0;
-for (const nodeModules of nodeModulesDirs) {
-  const target = join(nodeModules, "@ui5", "cli", "node_modules", "less-openui5");
+for (const target of nodeModulesDirs.flatMap((dir) => nestedPaths.map((p) => join(dir, ...p)))) {
   if (!existsSync(target)) {
     continue;
   }
