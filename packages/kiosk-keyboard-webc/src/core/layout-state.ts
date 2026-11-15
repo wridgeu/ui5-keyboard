@@ -199,7 +199,7 @@ export class LayoutState {
   }
 
   /**
-   * The layout to render under the constraint: the requested layout's registered
+   * The layout the inputs resolve to: the requested layout's registered
    * compact counterpart while the keyboard is narrow, the requested layout otherwise.
    * An unregistered counterpart resolves to the requested layout rather than to the
    * default one, since a consumer who names a missing one should keep the layout they
