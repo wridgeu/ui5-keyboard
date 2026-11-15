@@ -210,8 +210,6 @@ describe("icon + label rendering", () => {
   // Accessibility
 
   it("warns once per icon-only key with no accessible name, not on every re-render", async () => {
-    // Unique value so the module-level warn-once cache for this key starts
-    // empty regardless of other tests in this file.
     const noNameValue = "webc-warn-once-probe";
     const messages = await captureConsole("warn", async () => {
       const el = await createKeyboard([
@@ -227,6 +225,33 @@ describe("icon + label rendering", () => {
     });
     const probeWarnings = messages.filter((m) => m.includes(noNameValue));
     expect(probeWarnings.length).to.equal(1);
+  });
+
+  it("warns again for a new keyboard declaring the same icon-only key", async () => {
+    const messages = await captureConsole("warn", async () => {
+      const first = await createKeyboard([[{ value: "webc-restart-probe", icon: "sap-icon://home", label: "" }]]);
+      first.remove();
+      await createKeyboard([[{ value: "webc-restart-probe", icon: "sap-icon://home", label: "" }]]);
+    });
+    expect(messages.filter((m) => m.includes('Icon-only key "webc-restart-probe"')).length).to.equal(2);
+  });
+
+  it("warns once about an empty SAP icon URI, not on every re-render", async () => {
+    const messages = await captureConsole("warn", async () => {
+      const el = await createKeyboard([
+        [
+          { value: "{shift}", type: "modifier", width: "2.25" },
+          { value: "x", icon: "sap-icon://" },
+        ],
+      ]);
+      queryKey(el, "{shift}").click();
+      await nextRender();
+      queryKey(el, "{shift}").click();
+      await nextRender();
+    });
+    expect(
+      messages.filter((m) => m === '[kiosk-keyboard] empty SAP icon URI for key "x", skipping icon').length,
+    ).to.equal(1);
   });
 
   // CapsLock property overrides

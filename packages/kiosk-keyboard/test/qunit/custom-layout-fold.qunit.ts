@@ -37,7 +37,11 @@ type DeclaredSpec = Omit<CustomLayoutSpec, "middleware"> & {
   readonly middleware?: CustomLayoutSpec["middleware"] | string | number;
 };
 
-const fold = (...specs: DeclaredSpec[]): CustomLayoutFold => foldCustomLayouts(specs as CustomLayoutSpec[], isBuiltIn);
+/** Only `{backspace}` has a built-in accessible name. */
+const hasBuiltInName = (value: string): boolean => value === "{backspace}";
+
+const fold = (...specs: DeclaredSpec[]): CustomLayoutFold =>
+  foldCustomLayouts(specs as CustomLayoutSpec[], isBuiltIn, hasBuiltInName);
 const codes = (f: CustomLayoutFold): DiagnosticCode[] => f.diagnostics.map((d) => d.code);
 
 const VOCAB: DiagnosticVocabulary = {
@@ -49,7 +53,11 @@ const VOCAB: DiagnosticVocabulary = {
 QUnit.module("custom-layout-fold - shape");
 
 QUnit.test("no custom layouts folds to the shared empty result", (assert) => {
-  assert.strictEqual(foldCustomLayouts([], isBuiltIn), EMPTY_FOLD, "the same frozen object, so nothing is allocated");
+  assert.strictEqual(
+    foldCustomLayouts([], isBuiltIn, hasBuiltInName),
+    EMPTY_FOLD,
+    "the same frozen object, so nothing is allocated",
+  );
   assert.deepEqual(EMPTY_FOLD.diagnostics, [], "and it carries no diagnostics");
 });
 
@@ -235,6 +243,34 @@ QUnit.test("unknown-target: a built-in name needs no rows", (assert) => {
   assert.deepEqual(codes(fold({ name: "ja-kana", suppress: ["Middleware"] })), [], "the built-in resolves it");
 });
 
+QUnit.test("unnamed-key: an icon-only key with no accessible name, once per value", (assert) => {
+  const f = fold(
+    {
+      name: "x",
+      rows: [
+        [
+          { value: "{p}", label: "" },
+          { value: "{p}", label: "" },
+        ],
+      ],
+    },
+    { name: "y", rows: [[{ value: "{p}", label: "" }]] },
+  );
+  assert.deepEqual(f.diagnostics, [{ code: "unnamed-key", layout: "x", value: "{p}" }], "the first occurrence only");
+});
+
+QUnit.test("unnamed-key: an ariaLabel, a built-in name or a visible label names the key", (assert) => {
+  const rows: LayoutDefinition = [
+    [{ value: "{a}", label: "", ariaLabel: "A" }, { value: "{backspace}", label: "" }, { value: "{c}" }],
+  ];
+  assert.deepEqual(codes(fold({ name: "x", rows })), [], "nothing to report");
+});
+
+QUnit.test("unnamed-key: only the rows that win are checked", (assert) => {
+  const f = fold({ name: "x", rows: [[{ value: "{p}", label: "" }]] }, { name: "x", rows: ROWS });
+  assert.deepEqual(codes(f), ["duplicate-rows"], "the shadowed rows never render");
+});
+
 QUnit.module("custom-layout-fold - describeDiagnostic");
 
 QUnit.test("every code renders a sentence naming the twin's own surface", (assert) => {
@@ -279,6 +315,21 @@ QUnit.test("the host's own table is named rather than attributed to a layout", (
   const message = describeDiagnostic({ code: "invalid-variants", layout: "" }, VOCAB);
   assert.ok(message.startsWith('"defaultVariants"'), "an empty layout names the host property");
   assert.notOk(message.includes('for ""'), "rather than quoting an empty layout name");
+});
+
+QUnit.test("the key diagnostics keep their wording", (assert) => {
+  assert.strictEqual(
+    describeDiagnostic({ code: "unnamed-key", layout: "x", value: "{p}" }, VOCAB),
+    'Icon-only key "{p}" has no accessible name; set ariaLabel on the KeyDefinition.',
+  );
+  assert.strictEqual(
+    describeDiagnostic({ code: "empty-icon", layout: "x", value: "a" }, VOCAB),
+    'empty SAP icon URI for key "a", skipping icon',
+  );
+  assert.strictEqual(
+    describeDiagnostic({ code: "empty-icon", layout: "x", value: "{shift}", other: "capsLockIcon" }, VOCAB),
+    'empty SAP icon URI for capsLockIcon on key "{shift}", skipping icon',
+  );
 });
 
 QUnit.module("custom-layout-fold - validators");

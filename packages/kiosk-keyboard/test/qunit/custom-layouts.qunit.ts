@@ -7,7 +7,7 @@ import Log from "sap/base/Log";
 import type { LayoutDefinition, CompositionMiddleware } from "ui5/kiosk/types";
 import Localization from "sap/base/i18n/Localization";
 import LanguageTag from "sap/base/i18n/LanguageTag";
-import { placeAndWait, getRenderedLayoutKeys, getRequiredKeyElement, tapKey } from "./test-helpers";
+import { placeAndWait, getRenderedLayoutKeys, getRequiredKeyElement, tapKey, waitForRender } from "./test-helpers";
 
 const DOM = KioskKeyboard.DOM;
 
@@ -832,6 +832,12 @@ QUnit.test("A variant table without accentVariants warns once and applies nothin
   kb.invalidate();
   await placeAndWait(kb);
   assert.strictEqual(countDisarmedWarnings(), 1, "and is not repeated on re-render");
+
+  kb.setAccentVariants(true);
+  await waitForRender();
+  kb.setAccentVariants(false);
+  await waitForRender();
+  assert.strictEqual(countDisarmedWarnings(), 2, "disarming again is reported again");
 });
 
 QUnit.test("suppress=Variants opts a custom layout out of the built-in table", async (assert) => {
@@ -961,6 +967,30 @@ QUnit.test("An invalid defaultVariants table is reported against the host, not a
     true,
     "the invalid table is dropped and the built-in tier stands",
   );
+});
+
+QUnit.test("An unchanged invalid defaultVariants is not reported again after an unrelated edit", async (assert) => {
+  const warn = sandbox.stub(Log, "warning");
+  const extra = new CustomLayout({ name: "extra", rows: [[{ value: "a" }]] });
+  const { kb } = await mount({
+    accentVariants: true,
+    layout: "qwerty",
+    defaultVariants: { A: ["ä"] },
+    customLayouts: [extra],
+  });
+  const reported = (): number =>
+    warn.getCalls().filter((call) => String(call.args[0]).startsWith('"defaultVariants"')).length;
+  assert.strictEqual(reported(), 1, "the invalid table is reported on first render");
+
+  kb.invalidate();
+  await waitForRender();
+  extra.setRows([[{ value: "b" }]]);
+  await waitForRender();
+  assert.strictEqual(reported(), 1, "a clean rebuild of the fold does not re-report the unchanged table");
+
+  kb.setDefaultVariants({ B: ["ḃ"] });
+  await waitForRender();
+  assert.strictEqual(reported(), 2, "a new invalid table is reported");
 });
 
 QUnit.test("Editing a custom layout's variants re-resolves on the next render", async (assert) => {

@@ -60,7 +60,7 @@ import ResponsiveSizingController from "./internal/responsive-sizing-controller"
 import AutoCompactBehavior from "./internal/auto-compact-behavior";
 import FKeyController from "./internal/fkey-controller";
 import ControlsDelegationController from "./internal/controls-delegation-controller";
-import { getKeyLabel, getKeyAriaLabel, clearLabelWarnings } from "./internal/key-labels";
+import { getKeyLabel, getKeyAriaLabel } from "./internal/key-labels";
 import PhysicalKeyHighlight from "./internal/physical-key-highlight";
 import { parseKeyAction, assertNever, spendsOneShotShift, LAYOUT_BASE } from "./internal/key-token";
 import type { KeyAction } from "./internal/key-token";
@@ -188,8 +188,12 @@ export default class KioskKeyboard extends Control {
   private _foldCache!: LayoutFoldCache;
   /** The factory that produced `_middleware`, so a re-resolve onto the same factory is a no-op. */
   private _middlewareFactory!: (() => CompositionMiddleware) | null;
-  /** Caps the disarmed-variants diagnostic at one emission per control. */
-  private _warnedDisarmedVariants!: boolean;
+  /** The `defaultVariants` value last validated, compared by identity per the property's contract. */
+  private _checkedDefaultVariants!: unknown;
+  /** `_checkedDefaultVariants` when it is a valid table, else `null`. */
+  private _validDefaultVariants!: VariantTable | null;
+  /** Whether the last resolution declared a variant table with `accentVariants` off. */
+  private _disarmedVariants!: boolean;
   /** Caps the two-way tier write-back diagnostic at one emission per control. */
   private _warnedWriteBack!: boolean;
   /** Owns the ResizeObserver-driven height-responsive class application. */
@@ -967,7 +971,9 @@ export default class KioskKeyboard extends Control {
       reapplyAutoCompact: () => this._autoCompact.reapply(),
       warnTierWriteBack: () => this._warnTierWriteBack(),
     });
-    this._warnedDisarmedVariants = false;
+    this._checkedDefaultVariants = undefined;
+    this._validDefaultVariants = null;
+    this._disarmedVariants = false;
     this._warnedWriteBack = false;
     this._targetSession = new TargetInputSession(() => this._getTargetElement());
     this._middleware = null;
@@ -1062,7 +1068,6 @@ export default class KioskKeyboard extends Control {
       registrySetResolver(null);
       FKeyController.clearWarnings();
       iconsClearWarnings();
-      clearLabelWarnings();
       KioskKeyboard._globalTargetResolver = null;
       KioskKeyboard._announcements.teardown();
     }
@@ -1218,14 +1223,18 @@ export default class KioskKeyboard extends Control {
 
   /**
    * The table applied under every layout, validated here rather than in the fold
-   * because it never enters the aggregation.
+   * because it never enters the aggregation. Validated and reported once per value,
+   * which the property reads by identity.
    */
   private _resolvedDefaultVariants(): VariantTable | null {
     const table = this.getDefaultVariants();
-    if (table === null) return null;
-    if (isValidVariantTable(table)) return table;
-    this._foldCache.report([{ code: "invalid-variants", layout: "" }]);
-    return null;
+    if (table !== this._checkedDefaultVariants) {
+      this._checkedDefaultVariants = table;
+      const valid = table === null || isValidVariantTable(table);
+      if (!valid) this._foldCache.report([{ code: "invalid-variants", layout: "" }]);
+      this._validDefaultVariants = valid ? table : null;
+    }
+    return this._validDefaultVariants;
   }
 
   /**
@@ -1935,21 +1944,21 @@ export default class KioskKeyboard extends Control {
     // a layout the table resolution excludes keeps its keys unchanged. Author-declared
     // `variants` always win (applyVariantDefaults guarantees this).
     const defaults = this._resolvedDefaultVariants();
-    if (!this.getAccentVariants()) {
-      this._warnDisarmedVariants(fold.variants !== undefined || defaults !== null);
-      return base;
-    }
+    const armed = this.getAccentVariants();
+    this._noteDisarmedVariants(!armed && (fold.variants !== undefined || defaults !== null));
+    if (!armed) return base;
     const table = resolveVariantTable(layoutName, fold.variants, defaults);
     return table ? applyVariantDefaults(base, table) : base;
   }
 
   /**
-   * Warns once when a variant table is declared while `accentVariants` is off, the
-   * combination in which the tables resolve but nothing applies them.
+   * Warns on entering the state in which a variant table is declared while
+   * `accentVariants` is off: the tables resolve but nothing applies them.
    */
-  private _warnDisarmedVariants(hasTables: boolean): void {
-    if (this._warnedDisarmedVariants || !hasTables) return;
-    this._warnedDisarmedVariants = true;
+  private _noteDisarmedVariants(disarmed: boolean): void {
+    const was = this._disarmedVariants;
+    this._disarmedVariants = disarmed;
+    if (!disarmed || was) return;
     Log.warning(
       "A variant table is declared but accentVariants is false, so no variant table is applied. Set accentVariants to arm the long-press popups.",
       undefined,

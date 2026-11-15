@@ -1,4 +1,3 @@
-import Log from "sap/base/Log";
 import { getText } from "./i18n-registry";
 import { SPECIAL_KEY_I18N_KEYS } from "./key-action-meta";
 import { shiftedGlyph } from "./latin-variants";
@@ -53,9 +52,8 @@ export function getKeyLabel(key: KeyDefinition, shift: boolean, caps: boolean): 
  *
  * Resolution order: per-key `ariaLabel` -> visible label (`getKeyLabel`) ->
  * built-in i18n entry. For an icon-only key (`label: ""`) with none of these,
- * a dev-time warning is logged and the raw `value` is used as a last resort,
- * so a custom icon-only token never silently announces itself with no
- * accessible name.
+ * the raw `value` is used as a last resort, so a custom icon-only token never
+ * announces nothing. The fold reports such a key when its custom layout is folded.
  *
  * One case does not reach here: an icon-only `{shift}` key while Caps Lock is
  * active announces "Caps Lock" from the renderer, ahead of any `ariaLabel` or
@@ -72,30 +70,10 @@ export function getKeyAriaLabel(key: KeyDefinition, shift: boolean, caps: boolea
   const entry = SPECIAL_KEY_I18N[key.value];
   if (entry) return getText(entry[0], entry[1]);
 
-  // Icon-only key (label suppressed) with no ariaLabel and no i18n entry:
-  // warn so the consumer adds a localizable accessible name, and fall back
-  // to the raw value rather than announcing nothing. Warn once per key value
-  // (the renderer would otherwise repeat the warning on every re-render).
-  if (key.label === "" && !warnedMissingLabels.has(key.value)) {
-    warnedMissingLabels.add(key.value);
-    Log.warning(
-      `Icon-only key "${key.value}" has no accessible name; set ariaLabel on the KeyDefinition.`,
-      undefined,
-      "ui5.kiosk.KioskKeyboard",
-    );
-  }
-
   return key.value;
 }
 
-/** Key values already warned about, so re-renders do not repeat the warning. */
-const warnedMissingLabels = new Set<string>();
-
-/**
- * Clears the warned-once cache. Called when the last KioskKeyboard instance
- * is destroyed so module-level state does not survive across app restarts
- * (mirrors `clearIconWarnings`).
- */
-export function clearLabelWarnings(): void {
-  warnedMissingLabels.clear();
+/** Whether a key value has a built-in accessible name, so an icon-only key with it needs none. */
+export function hasBuiltInName(value: string): boolean {
+  return SPECIAL_KEY_I18N[value] !== undefined;
 }

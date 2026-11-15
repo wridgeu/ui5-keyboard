@@ -7,6 +7,7 @@ import {
   type DiagnosticVocabulary,
   type LayoutDiagnostic,
 } from "./custom-layout-fold";
+import { hasBuiltInName } from "./key-labels";
 import { getRegisteredLayoutNames, isBuiltInLayout } from "./layout-registry";
 
 /** How this twin spells the surface names a fold diagnostic has to quote. */
@@ -60,6 +61,7 @@ export default class LayoutFoldCache {
     this._fold = foldCustomLayouts(
       children.map((child) => child.toSpec()),
       isBuiltInLayout,
+      hasBuiltInName,
     );
     this.report(this._fold.diagnostics);
     this._host.onRebuilt();
