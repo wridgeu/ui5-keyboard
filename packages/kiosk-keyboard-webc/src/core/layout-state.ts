@@ -99,6 +99,8 @@ export class LayoutState {
   /** The intent and the effective layout `layout-change` last reported, or was seeded with. */
   private _reportedLayout = "";
   private _reportedEffective = "";
+  /** The effective layout the switch effects last ran for: the one on screen. */
+  private _rendered = "";
   /** The reason of a report held until {@link settle}, while the fold may still be filling. */
   private _held: Reason | null = null;
   /** Caps the unregistered-layout warning at one per distinct name. */
@@ -126,6 +128,7 @@ export class LayoutState {
     this._host.setCurrentLayout(this._requested);
     this._reportedLayout = this._intentName();
     this._reportedEffective = this._resolve().resolved;
+    this._rendered = this._reportedEffective;
   }
 
   /**
@@ -233,10 +236,11 @@ export class LayoutState {
   }
 
   /** {@link resolvedName} without the unregistered-layout warning, and the name it resolved. */
-  private _resolve(): { requested: string; resolved: string } {
-    const current = this._host.getCurrentLayout() || this._fallbackBase();
-    const requested =
-      this._source === "user" ? current : (constrainedLayoutName(this._host.getKeyboardType()) ?? current);
+  private _resolve(
+    current = this._host.getCurrentLayout() || this._fallbackBase(),
+    source = this._source,
+  ): { requested: string; resolved: string } {
+    const requested = source === "user" ? current : (constrainedLayoutName(this._host.getKeyboardType()) ?? current);
     return { requested, resolved: resolveLayoutName(requested, this._host.getFold().layouts) };
   }
 
@@ -292,12 +296,14 @@ export class LayoutState {
   }
 
   /**
-   * Derives the layout to render and, when it differs from the one on screen, switches
-   * to it: cancels any held key press, ends any in-progress composition, resets the
-   * typing context and re-seats focus on the key it followed. The `source` only
-   * changes on a real switch so a no-op can't silently flip the constraint-override.
-   * Under a `keyboardType` constraint only a request moves the layout; the rest waits
-   * for the constraint to lift. Returns whether the layout changed.
+   * Derives the layout to render and, when the effective layout differs from the one
+   * on screen - whatever moved it: a request, the width tier, a constraint, or a
+   * layout slotted or removed - switches to it: cancels any held key press, ends any
+   * in-progress composition, resets the typing context and re-seats focus on the key
+   * it followed. The `source` only changes with the tiered layout so a no-op can't
+   * silently flip the constraint-override. Under a `keyboardType` constraint only a
+   * request moves the tiered layout; the rest waits for the constraint to lift.
+   * Returns whether the effective layout changed.
    *
    * A width the user crossed is announced, by direction rather than by the layout's
    * name - an identifier the user never chose, which would enter a translated sentence
@@ -306,13 +312,20 @@ export class LayoutState {
    */
   private _commit(cause: CommitCause, source = this._source, crossed = false): boolean {
     const constrained = constrainedLayoutName(this._host.getKeyboardType()) !== null;
-    if (constrained && (cause === "tier" || cause === "refresh")) return false;
-    const target = this._target(constrained);
-    if (target === this._host.getCurrentLayout()) return false;
+    const current = this._host.getCurrentLayout();
+    const target = constrained && (cause === "tier" || cause === "refresh") ? current : this._target(constrained);
+    const nextSource = target === current ? this._source : source;
+    const effective = this._resolve(target || this._fallbackBase(), nextSource).resolved;
+    if (effective === this._rendered) {
+      if (target !== current) this._host.setCurrentLayout(target);
+      this._source = nextSource;
+      return false;
+    }
 
     const anchor = this._host.focusAnchor();
     this._host.setCurrentLayout(target);
-    this._source = source;
+    this._source = nextSource;
+    this._rendered = effective;
     this._host.cancelPress();
     this._host.endComposition();
     this._host.resetShiftState();

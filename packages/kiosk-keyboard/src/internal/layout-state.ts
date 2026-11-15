@@ -76,6 +76,8 @@ export default class LayoutState {
   private _requested = "";
   /** The requested layout after the width tier: what renders unless a constraint pins it. */
   private _current = "";
+  /** The effective layout the switch effects last ran for: the one on screen. */
+  private _rendered = "";
   private _source: LayoutSource = "external";
   /** Whether the `autoCompact` width tier last reported the keyboard too narrow. */
   private _narrow = false;
@@ -94,6 +96,7 @@ export default class LayoutState {
     this._base = name;
     this._requested = name;
     this._current = name;
+    this._rendered = this.resolvedName();
     this._reportedLayout = name;
     this._reportedEffective = name;
   }
@@ -203,9 +206,12 @@ export default class LayoutState {
    * reports the default layout it actually falls back to.
    */
   resolvedName(): string {
-    const current = this._current;
-    const requested =
-      this._source === "user" ? current : (constrainedLayoutName(this._host.getKeyboardType()) ?? current);
+    return this._resolve(this._current, this._source);
+  }
+
+  /** {@link resolvedName} for a given tiered layout and source. */
+  private _resolve(current: string, source: LayoutSource): string {
+    const requested = source === "user" ? current : (constrainedLayoutName(this._host.getKeyboardType()) ?? current);
     return registryResolveLayoutName(requested, this._host.getFold().layouts);
   }
 
@@ -226,13 +232,14 @@ export default class LayoutState {
   }
 
   /**
-   * Derives the layout to render and, when it differs from the current one, switches
-   * to it: cancels any held key press, ends any in-progress composition, resets the
-   * typing context, re-renders and re-seats focus on the key it followed. The `source`
-   * only changes on a real switch so a no-op can't silently flip the
-   * constraint-override. Under a `keyboardType` constraint only a request moves the
-   * layout; the rest waits for the constraint to lift. Returns whether the layout
-   * changed.
+   * Derives the layout to render and, when the effective layout differs from the one
+   * on screen - whatever moved it: a request, the width tier, a constraint, or a
+   * layout declared or removed - switches to it: cancels any held key press, ends any
+   * in-progress composition, resets the typing context, re-renders and re-seats focus
+   * on the key it followed. The `source` only changes with the tiered layout so a
+   * no-op can't silently flip the constraint-override. Under a `keyboardType`
+   * constraint only a request moves the tiered layout; the rest waits for the
+   * constraint to lift. Returns whether the effective layout changed.
    *
    * A width the user crossed is announced, by direction rather than by the layout's
    * name - an identifier the user never chose, which would enter a translated sentence
@@ -241,16 +248,22 @@ export default class LayoutState {
    */
   private _commit(cause: CommitCause, source = this._source, crossed = false): boolean {
     const constrained = constrainedLayoutName(this._host.getKeyboardType()) !== null;
-    if (constrained && cause !== "request") return false;
-    const target = this._target(constrained);
-    if (target === this._current) return false;
+    const target = constrained && cause !== "request" ? this._current : this._target(constrained);
+    const nextSource = target === this._current ? this._source : source;
+    const effective = this._resolve(target, nextSource);
+    if (effective === this._rendered) {
+      this._current = target;
+      this._source = nextSource;
+      return false;
+    }
 
     const anchorValue = this._host.focusAnchorValue();
-    this._source = source;
     this._host.cancelPress();
     this._host.endComposition();
     this._host.resetShiftState();
     this._current = target;
+    this._source = nextSource;
+    this._rendered = effective;
     this._host.invalidate();
     this._host.reseatFocusAnchor(anchorValue);
 
