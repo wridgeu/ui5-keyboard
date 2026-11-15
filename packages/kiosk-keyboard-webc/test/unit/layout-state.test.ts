@@ -45,7 +45,7 @@ describe("LayoutState.clearUserOverride", () => {
 
     box.keyboardType = "Full";
     expect(state.resolvedName(), "the lifted constraint lands on the base").to.equal("qwertz-de");
-    expect(box.changes).to.deep.equal(["numeric", "qwertz-de"]);
+    expect(box.changes).to.deep.equal(["numeric", "numpad"]);
   });
 
   it("a user pick of a primary layout still returns to the base under the constraint", () => {
@@ -56,7 +56,7 @@ describe("LayoutState.clearUserOverride", () => {
     box.keyboardType = "Numpad";
     state.clearUserOverride();
     expect(state.resolvedName(), "the constraint pins the surface").to.equal("numpad");
-    expect(box.changes).to.deep.equal(["qwertz-de"]);
+    expect(box.changes).to.deep.equal(["qwertz-de", "numpad"]);
   });
 
   it("clearUserOverride leaves a programmatic layout alone", () => {
@@ -204,7 +204,7 @@ describe("LayoutState golden sequence", () => {
       ["request B while narrow", "away-c", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], []],
       // The key pick was a user override, which a keyboardType change drops to the
       // base; the constraint wins, and lifting it re-tiers the base.
-      ["Numpad", "numpad", [{ layout: "away", requestedLayout: "away", autoDetected: false }], []],
+      ["Numpad", "numpad", [{ layout: "numpad", requestedLayout: "away", autoDetected: true }], []],
       ["Full", "away-c", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], []],
       ["widen", "away", [{ layout: "away", requestedLayout: "away", autoDetected: true }], [UNCOMPACTED]],
       ["{layout:pick}", "pick", [{ layout: "pick", requestedLayout: "pick", autoDetected: false }], []],
@@ -234,7 +234,7 @@ describe("LayoutState golden sequence", () => {
     step("lift");
 
     expect(trace).to.deep.equal([
-      ["Numpad while narrow", "numpad", "home-c", []],
+      ["Numpad while narrow", "numpad", "home-c", [{ layout: "numpad", requestedLayout: "home", autoDetected: true }]],
       ["widen under the constraint", "numpad", "home-c", []],
       ["lift", "home", "home", [{ layout: "home", requestedLayout: "home", autoDetected: true }]],
     ]);
@@ -340,7 +340,26 @@ describe("LayoutState fires layout-change whenever the rendered layout changes",
   it("an unregistered request that leaves the same layout on screen fires nothing", () => {
     const { box, state } = createRenderHost("qwerty", []);
     state.applyAttribute("late1");
+    state.settle();
     expect(state.resolvedName(), "precondition: the fallback still renders").to.equal("qwerty");
+    expect(box.changes).to.deep.equal([]);
+  });
+
+  it("an unregistered request that swaps the layout on screen for the fallback fires on settle", () => {
+    const { box, state } = createRenderHost("qwertz-de", []);
+    state.applyAttribute("late1");
+    expect(box.changes, "the fold may still be filling at request time").to.deep.equal([]);
+    state.settle();
+    expect(box.changes).to.deep.equal([{ layout: "qwerty", requestedLayout: "late1", autoDetected: true }]);
+  });
+
+  it("a request slotted before the render pass renders as asked and stays silent", () => {
+    const { box, state } = createRenderHost("qwertz-de", []);
+    state.applyAttribute("late1");
+    box.fold = foldCustomLayouts([{ name: "late1", rows }], isBuiltInLayout, () => false);
+    state.settle();
+    state.refresh();
+    expect(state.resolvedName(), "precondition: the slotted layout renders").to.equal("late1");
     expect(box.changes).to.deep.equal([]);
   });
 });

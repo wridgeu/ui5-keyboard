@@ -741,7 +741,7 @@ describe("kiosk-keyboard", () => {
       await nextRender();
       expect(el.effectiveLayout, "the lifted constraint lands on the base").to.equal("qwerty");
       expect(queryKey(el, "q"), "the base surface renders").to.not.be.null;
-      expect(changes).to.deep.equal(["numeric", "qwerty"]);
+      expect(changes).to.deep.equal(["numeric", "numpad", "qwerty"]);
     });
 
     // The latch is consumed to *produce* the payload - `key-press` already

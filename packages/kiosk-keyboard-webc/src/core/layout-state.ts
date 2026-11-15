@@ -66,7 +66,8 @@ interface LayoutStateHost {
  * is populated asynchronously by `_processChildren`, so a custom layout appended in
  * the same task is not in the fold yet and an early check would reject a name that is
  * about to be perfectly valid. {@link resolvedName} reports the fallback from the
- * render pass instead, where the fold is authoritative.
+ * render pass instead, where the fold is authoritative, and {@link settle} decides
+ * there whether such a request changed the layout on screen.
  */
 export class LayoutState {
   private readonly _host: LayoutStateHost;
@@ -77,6 +78,10 @@ export class LayoutState {
   private _source: LayoutSource = "external";
   /** Whether the `autoCompact` width tier last reported the keyboard too narrow. */
   private _narrow = false;
+  /** The layout {@link resolvedName} gave when `layout-change` last looked: the one on screen. */
+  private _rendered = "";
+  /** Whether an attribute request named a layout the fold did not hold, so {@link settle} decides. */
+  private _unsettled = false;
   /** Caps the unregistered-layout warning at one per distinct name. */
   private readonly _warnedUnregistered = new Set<string>();
 
@@ -98,6 +103,7 @@ export class LayoutState {
     this._requested = attribute || this._host.getLocaleLayout();
     this._base = attribute && !secondary ? attribute : this._host.getLocaleLayout();
     this._host.setCurrentLayout(this._requested);
+    this._rendered = this._resolve().resolved;
   }
 
   /**
@@ -159,6 +165,17 @@ export class LayoutState {
   }
 
   /**
+   * Called from the render pass, where the slot has settled: fires the `layout-change`
+   * an attribute request naming a not-yet-slotted layout held back, if the layout on
+   * screen changed by then.
+   */
+  settle(): void {
+    if (!this._unsettled) return;
+    this._unsettled = false;
+    this._fireIfRendered("attribute");
+  }
+
+  /**
    * The effective layout name for the current state: an explicit user switch (via a
    * `{layout:...}` key) takes precedence, then the keyboardType constraint
    * (Numpad/Numeric force their layout), then the current layout or, before the first
@@ -168,10 +185,7 @@ export class LayoutState {
    * this name, so none of them can key off a layout other than the one rendered.
    */
   resolvedName(): string {
-    const current = this._host.getCurrentLayout() || this._fallbackBase();
-    const requested =
-      this._source === "user" ? current : (constrainedLayoutName(this._host.getKeyboardType()) ?? current);
-    const resolved = resolveLayoutName(requested, this._host.getFold().layouts);
+    const { requested, resolved } = this._resolve();
     if (resolved !== requested && requested && !this._warnedUnregistered.has(requested)) {
       this._warnedUnregistered.add(requested);
       console.warn(
@@ -179,6 +193,14 @@ export class LayoutState {
       );
     }
     return resolved;
+  }
+
+  /** {@link resolvedName} without the unregistered-layout warning, and the name it resolved. */
+  private _resolve(): { requested: string; resolved: string } {
+    const current = this._host.getCurrentLayout() || this._fallbackBase();
+    const requested =
+      this._source === "user" ? current : (constrainedLayoutName(this._host.getKeyboardType()) ?? current);
+    return { requested, resolved: resolveLayoutName(requested, this._host.getFold().layouts) };
   }
 
   /** The layout a `{layout:base}` key and the session reset fall back through. */
@@ -215,35 +237,40 @@ export class LayoutState {
   }
 
   /**
-   * Derives the layout to render and, when it differs from the one on screen, switches
-   * to it: ends any in-progress composition, resets the typing context, re-seats focus
-   * on the key it followed and fires `layout-change`. The `source` only changes on a
-   * real switch so a no-op can't silently flip the constraint-override. Under a
-   * `keyboardType` constraint only a request moves the layout; the rest waits for the
-   * constraint to lift. Returns whether the layout changed.
+   * Derives the layout to render and, when it or the layout it resolves to differs from
+   * the one on screen, switches to it: ends any in-progress composition, resets the
+   * typing context and re-seats focus on the key it followed. `layout-change` fires
+   * exactly when {@link resolvedName} changes, naming it - a constraint taking effect
+   * or lifting and a requested layout slotted or removed included. The `source` only
+   * changes on a real switch so a no-op can't silently flip the constraint-override.
+   * Under a `keyboardType` constraint only a request moves the layout; the rest waits
+   * for the constraint to lift. Returns whether the layout changed.
    *
    * `autoDetected` is whether the change was not exactly a request: a width verdict or
-   * a changed input, or a request the tier rendered as its compact counterpart. The
-   * attribute path fires only in that second case - a consumer who set the attribute
-   * knows what they asked for. A width the user crossed is announced, by direction
-   * rather than by the layout's name - an identifier the user never chose, which would
-   * enter a translated sentence untranslated. Two texts, not one: a live region speaks
-   * on change, and consecutive announcements always alternate direction.
+   * a changed input, or a request that renders as some other layout - the tier's
+   * compact counterpart, a constraint or the registry fallback. The attribute path
+   * fires only in that second case - a consumer who set the attribute knows what they
+   * asked for. A width the user crossed is announced, by direction rather than by the
+   * layout's name - an identifier the user never chose, which would enter a translated
+   * sentence untranslated. Two texts, not one: a live region speaks on change, and
+   * consecutive announcements always alternate direction.
    */
   private _commit(cause: CommitCause, source = this._source, crossed = false): boolean {
     const constrained = constrainedLayoutName(this._host.getKeyboardType()) !== null;
-    if (constrained && (cause === "tier" || cause === "refresh")) return false;
-    const target = this._target(constrained);
-    if (target === this._host.getCurrentLayout()) return false;
-
+    const held = constrained && (cause === "tier" || cause === "refresh");
+    const target = held ? this._host.getCurrentLayout() : this._target(constrained);
+    const moved = target !== this._host.getCurrentLayout();
     const anchor = this._host.focusAnchor();
-    this._host.setCurrentLayout(target);
-    this._source = source;
+    if (moved) {
+      this._host.setCurrentLayout(target);
+      this._source = source;
+    }
+    if (!moved && this._resolve().resolved === this._rendered) return false;
+
     this._host.endComposition();
     this._host.resetShiftState();
     this._host.reseatFocusAnchor(anchor);
 
-    const autoDetected = (cause !== "request" && cause !== "attribute") || target !== this._requested;
     if (crossed) {
       this._host.announce(
         this._narrow
@@ -251,9 +278,20 @@ export class LayoutState {
           : getText("ARIA_LAYOUT_UNCOMPACTED", "Switched back to the standard keyboard layout"),
       );
     }
-    if (cause !== "attribute" || autoDetected) {
-      this._host.fireLayoutChange({ layout: target, requestedLayout: this._requested, autoDetected });
-    }
+    // The fold may not hold an attribute's layout yet: settle() decides once it does.
+    this._unsettled = cause === "attribute" && !getRegisteredLayout(target, this._host.getFold().layouts);
+    if (!this._unsettled) this._fireIfRendered(cause);
     return true;
+  }
+
+  /** Fires `layout-change` when the layout on screen is no longer the one last reported. */
+  private _fireIfRendered(cause: CommitCause): void {
+    const rendered = this._resolve().resolved;
+    if (rendered === this._rendered) return;
+    this._rendered = rendered;
+    const autoDetected = (cause !== "request" && cause !== "attribute") || rendered !== this._requested;
+    if (cause !== "attribute" || autoDetected) {
+      this._host.fireLayoutChange({ layout: rendered, requestedLayout: this._requested, autoDetected });
+    }
   }
 }

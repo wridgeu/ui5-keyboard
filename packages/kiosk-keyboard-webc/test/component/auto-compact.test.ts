@@ -350,7 +350,7 @@ describe("kiosk-keyboard - autoCompact", () => {
         ["request B while narrow", "away-c", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], ""],
         // The key pick was a user override, which a keyboardType change drops to the
         // base; the constraint wins, and lifting it re-tiers the base.
-        ["Numpad", "numpad", [{ layout: "away", requestedLayout: "away", autoDetected: false }], ""],
+        ["Numpad", "numpad", [{ layout: "numpad", requestedLayout: "away", autoDetected: true }], ""],
         ["Full", "away-c", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], ""],
         [
           "widen",

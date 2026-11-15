@@ -203,15 +203,18 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
  */
 @event("after-close", { bubbles: true })
 /**
- * Fired when the active layout changes (user switch or locale resolution).
+ * Fired once per change of the rendered layout (`effectiveLayout`), except one the
+ * `layout` attribute asked for exactly.
  *
  * @param {string} layout - The name of the layout that now renders.
  * @param {string} requestedLayout - The name of the layout last requested, which
- *   `layout` differs from while the `autoCompact` width tier renders its compact
- *   counterpart. Persist this one to restore a user's choice. Since 0.2.0.
+ *   `layout` differs from while the `autoCompact` width tier, a `keyboard-type`
+ *   constraint or the registry fallback renders another layout. Persist this one to
+ *   restore a user's choice. Since 0.2.0.
  * @param {boolean} autoDetected - Whether this change was not exactly a request: the
- *   `autoCompact` width tier resolving, a lifted `keyboard-type` constraint or a newly
- *   slotted layout, or a request the width tier rendered as its compact counterpart.
+ *   `autoCompact` width tier resolving, a `keyboard-type` constraint taking effect or
+ *   lifting, the requested layout being slotted or removed, or a request rendered as
+ *   another layout.
  * @public
  * @since 0.1.0
  */
@@ -425,8 +428,8 @@ class KioskKeyboard extends UI5Element {
    * applied. Read-only, and not reflected to an attribute: it is a resolved value,
    * not a declaration, so it follows `UI5Element.effectiveDir` rather than `layout`.
    *
-   * Changes to it are announced by `layout-change`; this getter is for reading the
-   * state at any other moment.
+   * Every change to it fires one `layout-change`, except one the `layout` attribute
+   * asked for exactly; this getter is for reading the state at any other moment.
    *
    * @public
    * @since 0.1.0
@@ -1086,6 +1089,10 @@ class KioskKeyboard extends UI5Element {
 
     this._keyGridNav.setLastFocusedKey(null);
     this._restoreKeyFocus = false;
+  }
+
+  override onBeforeRendering(): void {
+    this._layoutState.settle();
   }
 
   override onAfterRendering(): void {

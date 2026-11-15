@@ -383,16 +383,16 @@ export interface LayoutChangeEventDetail {
   /**
    * The name of the layout last requested - by the `layout` attribute, a
    * `{layout:*}` key or the session reset - which `layout` differs from while the
-   * `autoCompact` width tier renders its compact counterpart. Persist this one to
-   * restore a user's choice.
+   * `autoCompact` width tier, a `keyboardType` constraint or the registry fallback
+   * renders another layout. Persist this one to restore a user's choice.
    *
    * @since 0.2.0
    */
   requestedLayout: string;
   /**
    * Whether this change was not exactly a request: the `autoCompact` width tier
-   * resolving, a lifted `keyboardType` constraint or a newly declared layout, or a
-   * request the width tier rendered as its compact counterpart.
+   * resolving, a `keyboardType` constraint taking effect or lifting, the requested
+   * layout being slotted or removed, or a request rendered as another layout.
    */
   autoDetected: boolean;
 }

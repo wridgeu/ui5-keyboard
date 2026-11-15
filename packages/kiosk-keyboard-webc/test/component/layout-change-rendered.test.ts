@@ -73,4 +73,31 @@ describe("kiosk-keyboard - layout-change follows the rendered layout", () => {
     expect(el.effectiveLayout).to.equal("qwertz-de");
     expect(changes.slice(1)).to.deep.equal([{ layout: "qwertz-de", requestedLayout: "qwertz-de", autoDetected: true }]);
   });
+
+  it("fires once, naming the fallback, when `layout` names a layout that never arrives", async () => {
+    await withCapturedWarnings(async () => {
+      const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwertz-de"></kiosk-keyboard> `);
+      await settle();
+      const changes = record(el);
+
+      el.layout = "no-such-layout";
+      await settle();
+
+      expect(el.effectiveLayout).to.equal("qwerty");
+      expect(changes).to.deep.equal([{ layout: "qwerty", requestedLayout: "no-such-layout", autoDetected: true }]);
+    });
+  });
+
+  it("stays silent for a layout appended and selected in the same task", async () => {
+    const el = await fixture<KioskKeyboard>(html` <kiosk-keyboard layout="qwertz-de"></kiosk-keyboard> `);
+    await settle();
+    const changes = record(el);
+
+    el.appendChild(customLayout({ name: "late1", rows }));
+    el.layout = "late1";
+    await settle();
+
+    expect(el.effectiveLayout, "precondition: the appended layout renders").to.equal("late1");
+    expect(changes, "the attribute rendered exactly as asked").to.deep.equal([]);
+  });
 });
