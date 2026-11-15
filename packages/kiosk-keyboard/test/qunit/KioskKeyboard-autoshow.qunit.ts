@@ -20,7 +20,9 @@ const dispatchNullRelatedFocusOut = (element: HTMLElement): void => {
   element.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: null }));
 };
 
-QUnit.test("autoShow with docked=false does not open keyboard on input focus", async (assert) => {
+// show() is a no-op while undocked, so isOpen() cannot tell; the observable
+// effect of auto-show reacting to the focus would be claiming the input.
+QUnit.test("autoShow with docked=false does not claim the focused input", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");
   const kb = new KioskKeyboard({ autoShow: true, docked: false });
@@ -29,7 +31,7 @@ QUnit.test("autoShow with docked=false does not open keyboard on input focus", a
   (input.getFocusDomRef() as HTMLElement).focus();
   await waitForRender();
 
-  assert.notOk(kb.isOpen(), "Keyboard does not open when docked is false");
+  assert.strictEqual(kb.getActiveControl(), null, "Focus does not make the input the target when docked is false");
 
   input.destroy();
   kb.destroy();

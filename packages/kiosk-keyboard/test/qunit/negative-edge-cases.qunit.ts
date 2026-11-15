@@ -1,6 +1,13 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
-import { placeAndWait, waitForRender, tapKey, isShiftActive, isCapsLock } from "./test-helpers";
+import {
+  placeAndWait,
+  waitForRender,
+  tapKey,
+  isShiftActive,
+  isCapsLock,
+  freezeDoubleClickWindow,
+} from "./test-helpers";
 
 // ──────────────────────────────────────────────
 // Layout switch while shift is active
@@ -33,12 +40,11 @@ QUnit.test("Caps lock resets on layout switch", async (assert) => {
   await waitForRender();
   assert.ok(isCapsLock(kb), "Caps lock is active");
 
-  // Switching layout clears caps lock immediately.
+  // The numeric layout has no shift key to show caps lock on, so the clear is
+  // observed after returning to the base layout.
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
-  assert.notOk(isCapsLock(kb), "Caps lock cleared by the layout switch");
 
-  // Still cleared after returning to the base layout.
   tapKey(kb, "{layout:base}");
   await waitForRender();
   assert.notOk(isCapsLock(kb), "Caps lock stays cleared after the round-trip");
@@ -47,7 +53,7 @@ QUnit.test("Caps lock resets on layout switch", async (assert) => {
   kb.destroy();
 });
 
-QUnit.test("Target switch resets shift regardless of current layout", async (assert) => {
+async function makeTwoTargetKeyboard(): Promise<{ kb: KioskKeyboard; input1: Input; input2: Input }> {
   const input1 = new Input({ value: "" });
   const input2 = new Input({ value: "" });
   input1.placeAt("qunit-fixture");
@@ -55,25 +61,60 @@ QUnit.test("Target switch resets shift regardless of current layout", async (ass
 
   const kb = new KioskKeyboard({ controls: [input1.getId(), input2.getId()] });
   await placeAndWait(kb);
+  input1.focus();
+  return { kb, input1, input2 };
+}
 
-  // Activate shift on base layout
-  tapKey(kb, "{shift}");
-  await waitForRender();
-  assert.ok(isShiftActive(kb), "Shift active on base layout");
+QUnit.test("Target switch on a picked layout returns to the base layout", async (assert) => {
+  const { kb, input1, input2 } = await makeTwoTargetKeyboard();
 
-  // Switch to numeric layout (shift persists internally but is not
-  // observable: numeric layout has no shift key)
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
+  assert.strictEqual(kb.getLayout(), "numeric", "Precondition: the user picked the numeric layout");
 
-  // Switch target while on numeric layout: the user pick is dropped for the
-  // base layout, and shift must not be active on it
   input2.focus();
   await waitForRender();
-
   assert.strictEqual(kb.getLayout(), "qwerty", "Target switch returned the dropped pick to the base layout");
+
+  input1.destroy();
+  input2.destroy();
+  kb.destroy();
+});
+
+// Shift/caps are armed on the base layout: a switch away from a picked layout
+// resets them through the layout change too, which would hide the target-switch reset.
+QUnit.test("Target switch resets a one-shot shift", async (assert) => {
+  const { kb, input1, input2 } = await makeTwoTargetKeyboard();
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isShiftActive(kb), "Precondition: shift is armed");
+
+  input2.focus();
+  await waitForRender();
   assert.notOk(isShiftActive(kb), "Shift not active after the target switch");
-  assert.notOk(isCapsLock(kb), "Caps lock also reset when target switches");
+
+  input1.destroy();
+  input2.destroy();
+  kb.destroy();
+});
+
+QUnit.test("Target switch resets a latched caps lock", async (assert) => {
+  const { kb, input1, input2 } = await makeTwoTargetKeyboard();
+
+  const clock = freezeDoubleClickWindow();
+  try {
+    tapKey(kb, "{shift}");
+    tapKey(kb, "{shift}");
+    await waitForRender();
+    assert.ok(isCapsLock(kb), "Precondition: caps lock is latched");
+
+    input2.focus();
+    await waitForRender();
+    assert.notOk(isCapsLock(kb), "Caps lock reset when the target switches");
+  } finally {
+    clock.restore();
+  }
 
   input1.destroy();
   input2.destroy();
