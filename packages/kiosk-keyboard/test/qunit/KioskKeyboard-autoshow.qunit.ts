@@ -37,6 +37,25 @@ QUnit.test("autoShow with docked=false does not claim the focused input", async 
   kb.destroy();
 });
 
+QUnit.test("autoShow set while undocked takes effect once docked", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+
+  kb.setAutoShow(true);
+  kb.setDocked(true);
+
+  (input.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+
+  assert.ok(kb.isOpen(), "Focus opens the keyboard after docking");
+  assert.strictEqual(kb.getActiveControl(), input, "Focus makes the input the target after docking");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("autoShow ignores non-textual input types (checkbox)", async (assert) => {
   const cb = new CheckBox();
   cb.placeAt("qunit-fixture");

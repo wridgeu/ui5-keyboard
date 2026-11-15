@@ -52,7 +52,16 @@ export default class AutoShowBehavior extends BaseObject {
     this._host = host;
   }
 
-  enable(): void {
+  /** Leaves the document focus listeners armed exactly while the host is docked with `autoShow` on. */
+  sync(): void {
+    if (this._host.getDocked() && this._host.getAutoShow()) {
+      this.enable();
+    } else {
+      this.disable();
+    }
+  }
+
+  private enable(): void {
     if (this._abort) return;
     this._abort = new AbortController();
     const { signal } = this._abort;
@@ -60,7 +69,7 @@ export default class AutoShowBehavior extends BaseObject {
     document.addEventListener("focusout", (e) => this._onDocumentFocusOut(e), { capture: true, signal });
   }
 
-  disable(): void {
+  private disable(): void {
     if (!this._abort) return;
     this.cancelPendingClose();
     this._abort.abort();
@@ -78,14 +87,8 @@ export default class AutoShowBehavior extends BaseObject {
     }
   }
 
-  onAfterRendering(): void {
-    if (this._host.getDocked() && this._host.getAutoShow() && !this.isActive()) {
-      this.enable();
-    }
-  }
-
   private _onDocumentFocusIn(event: FocusEvent): void {
-    if (!this._host.getDocked() || !isParticipating(this._host)) return;
+    if (!isParticipating(this._host)) return;
 
     if (this._host.getControls().length > 0) {
       this._host._syncControls();
