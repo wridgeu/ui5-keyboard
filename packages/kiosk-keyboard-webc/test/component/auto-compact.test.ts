@@ -17,9 +17,7 @@ interface Mounted {
   /** The fixed-width box the keyboard fills, which is what the tier measures. */
   host: HTMLElement;
   /** Every `layout-change` fired since mount, in order. */
-  changes: Omit<LayoutChangeEventDetail, "requestedLayout">[];
-  /** The `requestedLayout` of each of those, in the same order. */
-  requested: string[];
+  changes: LayoutChangeEventDetail[];
   /** Resizes the box and lets the tier settle. */
   resize(width: number): Promise<void>;
 }
@@ -37,11 +35,8 @@ async function mount(width: number, attributes: Record<string, string>, ...child
   host.appendChild(el);
 
   const changes: Mounted["changes"] = [];
-  const requested: string[] = [];
   el.addEventListener("layout-change", (e) => {
-    const { layout, requestedLayout, autoDetected } = (e as CustomEvent<LayoutChangeEventDetail>).detail;
-    changes.push({ layout, autoDetected });
-    requested.push(requestedLayout);
+    changes.push((e as CustomEvent<LayoutChangeEventDetail>).detail);
   });
 
   await fixture(host);
@@ -51,7 +46,6 @@ async function mount(width: number, attributes: Record<string, string>, ...child
     el,
     host,
     changes,
-    requested,
     async resize(next: number) {
       host.style.width = `${next}px`;
       await settle();
@@ -93,7 +87,7 @@ describe("kiosk-keyboard - autoCompact", () => {
 
     expect(off.changes, "no layout change was fired").to.deep.equal([]);
     expect(on.changes, "the same box swaps with the property on").to.deep.equal([
-      { layout: "ja-kana-compact", autoDetected: true },
+      { layout: "ja-kana", effectiveLayout: "ja-kana-compact", reason: "width" },
     ]);
   });
 
@@ -103,13 +97,13 @@ describe("kiosk-keyboard - autoCompact", () => {
     expect(changes, "a keyboard with room to spare does not swap").to.deep.equal([]);
 
     await resize(NARROW_PX);
-    expect(changes).to.deep.equal([{ layout: "ja-kana-compact", autoDetected: true }]);
+    expect(changes).to.deep.equal([{ layout: "ja-kana", effectiveLayout: "ja-kana-compact", reason: "width" }]);
 
     await resize(WIDE_PX);
     // Not the locale default and not the compact form: the layout that was asked for.
     expect(changes).to.deep.equal([
-      { layout: "ja-kana-compact", autoDetected: true },
-      { layout: "ja-kana", autoDetected: true },
+      { layout: "ja-kana", effectiveLayout: "ja-kana-compact", reason: "width" },
+      { layout: "ja-kana", effectiveLayout: "ja-kana", reason: "width" },
     ]);
     expect(readDataKeys(el), "the requested layout is back key for key").to.deep.equal(wideKeys);
   });
@@ -126,7 +120,7 @@ describe("kiosk-keyboard - autoCompact", () => {
     expect(readDataKeys(el)).to.deep.equal([["{layout:away}", "h"]]);
 
     await resize(NARROW_PX);
-    expect(changes).to.deep.equal([{ layout: "home-c", autoDetected: true }]);
+    expect(changes).to.deep.equal([{ layout: "home", effectiveLayout: "home-c", reason: "width" }]);
     expect(readDataKeys(el)).to.deep.equal([["hc"]]);
 
     await resize(WIDE_PX);
@@ -154,20 +148,21 @@ describe("kiosk-keyboard - autoCompact", () => {
     await settle();
 
     // The request applied, and the tier then resolved against it rather than
-    // against the layout it replaced.
-    expect(changes).to.deep.equal([{ layout: "home-c", autoDetected: true }]);
+    // against the layout it replaced: one change, of both.
+    expect(changes).to.deep.equal([{ layout: "home", effectiveLayout: "home-c", reason: "api" }]);
     expect(readDataKeys(el)).to.deep.equal([["hc"]]);
 
     await resize(WIDE_PX);
     expect(readDataKeys(el), "the new request is what the room returns to").to.deep.equal([["{layout:away}", "h"]]);
   });
 
-  it("fires layout-change with autoDetected false for a request", async () => {
+  it("fires layout-change with reason user for a key, which a primary pick writes to `layout`", async () => {
     const { el, changes } = await mount(WIDE_PX, { layout: "home", "auto-compact": "" }, ...pair());
     requireKey(el, "{layout:away}").click();
     await settle();
 
-    expect(changes).to.deep.equal([{ layout: "away", autoDetected: false }]);
+    expect(changes).to.deep.equal([{ layout: "away", effectiveLayout: "away", reason: "user" }]);
+    expect(el.getAttribute("layout"), "the pick reflects to the attribute").to.equal("away");
   });
 
   it("follows the focused key to the seat the compact form gives it", async () => {
@@ -246,7 +241,7 @@ describe("kiosk-keyboard - autoCompact", () => {
     await settle();
 
     expect(changes, "the asked-for layout tiers to its compact form").to.deep.equal([
-      { layout: "home-c", autoDetected: true },
+      { layout: "home", effectiveLayout: "home-c", reason: "api" },
     ]);
     // A switch the user asked for is its own feedback, and it moves focus onto
     // the key it followed, which announces itself.
@@ -286,12 +281,13 @@ describe("kiosk-keyboard - autoCompact", () => {
 
     // The counterpart arriving is a change to what the tier resolves through, and the
     // box never moved, so no resize reports it.
-    expect(changes).to.deep.equal([{ layout: "home-c", autoDetected: true }]);
+    expect(changes).to.deep.equal([{ layout: "home", effectiveLayout: "home-c", reason: "layouts" }]);
     expect(readDataKeys(el)).to.deep.equal([["hc"]]);
   });
 
-  it("resolves requests, width, keyboardType, user picks and a late counterpart in one sequence", async () => {
-    const { el, changes, requested, resize } = await mount(
+  it("reports the intent, the effective layout and one event per change, through every input", async () => {
+    const solo = customLayout({ name: "solo", rows: [[{ value: "s" }]], compact: "solo-c" });
+    const { el, changes, resize } = await mount(
       WIDE_PX,
       { layout: "home", "auto-compact": "" },
       customLayout({ name: "home", rows: home, compact: "home-c" }),
@@ -299,23 +295,21 @@ describe("kiosk-keyboard - autoCompact", () => {
       customLayout({ name: "away", rows: [[{ value: "{layout:pick}" }, { value: "a" }]], compact: "away-c" }),
       customLayout({ name: "away-c", rows: [[{ value: "ac" }]] }),
       customLayout({ name: "pick", rows: [[{ value: "{layout:base}" }, { value: "p" }]], layoutRole: "Secondary" }),
-      customLayout({ name: "solo", rows: [[{ value: "s" }]], compact: "solo-c" }),
+      solo,
     );
-    /** Per step: the rendered layout, and the events and announcement since the last step. */
+    /** Per step: the intent, the rendered layout, and the events and announcement since the last step. */
     const trace: unknown[] = [];
     const step = (name: string): void => {
-      const names = requested.splice(0);
-      const events = changes.splice(0).map((change, i) => ({ ...change, requestedLayout: names[i] }));
-      trace.push([name, el.effectiveLayout, events, announcedText()]);
+      trace.push([name, el.layout, el.effectiveLayout, changes.splice(0), announcedText()]);
       resetAnnouncements();
     };
 
-    step("request A");
+    step("mount");
     await resize(NARROW_PX);
     step("narrow");
     requireKey(el, "{layout:away}").click();
     await settle();
-    step("request B while narrow");
+    step("{layout:away} while narrow");
     el.keyboardType = "Numpad";
     await settle();
     step("Numpad");
@@ -327,44 +321,81 @@ describe("kiosk-keyboard - autoCompact", () => {
     requireKey(el, "{layout:pick}").click();
     await settle();
     step("{layout:pick}");
+    el.reset();
+    await settle();
+    step("reset");
+    requireKey(el, "{layout:pick}").click();
+    await settle();
     requireKey(el, "{layout:base}").click();
     await settle();
-    step("{layout:base}");
+    step("{layout:pick}, {layout:base}");
     el.layout = "solo";
     await resize(NARROW_PX);
-    step("request solo, narrow");
-    el.appendChild(customLayout({ name: "solo-c", rows: [[{ value: "sc" }]] }));
+    step("api solo, narrow");
+    const soloCompact = customLayout({ name: "solo-c", rows: [[{ value: "sc" }]] });
+    el.appendChild(soloCompact);
     await settle();
     step("solo-c slotted");
+    const keys = readDataKeys(el);
+    solo.remove();
+    soloCompact.remove();
+    await settle();
+    step("solo and solo-c removed");
 
-    expect([trace, readDataKeys(el)]).to.deep.equal([
+    expect([trace, keys]).to.deep.equal([
       [
-        ["request A", "home", [], ""],
+        ["mount", "home", "home", [], ""],
         [
           "narrow",
+          "home",
           "home-c",
-          [{ layout: "home-c", requestedLayout: "home", autoDetected: true }],
+          [{ layout: "home", effectiveLayout: "home-c", reason: "width" }],
           "Switched to the compact keyboard layout",
         ],
-        // One change, naming the layout that renders, unannounced.
-        ["request B while narrow", "away-c", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], ""],
-        // The key pick was a user override, which a keyboardType change drops to the
-        // base; the constraint wins, and lifting it re-tiers the base.
-        ["Numpad", "numpad", [{ layout: "away", requestedLayout: "away", autoDetected: false }], ""],
-        ["Full", "away-c", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], ""],
+        // A primary pick is the user's intent, reflected; both change, one event.
+        [
+          "{layout:away} while narrow",
+          "away",
+          "away-c",
+          [{ layout: "away", effectiveLayout: "away-c", reason: "user" }],
+          "",
+        ],
+        // The constraint pins the surface without touching the intent; lifting it
+        // re-tiers the intent.
+        ["Numpad", "away", "numpad", [{ layout: "away", effectiveLayout: "numpad", reason: "keyboardType" }], ""],
+        ["Full", "away", "away-c", [{ layout: "away", effectiveLayout: "away-c", reason: "keyboardType" }], ""],
         [
           "widen",
           "away",
-          [{ layout: "away", requestedLayout: "away", autoDetected: true }],
+          "away",
+          [{ layout: "away", effectiveLayout: "away", reason: "width" }],
           "Switched back to the standard keyboard layout",
         ],
-        ["{layout:pick}", "pick", [{ layout: "pick", requestedLayout: "pick", autoDetected: false }], ""],
-        ["{layout:base}", "away", [{ layout: "away", requestedLayout: "away", autoDetected: false }], ""],
-        // The attribute path is silent, and solo-c is not slotted yet, so the crossing
-        // swaps nothing...
-        ["request solo, narrow", "solo", [], ""],
+        // A secondary pick changes only what renders.
+        ["{layout:pick}", "away", "pick", [{ layout: "away", effectiveLayout: "pick", reason: "user" }], ""],
+        ["reset", "away", "away", [{ layout: "away", effectiveLayout: "away", reason: "api" }], ""],
+        [
+          "{layout:pick}, {layout:base}",
+          "away",
+          "away",
+          [
+            { layout: "away", effectiveLayout: "pick", reason: "user" },
+            { layout: "away", effectiveLayout: "away", reason: "user" },
+          ],
+          "",
+        ],
+        // solo-c is not slotted yet, so the crossing swaps nothing...
+        ["api solo, narrow", "solo", "solo", [{ layout: "solo", effectiveLayout: "solo", reason: "api" }], ""],
         // ...and the counterpart arriving applies without a resize, unannounced.
-        ["solo-c slotted", "solo-c", [{ layout: "solo-c", requestedLayout: "solo", autoDetected: true }], ""],
+        ["solo-c slotted", "solo", "solo-c", [{ layout: "solo", effectiveLayout: "solo-c", reason: "layouts" }], ""],
+        // The intent outlives its layout; the registry fallback renders.
+        [
+          "solo and solo-c removed",
+          "solo",
+          "qwerty",
+          [{ layout: "solo", effectiveLayout: "qwerty", reason: "layouts" }],
+          "",
+        ],
       ],
       [["sc"]],
     ]);
@@ -379,7 +410,7 @@ describe("kiosk-keyboard - autoCompact", () => {
     // observation the box delivers.
     await resize(WIDE_PX - 1);
 
-    expect(changes).to.deep.equal([{ layout: "home-c", autoDetected: true }]);
+    expect(changes).to.deep.equal([{ layout: "home", effectiveLayout: "home-c", reason: "width" }]);
     expect(readDataKeys(el)).to.deep.equal([["hc"]]);
   });
 });

@@ -400,10 +400,31 @@ QUnit.test("autoType switch to a different same-type input drops a user {layout:
     "7",
     "Switching to a different input drops the user override and re-engages the numpad constraint (row 0 '7')",
   );
-  assert.strictEqual(kb.getLayout(), "qwerty", "the dropped pick returned the layout property to the base");
+  assert.strictEqual(kb.getEffectiveLayout(), "numpad", "the dropped pick returned to the base under the constraint");
 
   numA.destroy();
   numB.destroy();
+  kb.destroy();
+});
+
+QUnit.test("autoType reports the detected constraint through layoutChange, leaving layout alone", async (assert) => {
+  const num = new Input({ type: "Number" });
+  num.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ docked: true, autoShow: true, autoType: true, layout: "qwertz-de" });
+  await placeAndWait(kb);
+  const changes: unknown[] = [];
+  kb.attachLayoutChange((event) => {
+    const { layout, effectiveLayout, reason } = event.getParameters();
+    changes.push({ layout, effectiveLayout, reason });
+  });
+
+  (num.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+
+  assert.strictEqual(kb.getLayout(), "qwertz-de", "detection leaves the intent alone");
+  assert.deepEqual(changes, [{ layout: "qwertz-de", effectiveLayout: "numpad", reason: "keyboardType" }]);
+
+  num.destroy();
   kb.destroy();
 });
 

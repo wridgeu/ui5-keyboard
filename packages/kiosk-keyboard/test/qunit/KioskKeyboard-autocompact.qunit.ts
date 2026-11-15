@@ -1,9 +1,8 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import type { $KioskKeyboardSettings } from "ui5/kiosk/KioskKeyboard";
 import CustomLayout from "ui5/kiosk/CustomLayout";
-import { KeyboardType, LayoutRole } from "ui5/kiosk/library";
+import { KeyboardType, LayoutChangeReason, LayoutRole } from "ui5/kiosk/library";
 import type { LayoutDefinition } from "ui5/kiosk/types";
-import Log from "sap/base/Log";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import {
   announcedText,
@@ -22,11 +21,14 @@ const WIDE_PX = 600;
 
 const sandbox = sinon.createSandbox();
 
-/** Both fields are optional on the event, so a missing one shows up in the comparison. */
+/** Every field is optional on the event, so a missing one shows up in the comparison. */
 interface LayoutChange {
   layout: string | undefined;
-  autoDetected: boolean | undefined;
+  effectiveLayout: string | undefined;
+  reason: LayoutChangeReason | undefined;
 }
+
+const { User, Api, Width, KeyboardTypeChange: Type, Layouts } = LayoutChangeReason;
 
 interface Mounted {
   kb: KioskKeyboard;
@@ -64,7 +66,11 @@ async function mount(width: number, settings: $KioskKeyboardSettings): Promise<M
   mounted.push(kb);
   const changes: LayoutChange[] = [];
   kb.attachLayoutChange((event) => {
-    changes.push({ layout: event.getParameter("layout"), autoDetected: event.getParameter("autoDetected") });
+    changes.push({
+      layout: event.getParameter("layout"),
+      effectiveLayout: event.getParameter("effectiveLayout"),
+      reason: event.getParameter("reason"),
+    });
   });
 
   kb.placeAt(box);
@@ -137,20 +143,25 @@ QUnit.test("A layout with a compact counterpart swaps below the threshold and ba
   assert.deepEqual(changes, [], "a keyboard with room to spare does not swap");
 
   await resize(NARROW_PX);
-  assert.strictEqual(kb.getLayout(), "ja-kana-compact", "the compact counterpart took over");
-  assert.deepEqual(changes, [{ layout: "ja-kana-compact", autoDetected: true }], "one auto-detected change");
+  assert.strictEqual(kb.getEffectiveLayout(), "ja-kana-compact", "the compact counterpart took over");
+  assert.strictEqual(kb.getLayout(), "ja-kana", "the intent is untouched");
+  assert.deepEqual(
+    changes,
+    [{ layout: "ja-kana", effectiveLayout: "ja-kana-compact", reason: Width }],
+    "one width change",
+  );
   assert.notDeepEqual(getRenderedLayoutKeys(kb), wideKeys, "the compact rows replaced the wide ones");
 
   await resize(WIDE_PX);
   // Not the locale default and not the compact form: the layout that was asked for.
-  assert.strictEqual(kb.getLayout(), "ja-kana", "the requested layout returned");
+  assert.strictEqual(kb.getEffectiveLayout(), "ja-kana", "the requested layout returned");
   assert.deepEqual(
     changes,
     [
-      { layout: "ja-kana-compact", autoDetected: true },
-      { layout: "ja-kana", autoDetected: true },
+      { layout: "ja-kana", effectiveLayout: "ja-kana-compact", reason: Width },
+      { layout: "ja-kana", effectiveLayout: "ja-kana", reason: Width },
     ],
-    "the way back is auto-detected too",
+    "the way back is a width change too",
   );
   assert.deepEqual(getRenderedLayoutKeys(kb), wideKeys, "the requested layout is back key for key");
 });
@@ -158,90 +169,66 @@ QUnit.test("A layout with a compact counterpart swaps below the threshold and ba
 QUnit.test("A swap does not become the base layout a {layout:base} key returns to", async (assert) => {
   const { kb, resize } = await mount(WIDE_PX, { layout: "home", autoCompact: true, customLayouts: pair() });
   await resize(NARROW_PX);
-  assert.strictEqual(kb.getLayout(), "home-c", "the tier swapped");
+  assert.strictEqual(kb.getEffectiveLayout(), "home-c", "the tier swapped");
   assert.strictEqual(kb.getBaseLayout(), "home", "the arrangement a width picked is not the base");
 
   kb.resetLayout();
   await settle();
-  assert.strictEqual(kb.getLayout(), "home-c", "returning to base re-tiers to the compact form");
+  assert.strictEqual(kb.getEffectiveLayout(), "home-c", "returning to base re-tiers to the compact form");
 
   await resize(WIDE_PX);
   // Regression: the tier used to promote its own target to the base layout, so the
   // round trip through base made the compact form the request and stranded it there.
-  assert.strictEqual(kb.getLayout(), "home", "the requested layout is still what widening restores");
+  assert.strictEqual(kb.getEffectiveLayout(), "home", "the requested layout is still what widening restores");
 });
 
 QUnit.test("Switching autoCompact off gives the requested layout back", async (assert) => {
   const { kb, resize } = await mount(WIDE_PX, { layout: "home", autoCompact: true, customLayouts: pair() });
   await resize(NARROW_PX);
-  assert.strictEqual(kb.getLayout(), "home-c", "the tier swapped");
+  assert.strictEqual(kb.getEffectiveLayout(), "home-c", "the tier swapped");
 
   kb.setAutoCompact(false);
   await settle();
   // Regression: teardown used to leave the compact form applied with no observer
   // left to undo it, so disabling the feature stranded its own result.
-  assert.strictEqual(kb.getLayout(), "home", "disabling restores what was asked for");
+  assert.strictEqual(kb.getEffectiveLayout(), "home", "disabling restores what was asked for");
 });
 
 // ───────────────────────────────────────────────────
-// Two-way write-back of the tier
+// A two-way `layout` binding holds the intent
 // ───────────────────────────────────────────────────
 
-/** A keyboard whose `layout` is bound to `/layout` of its own model in the given mode. */
-async function mountBound(width: number, mode: "TwoWay" | "OneWay"): Promise<Mounted & { model: JSONModel }> {
+QUnit.test("A two-way binding takes the user's primary pick, never a width or a constraint", async (assert) => {
   const model = new JSONModel({ layout: "home" });
-  const box = await mount(width, {
-    layout: { path: "/layout", mode },
+  const { kb, resize } = await mount(WIDE_PX, {
+    layout: { path: "/layout", mode: "TwoWay" },
     autoCompact: true,
     customLayouts: pair(),
     models: model,
   });
-  return { ...box, model };
-}
-
-QUnit.test("A tier written through a two-way binding is reported once", async (assert) => {
-  const warn = sandbox.stub(Log, "warning");
-  const { kb, resize, model } = await mountBound(WIDE_PX, "TwoWay");
+  const trace: unknown[] = [];
+  const step = (name: string): void => {
+    trace.push([name, model.getProperty("/layout"), kb.getLayout(), kb.getEffectiveLayout()]);
+  };
 
   await resize(NARROW_PX);
-  assert.strictEqual(kb.getLayout(), "home-c", "the tier applied");
-  // The write-back itself is the UI5 contract `sap.f.DynamicPage` follows for
-  // `headerExpanded`, and it stays. What it must not be is silent: two-way is every
-  // JSONModel's default, so an app binding a stored preference never asked for it.
-  assert.strictEqual(model.getProperty("/layout"), "home-c", "the model took the detected value");
-  const hits = () => warn.getCalls().filter((call) => String(call.args[0]).includes("bound two-way"));
-  assert.strictEqual(hits().length, 1, "and the write-back is reported");
-  assert.ok(String(hits()[0]!.args[0]).includes('mode: "OneWay"'), "naming the remedy");
-
+  step("narrow");
+  kb.setKeyboardType(KeyboardType.Numpad);
+  await settle();
+  step("Numpad");
+  kb.resetKeyboardType();
   await resize(WIDE_PX);
-  await resize(NARROW_PX);
-  assert.strictEqual(hits().length, 1, "once per control, not once per crossing");
-});
+  step("Full, wide");
+  tapKey(kb, "{layout:away}");
+  await settle();
+  step("{layout:away}");
 
-QUnit.test("A one-way binding takes no write-back and is not reported", async (assert) => {
-  const warn = sandbox.stub(Log, "warning");
-  const { kb, resize, model } = await mountBound(WIDE_PX, "OneWay");
-
-  await resize(NARROW_PX);
-  assert.strictEqual(kb.getLayout(), "home-c", "the tier still applies");
-  assert.strictEqual(model.getProperty("/layout"), "home", "the stored preference is untouched");
-  assert.strictEqual(
-    warn.getCalls().filter((call) => String(call.args[0]).includes("bound two-way")).length,
-    0,
-    "and there is nothing to report",
-  );
-});
-
-QUnit.test("An unbound layout is not reported", async (assert) => {
-  const warn = sandbox.stub(Log, "warning");
-  const { resize } = await mount(WIDE_PX, { layout: "home", autoCompact: true, customLayouts: pair() });
-
-  await resize(NARROW_PX);
-  assert.strictEqual(
-    warn.getCalls().filter((call) => String(call.args[0]).includes("bound two-way")).length,
-    0,
-    "no binding, no write-back, no warning",
-  );
+  assert.deepEqual(trace, [
+    ["narrow", "home", "home", "home-c"],
+    ["Numpad", "home", "home", "numpad"],
+    ["Full, wide", "home", "home", "home"],
+    ["{layout:away}", "away", "away", "away"],
+  ]);
 });
 
 QUnit.test("A keyboardType constraint suppresses the tier", async (assert) => {
@@ -253,7 +240,8 @@ QUnit.test("A keyboardType constraint suppresses the tier", async (assert) => {
   await resize(NARROW_PX);
   // Numpad pins the rendered surface, so a swap would announce a layout nobody can see.
   assert.deepEqual(changes, [], "no layout change is announced while the surface is constrained");
-  assert.strictEqual(kb.getLayout(), "ja-kana", "and the layout under the constraint is untouched");
+  assert.strictEqual(kb.getLayout(), "ja-kana", "and the intent under the constraint is untouched");
+  assert.strictEqual(kb.getEffectiveLayout(), "numpad", "while the constraint renders");
 });
 
 QUnit.test("Lifting a keyboardType constraint re-tiers the layout that surfaces", async (assert) => {
@@ -262,14 +250,14 @@ QUnit.test("Lifting a keyboardType constraint re-tiers the layout that surfaces"
     autoCompact: true,
     keyboardType: KeyboardType.Numpad,
   });
-  assert.strictEqual(kb.getLayout(), "ja-kana", "the constrained keyboard did not tier");
+  assert.strictEqual(kb.getEffectiveLayout(), "numpad", "the constrained keyboard did not tier");
 
   kb.resetKeyboardType();
   await settle();
 
   // The constraint was the only thing holding the swap back, and lifting it is a
   // change no resize reports - the box never moved.
-  assert.strictEqual(kb.getLayout(), "ja-kana-compact", "the layout tiers as soon as it surfaces");
+  assert.strictEqual(kb.getEffectiveLayout(), "ja-kana-compact", "the layout tiers as soon as it surfaces");
 });
 
 QUnit.test("A counterpart whose rows arrive from a model re-tiers on arrival", async (assert) => {
@@ -290,7 +278,11 @@ QUnit.test("A counterpart whose rows arrive from a model re-tiers on arrival", a
 
   // The rows arriving is a change to what the tier resolves through, and the box
   // never moved, so no resize reports it.
-  assert.deepEqual(changes, [{ layout: "home-c", autoDetected: true }], "the counterpart took over on arrival");
+  assert.deepEqual(
+    changes,
+    [{ layout: "home", effectiveLayout: "home-c", reason: Layouts }],
+    "the counterpart took over on arrival",
+  );
   assert.deepEqual(getRenderedLayoutKeys(kb), [["hc"]], "the compact rows render");
 });
 
@@ -299,13 +291,13 @@ QUnit.test("A keyboard that loses its box does not tier", async (assert) => {
   await hide();
   // A zero inline size is an element without layout, not a narrow keyboard.
   assert.deepEqual(changes, [], "being hidden is not a width");
-  assert.strictEqual(kb.getLayout(), "ja-kana", "the layout is unchanged");
+  assert.strictEqual(kb.getEffectiveLayout(), "ja-kana", "the layout is unchanged");
 });
 
 QUnit.test("A layout that declares no counterpart never swaps", async (assert) => {
   const { kb, changes } = await mount(NARROW_PX, { layout: "qwertz-de", autoCompact: true });
 
-  assert.strictEqual(kb.getLayout(), "qwertz-de", "qwertz-de is still the layout");
+  assert.strictEqual(kb.getEffectiveLayout(), "qwertz-de", "qwertz-de is still the layout");
   assert.deepEqual(changes, [], "no layout change was fired");
 });
 
@@ -318,7 +310,11 @@ QUnit.test("A custom layout tiers by the counterpart it declares itself", async 
   assert.deepEqual(getRenderedLayoutKeys(kb), [["{layout:away}", "h"]], "the wide form renders first");
 
   await resize(NARROW_PX);
-  assert.deepEqual(changes, [{ layout: "home-c", autoDetected: true }], "the declared counterpart took over");
+  assert.deepEqual(
+    changes,
+    [{ layout: "home", effectiveLayout: "home-c", reason: Width }],
+    "the declared counterpart took over",
+  );
   assert.deepEqual(getRenderedLayoutKeys(kb), [["hc"]], "the compact rows render");
 
   await resize(WIDE_PX);
@@ -351,8 +347,8 @@ QUnit.test("An explicit request while narrow wins, and the tier resolves from th
 
   assert.deepEqual(
     changes,
-    [{ layout: "home-c", autoDetected: true }],
-    "one change, naming the counterpart of the request",
+    [{ layout: "home", effectiveLayout: "home-c", reason: Api }],
+    "one change, of both the intent and the counterpart of the request",
   );
   assert.deepEqual(getRenderedLayoutKeys(kb), [["hc"]], "the counterpart of the NEW request renders");
 
@@ -430,7 +426,7 @@ QUnit.test("A keyboard that was always narrow announces nothing on first paint",
   resetAnnouncements();
   const { kb, resize } = await mount(NARROW_PX, { layout: "ja-kana", autoCompact: true });
 
-  assert.strictEqual(kb.getLayout(), "ja-kana-compact", "the compact form is what mounted");
+  assert.strictEqual(kb.getEffectiveLayout(), "ja-kana-compact", "the compact form is what mounted");
   // Nothing was rearranged under the user: this is the arrangement they first saw.
   assert.strictEqual(announcedText(), "", "the first resolution is not a change to announce");
 
@@ -450,127 +446,150 @@ QUnit.test("A request drops a tier announcement that has not reached the live re
   // what puts a request in the same frame, which a resize cannot do: the observer
   // and the frame it applies from settle before the test regains control.
   kb._applyCompactTier(true, true);
-  assert.strictEqual(kb.getLayout(), "ja-kana-compact", "the tier swapped");
+  assert.strictEqual(kb.getEffectiveLayout(), "ja-kana-compact", "the tier swapped");
 
   kb.setLayout("qwerty");
   await settle();
   // The pending text names the layout the request just replaced, so announcing it
   // would tell a screen reader user the keyboard is on a layout it has left.
-  assert.strictEqual(kb.getLayout(), "qwerty", "the request took effect");
+  assert.strictEqual(kb.getEffectiveLayout(), "qwerty", "the request took effect");
   assert.strictEqual(announcedText(), "", "the superseded announcement never reaches the region");
 });
 
-QUnit.test(
-  "Requests, width, keyboardType, user picks and a late counterpart resolve in one sequence",
-  async (assert) => {
-    const { kb, changes, resize } = await mount(WIDE_PX, {
-      layout: "home",
-      autoCompact: true,
-      customLayouts: [
-        new CustomLayout({ name: "home", rows: home, compact: "home-c" }),
-        new CustomLayout({ name: "home-c", rows: [[{ value: "{layout:away}" }, { value: "hc" }]] }),
-        new CustomLayout({ name: "away", rows: [[{ value: "{layout:pick}" }, { value: "a" }]], compact: "away-c" }),
-        new CustomLayout({ name: "away-c", rows: [[{ value: "ac" }]] }),
-        new CustomLayout({
-          name: "pick",
-          rows: [[{ value: "{layout:base}" }, { value: "p" }]],
-          layoutRole: LayoutRole.Secondary,
-        }),
-        new CustomLayout({ name: "solo", rows: [[{ value: "s" }]], compact: "solo-c" }),
-      ],
-    });
-    /**
-     * Per step: the `layout` property, the first rendered key, and the events and
-     * announcement since the last step.
-     */
-    const requested: (string | undefined)[] = [];
-    kb.attachLayoutChange((event) => {
-      requested.push(event.getParameter("requestedLayout"));
-    });
-    const trace: unknown[] = [];
-    const step = (name: string): void => {
-      const names = requested.splice(0);
-      const events = changes.splice(0).map((change, i) => ({ ...change, requestedLayout: names[i] }));
-      trace.push([name, kb.getLayout(), getRenderedLayoutKeys(kb)[0]?.[0], events, announcedText()]);
-      resetAnnouncements();
-    };
-
-    step("request A");
-    await resize(NARROW_PX);
-    step("narrow");
-    tapKey(kb, "{layout:away}");
-    await settle();
-    step("request B while narrow");
-    kb.setKeyboardType(KeyboardType.Numpad);
-    await settle();
-    step("Numpad");
-    kb.resetKeyboardType();
-    await settle();
-    step("reset");
-    await resize(WIDE_PX);
-    step("widen");
-    tapKey(kb, "{layout:pick}");
-    await settle();
-    step("{layout:pick}");
-    tapKey(kb, "{layout:base}");
-    await settle();
-    step("{layout:base}");
-    kb.setLayout("solo");
-    await resize(NARROW_PX);
-    step("request solo, narrow");
-    kb.addCustomLayout(new CustomLayout({ name: "solo-c", rows: [[{ value: "sc" }]] }));
-    await settle();
-    step("solo-c declared");
-
-    assert.deepEqual(trace, [
-      ["request A", "home", "{layout:away}", [], ""],
-      [
-        "narrow",
-        "home-c",
-        "{layout:away}",
-        [{ layout: "home-c", requestedLayout: "home", autoDetected: true }],
-        "Switched to the compact keyboard layout",
-      ],
-      // One change, naming the layout that renders, unannounced.
-      [
-        "request B while narrow",
-        "away-c",
-        "ac",
-        [{ layout: "away-c", requestedLayout: "away", autoDetected: true }],
-        "",
-      ],
-      // The key pick was a user override, which a keyboardType change drops to the base;
-      // the constraint wins, and lifting it re-tiers the base.
-      ["Numpad", "away", "7", [{ layout: "away", requestedLayout: "away", autoDetected: false }], ""],
-      ["reset", "away-c", "ac", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], ""],
-      [
-        "widen",
-        "away",
-        "{layout:pick}",
-        [{ layout: "away", requestedLayout: "away", autoDetected: true }],
-        "Switched back to the standard keyboard layout",
-      ],
-      [
-        "{layout:pick}",
-        "pick",
-        "{layout:base}",
-        [{ layout: "pick", requestedLayout: "pick", autoDetected: false }],
-        "",
-      ],
-      [
-        "{layout:base}",
-        "away",
-        "{layout:pick}",
-        [{ layout: "away", requestedLayout: "away", autoDetected: false }],
-        "",
-      ],
-      // solo-c is not declared yet, so the crossing swaps nothing...
-      ["request solo, narrow", "solo", "s", [{ layout: "solo", requestedLayout: "solo", autoDetected: false }], ""],
-      // ...and the counterpart arriving applies without a resize, unannounced.
-      ["solo-c declared", "solo-c", "sc", [{ layout: "solo-c", requestedLayout: "solo", autoDetected: true }], ""],
+QUnit.test("The intent, the effective layout and one event per change, through every input", async (assert) => {
+  const solo = new CustomLayout({ name: "solo", rows: [[{ value: "s" }]], compact: "solo-c" });
+  const { kb, changes, resize } = await mount(WIDE_PX, {
+    layout: "home",
+    autoCompact: true,
+    customLayouts: [
+      new CustomLayout({ name: "home", rows: home, compact: "home-c" }),
+      new CustomLayout({ name: "home-c", rows: [[{ value: "{layout:away}" }, { value: "hc" }]] }),
+      new CustomLayout({ name: "away", rows: [[{ value: "{layout:pick}" }, { value: "a" }]], compact: "away-c" }),
+      new CustomLayout({ name: "away-c", rows: [[{ value: "ac" }]] }),
+      new CustomLayout({
+        name: "pick",
+        rows: [[{ value: "{layout:base}" }, { value: "p" }]],
+        layoutRole: LayoutRole.Secondary,
+      }),
+      solo,
+    ],
+  });
+  /**
+   * Per step: the `layout` property (intent), the effective layout, the first
+   * rendered key, and the events and announcement since the last step.
+   */
+  const trace: unknown[] = [];
+  const step = (name: string): void => {
+    trace.push([
+      name,
+      kb.getLayout(),
+      kb.getEffectiveLayout(),
+      getRenderedLayoutKeys(kb)[0]?.[0],
+      changes.splice(0),
+      announcedText(),
     ]);
-  },
-);
+    resetAnnouncements();
+  };
+
+  step("mount");
+  await resize(NARROW_PX);
+  step("narrow");
+  tapKey(kb, "{layout:away}");
+  await settle();
+  step("{layout:away} while narrow");
+  kb.setKeyboardType(KeyboardType.Numpad);
+  await settle();
+  step("Numpad");
+  kb.resetKeyboardType();
+  await settle();
+  step("resetKeyboardType");
+  await resize(WIDE_PX);
+  step("widen");
+  tapKey(kb, "{layout:pick}");
+  await settle();
+  step("{layout:pick}");
+  kb.resetLayout();
+  await settle();
+  step("resetLayout");
+  tapKey(kb, "{layout:pick}");
+  await settle();
+  tapKey(kb, "{layout:base}");
+  await settle();
+  step("{layout:pick}, {layout:base}");
+  kb.setLayout("solo");
+  await resize(NARROW_PX);
+  step("setLayout solo, narrow");
+  const soloCompact = new CustomLayout({ name: "solo-c", rows: [[{ value: "sc" }]] });
+  kb.addCustomLayout(soloCompact);
+  await settle();
+  step("solo-c declared");
+  kb.removeCustomLayout(solo);
+  kb.removeCustomLayout(soloCompact);
+  solo.destroy();
+  soloCompact.destroy();
+  await settle();
+  step("solo and solo-c removed");
+
+  assert.deepEqual(trace, [
+    ["mount", "home", "home", "{layout:away}", [], ""],
+    [
+      "narrow",
+      "home",
+      "home-c",
+      "{layout:away}",
+      [{ layout: "home", effectiveLayout: "home-c", reason: Width }],
+      "Switched to the compact keyboard layout",
+    ],
+    // A primary pick is the user's intent; both change, one event, unannounced.
+    [
+      "{layout:away} while narrow",
+      "away",
+      "away-c",
+      "ac",
+      [{ layout: "away", effectiveLayout: "away-c", reason: User }],
+      "",
+    ],
+    // The constraint pins the surface without touching the intent; lifting it
+    // re-tiers the intent.
+    ["Numpad", "away", "numpad", "7", [{ layout: "away", effectiveLayout: "numpad", reason: Type }], ""],
+    ["resetKeyboardType", "away", "away-c", "ac", [{ layout: "away", effectiveLayout: "away-c", reason: Type }], ""],
+    [
+      "widen",
+      "away",
+      "away",
+      "{layout:pick}",
+      [{ layout: "away", effectiveLayout: "away", reason: Width }],
+      "Switched back to the standard keyboard layout",
+    ],
+    // A secondary pick changes only what renders.
+    ["{layout:pick}", "away", "pick", "{layout:base}", [{ layout: "away", effectiveLayout: "pick", reason: User }], ""],
+    ["resetLayout", "away", "away", "{layout:pick}", [{ layout: "away", effectiveLayout: "away", reason: Api }], ""],
+    [
+      "{layout:pick}, {layout:base}",
+      "away",
+      "away",
+      "{layout:pick}",
+      [
+        { layout: "away", effectiveLayout: "pick", reason: User },
+        { layout: "away", effectiveLayout: "away", reason: User },
+      ],
+      "",
+    ],
+    // solo-c is not declared yet, so the crossing swaps nothing...
+    ["setLayout solo, narrow", "solo", "solo", "s", [{ layout: "solo", effectiveLayout: "solo", reason: Api }], ""],
+    // ...and the counterpart arriving applies without a resize, unannounced.
+    ["solo-c declared", "solo", "solo-c", "sc", [{ layout: "solo", effectiveLayout: "solo-c", reason: Layouts }], ""],
+    // The intent outlives its layout; the registry fallback renders.
+    [
+      "solo and solo-c removed",
+      "solo",
+      "qwerty",
+      "1",
+      [{ layout: "solo", effectiveLayout: "qwerty", reason: Layouts }],
+      "",
+    ],
+  ]);
+});
 
 QUnit.test("The tier follows the threshold custom property, not a fixed width", async (assert) => {
   const { kb, changes, resize } = await mount(WIDE_PX, {
@@ -590,7 +609,11 @@ QUnit.test("The tier follows the threshold custom property, not a fixed width", 
     // observation the box delivers.
     await resize(WIDE_PX - 1);
 
-    assert.deepEqual(changes, [{ layout: "home-c", autoDetected: true }], "599px is narrow against a 40rem threshold");
+    assert.deepEqual(
+      changes,
+      [{ layout: "home", effectiveLayout: "home-c", reason: Width }],
+      "599px is narrow against a 40rem threshold",
+    );
     assert.deepEqual(getRenderedLayoutKeys(kb), [["hc"]], "the compact rows render");
   } finally {
     override.remove();
