@@ -17,7 +17,6 @@ export default class HotkeysSequences extends BaseController {
   private _pendingTimer: ReturnType<typeof setTimeout> | null = null;
   /** Continuations reported by the `onPending` calls of the current key press. */
   private _nextKeys: string[] = [];
-  private _collectingKeyPress = false;
 
   override onInit(): void {
     this._hotkeys = this.getTypedComponent().getHotkeyManager().createGroup();
@@ -64,11 +63,9 @@ export default class HotkeysSequences extends BaseController {
     return (info: { completedSteps: number; totalSteps: number; nextKey: string }) => {
       // One key press fires onPending once per sequence it advanced, synchronously
       // within the keydown; the microtask closes that batch.
-      if (!this._collectingKeyPress) {
-        this._collectingKeyPress = true;
-        this._nextKeys = [];
+      if (this._nextKeys.length === 0) {
         queueMicrotask(() => {
-          this._collectingKeyPress = false;
+          this._nextKeys = [];
         });
       }
       if (!this._nextKeys.includes(info.nextKey)) {
