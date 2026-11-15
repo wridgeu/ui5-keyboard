@@ -78,11 +78,11 @@ export class ShiftState {
 
   /** Auto-releases shift (but not caps lock) after a key press. */
   autoRelease(): void {
+    // A key between two shift taps breaks the double-click, whatever the
+    // mode: the next toggle() starts a fresh cycle instead of reaching CapsLock.
+    this._lastToggleTime = -Infinity;
     if (this._mode === Mode.Shift) {
       this._mode = Mode.Off;
-      // Close the double-click window so the next toggle() starts a
-      // fresh cycle instead of incorrectly jumping to CapsLock.
-      this._lastToggleTime = -Infinity;
       this._onChange();
     }
   }
@@ -99,12 +99,10 @@ export class ShiftState {
       this._mode = Mode.Off;
     }
 
-    if (prev !== this._mode) {
-      // Reset the double-click window so the next virtual toggle()
-      // starts fresh instead of inheriting stale timing.
-      this._lastToggleTime = -Infinity;
-      this._onChange();
-    }
+    // A physical keystroke breaks a virtual double-click even when the mode
+    // does not change, so the next toggle() starts fresh.
+    this._lastToggleTime = -Infinity;
+    if (prev !== this._mode) this._onChange();
   }
 
   /** Clears both shift and caps lock. */
