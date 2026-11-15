@@ -39,7 +39,7 @@ Most developer diagnostics (an invalid custom layout, an unknown icon, an icon-o
 | W5  | `warnedMissingLabels`                     | `KioskKeyboard.ts:154-164, 1499-1500`             | **module** | template `aria-label`, per key per render (`KioskKeyboardTemplate.tsx:159`)     | never, by design ("per-page" comment `:155-163`)          | 13  |
 | W6  | `warnedUnsupportedFKeys`                  | `core/fkey-controller.ts:50-59, 98-99`            | **module** | F-key press in `Native` mode                                                    | never, by design (`:51-58`)                               | 12  |
 
-**Totals:** 14 diagnostics with dedupe machinery. That is 12 warn-once sets or flags (7 kiosk, 5 webc), plus 2 piggy-backed diagnostics (K2, W2) that borrow the fold's set. Five of the sets live at module scope (K6-K8, W5, W6). About **117 compensating lines** in all: 66 in kiosk, 51 in webc.
+**Totals:** 14 diagnostics with dedupe machinery. That is 12 warn-once sets or flags (7 kiosk, 5 webc), plus 2 piggy-backed diagnostics (K2, W2) that borrow the fold's set. Five of the sets live at module scope (K6-K8, W5, W6). About **109 compensating lines** in all: 66 in kiosk, 43 in webc.
 
 One read-path diagnostic has **no** dedupe at all. webc's `_resolveKeyIcon` warns `empty SAP icon URI for …` (`KioskKeyboard.ts:1518`) each time the template resolves the key (`KioskKeyboardTemplate.tsx:124`), so it repeats on every render, for example on every Shift press. This comes from reading the code; it was not run. Kiosk has no twin for it, because a bare `sap-icon://` fails `IconPool.getIconInfo` and goes through K6.
 
