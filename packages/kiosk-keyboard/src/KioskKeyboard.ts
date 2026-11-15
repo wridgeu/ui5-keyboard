@@ -981,6 +981,11 @@ export default class KioskKeyboard extends Control {
         this.fireLayoutChange(parameters);
       },
       resetShiftState: () => this._shiftState.reset(),
+      // The pointer press goes the way a touchcancel takes it; the keyboard press is visual only.
+      cancelPress: () => {
+        this.ontouchcancel();
+        this._clearKeyboardPressedState();
+      },
       endComposition: () => this._dropComposition("commit"),
       focusAnchorValue: () => this._focusAnchorValue(),
       reseatFocusAnchor: (value) => this._reseatFocusAnchor(value),

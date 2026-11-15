@@ -20,6 +20,7 @@ function createHost(attribute = "qwerty", locale = "qwerty") {
       box.changes.push(p.layout);
     },
     resetShiftState: () => {},
+    cancelPress: () => {},
     endComposition: () => {},
     focusAnchor: () => ({ value: null, focused: false }),
     reseatFocusAnchor: () => {},
@@ -130,6 +131,7 @@ describe("LayoutState golden sequence", () => {
       resetShiftState: () => {
         box.shiftResets++;
       },
+      cancelPress: () => {},
       endComposition: () => {},
       focusAnchor: () => ({ value: null, focused: false }),
       reseatFocusAnchor: () => {},

@@ -711,6 +711,7 @@ class KioskKeyboard extends UI5Element {
       this.fireDecoratorEvent("layout-change", parameters);
     },
     resetShiftState: () => this._shiftState.reset(),
+    cancelPress: () => this._cancelPress(),
     endComposition: () => {
       if (this._middleware) {
         this._middleware.commit();
@@ -868,6 +869,14 @@ class KioskKeyboard extends UI5Element {
   };
   /** Set for one touchend after a touch variant drag-release commits, to swallow the trailing synthesized tap. */
   private _variantCommittedTouch = false;
+  /** Whether a primary pointer is down on a keycap, from its pointerdown to its pointerup or pointercancel. */
+  private _pointerOnKey = false;
+  /**
+   * Set when a layout switch abandoned the held pointer press; swallows that gesture's
+   * trailing click. Cleared by the next pointerdown or grid keydown, so a release that
+   * lands off the key cannot swallow a later activation.
+   */
+  private _dropPressClick = false;
 
   // ── Backspace press-and-hold auto-repeat ──
   /** Owns the pointer gesture, repeat timer, and trailing-click suppression. */
@@ -937,6 +946,7 @@ class KioskKeyboard extends UI5Element {
   // While the popup is open its own roving navigation owns the arrow keys, so
   // grid navigation yields (focus is inside the popup, but guard defensively).
   readonly _boundOnKeyDown = (e: KeyboardEvent): void => {
+    this._dropPressClick = false;
     if (this._variantPopup) return;
     this._keyGridNav.onKeyDown(e);
   };
@@ -1040,6 +1050,26 @@ class KioskKeyboard extends UI5Element {
     const { signal } = this._hostAbort;
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false, signal });
     this.shadowRoot!.addEventListener("touchend", this._boundTouchEnd, { signal });
+
+    // Tracks the held pointer press a layout switch must abandon (`_cancelPress`).
+    this.shadowRoot!.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (!(e instanceof PointerEvent) || e.button > 0) return;
+        this._dropPressClick = false;
+        this._pointerOnKey = e.target instanceof Element && e.target.closest(KIOSK_KEYBOARD_DOM.selectors.key) !== null;
+      },
+      { signal },
+    );
+    document.addEventListener("pointerup", () => (this._pointerOnKey = false), { signal });
+    document.addEventListener(
+      "pointercancel",
+      () => {
+        this._pointerOnKey = false;
+        this._dropPressClick = false;
+      },
+      { signal },
+    );
 
     // Backspace press-and-hold auto-repeat (pointer gesture + trailing-click suppression).
     this._backspaceRepeat.attach(signal);
@@ -1606,6 +1636,12 @@ class KioskKeyboard extends UI5Element {
       clicked instanceof Element ? clicked.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook) : null;
     if (!keyEl) return;
 
+    // The release of a press a layout switch abandoned.
+    if (this._dropPressClick) {
+      this._dropPressClick = false;
+      return;
+    }
+
     const value = keyEl.dataset.key!;
     // Shift held on the activating event types the shifted glyph without
     // latching the on-screen `{shift}` state, mirroring a physical keyboard.
@@ -1795,6 +1831,20 @@ class KioskKeyboard extends UI5Element {
 
   private _onKeyMouseDown(e: Event): void {
     e.preventDefault();
+  }
+
+  /**
+   * Abandons a key press held across a layout switch, the way a pointercancel or a
+   * focus loss does: the backspace repeat and variant hold stop, the keyboard press
+   * (and a pending Space release) is dropped, and the held pointer's trailing click is
+   * swallowed. The keycap under the press now shows another key, so its release types
+   * nothing.
+   */
+  private _cancelPress(): void {
+    this._backspaceRepeat.stop();
+    this._variantGesture.stop();
+    this._keyGridNav.onFocusOut();
+    if (this._pointerOnKey) this._dropPressClick = true;
   }
 
   // ── Accent-variant popup ──
