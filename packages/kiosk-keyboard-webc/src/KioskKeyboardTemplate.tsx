@@ -108,6 +108,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             part="row"
             key={`row-${rowIndex}`}
             data-row-kind={classifyRow(row)}
+            style={`--_kiosk-keyboard-row-keys: ${row.length}`}
           >
             {row.map((key, colIndex) => {
               const id = keyElementId(this._componentId, rowIndex, colIndex);

@@ -287,8 +287,9 @@
   }
 
   .ui5KioskRow {
+    --_ui5KioskKeyboard-rowGap: var(--_ui5KioskKeyboard-keyGap);
     display: flex;
-    gap: var(--_ui5KioskKeyboard-keyGap);
+    gap: var(--_ui5KioskKeyboard-rowGap);
     justify-content: center;
   }
 
@@ -354,10 +355,14 @@
     /* WCAG 2.5.8 (AA): keys hold a 24 CSS px floor on both axes, growing with the
        root font size but never falling below the criterion's absolute pixel value
        on a page that shrinks the root. Narrow widths recover room by tightening the
-       inter-key gap (see the width-responsive @container rules) rather than the
-       keys. The inline floor is lifted below 20rem, where holding it pushes a full
-       row past the container edge - see that tier's rule. */
-    min-inline-size: ~"max(1.5rem, 24px)";
+       inter-key gap (see the width-responsive @container rules) first. The inline
+       floor is capped at the width that fits the row's full key count (written by
+       the renderer) beside its gaps: 100cqi is the keyboard's content box, which
+       is the row's width. Reachability outranks the target size, since a
+       center-justified row that overflows is clipped at BOTH edges; where the cap
+       bites, SC 2.5.8 is not met and every key in that row gets the fitting width.
+       Below 20rem the floor is lifted instead - see that tier's rule. */
+    min-inline-size: ~"min(max(1.5rem, 24px), (100cqi - (var(--_ui5KioskKeyboard-rowKeys, 1) - 1) * var(--_ui5KioskKeyboard-rowGap, 0px)) / var(--_ui5KioskKeyboard-rowKeys, 1))";
     min-block-size: ~"max(1.5rem, 24px)";
     white-space: nowrap;
     container-type: inline-size;
@@ -654,21 +659,22 @@
   /* Width-responsive @container */
 
   /* Pair for the 24px key floor: tighten the inter-key gap on narrow keyboards so
-     a full row of floored keys fits rather than overflowing. Mirrors the height-
-     driven cqShort/cqTiny gap drops, but keyed off the keyboard's own width. The
-     gap is set on the row (a container descendant); the container element itself
-     cannot be targeted from its own @container query. min() caps rather than
+     a full row of floored keys fits at more widths before the floor's cap bites.
+     Mirrors the height-driven cqShort/cqTiny gap drops, but keyed off the
+     keyboard's own width. The gap is set on the row (a container descendant), as
+     the --_ui5KioskKeyboard-rowGap the keys' floor reads; the container element
+     itself cannot be targeted from its own @container query. min() caps rather than
      hard-replaces, so a consumer's --ui5KioskKeyboard-keyGap and an already-tighter
      height tier both survive. */
   @container keyboard (max-width: 22rem) {
     .ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskRow {
-      gap: ~"min(var(--_ui5KioskKeyboard-keyGap), 0.25rem)";
+      --_ui5KioskKeyboard-rowGap: ~"min(var(--_ui5KioskKeyboard-keyGap), 0.25rem)";
     }
   }
 
   @container keyboard (max-width: 20rem) {
     .ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskRow {
-      gap: ~"min(var(--_ui5KioskKeyboard-keyGap), 0.125rem)";
+      --_ui5KioskKeyboard-rowGap: ~"min(var(--_ui5KioskKeyboard-keyGap), 0.125rem)";
     }
   }
 
@@ -682,11 +688,8 @@
     .ui5KioskKeyboard:not(.ui5KioskKeyboard--numpad) .ui5KioskKey {
       --_ui5KioskKeyboard-keyPadding: ~"var(--_ui5KioskKeyboard-keyPaddingXs)";
 
-      /* Reachability outranks the target-size floor at the narrowest tier: the
-         densest rows do not fit a full set of floored keys here, and a
-         center-justified row that overflows is clipped at BOTH edges, taking its
-         outermost keys with it. Keys shrink to fit instead, so every key stays
-         on screen; SC 2.5.8 is consequently not met below this width. */
+      /* The inline floor is lifted at the narrowest tier, so keys share the row by
+         their spans rather than taking the capped floor's equal widths. */
       min-inline-size: 0;
     }
 

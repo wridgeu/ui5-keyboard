@@ -55,6 +55,8 @@ interface KeyBox {
   height: number;
   /** Whether a hit test at the key's center lands on the key or its own content. */
   reachable: boolean;
+  /** Inline size each key gets when its row's keys share the row equally beside its gaps. */
+  rowFit: number;
 }
 
 interface KeyboardGeometry {
@@ -102,7 +104,10 @@ async function measureKeyboard(page: Page, containerId: string): Promise<Keyboar
         keys: [...board.querySelectorAll<HTMLElement>(keySelector)].map((el) => {
           const box = el.getBoundingClientRect();
           const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+          const row = el.parentElement!;
+          const n = row.querySelectorAll(keySelector).length;
           return {
+            rowFit: (row.clientWidth - (n - 1) * parseFloat(getComputedStyle(row).columnGap)) / n,
             key: el.dataset.key ?? "",
             left: box.left,
             right: box.right,
@@ -240,9 +245,11 @@ test("keys hold the target-size floor, or stay reachable below the tier", async 
       if (geometry.narrowTier) {
         expect(box.reachable, `${id}: key '${box.key}' is hit-testable in a ${where}`).toBe(true);
       } else {
-        expect(box.width, `${id}: key '${box.key}' holds 24px inline in a ${where}`).toBeGreaterThanOrEqual(
-          TARGET_SIZE,
-        );
+        // A row too dense for 24px keys caps the floor at the width that fits it.
+        expect(
+          box.width,
+          `${id}: key '${box.key}' holds 24px inline, or its row's fit, in a ${where}`,
+        ).toBeGreaterThanOrEqual(Math.min(TARGET_SIZE, box.rowFit - EDGE_EPSILON));
       }
     }
   }
