@@ -1,5 +1,5 @@
 import type { ConflictBehavior } from "../library";
-import type { HotkeyCallback, ParsedHotkey, SequencePendingCallback } from "../types";
+import type { HotkeyCallback, HotkeyOptions, ParsedHotkey, SequencePendingCallback } from "../types";
 
 /**
  * Internal representation of a fully resolved hotkey registration.
@@ -48,12 +48,18 @@ export interface ResolvedHotkeyOptions {
 
 /**
  * Internal representation of a fully resolved sequence registration.
+ *
+ * Extends a record over every {@link SequenceOptions} key, so a field added to
+ * `HotkeyOptions` becomes a required member here and fails to compile until
+ * the registration stores it.
  * @internal Use {@link HotkeyRegistrationInfo} (from `../types`) for public introspection.
  */
-export interface SequenceRegistration {
+export interface SequenceRegistration extends Record<keyof SequenceOptions, unknown> {
   id: string;
   /** Whether the registration is still active (set to `false` on unregister). */
   active: boolean;
+  /** The original hotkey string as provided by the caller. */
+  hotkey: string;
   sequence: string[];
   parsedSteps: ParsedHotkey[];
   callback: HotkeyCallback;
@@ -68,93 +74,10 @@ export interface SequenceRegistration {
   suppressInPopups: boolean;
 }
 
-// ──────────────────────────────────────────────
-// Sequence types (internal)
-// ──────────────────────────────────────────────
-
 /**
- * Options for registering a key sequence.
+ * The hotkey options a sequence registration honours: every `HotkeyOptions`
+ * field except those that only apply to a single-key hotkey. A sequence always
+ * ignores key repeat, has no conflict handling and no element target.
+ * @internal
  */
-export interface SequenceOptions {
-  /** Human-readable description. */
-  description?: string;
-  /** Timeout in ms between keys before the sequence resets. @default 1000 */
-  timeout?: number;
-  /** Scope - uses HotkeyManager's scope stack. @default "__global__" */
-  scope?: string;
-  /** Whether the sequence is active. @default true */
-  enabled?: boolean | (() => boolean);
-  /**
-   * Suppress the sequence when an input element is focused.
-   * - `true`: Always suppress in inputs.
-   * - `false`: Never suppress in inputs.
-   * - `"auto"`: Suppress for single keys; allow for Ctrl/Meta combos and Escape.
-   * @default "auto"
-   */
-  ignoreInputs?: boolean | "auto";
-  /** Prevent default on the final key. @default true */
-  preventDefault?: boolean;
-  /** Stop propagation on the final key. @default true */
-  stopPropagation?: boolean;
-  /**
-   * Per-registration callback for mid-sequence progress.
-   *
-   * Fires after each intermediate key with progress info (completed steps,
-   * total steps, next expected key).
-   *
-   * Dies with the registration - no manual cleanup needed.
-   */
-  onPending?: SequencePendingCallback;
-  /** Suppress this sequence when a UI5 dialog or popover is open. @default true */
-  suppressInPopups?: boolean;
-}
-
-/**
- * Options that can be updated on a live sequence registration via `setOptions()`.
- * Excludes `scope`, which requires unregister + re-register.
- */
-export type UpdatableSequenceOptions = Omit<SequenceOptions, "scope">;
-
-/**
- * Handle for managing a sequence registration lifecycle.
- */
-export interface SequenceRegistrationHandle {
-  /** Unique identifier for this registration. */
-  readonly id: string;
-  /** Whether this registration is still active (not yet unregistered). */
-  readonly isActive: boolean;
-  /** The original sequence keys as registered. */
-  readonly sequence: string[];
-  /** The scope this sequence belongs to. */
-  readonly scope: string;
-  /** Human-readable description (current value). */
-  readonly description: string;
-  /** Remove this registration and clean up. */
-  unregister(): void;
-  /**
-   * Update options on a live registration without re-registering.
-   * All fields except `scope` can be changed.
-   *
-   * @param options - Partial options to merge into the registration.
-   * @throws Error if the handle has been unregistered or if `scope` is provided.
-   */
-  setOptions(options: Partial<UpdatableSequenceOptions>): void;
-}
-
-/**
- * Public view of a sequence registration for introspection.
- * Flat, serializable shape - no closures, no parsed internals.
- */
-export interface SequenceRegistrationInfo {
-  readonly id: string;
-  readonly sequence: readonly string[];
-  readonly scope: string;
-  readonly description: string;
-  /** Resolved to current value (not the closure). */
-  readonly enabled: boolean;
-  readonly timeout: number;
-  readonly ignoreInputs: boolean | "auto";
-  readonly preventDefault: boolean;
-  readonly stopPropagation: boolean;
-  readonly suppressInPopups: boolean;
-}
+export type SequenceOptions = Omit<HotkeyOptions, "target" | "conflictBehavior" | "ignoreRepeat">;

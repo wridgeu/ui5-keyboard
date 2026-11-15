@@ -1,19 +1,20 @@
 import Log from "sap/base/Log";
 import { GLOBAL_SCOPE } from "./constants";
+import { assertImmutableSetOptions } from "./immutable-options";
 import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./dom";
 import { getCandidateKeys, matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import { resolveScopeOrGlobal } from "./scope";
 import { resolveEnabled } from "./resolve-enabled";
+import { ConflictBehavior } from "../library";
 import type { Platform } from "../library";
-import type { HotkeyCallback } from "../types";
 import type {
-  SequenceOptions,
-  SequenceRegistration,
-  SequenceRegistrationHandle,
-  SequenceRegistrationInfo,
-  UpdatableSequenceOptions,
-} from "./types";
+  HotkeyCallback,
+  HotkeyRegistrationHandle,
+  HotkeyRegistrationInfo,
+  UpdatableHotkeyOptions,
+} from "../types";
+import type { SequenceOptions, SequenceRegistration } from "./types";
 
 const LOG_COMPONENT = "ui5.hotkeys.SequenceManager";
 const DEFAULT_TIMEOUT = 1000;
@@ -37,7 +38,7 @@ function assertValidTimeout(timeout: number): number {
  */
 const UPDATABLE_OPTION_DEFAULTS: Omit<
   SequenceRegistration,
-  "id" | "active" | "sequence" | "parsedSteps" | "callback" | "scope" | "timeout"
+  "id" | "active" | "hotkey" | "sequence" | "parsedSteps" | "callback" | "scope" | "timeout"
 > = {
   description: "",
   enabled: true,
@@ -64,7 +65,7 @@ const UPDATABLE_OPTION_KEYS = Object.keys(UPDATABLE_OPTION_DEFAULTS) as Updatabl
  * (override defaults) and `setOptions` (live update). `timeout` is validated
  * separately by the callers.
  */
-function applyUpdatableOptions(target: SequenceRegistration, source: Partial<UpdatableSequenceOptions>): void {
+function applyUpdatableOptions(target: SequenceRegistration, source: SequenceOptions): void {
   for (const key of UPDATABLE_OPTION_KEYS) {
     const value = source[key];
     if (value !== undefined) {
@@ -115,15 +116,17 @@ export default class SequenceManager {
   /**
    * Register a key sequence.
    *
+   * @param hotkey - The hotkey string as provided by the caller (e.g., "G E").
    * @param sequence - Array of hotkey strings forming the sequence (e.g., ["G", "E"]).
    * @param callback - Function to invoke when the full sequence is matched.
    * @param options - Optional configuration.
    */
   registerSequence(
+    hotkey: string,
     sequence: string[],
     callback: HotkeyCallback,
     options?: SequenceOptions,
-  ): SequenceRegistrationHandle {
+  ): HotkeyRegistrationHandle {
     const id = `seq_${++idSeq}`;
     const parsedSteps = sequence.map((s, i) => {
       try {
@@ -143,6 +146,7 @@ export default class SequenceManager {
     const registration: SequenceRegistration = {
       id,
       active: true,
+      hotkey,
       sequence: sequenceCopy,
       parsedSteps,
       callback,
@@ -168,6 +172,9 @@ export default class SequenceManager {
       get isActive() {
         return registration.active;
       },
+      get hotkey() {
+        return registration.hotkey;
+      },
       get sequence() {
         return [...registration.sequence];
       },
@@ -190,12 +197,10 @@ export default class SequenceManager {
         });
         Log.debug(`Unregistered sequence (id: ${id})`, undefined, LOG_COMPONENT);
       },
-      setOptions: (newOptions: Partial<UpdatableSequenceOptions>) => {
+      setOptions: (newOptions: Partial<UpdatableHotkeyOptions>) => {
+        assertImmutableSetOptions(newOptions);
         if (!registration.active) {
           throw new Error(`Cannot setOptions on unregistered sequence (id: ${id})`);
-        }
-        if ("scope" in newOptions) {
-          throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
         }
         if (newOptions.timeout !== undefined) registration.timeout = assertValidTimeout(newOptions.timeout);
         applyUpdatableOptions(registration, newOptions);
@@ -207,25 +212,33 @@ export default class SequenceManager {
    * Get all active registrations.
    * Info objects are flat snapshots - no closures or parsed internals leak.
    */
-  getRegistrations(): ReadonlyArray<SequenceRegistrationInfo> {
+  getRegistrations(): ReadonlyArray<HotkeyRegistrationInfo> {
     return Array.from(this._registrations.values()).map((r) => this._toRegistrationInfo(r));
   }
 
   /**
-   * Convert an internal registration to the public flat info shape.
+   * Convert an internal registration to the public flat info shape. The
+   * hotkey-only fields hold the fixed values a sequence always has: repeats
+   * ignored, the default conflict behavior, no element target.
    */
-  private _toRegistrationInfo(reg: SequenceRegistration): SequenceRegistrationInfo {
+  private _toRegistrationInfo(reg: SequenceRegistration): HotkeyRegistrationInfo {
+    const hotkey = reg.sequence.join(" ");
     return {
       id: reg.id,
-      sequence: [...reg.sequence],
+      hotkey,
+      normalizedHotkey: hotkey,
       scope: reg.scope,
       description: reg.description,
       enabled: this._isRegistrationEnabled(reg),
-      timeout: reg.timeout,
-      ignoreInputs: reg.ignoreInputs,
       preventDefault: reg.preventDefault,
       stopPropagation: reg.stopPropagation,
+      ignoreInputs: reg.ignoreInputs,
+      ignoreRepeat: true,
       suppressInPopups: reg.suppressInPopups,
+      conflictBehavior: ConflictBehavior.Warn,
+      hasTarget: false,
+      sequence: [...reg.sequence],
+      timeout: reg.timeout,
     };
   }
 
