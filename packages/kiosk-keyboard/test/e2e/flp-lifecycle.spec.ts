@@ -8,6 +8,10 @@ import { test, expect, type Page } from "@playwright/test";
 const FLP_PAGE = "/test/flp.html";
 type HasherWindow = Window & typeof globalThis & { hasher: { setHash(hash: string): void } };
 
+// The shell owns the id prefix up to "---"; the router target id and the view-local id are the app's.
+const keyboard = (page: Page) => page.locator('[id$="---kioskI18nExtensibility--i18nKeyboard"]');
+const demoAppTile = (page: Page) => page.locator(".sapMGT").filter({ hasText: "UI5 Keyboard Libraries Demo" });
+
 async function waitForFlpShell(page: Page): Promise<void> {
   await page.goto(FLP_PAGE);
   await page.locator("#shell-header").waitFor({ timeout: 30_000 });
@@ -15,7 +19,7 @@ async function waitForFlpShell(page: Page): Promise<void> {
 }
 
 async function openAppTile(page: Page): Promise<void> {
-  await page.locator(".sapMGT").first().click();
+  await demoAppTile(page).click();
   // Confirm the app started via the hash, then that a page rendered. Use counts
   // (not a specific element) because stale pages from a prior session may exist.
   await page.waitForFunction(() => window.location.hash.includes("DemoApp-display"), null, { timeout: 30_000 });
@@ -28,7 +32,7 @@ async function navigateToHash(page: Page, hash: string): Promise<void> {
 
 async function navigateToI18nPage(page: Page): Promise<void> {
   await navigateToHash(page, "DemoApp-display&/kiosk/i18n-extensibility");
-  await page.locator(".ui5KioskKeyboard").first().waitFor({ timeout: 15_000 });
+  await keyboard(page).waitFor({ timeout: 15_000 });
 }
 
 async function navigateToFlpHome(page: Page): Promise<void> {
@@ -36,7 +40,6 @@ async function navigateToFlpHome(page: Page): Promise<void> {
   await page.locator(".sapMGT").first().waitFor({ timeout: 15_000 });
 }
 
-const keyboard = (page: Page) => page.locator(".ui5KioskKeyboard").first();
 const shiftLabel = (page: Page) => keyboard(page).locator('[data-key="{shift}"] .ui5KioskKey__label');
 
 test("restores default labels after leaving and re-entering via tile click", async ({ page }) => {
@@ -47,7 +50,7 @@ test("restores default labels after leaving and re-entering via tile click", asy
   await expect(keyboard(page)).toHaveAttribute("aria-label", "Virtual Keyboard");
   await expect(shiftLabel(page)).toHaveText("Shift");
 
-  await page.locator("li").filter({ hasText: "French" }).first().click();
+  await page.getByRole("option", { name: "French" }).click();
   await expect(keyboard(page)).toHaveAttribute("aria-label", "Clavier virtuel");
   await expect(shiftLabel(page)).toHaveText("Maj");
 
@@ -57,4 +60,26 @@ test("restores default labels after leaving and re-entering via tile click", asy
   await expect(keyboard(page)).toBeVisible();
   await expect(keyboard(page)).toHaveAttribute("aria-label", "Virtual Keyboard");
   await expect(shiftLabel(page)).toHaveText("Shift");
+});
+
+test("controller-built controls keep their stable ids across app exit and re-entry", async ({ page }) => {
+  await waitForFlpShell(page);
+
+  for (let entry = 0; entry < 2; entry++) {
+    await openAppTile(page);
+    await navigateToHash(page, "DemoApp-display&/kiosk/component");
+    await page.getByRole("button", { name: "Show Keyboard" }).click();
+    await expect(page.locator('[id$="---kioskComponent--componentKeyboard"]')).toBeVisible();
+
+    await navigateToHash(page, "DemoApp-display&/kiosk/popover");
+    await page.getByTitle("Open keyboard for Full Name (generous height)").click();
+    await expect(page.locator('[id$="---kioskPopover--popoverA"]')).toBeVisible();
+    await expect(page.locator('[id$="---kioskPopover--popoverKeyboardA"]')).toHaveAttribute(
+      "aria-label",
+      "Virtual Keyboard (generous)",
+    );
+    await page.keyboard.press("Escape");
+
+    await navigateToFlpHome(page);
+  }
 });
