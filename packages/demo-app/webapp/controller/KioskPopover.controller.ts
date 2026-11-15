@@ -74,7 +74,10 @@ export default class KioskPopover extends BaseController {
 
     let keyboard = this._keyboards.get(key);
     if (!keyboard) {
-      keyboard = new KioskKeyboard({ keyboardType: KeyboardType.Full, ariaLabel: variant.ariaLabel });
+      keyboard = new KioskKeyboard(this.createId(`popoverKeyboard${key}`), {
+        keyboardType: KeyboardType.Full,
+        ariaLabel: variant.ariaLabel,
+      });
       if (variant.styleClass) keyboard.addStyleClass(variant.styleClass);
       this._keyboards.set(key, keyboard);
     }
@@ -91,7 +94,7 @@ export default class KioskPopover extends BaseController {
       if (variant.contentHeight) {
         settings.contentHeight = variant.contentHeight;
       }
-      popover = new Popover(settings);
+      popover = new Popover(this.createId(`popover${key}`), settings);
       this.getView()!.addDependent(popover);
       this._popovers.set(key, popover);
     }

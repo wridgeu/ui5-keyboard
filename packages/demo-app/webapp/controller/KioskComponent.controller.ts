@@ -19,7 +19,7 @@ export default class KioskComponent extends BaseController {
   override onInit(): void {
     const stateModel = this.getStateModel();
 
-    this._keyboard = new KioskKeyboard({
+    this._keyboard = new KioskKeyboard(this.createId("componentKeyboard"), {
       docked: true,
       ariaLabel: "Component Keyboard",
       keyPress: (event: KioskKeyboard$KeyPressEvent) => {
