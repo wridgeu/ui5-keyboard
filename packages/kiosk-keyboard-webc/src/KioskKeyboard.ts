@@ -1531,8 +1531,7 @@ class KioskKeyboard extends UI5Element {
         if (!clIcon) return null; // capsLockIcon: "" suppresses icon
         return parseSapIcon(clIcon, `capsLockIcon on key "${key.value}"`);
       }
-      const builtIn = ICON_MAP["{shift:capsLock}"];
-      return builtIn ? { value: builtIn, sap: true } : null;
+      return { value: SPECIAL_KEY_ICON_NAMES.capsLock, sap: true };
     }
 
     if (key.icon === "") return null; // suppress default-state icon
@@ -1932,7 +1931,6 @@ class KioskKeyboard extends UI5Element {
 
   /** Sets keyboardType without marking it as explicit (for auto-detection). */
   private _setKeyboardTypeInternal(value: `${KeyboardType}`): void {
-    if (value === this.keyboardType) return;
     this._keyboardTypeSource = `auto:${value}`;
     this.keyboardType = value;
   }

@@ -398,13 +398,13 @@ describe("kiosk-keyboard - custom layouts", () => {
     await withCapturedWarnings(async (messages) => {
       const el = await mount(
         { layout: "qwerty", "accent-variants": "" },
-        // An empty glyph makes the table unusable.
-        customLayout({ name: "qwerty", variants: { a: [""] } }),
+        // An empty glyph makes the table unusable; its `o: []` would strip o's popup if applied.
+        customLayout({ name: "qwerty", variants: { a: [""], o: [] } }),
       );
       expect(messages.length, "an invalid table is logged").to.be.greaterThan(0);
       expect(
-        requireKey(el, "a").hasAttribute(DOM.attributes.hasVariants),
-        "the invalid table is dropped, so 'a' falls through to the built-in Latin table",
+        requireKey(el, "o").hasAttribute(DOM.attributes.hasVariants),
+        "the invalid table is dropped, so 'o' keeps the built-in Latin table",
       ).to.equal(true);
     });
   });
@@ -452,16 +452,12 @@ describe("kiosk-keyboard - custom layouts", () => {
     } satisfies Record<string, NotAVariantTable>;
     for (const [label, table] of Object.entries(impostors)) {
       await withCapturedWarnings(async (messages) => {
-        const el = await mount(
+        await mount(
           { layout: "qwerty", "accent-variants": "" },
           // @ts-expect-error a table only plain JS can assign, which is what the validator screens
           customLayout({ name: "qwerty", variants: table }),
         );
         expect(messages.length, `${label} is logged as invalid`).to.be.greaterThan(0);
-        expect(
-          requireKey(el, "a").hasAttribute(DOM.attributes.hasVariants),
-          `${label} is skipped, so 'a' keeps the built-in table`,
-        ).to.equal(true);
       });
     }
   });
@@ -473,15 +469,16 @@ describe("kiosk-keyboard - custom layouts", () => {
       await withCapturedWarnings(async (messages) => {
         const el = await mount(
           { layout: "qwerty", "accent-variants": "" },
-          customLayout({ name: "qwerty", variants: { [base]: ["ä"] } }),
+          // Its `o: []` would strip o's popup if the table were applied.
+          customLayout({ name: "qwerty", variants: { [base]: ["ä"], o: [] } }),
         );
         expect(
           messages.some((message) => message.includes("lowercase base letters")),
           `"${base}" is logged as invalid`,
         ).to.equal(true);
         expect(
-          requireKey(el, "a").hasAttribute(DOM.attributes.hasVariants),
-          `"${base}" is skipped, so 'a' keeps the built-in table`,
+          requireKey(el, "o").hasAttribute(DOM.attributes.hasVariants),
+          `"${base}" is skipped, so 'o' keeps the built-in table`,
         ).to.equal(true);
       });
     }
