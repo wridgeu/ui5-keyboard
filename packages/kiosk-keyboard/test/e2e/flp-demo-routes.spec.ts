@@ -77,3 +77,31 @@ test("hotkeys/target-bubbling: Escape fires the innermost target around focus", 
   await page.keyboard.press("Escape");
   await expect(latest).toContainText("inner target fired");
 });
+
+test.describe("control cards at phone width", () => {
+  test.use({ viewport: { width: 375, height: 667 } });
+
+  for (const [route, viewId, ...localIds] of [
+    ["kiosk/docked", "kioskDocked", "mobileKeyboardSegments", "fKeyModeSegments"],
+    ["kiosk/focus-scenarios", "kioskFocusScenarios", "focusInput2"],
+    ["kiosk/i18n-extensibility", "kioskI18nExtensibility", "i18nModeSegments"],
+  ]) {
+    test(`${route}: controls stay inside their panel, labels untruncated`, async ({ page }) => {
+      await page.goto(appRoute(route));
+      for (const localId of localIds) {
+        const control = byAppId(page, viewId!, localId!);
+        await control.waitFor({ timeout: 30_000 });
+        const fit = await control.evaluate((el) => {
+          const panel = el.closest(".sapMPanelContent")!.getBoundingClientRect();
+          const box = el.getBoundingClientRect();
+          const truncated = [...el.querySelectorAll(".sapMSegBBtnInner")]
+            .filter((t) => t.scrollWidth > t.clientWidth)
+            .map((t) => t.textContent);
+          return { right: box.right, panelRight: panel.right, truncated };
+        });
+        expect(fit.right, localId).toBeLessThanOrEqual(fit.panelRight);
+        expect(fit.truncated, localId).toEqual([]);
+      }
+    });
+  }
+});

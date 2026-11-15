@@ -16,9 +16,9 @@
                         <Label id="enabledLabel" text="Enabled:" class="sapUiSmallMarginEnd" />
                         <Switch state="{docked>/kioskEnabled}" ariaLabelledBy="enabledLabel" />
                     </HBox>
-                    <HBox alignItems="Center" class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
+                    <HBox wrap="Wrap" alignItems="Center" class="sapUiSmallMarginEnd sapUiTinyMarginBottom">
                         <Label id="mobileKeyboardLabel" text="Mobile Keyboard:" class="sapUiSmallMarginEnd" />
-                        <SegmentedButton selectedKey="{docked>/kioskMobileKeyboard}" ariaLabelledBy="mobileKeyboardLabel" width="15rem">
+                        <SegmentedButton id="mobileKeyboardSegments" selectedKey="{docked>/kioskMobileKeyboard}" ariaLabelledBy="mobileKeyboardLabel" width="15rem">
                             <items>
                                 <SegmentedButtonItem key="Custom" text="Custom" />
                                 <SegmentedButtonItem key="Native" text="Native" />
@@ -33,9 +33,9 @@
                             <core:Item key="{docked>key}" text="{docked>text}" />
                         </Select>
                     </HBox>
-                    <HBox alignItems="Center" class="sapUiTinyMarginBottom">
+                    <HBox wrap="Wrap" alignItems="Center" class="sapUiTinyMarginBottom">
                         <Label id="fKeyModeLabel" text="F-Key Mode:" class="sapUiSmallMarginEnd" />
-                        <SegmentedButton selectedKey="{docked>/kioskFKeyMode}" ariaLabelledBy="fKeyModeLabel" width="15rem">
+                        <SegmentedButton id="fKeyModeSegments" selectedKey="{docked>/kioskFKeyMode}" ariaLabelledBy="fKeyModeLabel" width="15rem">
                             <items>
                                 <SegmentedButtonItem key="Virtual" text="Virtual" />
                                 <SegmentedButtonItem key="Native" text="Native" />
