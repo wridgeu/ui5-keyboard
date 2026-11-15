@@ -8,6 +8,7 @@ import {
   isBuiltInLayout,
   getLocaleLayout,
 } from "../../src/core/layout-registry.js";
+import qwerty from "../../src/layouts/qwerty.js";
 import type { LayoutDefinition } from "../../src/types.js";
 
 const CUSTOM_LAYOUT: LayoutDefinition = [[{ value: "a" }, { value: "b" }, { value: "c" }]];
@@ -64,7 +65,7 @@ describe("layout-registry", () => {
 
     it("falls through to built-in when instance map lacks the name", () => {
       const instanceMap = new Map([["unrelated", CUSTOM_LAYOUT]]);
-      expect(getRegisteredLayout("qwerty", instanceMap)).toBe(getRegisteredLayout("qwerty"));
+      expect(getRegisteredLayout("qwerty", instanceMap)).toBe(qwerty);
     });
 
     it("accepts __proto__ / prototype / constructor in instance map", () => {
@@ -101,16 +102,12 @@ describe("layout-registry", () => {
     it("returns default for non-string argument", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       // @ts-expect-error a name only plain JS can supply, which is what the guard covers
-      const layout = getLayoutOrDefault(undefined);
-      expect(layout).toBeDefined();
-      expect(layout.length).toBeGreaterThan(0);
+      expect(getLayoutOrDefault(undefined)).toBe(qwerty);
     });
 
     it("returns default for whitespace-only name", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
-      const layout = getLayoutOrDefault("   ");
-      expect(layout).toBeDefined();
-      expect(layout.length).toBeGreaterThan(0);
+      expect(getLayoutOrDefault("   ")).toBe(qwerty);
     });
   });
 
@@ -157,8 +154,8 @@ describe("layout-registry", () => {
 
     it("instance locale map shadows built-in locale map", async () => {
       await withLanguage("de", () => {
-        const instanceLocale = new Map([["de", "qwerty"]]);
-        expect(getLocaleLayout(instanceLocale)).toBe("qwerty");
+        const instanceLocale = new Map([["de", "qwerty-es"]]);
+        expect(getLocaleLayout(instanceLocale)).toBe("qwerty-es");
       });
     });
 

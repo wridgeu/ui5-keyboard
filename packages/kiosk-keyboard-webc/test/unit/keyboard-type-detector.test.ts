@@ -97,8 +97,9 @@ describe("detectKeyboardType", () => {
 
     it("ignores empty data-keyboard-type", () => {
       const el = document.createElement("input");
+      el.type = "number";
       el.setAttribute("data-keyboard-type", "");
-      expect(detectKeyboardType(el)).toBe("Full");
+      expect(detectKeyboardType(el)).toBe("Numpad");
     });
 
     it("detects data-keyboard-type across shadow DOM boundaries", () => {

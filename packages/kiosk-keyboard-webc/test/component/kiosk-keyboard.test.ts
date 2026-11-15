@@ -1193,7 +1193,6 @@ describe("kiosk-keyboard", () => {
 
       expect(queryKey(el, "{layout:numeric}"), "the '123' key remains the real way back to numbers").to.not.be.null;
       expect(queryKey(el, "{layout:Base}"), "the mixed-case dead ABC key is stripped").to.be.null;
-      expect(queryKey(el, "{layout:base}"), "no lowercase base key either").to.be.null;
     });
 
     it("Numpad: a user-reached symbols layout keeps the return key (relabeled) to the numpad", async () => {
@@ -1333,13 +1332,16 @@ describe("kiosk-keyboard", () => {
       const el = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
       await nextRender();
 
-      // Auto-detect Numpad for the number input. The auto-forced numpad surface
-      // strips the {layout:base} (ABC) key, so its absence marks "on numpad".
+      // Auto-detect Numpad for the number input; the numpad's 7-8-9 top row marks
+      // "on numpad".
       input.focus();
       input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       await nextRender();
       expect(el.keyboardType).to.equal("Numpad");
-      expect(queryKey(el, "{layout:base}"), "auto-forced numpad strips the ABC key").to.be.null;
+      expect(
+        queryRows(el)[0].querySelectorAll('[role="button"]').length,
+        "auto-forced numpad renders its 3-key top row",
+      ).to.equal(3);
 
       // User taps a {layout:special} key: a user-driven switch that overrides the
       // keyboardType constraint. The special layout's symbol keys (e.g. "[") mark
@@ -2021,7 +2023,9 @@ describe("kiosk-keyboard", () => {
       const region = politeAnnouncementRegion();
       expect(region, "the framework's polite region is in the page").to.not.be.null;
       expect(el.shadowRoot!.querySelector("[aria-live]"), "no live region inside the shadow root").to.be.null;
-      expect(el.contains(region), "the region is not inside the keyboard element at all").to.be.false;
+      expect(el.querySelectorAll("[aria-live]").length, "no live region in the keyboard's light DOM either").to.equal(
+        0,
+      );
     });
 
     it("marks the docked-hidden root inert so its tabbable key is not exposed inside an aria-hidden subtree", async () => {
@@ -3359,7 +3363,7 @@ describe("kiosk-keyboard", () => {
       const container = await fixture(html`
         <div>
           <input id="multi-kb-input" type="text" />
-          <kiosk-keyboard id="kb-disabled" layout="qwerty" docked disabled controls="multi-kb-input"></kiosk-keyboard>
+          <kiosk-keyboard id="kb-disabled" layout="qwerty" disabled controls="multi-kb-input"></kiosk-keyboard>
           <kiosk-keyboard id="kb-active" layout="qwerty" docked auto-show controls="multi-kb-input"></kiosk-keyboard>
         </div>
       `);

@@ -13,7 +13,6 @@ function resolveRemThreshold(
   remPx: number,
 ): number {
   const raw = computedStyle.getPropertyValue(prop).trim();
-  if (!raw) return fallbackRem * remPx;
   const value = Number.parseFloat(raw);
   return Number.isNaN(value) ? fallbackRem * remPx : value * remPx;
 }

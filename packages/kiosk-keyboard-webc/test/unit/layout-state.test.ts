@@ -31,7 +31,7 @@ function createHost(attribute = "qwerty", locale = "qwerty") {
 
 describe("LayoutState.clearUserOverride", () => {
   it("a keyboardType round-trip lands on the base, not on the user pick", () => {
-    const { box, state } = createHost();
+    const { box, state } = createHost("qwertz-de", "qwerty");
     state.applyKeySwitch("numeric");
     expect(box.current, "precondition: the user pick landed").to.equal("numeric");
 
@@ -40,8 +40,8 @@ describe("LayoutState.clearUserOverride", () => {
     expect(state.resolvedName(), "the constraint pins the surface").to.equal("numpad");
 
     box.keyboardType = "Full";
-    expect(state.resolvedName(), "the lifted constraint lands on the base").to.equal("qwerty");
-    expect(box.changes).to.deep.equal(["numeric", "qwerty"]);
+    expect(state.resolvedName(), "the lifted constraint lands on the base").to.equal("qwertz-de");
+    expect(box.changes).to.deep.equal(["numeric", "qwertz-de"]);
   });
 
   it("a user pick of a primary layout still returns to the base under the constraint", () => {

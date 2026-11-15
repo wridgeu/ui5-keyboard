@@ -232,11 +232,14 @@ describe("kiosk-keyboard - autoCompact", () => {
   });
 
   it("says nothing when the layout switch was asked for", async () => {
-    const { el } = await mount(WIDE_PX, { layout: "ja-kana", "auto-compact": "" });
+    const { el, changes } = await mount(NARROW_PX, { layout: "away", "auto-compact": "" }, ...pair());
 
-    el.layout = "qwerty";
+    el.layout = "home";
     await settle();
 
+    expect(changes, "the asked-for layout tiers to its compact form").to.deep.equal([
+      { layout: "home-c", autoDetected: true },
+    ]);
     // A switch the user asked for is its own feedback, and it moves focus onto
     // the key it followed, which announces itself.
     expect(announcedText()).to.equal("");
