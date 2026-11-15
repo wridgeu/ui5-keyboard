@@ -21,7 +21,7 @@ type MatchOptions = Omit<FindMatchOptions, "registrations">;
  * for the unhandled-callback, and leaves execution
  * (preventDefault/stopPropagation/callback) to the manager.
  *
- * Reads the shared registration index and map; resolves the event path through
+ * Reads the shared registration index; resolves the event path through
  * the focus-fallback tracker; maps registrations to public info via the
  * injected callback (the manager owns that conversion).
  */
@@ -76,10 +76,10 @@ export default class HotkeyMatcher {
 
       // Iterate composedPath from index 0 (innermost) outward
       for (const node of eventPath) {
-        const ids = this._index.getTargetRegistrationIds(bucket, node);
-        if (!ids || ids.size === 0) continue;
+        const regs = this._index.getTargetRegistrations(bucket, node);
+        if (!regs) continue;
 
-        const matched = findMatchInScope({ ...matchOpts, registrations: this._index.getRegistrationsFromIds(ids) });
+        const matched = findMatchInScope({ ...matchOpts, registrations: [...regs] });
         if (matched) return matched;
       }
     }
@@ -95,13 +95,10 @@ export default class HotkeyMatcher {
     const { event, skipInfo } = matchOpts;
     for (const scope of scopes) {
       const bucket = this._index.getBucket(scope);
-      if (!bucket || bucket.callbackTargetIds.size === 0) continue;
+      if (!bucket || bucket.callbackTargets.size === 0) continue;
 
-      for (const id of bucket.callbackTargetIds) {
-        const reg = this._index.getRegistration(id);
-        if (!reg) continue;
-
-        // callbackTargetIds only ever holds callback-target registrations.
+      for (const reg of bucket.callbackTargets) {
+        // callbackTargets only ever holds callback-target registrations.
         const target = reg.options.target;
         if (target?.kind !== "callback") continue;
 
@@ -142,13 +139,12 @@ export default class HotkeyMatcher {
       const bucket = this._index.getBucket(scope);
       if (!bucket) continue;
 
-      for (const [targetNode, ids] of bucket.targets) {
+      for (const [targetNode, regs] of bucket.targets) {
         if (pathSet.has(targetNode)) continue; // Already checked in main pass
         if (targetNode instanceof Element && !targetNode.isConnected) continue; // Skip detached DOM refs
 
-        for (const id of ids) {
-          const reg = this._index.getRegistration(id);
-          if (reg && matchesKeyboardEvent(event, reg.parsedHotkey)) {
+        for (const reg of regs) {
+          if (matchesKeyboardEvent(event, reg.parsedHotkey)) {
             recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, this._toRegistrationInfo);
           }
         }
