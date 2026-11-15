@@ -67,9 +67,9 @@
     "fmt:check": "oxfmt --check .",
     "typecheck": "npm run typecheck:hotkeys && npm run typecheck:hotkeys:test && npm run typecheck:kiosk && npm run typecheck:kiosk:test && npm run typecheck:kiosk:e2e && npm run typecheck:kiosk-webc && npm run typecheck:kiosk-webc:test && npm run typecheck:kiosk-webc:e2e && npm run typecheck:demo && npm run typecheck:tools",
     "typecheck:hotkeys": "npm run typecheck -w packages/hotkeys",
-    "typecheck:hotkeys:test": "npm exec -w packages/hotkeys -- tsc -p test/tsconfig.json --noEmit",
+    "typecheck:hotkeys:test": "tsc -p packages/hotkeys/test/tsconfig.json --noEmit",
     "typecheck:kiosk": "npm run typecheck -w packages/kiosk-keyboard",
-    "typecheck:kiosk:test": "npm exec -w packages/kiosk-keyboard -- tsc -p test/tsconfig.json --noEmit",
+    "typecheck:kiosk:test": "tsc -p packages/kiosk-keyboard/test/tsconfig.json --noEmit",
     "typecheck:kiosk-webc": "npm run typecheck -w packages/kiosk-keyboard-webc",
     "typecheck:kiosk-webc:test": "tsc -p packages/kiosk-keyboard-webc/test/tsconfig.json --noEmit",
     "typecheck:kiosk-webc:e2e": "npm run typecheck:e2e -w packages/kiosk-keyboard-webc",
@@ -93,6 +93,7 @@
     "@types/node": "~24.13.3",
     "@types/qunit": "~2.19.14",
     "@types/sinon": "~21.0.1",
+    "@typescript/native": "npm:typescript@~7.0.2",
     "@ui5/linter": "~1.23.5",
     "@ui5/ts-interface-generator": "~0.12.0",
     "@ui5/webcomponents-tools": "2.28.1",
@@ -104,7 +105,7 @@
     "puppeteer": "~25.5.0",
     "rimraf": "~6.1.3",
     "start-server-and-test": "~3.0.12",
-    "typescript": "~6.0.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "ui5-test-runner": "~5.14.0"
   },
   "overrides": {
