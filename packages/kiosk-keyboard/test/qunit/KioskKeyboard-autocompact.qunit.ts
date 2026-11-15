@@ -351,11 +351,8 @@ QUnit.test("An explicit request while narrow wins, and the tier resolves from th
 
   assert.deepEqual(
     changes,
-    [
-      { layout: "home", autoDetected: false },
-      { layout: "home-c", autoDetected: true },
-    ],
-    "the request applied, then the tier resolved against it",
+    [{ layout: "home-c", autoDetected: true }],
+    "one change, naming the counterpart of the request",
   );
   assert.deepEqual(getRenderedLayoutKeys(kb), [["hc"]], "the counterpart of the NEW request renders");
 
@@ -486,9 +483,15 @@ QUnit.test(
      * Per step: the `layout` property, the first rendered key, and the events and
      * announcement since the last step.
      */
+    const requested: (string | undefined)[] = [];
+    kb.attachLayoutChange((event) => {
+      requested.push(event.getParameter("requestedLayout"));
+    });
     const trace: unknown[] = [];
     const step = (name: string): void => {
-      trace.push([name, kb.getLayout(), getRenderedLayoutKeys(kb)[0]?.[0], changes.splice(0), announcedText()]);
+      const names = requested.splice(0);
+      const events = changes.splice(0).map((change, i) => ({ ...change, requestedLayout: names[i] }));
+      trace.push([name, kb.getLayout(), getRenderedLayoutKeys(kb)[0]?.[0], events, announcedText()]);
       resetAnnouncements();
     };
 
@@ -525,37 +528,46 @@ QUnit.test(
         "narrow",
         "home-c",
         "{layout:away}",
-        [{ layout: "home-c", autoDetected: true }],
+        [{ layout: "home-c", requestedLayout: "home", autoDetected: true }],
         "Switched to the compact keyboard layout",
       ],
-      // The request lands first, then the tier resolves against it, unannounced.
+      // One change, naming the layout that renders, unannounced.
       [
         "request B while narrow",
         "away-c",
         "ac",
-        [
-          { layout: "away", autoDetected: false },
-          { layout: "away-c", autoDetected: true },
-        ],
+        [{ layout: "away-c", requestedLayout: "away", autoDetected: true }],
         "",
       ],
       // The key pick was a user override, which a keyboardType change drops to the base;
       // the constraint wins, and lifting it re-tiers the base.
-      ["Numpad", "away", "7", [{ layout: "away", autoDetected: false }], ""],
-      ["reset", "away-c", "ac", [{ layout: "away-c", autoDetected: true }], ""],
+      ["Numpad", "away", "7", [{ layout: "away", requestedLayout: "away", autoDetected: false }], ""],
+      ["reset", "away-c", "ac", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], ""],
       [
         "widen",
         "away",
         "{layout:pick}",
-        [{ layout: "away", autoDetected: true }],
+        [{ layout: "away", requestedLayout: "away", autoDetected: true }],
         "Switched back to the standard keyboard layout",
       ],
-      ["{layout:pick}", "pick", "{layout:base}", [{ layout: "pick", autoDetected: false }], ""],
-      ["{layout:base}", "away", "{layout:pick}", [{ layout: "away", autoDetected: false }], ""],
+      [
+        "{layout:pick}",
+        "pick",
+        "{layout:base}",
+        [{ layout: "pick", requestedLayout: "pick", autoDetected: false }],
+        "",
+      ],
+      [
+        "{layout:base}",
+        "away",
+        "{layout:pick}",
+        [{ layout: "away", requestedLayout: "away", autoDetected: false }],
+        "",
+      ],
       // solo-c is not declared yet, so the crossing swaps nothing...
-      ["request solo, narrow", "solo", "s", [{ layout: "solo", autoDetected: false }], ""],
+      ["request solo, narrow", "solo", "s", [{ layout: "solo", requestedLayout: "solo", autoDetected: false }], ""],
       // ...and the counterpart arriving applies without a resize, unannounced.
-      ["solo-c declared", "solo-c", "sc", [{ layout: "solo-c", autoDetected: true }], ""],
+      ["solo-c declared", "solo-c", "sc", [{ layout: "solo-c", requestedLayout: "solo", autoDetected: true }], ""],
     ]);
   },
 );

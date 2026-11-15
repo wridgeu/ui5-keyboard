@@ -25,8 +25,8 @@ declare module "./KioskKeyboard" {
         and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
         writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
         when it holds a stored preference, or a detected value travels back into the
-        model; take user-driven changes from `layoutChange`, whose `autoDetected`
-        parameter is `false` for exactly those.
+        model; take the layout to persist from the `requestedLayout` parameter of
+        `layoutChange`, which every change carries.
          *
          * @since 0.1.0
          */
@@ -282,8 +282,8 @@ declare module "./KioskKeyboard" {
         and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
         writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
         when it holds a stored preference, or a detected value travels back into the
-        model; take user-driven changes from `layoutChange`, whose `autoDetected`
-        parameter is `false` for exactly those.
+        model; take the layout to persist from the `requestedLayout` parameter of
+        `layoutChange`, which every change carries.
          *
          * @since 0.1.0
          * Default value is: "qwerty"
@@ -301,8 +301,8 @@ declare module "./KioskKeyboard" {
         and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
         writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
         when it holds a stored preference, or a detected value travels back into the
-        model; take user-driven changes from `layoutChange`, whose `autoDetected`
-        parameter is `false` for exactly those.
+        model; take the layout to persist from the `requestedLayout` parameter of
+        `layoutChange`, which every change carries.
          *
          * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
@@ -1171,6 +1171,8 @@ declare module "./KioskKeyboard" {
          * @param parameters Parameters to pass along with the event
          * @param [mParameters.layout] Fired when the active layout changes (via a `{layout:name}` key
         or programmatic `setLayout()` call).
+         * @param [mParameters.requestedLayout] Fired when the active layout changes (via a `{layout:name}` key
+        or programmatic `setLayout()` call).
          * @param [mParameters.autoDetected] Fired when the active layout changes (via a `{layout:name}` key
         or programmatic `setLayout()` call).
          *
@@ -1471,6 +1473,7 @@ declare module "./KioskKeyboard" {
      */
     export interface KioskKeyboard$LayoutChangeEventParameters {
         layout?: string;
+        requestedLayout?: string;
         autoDetected?: boolean;
     }
 

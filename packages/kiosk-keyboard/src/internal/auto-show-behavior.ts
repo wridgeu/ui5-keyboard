@@ -136,8 +136,8 @@ export default class AutoShowBehavior extends BaseObject {
       // explicitly chose. Mirrors the webc focusin guard
       // (`if (detected !== this.keyboardType)`).
       if (detected !== previous) {
-        this._host._setKeyboardTypeSource(`auto:${detected}`);
         this._host.setProperty("keyboardType", detected);
+        this._host._setKeyboardTypeSource(`auto:${detected}`);
         this._host.fireKeyboardTypeChange({
           keyboardType: detected,
           previousKeyboardType: previous,
