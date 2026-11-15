@@ -164,9 +164,10 @@ const KioskKeyboardRenderer = {
     }
     // Re-emit the physical-keyboard mirror for the keycap whose hardware key is
     // down: holding a modifier invalidates the control, and the mirror has to
-    // outlive the patch that invalidation triggers.
+    // outlive the patch that invalidation triggers. A layout change seats another
+    // key at the same position, which must not inherit the mirror.
     const highlighted = _getHighlightedKey();
-    if (highlighted?.row === ri && highlighted.col === ci) {
+    if (highlighted?.row === ri && highlighted.col === ci && highlighted.value === key.value) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyHighlight);
     }
     this.writeKeyAttributes(rm, oControl, key, ri, ci, focusTarget, label);

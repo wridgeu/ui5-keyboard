@@ -23,6 +23,12 @@ function resolveDataKey(key: string): string | undefined {
   return KEY_TO_DATA_KEY.get(key) ?? (NATIVE_DISPATCHABLE.has(key) ? `{fkey:${key}}` : undefined);
 }
 
+/**
+ * The held key's grid position plus its value: a layout change re-seats the grid,
+ * and the mirror belongs only on a keycap still carrying the held key's value.
+ */
+export type HighlightedKey = KeyPosition & { readonly value: string };
+
 interface PhysicalKeyHighlightHost {
   getDomRef(): globalThis.Element | null;
 }
@@ -49,7 +55,7 @@ export default class PhysicalKeyHighlight {
     onkeyup: (event: DelegatedKeyboardEvent) => void;
   };
   private _targetId: string | null = null;
-  private _highlightedKey: KeyPosition | null = null;
+  private _highlightedKey: HighlightedKey | null = null;
 
   constructor(
     private readonly _host: PhysicalKeyHighlightHost,
@@ -109,7 +115,9 @@ export default class PhysicalKeyHighlight {
       dom.querySelector(KIOSK_KEYBOARD_DOM.selectors.keyByShiftValue(key));
     if (el) {
       el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyHighlight);
-      this._highlightedKey = keyPositionOf(el);
+      const position = keyPositionOf(el);
+      const value = el.getAttribute(KIOSK_KEYBOARD_DOM.attributes.key);
+      this._highlightedKey = position && value !== null ? { ...position, value } : null;
     }
   }
 
@@ -126,8 +134,8 @@ export default class PhysicalKeyHighlight {
     this._highlightedKey = null;
   }
 
-  /** The grid position of the key the physical keyboard currently holds down. */
-  getHighlightedKey(): KeyPosition | null {
+  /** The key the physical keyboard currently holds down. */
+  getHighlightedKey(): HighlightedKey | null {
     return this._highlightedKey;
   }
 }

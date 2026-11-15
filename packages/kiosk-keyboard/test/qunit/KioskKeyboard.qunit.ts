@@ -1986,6 +1986,36 @@ QUnit.test("Switching target while a physical key is held clears the mirror", as
   kb.destroy();
 });
 
+QUnit.test("A layout change while a physical key is held mirrors no other key", async (assert) => {
+  const input = new Input({ value: "" });
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({ controls: [input.getId()] });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLElement;
+  inputDom.focus();
+  inputDom.dispatchEvent(new KeyboardEvent("keydown", { key: "q", bubbles: true }));
+  assert.ok(hasKeyClass(kb, "q", DOM.classes.keyHighlight), "Precondition: the mirror lights up");
+
+  // The numeric layout has no "q" key, so nothing on it is the held key.
+  kb.setLayout("numeric");
+  await waitForRender();
+  const lit = getKeyboardDom(kb).querySelectorAll(`.${DOM.classes.keyHighlight}`);
+  assert.deepEqual(
+    Array.from(lit, (el) => el.getAttribute("data-key")),
+    [],
+    "No key on the new layout is mirrored",
+  );
+
+  kb.setLayout("qwerty");
+  await waitForRender();
+  assert.ok(hasKeyClass(kb, "q", DOM.classes.keyHighlight), "The still-held key is mirrored again on its layout");
+
+  input.destroy();
+  kb.destroy();
+});
+
 /**
  * Hold `key` on `el`: the initial keydown, then the auto-repeat keydowns the OS
  * sends while the key stays down.
