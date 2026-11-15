@@ -194,7 +194,7 @@ The kiosk docked render is too unstable under phone emulation to be meaningful a
 
 ### Generated assets for webc E2E
 
-The webc package serves source entry points through Vite in its manual and visual test pages (`src/bundle.esm.ts`), so E2E scripts do not need a full prebuild, but they do need generated theme and i18n output. Every `test:e2e:*` script in `packages/kiosk-keyboard-webc/package.json` that invokes `playwright test` runs `npm run generate` inline first, including headed and device-project variants (`test:e2e:report`, which only opens the HTML report, does not).
+The webc package serves source entry points through Vite in its manual and visual test pages (`src/bundle.esm.ts`), so E2E scripts do not need a full prebuild, but they do need generated theme and i18n output. Each runner config regenerates it once per run, so a runner started directly (`npx playwright test <spec>`, `npx web-test-runner --files <file>`, `npx vitest run <file>`) reads fresh output without `npm run generate`: the Playwright `webServer` command runs `ui5nps generate` before `vite` (a server reused through `reuseExistingServer` is not regenerated), web-test-runner runs it from a plugin's `serverStart`, and vitest from `globalSetup` (`generate-sources.mjs`).
 
 The kiosk-keyboard (UI5) package uses `ui5 serve` with live transpile, so its E2E scripts avoid a separate prebuild step entirely.
 

@@ -41,6 +41,8 @@ export default defineConfig({
   test: {
     include: ["test/unit/**/*.test.ts"],
     environment: "jsdom",
+    // src/core/i18n.ts imports src/generated/i18n/i18n-defaults.
+    globalSetup: "./generate-sources.mjs",
     restoreMocks: true,
     coverage: {
       provider: "v8",
