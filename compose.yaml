@@ -1,0 +1,75 @@
+# Runs a suite inside the pinned Playwright image, so captured pixels come from a
+# fixed browser and font stack rather than from whatever the host happens to have.
+#
+#   npm run visual:docker visual:check
+#   npm run visual:docker visual:update
+#   npm run visual:docker -- test:e2e -w packages/kiosk-keyboard -- --project=desktop
+#   docker compose down -v                      # drop the cached installs
+#
+# `visual:docker` is `docker compose run --rm visual npm run`; a script with its
+# own flags needs the `--` so the outer npm does not parse them. The repository is
+# bind-mounted, so regenerated baselines land straight in the working tree.
+# Everything after a chown of the mount points runs as `pwuser` (uid 1001, the
+# GitHub Actions runner's uid), so nothing the container writes is root-owned on
+# a Linux host. The volumes and packages/*/{test-results,playwright-report} must
+# therefore be writable by uid 1001; `docker compose down -v` resets the volumes.
+#
+# On GitHub Actions the native equivalent is the job-level `container:` key with
+# this same image reference.
+
+services:
+  visual:
+    # Tag must match @playwright/test in package-lock.json; the digest is what is
+    # pulled. Update both together (tools/check-compose-image.mjs gates it).
+    image: mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e
+    working_dir: /work
+    # Browsers fork heavily and leave zombies without a reaping PID 1.
+    init: true
+    # Only what the root pre-step in the entrypoint needs: chown the mount points,
+    # reach two of them through pwuser's 750 home, switch uid/gid. Chromium runs
+    # --no-sandbox and needs none.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_READ_SEARCH
+      - SETUID
+      - SETGID
+    environment:
+      # setpriv keeps the caller's environment, so HOME would stay /root.
+      HOME: /home/pwuser
+      # No suite started here uses the puppeteer backend, so skip its Chrome
+      # download (as the e2e job in ci.yml does).
+      PUPPETEER_SKIP_DOWNLOAD: "1"
+    # A fresh named volume mounts as a root-owned directory. Hand the mount
+    # points to pwuser, drop to it, install against the lockfile, then run
+    # whatever was passed to `compose run`.
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        chown pwuser:pwuser /work/node_modules /work/packages/kiosk-keyboard-webc/node_modules /work/packages/demo-app/node_modules /home/pwuser/.npm /home/pwuser/.ui5
+        exec setpriv --reuid=pwuser --regid=pwuser --init-groups --inh-caps=-all \
+          bash -c 'npm ci --no-audit --no-fund && exec "$$@"' -- "$$@"
+      - --
+    volumes:
+      - .:/work
+      # Named volumes, not the host tree: its native binaries are Windows builds,
+      # and a bind-mounted node_modules crosses the Docker Desktop VM boundary one
+      # file at a time. `npm ci` reinstalls every run; the npm cache is what
+      # persists. Only the three paths npm populates are covered.
+      - node_modules:/work/node_modules
+      - webc_node_modules:/work/packages/kiosk-keyboard-webc/node_modules
+      - demo_node_modules:/work/packages/demo-app/node_modules
+      - npm_cache:/home/pwuser/.npm
+      # `ui5 serve` downloads the OpenUI5 distribution on first use.
+      - ui5_cache:/home/pwuser/.ui5
+
+volumes:
+  node_modules:
+  webc_node_modules:
+  demo_node_modules:
+  npm_cache:
+  ui5_cache:

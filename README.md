@@ -211,6 +211,7 @@ npm run test:hotkeys              # Hotkeys QUnit
 npm run test:kiosk                # Kiosk QUnit + desktop e2e
 npm run test:kiosk-webc           # Kiosk webc unit tests (Vitest)
 npm run test:e2e:all-devices      # All e2e across the device matrix (kiosk + webc)
+npm run visual:check              # Compare the committed visual baselines (local only, never gated)
 ```
 
 The full per-package catalog (multi-device matrix, FLP lifecycle, smoke checks, visual-baseline management, coverage) and the e2e prerequisites are documented in [docs/shared/TESTING.md](./docs/shared/TESTING.md).
