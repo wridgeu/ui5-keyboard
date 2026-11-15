@@ -6,7 +6,11 @@ import type { CustomLayoutSpec, KeyboardType, LayoutChangeEventDetail } from "..
 
 /** A host over a local layout variable and a keyboardType box, recording every `layout-change`. */
 function createHost(attribute = "qwerty", locale = "qwerty") {
-  const box = { current: "", keyboardType: "Full" as `${KeyboardType}`, changes: [] as string[] };
+  const box = {
+    current: "",
+    keyboardType: "Full" as `${KeyboardType}`,
+    changes: [] as string[],
+  };
   const state = new LayoutState({
     getCurrentLayout: () => box.current,
     setCurrentLayout: (name) => {
@@ -255,5 +259,88 @@ describe("LayoutState golden sequence", () => {
     count();
 
     expect(resets, "a switch, a re-selection, a width swap, a tiered request").to.deep.equal([1, 1, 1, 1]);
+  });
+});
+
+describe("LayoutState fires layout-change whenever the rendered layout changes", () => {
+  const rows = [[{ value: "x" }]];
+
+  /** A host whose fold and keyboardType a test can change under the state. */
+  function createRenderHost(attribute: string, specs: CustomLayoutSpec[]) {
+    const box = {
+      current: "",
+      keyboardType: "Full" as `${KeyboardType}`,
+      fold: foldCustomLayouts(specs, isBuiltInLayout, () => false),
+      changes: [] as LayoutChangeEventDetail[],
+    };
+    const state = new LayoutState({
+      getCurrentLayout: () => box.current,
+      setCurrentLayout: (name) => {
+        box.current = name;
+      },
+      getLayoutAttribute: () => attribute,
+      getLocaleLayout: () => "qwerty",
+      getKeyboardType: () => box.keyboardType,
+      getFold: () => box.fold,
+      fireLayoutChange: (p) => {
+        box.changes.push(p);
+      },
+      resetShiftState: () => {},
+      endComposition: () => {},
+      focusAnchor: () => ({ value: null, focused: false }),
+      reseatFocusAnchor: () => {},
+      announce: () => {},
+    });
+    state.seed();
+    /** What the fold cache does when the slot changes. */
+    const slot = (next: CustomLayoutSpec[]): void => {
+      box.fold = foldCustomLayouts(next, isBuiltInLayout, () => false);
+      state.refresh();
+    };
+    /** What the element's `keyboardType` invalidation does. */
+    const setKeyboardType = (type: `${KeyboardType}`): void => {
+      box.keyboardType = type;
+      state.clearUserOverride();
+      state.refresh();
+    };
+    return { box, state, slot, setKeyboardType };
+  }
+
+  it("a requested layout slotted after the request fires once, naming it", () => {
+    const { box, state, slot } = createRenderHost("late1", []);
+    expect(state.resolvedName(), "precondition: the fallback renders").to.equal("qwerty");
+
+    slot([{ name: "late1", rows }]);
+    expect(state.resolvedName()).to.equal("late1");
+    expect(box.changes).to.deep.equal([{ layout: "late1", requestedLayout: "late1", autoDetected: true }]);
+  });
+
+  it("removing the requested layout from the slot fires once, naming the fallback", () => {
+    const { box, state, slot } = createRenderHost("late1", [{ name: "late1", rows }]);
+    expect(state.resolvedName(), "precondition: the slotted layout renders").to.equal("late1");
+
+    slot([]);
+    expect(state.resolvedName()).to.equal("qwerty");
+    expect(box.changes).to.deep.equal([{ layout: "qwerty", requestedLayout: "late1", autoDetected: true }]);
+  });
+
+  it("a keyboardType constraint taking effect and lifting each fire once", () => {
+    const { box, state, setKeyboardType } = createRenderHost("qwertz-de", []);
+
+    setKeyboardType("Numeric");
+    expect(state.resolvedName()).to.equal("numeric");
+    setKeyboardType("Full");
+    expect(state.resolvedName()).to.equal("qwertz-de");
+    expect(box.changes).to.deep.equal([
+      { layout: "numeric", requestedLayout: "qwertz-de", autoDetected: true },
+      { layout: "qwertz-de", requestedLayout: "qwertz-de", autoDetected: true },
+    ]);
+  });
+
+  it("an unregistered request that leaves the same layout on screen fires nothing", () => {
+    const { box, state } = createRenderHost("qwerty", []);
+    state.applyAttribute("late1");
+    expect(state.resolvedName(), "precondition: the fallback still renders").to.equal("qwerty");
+    expect(box.changes).to.deep.equal([]);
   });
 });
