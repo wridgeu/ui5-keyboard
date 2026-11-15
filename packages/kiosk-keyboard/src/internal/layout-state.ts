@@ -37,6 +37,11 @@ interface LayoutStateHost {
   fireLayoutChange(parameters: { layout: string; requestedLayout: string; autoDetected: boolean }): void;
   /** Selecting a layout always resets the typing context. */
   resetShiftState(): void;
+  /**
+   * Abandons a key press still held: the keycap under it now shows another key, so
+   * its release must not type that one.
+   */
+  cancelPress(): void;
   endComposition(): void;
   /** The key focus sits on, captured before a switch re-renders the grid. */
   focusAnchorValue(): string | null;
@@ -201,8 +206,9 @@ export default class LayoutState {
 
   /**
    * Derives the layout to render and, when it differs from the `layout` property,
-   * switches to it: ends any in-progress composition, resets the typing context,
-   * writes the property, re-seats focus on the key it followed and fires
+   * switches to it: cancels any held key press, ends any in-progress composition,
+   * resets the typing context, writes the property, re-seats focus on the key it
+   * followed and fires
    * `layoutChange`. The `source` only changes on a real switch so a no-op can't
    * silently flip the constraint-override. Under a `keyboardType` constraint only a
    * request moves the layout; the rest waits for the constraint to lift. Returns
@@ -224,6 +230,7 @@ export default class LayoutState {
 
     const anchorValue = this._host.focusAnchorValue();
     this._source = source;
+    this._host.cancelPress();
     this._host.endComposition();
     this._host.resetShiftState();
     this._host.setLayoutProperty(target);

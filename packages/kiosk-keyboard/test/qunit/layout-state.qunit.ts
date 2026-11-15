@@ -18,6 +18,7 @@ function createHost() {
       box.changes.push(p.layout);
     },
     resetShiftState: () => {},
+    cancelPress: () => {},
     endComposition: () => {},
     focusAnchorValue: () => null,
     reseatFocusAnchor: () => {},
@@ -91,6 +92,7 @@ function createGoldenHost() {
     resetShiftState: () => {
       box.shiftResets++;
     },
+    cancelPress: () => {},
     endComposition: () => {},
     focusAnchorValue: () => null,
     reseatFocusAnchor: () => {},

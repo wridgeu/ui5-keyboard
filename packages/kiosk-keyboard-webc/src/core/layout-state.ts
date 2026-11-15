@@ -44,6 +44,11 @@ interface LayoutStateHost {
   fireLayoutChange(parameters: LayoutChangeEventDetail): void;
   /** Selecting a layout always resets the typing context. */
   resetShiftState(): void;
+  /**
+   * Abandons a key press still held: the keycap under it now shows another key, so
+   * its release must not type that one.
+   */
+  cancelPress(): void;
   endComposition(): void;
   focusAnchor(): FocusAnchor;
   reseatFocusAnchor(anchor: FocusAnchor): void;
@@ -216,9 +221,10 @@ export class LayoutState {
 
   /**
    * Derives the layout to render and, when it differs from the one on screen, switches
-   * to it: ends any in-progress composition, resets the typing context, re-seats focus
-   * on the key it followed and fires `layout-change`. The `source` only changes on a
-   * real switch so a no-op can't silently flip the constraint-override. Under a
+   * to it: cancels any held key press, ends any in-progress composition, resets the
+   * typing context, re-seats focus on the key it followed and fires `layout-change`.
+   * The `source` only changes on a real switch so a no-op can't silently flip the
+   * constraint-override. Under a
    * `keyboardType` constraint only a request moves the layout; the rest waits for the
    * constraint to lift. Returns whether the layout changed.
    *
@@ -239,6 +245,7 @@ export class LayoutState {
     const anchor = this._host.focusAnchor();
     this._host.setCurrentLayout(target);
     this._source = source;
+    this._host.cancelPress();
     this._host.endComposition();
     this._host.resetShiftState();
     this._host.reseatFocusAnchor(anchor);
