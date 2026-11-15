@@ -1,11 +1,14 @@
 import { playwrightLauncher } from "@web/test-runner-playwright";
 import { esbuildPlugin } from "@web/dev-server-esbuild";
+import generateSources from "./generate-sources.mjs";
 
 export default {
   files: "test/component/**/*.test.ts",
   nodeResolve: true,
   browsers: [playwrightLauncher({ product: "chromium" })],
   plugins: [
+    // The runner awaits serverStart before it launches a browser.
+    { name: "generate-sources", serverStart: generateSources },
     esbuildPlugin({
       ts: true,
       tsx: true,

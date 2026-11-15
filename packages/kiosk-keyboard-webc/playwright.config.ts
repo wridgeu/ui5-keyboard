@@ -116,7 +116,12 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: `vite --port ${PORT} --strictPort`,
+    // Generate inside the command, not in globalSetup: Playwright starts the
+    // webServer before globalSetup, and Vite pre-transforms a page's imports
+    // when the readiness probe fetches it, so generated modules would be
+    // transformed before a globalSetup could rewrite them. A server reused via
+    // reuseExistingServer is not regenerated.
+    command: `ui5nps generate && vite --port ${PORT} --strictPort`,
     cwd: __dirname,
     url: `http://localhost:${PORT}/test/pages/index.html`,
     reuseExistingServer: !process.env.CI,
