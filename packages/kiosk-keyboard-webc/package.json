@@ -114,16 +114,16 @@
     "generateAPI": "ui5nps generateAPI"
   },
   "dependencies": {
-    "@ui5/webcomponents": "~2.26.0",
-    "@ui5/webcomponents-base": "~2.26.0",
-    "@ui5/webcomponents-icons": "~2.26.0",
-    "@ui5/webcomponents-theming": "~2.26.0"
+    "@ui5/webcomponents": "~2.28.1",
+    "@ui5/webcomponents-base": "~2.28.1",
+    "@ui5/webcomponents-icons": "~2.28.1",
+    "@ui5/webcomponents-theming": "~2.28.1"
   },
   "devDependencies": {
     "@esm-bundle/chai": "^4.3.4-fix.0",
     "@open-wc/testing": "~5.0.0",
     "@playwright/test": "~1.62.1",
-    "@ui5/webcomponents-tools": "2.26.0",
+    "@ui5/webcomponents-tools": "2.28.1",
     "@vitest/coverage-v8": "~4.1.11",
     "@web/dev-server-esbuild": "~2.0.0",
     "@web/test-runner": "~1.0.0",
