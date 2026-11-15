@@ -19,3 +19,4 @@ A spec is kept while something still points at it - CLAUDE.md, a config, a test,
 | [Native Insertion Adversarial Hypotheses](./2026-08-11-native-text-insertion-adversarial-hypotheses.md) | Adversarial validation of the native-insertion suites, per CLAUDE.md §7.                                         |
 | [Live-Region Exposure (#247, #254)](./2026-08-26-live-region-exposure-adversarial-hypotheses.md)        | Adversarial validation of the ARIA live-region exposure fix and the variant-count rephrase.                      |
 | [Key Identity Study](./2026-11-15-key-identity-study.md)                                                | Position vs value as key identity; measured duplicates, inventory, and the held-press bug after a layout change. |
+| [Diagnostics Dedupe Study](./2026-11-15-diagnostics-dedupe-study.md)                                    | Warn-once sets on read paths: inventory, write-time classification, module-state probe, recommendation.          |
