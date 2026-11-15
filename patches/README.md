@@ -2,13 +2,13 @@
 
 Local patches applied via [patch-package](https://github.com/ds300/patch-package) to fix upstream issues in dependencies. These are applied automatically on `npm install` via the `postinstall` script.
 
-## @ui5/webcomponents-tools+2.26.0
+## @ui5/webcomponents-tools+2.28.1
 
 Fixes five bugs in the Custom Elements Manifest (CEM) generation tooling.
 
-**Pinned at 2.26.0:**
+**Pinned at 2.28.1:**
 
-The patch applies cleanly to the pristine `2.26.0` package as published on npm (patch-package warns when the filename version does not match the installed version, so a clean `npm install` confirms it); none of the five bugs were fixed upstream across the `2.20.0` → `2.26.0` bumps. The patch filename tracks the pinned version.
+The patch applies cleanly to the pristine `2.28.1` package as published on npm (patch-package warns when the filename version does not match the installed version, so a clean `npm install` confirms it); none of the five bugs were fixed upstream across the `2.20.0` → `2.28.1` bumps. The patch filename tracks the pinned version.
 
 **Note on upstream ownership:**
 
@@ -117,7 +117,7 @@ The same bug exists in both `handlers.js` (member descriptions) and `class-jsdoc
 
 Repository: https://github.com/UI5/webcomponents.
 
-These patches should be removed once the upstream issues are resolved. As of `@ui5/webcomponents-tools@2.26.0` all five bugs are still present upstream.
+These patches should be removed once the upstream issues are resolved. As of `@ui5/webcomponents-tools@2.28.1` all five bugs are still present upstream.
 
 ## less-openui5+0.11.6
 

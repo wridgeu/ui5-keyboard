@@ -14,7 +14,7 @@
     "lint:ui5": "ui5lint --ui5-config ui5.yaml"
   },
   "dependencies": {
-    "@ui5/webcomponents": "~2.26.0",
+    "@ui5/webcomponents": "~2.28.1",
     "kiosk-keyboard-webc": "*",
     "ui5-lib-hotkeys": "*",
     "ui5-lib-kiosk-keyboard": "*"

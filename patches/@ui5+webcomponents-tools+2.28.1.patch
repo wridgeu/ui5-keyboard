@@ -1,8 +1,8 @@
 diff --git a/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs b/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs
-index 5af121e..4a70cd9 100644
+index 0d37576..62daded 100644
 --- a/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs
 +++ b/node_modules/@ui5/webcomponents-tools/lib/cem/custom-elements-manifest.config.mjs
-@@ -183,7 +183,7 @@ function processClass(ts, classNode, moduleDoc) {
+@@ -205,7 +205,7 @@ function processClass(ts, classNode, moduleDoc) {
  	// Slots (with accessor), methods and fields
  	for (let i = 0; i < (currClass.members?.length || 0); i++) {
  		const member = currClass.members[i];
@@ -11,7 +11,7 @@ index 5af121e..4a70cd9 100644
  		const classNodeMemberJSdoc = classNodeMember?.jsDoc?.[0];
  
  		if (!classNodeMember || !classNodeMemberJSdoc) continue;
-@@ -239,7 +239,7 @@ function processClass(ts, classNode, moduleDoc) {
+@@ -262,7 +262,7 @@ function processClass(ts, classNode, moduleDoc) {
  				}
  
  				if (currClass.customElement && member.privacy === "public") {
@@ -20,7 +20,7 @@ index 5af121e..4a70cd9 100644
  					const attributeValue = typeChecker.typeToString(typeChecker.getTypeAtLocation(tsProgramMember), tsProgramMember);
  
  					if (attributeValue === "boolean" && member.default === "true") {
-@@ -595,7 +595,9 @@ export default {
+@@ -637,7 +637,9 @@ export default {
  
  					for (const key in obj) {
  						if (Array.isArray(obj[key])) {
