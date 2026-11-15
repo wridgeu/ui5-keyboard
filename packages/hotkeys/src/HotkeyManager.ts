@@ -9,6 +9,7 @@ import EventDispatcher from "./internal/event-dispatcher";
 import type { EventContext, HotkeyDispatchHandler, HotkeyDispatchResult } from "./internal/event-dispatcher";
 import { INTERNAL_TOKEN } from "./internal/internal-token";
 import { GLOBAL_SCOPE } from "./internal/constants";
+import { assertImmutableSetOptions } from "./internal/immutable-options";
 import FocusFallbackTracker from "./internal/FocusFallbackTracker";
 import { getEventTarget, isInputElement } from "./internal/dom";
 import { parseHotkey, formatParsed, parseSequenceSteps } from "./internal/parse";
@@ -33,13 +34,7 @@ import type {
   UnhandledCallback,
   UpdatableHotkeyOptions,
 } from "./types";
-import type {
-  HotkeyRegistration,
-  ResolvedHotkeyOptions,
-  ResolvedTarget,
-  SequenceOptions,
-  SequenceRegistrationInfo,
-} from "./internal/types";
+import type { HotkeyRegistration, ResolvedHotkeyOptions, ResolvedTarget } from "./internal/types";
 
 const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 
@@ -66,20 +61,6 @@ function sameTarget(a: ResolvedTarget, b: ResolvedTarget): boolean {
   if (a.kind === "element" && b.kind === "element") return a.el === b.el;
   if (a.kind === "callback" && b.kind === "callback") return a.fn === b.fn;
   return false;
-}
-
-/**
- * `scope` and `conflictBehavior` are fixed at registration time. Reject any
- * `setOptions` call that tries to change them. Shared by the hotkey and
- * sequence registration handles.
- */
-function assertImmutableSetOptions(newOptions: Partial<UpdatableHotkeyOptions>): void {
-  if ("scope" in newOptions) {
-    throw new Error("Cannot change scope via setOptions - unregister and re-register instead");
-  }
-  if ("conflictBehavior" in newOptions) {
-    throw new Error("Cannot change conflictBehavior via setOptions - unregister and re-register instead");
-  }
 }
 
 /**
@@ -538,8 +519,7 @@ export default class HotkeyManager extends BaseObject {
   getRegistrations(): ReadonlyArray<HotkeyRegistrationInfo> {
     const hotkeys = Array.from(this._registrations.values()).map((r) => this._toRegistrationInfo(r));
     if (!this._sequenceManager) return hotkeys;
-    const sequences = this._sequenceManager.getRegistrations().map((s) => this._sequenceRegToInfo(s));
-    return [...hotkeys, ...sequences];
+    return [...hotkeys, ...this._sequenceManager.getRegistrations()];
   }
 
   /**
@@ -568,10 +548,7 @@ export default class HotkeyManager extends BaseObject {
     addFromIds(bucket.callbackTargetIds);
 
     if (this._sequenceManager) {
-      const seqRegs = this._sequenceManager.getRegistrations().filter((r) => r.scope === normalizedScope);
-      for (const s of seqRegs) {
-        result.push(this._sequenceRegToInfo(s));
-      }
+      result.push(...this._sequenceManager.getRegistrations().filter((r) => r.scope === normalizedScope));
     }
 
     return result;
@@ -647,78 +624,7 @@ export default class HotkeyManager extends BaseObject {
       );
     }
 
-    const seqOptions: SequenceOptions = {
-      description: options?.description,
-      timeout: options?.timeout,
-      scope: options?.scope,
-      enabled: options?.enabled,
-      ignoreInputs: options?.ignoreInputs,
-      preventDefault: options?.preventDefault,
-      stopPropagation: options?.stopPropagation,
-      onPending: options?.onPending,
-      suppressInPopups: options?.suppressInPopups,
-    };
-
-    const innerHandle = this._getSequenceManager().registerSequence(steps, callback, seqOptions);
-
-    const handle: HotkeyRegistrationHandle = {
-      get id() {
-        return innerHandle.id;
-      },
-      get isActive() {
-        return innerHandle.isActive;
-      },
-      get hotkey() {
-        return hotkey;
-      },
-      get sequence() {
-        return innerHandle.sequence;
-      },
-      get scope() {
-        return innerHandle.scope;
-      },
-      get description() {
-        return innerHandle.description;
-      },
-      unregister: () => {
-        innerHandle.unregister();
-      },
-      setOptions: (newOptions: Partial<UpdatableHotkeyOptions>) => {
-        assertImmutableSetOptions(newOptions);
-        innerHandle.setOptions({
-          description: newOptions.description,
-          timeout: newOptions.timeout,
-          enabled: newOptions.enabled,
-          ignoreInputs: newOptions.ignoreInputs,
-          preventDefault: newOptions.preventDefault,
-          stopPropagation: newOptions.stopPropagation,
-          onPending: newOptions.onPending,
-          suppressInPopups: newOptions.suppressInPopups,
-        });
-      },
-    };
-
-    return handle;
-  }
-
-  private _sequenceRegToInfo(s: SequenceRegistrationInfo): HotkeyRegistrationInfo {
-    return {
-      id: s.id,
-      hotkey: s.sequence.join(" "),
-      normalizedHotkey: s.sequence.join(" "),
-      scope: s.scope,
-      description: s.description,
-      enabled: s.enabled,
-      preventDefault: s.preventDefault,
-      stopPropagation: s.stopPropagation,
-      ignoreInputs: s.ignoreInputs,
-      ignoreRepeat: true,
-      suppressInPopups: s.suppressInPopups,
-      conflictBehavior: ConflictBehavior.Warn,
-      hasTarget: false,
-      sequence: s.sequence,
-      timeout: s.timeout,
-    };
+    return this._getSequenceManager().registerSequence(hotkey, steps, callback, options);
   }
 
   /**

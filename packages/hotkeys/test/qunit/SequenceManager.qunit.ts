@@ -1,3 +1,4 @@
+import { ConflictBehavior } from "ui5/hotkeys/library";
 import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
 import { stubPopupOpen } from "./popup-helpers";
 
@@ -668,6 +669,92 @@ QUnit.test("ignoreInputs: auto allows Ctrl sequence in input", (assert) => {
   clock.tick(50);
   fireKeyOn(input, "s", { ctrlKey: true });
   assert.ok(called, "Ctrl sequence allowed in input with auto");
+});
+
+QUnit.test("getRegistrations and getRegistrationsForScope report every field of a sequence", (assert) => {
+  const manager = createHotkeyManager();
+  const hotkeyHandle = manager.register("Escape", () => {}, { scope: "main" });
+  const handle = manager.register(" g   i ", () => {}, {
+    scope: "main",
+    description: "Go to Inbox",
+    timeout: 500,
+    enabled: () => false,
+    ignoreInputs: true,
+    preventDefault: false,
+    stopPropagation: false,
+    suppressInPopups: false,
+    ignoreRepeat: false,
+    conflictBehavior: ConflictBehavior.Error,
+    target: fixture,
+  });
+
+  assert.strictEqual(handle.hotkey, " g   i ", "handle.hotkey is the string as registered");
+  assert.deepEqual(handle.sequence, ["g", "i"], "handle.sequence is the split steps");
+  assert.strictEqual(handle.scope, "main", "handle.scope");
+  assert.strictEqual(handle.description, "Go to Inbox", "handle.description");
+
+  const expected = {
+    id: handle.id,
+    hotkey: "g i",
+    normalizedHotkey: "g i",
+    scope: "main",
+    description: "Go to Inbox",
+    enabled: false,
+    preventDefault: false,
+    stopPropagation: false,
+    ignoreInputs: true,
+    ignoreRepeat: true,
+    suppressInPopups: false,
+    conflictBehavior: ConflictBehavior.Warn,
+    hasTarget: false,
+    sequence: ["g", "i"],
+    timeout: 500,
+  };
+  const all = manager.getRegistrations();
+  assert.deepEqual(
+    all.map((r) => r.id),
+    [hotkeyHandle.id, handle.id],
+    "getRegistrations lists hotkeys before sequences",
+  );
+  assert.deepEqual(all[1], expected, "getRegistrations reports the sequence");
+  const scoped = manager.getRegistrationsForScope("main");
+  assert.deepEqual(
+    scoped.map((r) => r.id),
+    [hotkeyHandle.id, handle.id],
+    "getRegistrationsForScope lists hotkeys before sequences",
+  );
+  assert.deepEqual(scoped[1], expected, "getRegistrationsForScope reports the sequence");
+});
+
+QUnit.test("setOptions updates every updatable sequence option", (assert) => {
+  const manager = createHotkeyManager();
+  const pending: number[] = [];
+  const handle = manager.register("G I", () => {});
+
+  handle.setOptions({
+    description: "Updated",
+    timeout: 250,
+    enabled: false,
+    ignoreInputs: true,
+    preventDefault: false,
+    stopPropagation: false,
+    suppressInPopups: false,
+    onPending: (info) => pending.push(info.completedSteps),
+  });
+
+  const [info] = manager.getRegistrations();
+  assert.strictEqual(info!.description, "Updated", "description");
+  assert.strictEqual(info!.timeout, 250, "timeout");
+  assert.strictEqual(info!.enabled, false, "enabled");
+  assert.strictEqual(info!.ignoreInputs, true, "ignoreInputs");
+  assert.strictEqual(info!.preventDefault, false, "preventDefault");
+  assert.strictEqual(info!.stopPropagation, false, "stopPropagation");
+  assert.strictEqual(info!.suppressInPopups, false, "suppressInPopups");
+  assert.strictEqual(handle.description, "Updated", "handle.description");
+
+  handle.setOptions({ enabled: true });
+  fireKey("g");
+  assert.deepEqual(pending, [1], "onPending fires after the first step");
 });
 
 // ──────────────────────────────────────────────
