@@ -82,6 +82,8 @@ function createGoldenHost() {
     fold: foldCustomLayouts(goldenSpecs, isBuiltInLayout, () => false),
     changes: [] as Change[],
     shiftResets: 0,
+    /** The switch effects other than the shift reset, in call order. */
+    effects: [] as string[],
   };
   let applied: boolean | null = null;
   const state = new LayoutState({
@@ -98,10 +100,16 @@ function createGoldenHost() {
     resetShiftState: () => {
       box.shiftResets++;
     },
-    cancelPress: () => {},
-    endComposition: () => {},
+    cancelPress: () => {
+      box.effects.push("cancelPress");
+    },
+    endComposition: () => {
+      box.effects.push("endComposition");
+    },
     focusAnchorValue: () => null,
-    reseatFocusAnchor: () => {},
+    reseatFocusAnchor: () => {
+      box.effects.push("reseatFocusAnchor");
+    },
   });
   const resize = (narrow: boolean): void => {
     if (narrow === applied) return;
@@ -273,4 +281,35 @@ QUnit.test("every request resets the typing context once, a re-selection and a t
   count();
 
   assert.deepEqual(resets, [1, 1, 1, 1], "a switch, a re-selection, a width swap, a tiered request");
+});
+
+QUnit.test("a declared-layout change that moves the effective layout applies every switch effect once", (assert) => {
+  const { box, state, setKeyboardType, declare } = createGoldenHost();
+  state.perform("solo", "external", "passed to setLayout()", Api);
+  const withoutSolo = goldenSpecs.filter((s) => s.name !== "solo");
+  const effects: [string, string[], number][] = [];
+  const step = (label: string): void => {
+    effects.push([label, box.effects, box.shiftResets]);
+    box.effects = [];
+    box.shiftResets = 0;
+  };
+  box.effects = [];
+  box.shiftResets = 0;
+
+  declare(withoutSolo);
+  step("removed");
+  declare(goldenSpecs);
+  step("declared again");
+  setKeyboardType(KeyboardType.Numpad);
+  step("constraint on");
+  declare(withoutSolo);
+  step("removed under the constraint");
+
+  const all = ["cancelPress", "endComposition", "reseatFocusAnchor"];
+  assert.deepEqual(effects, [
+    ["removed", all, 1],
+    ["declared again", all, 1],
+    ["constraint on", all, 1],
+    ["removed under the constraint", [], 0],
+  ]);
 });

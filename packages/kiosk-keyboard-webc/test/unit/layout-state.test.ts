@@ -21,6 +21,8 @@ function createHost(attribute = "qwerty", locale = "qwerty", fold: CustomLayoutF
     changes: [] as LayoutChangeEventDetail[],
     announced: [] as string[],
     shiftResets: 0,
+    /** The switch effects other than the shift reset, in call order. */
+    effects: [] as string[],
   };
   const state: LayoutState = new LayoutState({
     getCurrentLayout: () => box.current,
@@ -41,10 +43,16 @@ function createHost(attribute = "qwerty", locale = "qwerty", fold: CustomLayoutF
     resetShiftState: () => {
       box.shiftResets++;
     },
-    cancelPress: () => {},
-    endComposition: () => {},
+    cancelPress: () => {
+      box.effects.push("cancelPress");
+    },
+    endComposition: () => {
+      box.effects.push("endComposition");
+    },
     focusAnchor: () => ({ value: null, focused: false }),
-    reseatFocusAnchor: () => {},
+    reseatFocusAnchor: () => {
+      box.effects.push("reseatFocusAnchor");
+    },
     announce: (text) => {
       box.announced.push(text);
     },
@@ -347,6 +355,38 @@ describe("LayoutState reports what the slot changes", () => {
     slot([]);
     expect(state.resolvedName()).to.equal("qwerty");
     expect(box.changes).to.deep.equal([{ layout: "late1", effectiveLayout: "qwerty", reason: "layouts" }]);
+  });
+
+  it("a slot change that moves the effective layout applies every switch effect once", () => {
+    const { box, slot, setKeyboardType } = createHost(
+      "late1",
+      "qwerty",
+      foldCustomLayouts([{ name: "late1", rows }], isBuiltInLayout, () => false),
+    );
+    const effects: [string, string[], number][] = [];
+    const step = (label: string): void => {
+      effects.push([label, box.effects, box.shiftResets]);
+      box.effects = [];
+      box.shiftResets = 0;
+    };
+    box.shiftResets = 0;
+
+    slot([]);
+    step("removed");
+    slot([{ name: "late1", rows }]);
+    step("slotted again");
+    setKeyboardType("Numpad");
+    step("constraint on");
+    slot([]);
+    step("removed under the constraint");
+
+    const all = ["cancelPress", "endComposition", "reseatFocusAnchor"];
+    expect(effects).to.deep.equal([
+      ["removed", all, 1],
+      ["slotted again", all, 1],
+      ["constraint on", all, 1],
+      ["removed under the constraint", [], 0],
+    ]);
   });
 
   it("an unregistered request holds its report for the render pass, then names the fallback", () => {
