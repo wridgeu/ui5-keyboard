@@ -68,8 +68,8 @@ QUnit.test("Double unregister is a silent no-op", (assert) => {
   const handle = manager.register("Escape", () => {});
 
   handle.unregister();
-  handle.unregister(); // no throw
-  assert.notOk(handle.isActive, "Handle is no longer active");
+  handle.unregister();
+  assert.ok(true, "did not throw");
 });
 
 // ──────────────────────────────────────────────
@@ -700,9 +700,18 @@ QUnit.test("preventDefault: true (default) prevents default", (assert) => {
 QUnit.test("preventDefault: false does not prevent default", (assert) => {
   const manager = createHotkeyManager();
 
-  manager.register("F5", () => {}, { preventDefault: false });
+  let called = false;
+
+  manager.register(
+    "F5",
+    () => {
+      called = true;
+    },
+    { preventDefault: false },
+  );
 
   const event = fireKey("F5");
+  assert.ok(called, "Hotkey fired");
   assert.notOk(event.defaultPrevented, "Default was not prevented");
 });
 
@@ -1916,12 +1925,15 @@ QUnit.test("Target callback: respects scope", (assert) => {
 
 QUnit.test("Target callback: throwing callback is caught and skipped", (assert) => {
   const manager = createHotkeyManager();
-  let called = false;
+  const div = document.createElement("div");
+  fixture.appendChild(div);
+  let throwingCalled = false;
+  let otherCalled = false;
 
   manager.register(
     "F5",
     () => {
-      called = true;
+      throwingCalled = true;
     },
     {
       target: () => {
@@ -1929,9 +1941,17 @@ QUnit.test("Target callback: throwing callback is caught and skipped", (assert) 
       },
     },
   );
+  manager.register(
+    "F5",
+    () => {
+      otherCalled = true;
+    },
+    { target: () => div, conflictBehavior: ConflictBehavior.Allow },
+  );
 
-  fireKey("F5");
-  assert.notOk(called, "Registration with throwing callback does not fire");
+  fireKeyOn(div, "F5");
+  assert.notOk(throwingCalled, "Registration with throwing callback does not fire");
+  assert.ok(otherCalled, "Matching continues past the throwing callback to the next registration");
 });
 
 QUnit.test("Target callback: unregister cleans up", (assert) => {

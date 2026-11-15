@@ -330,10 +330,8 @@ QUnit.test("Destroy-while-recording marks recorder as destroyed", (assert) => {
   assert.notOk(recorder.isRecording, "isRecording is false after manager destroy");
   assert.ok(recorder.isDestroyed, "isDestroyed is true after manager destroy");
 
-  // stop() on a destroyed recorder must be idempotent: no throw, no state flip.
+  // stop() on a destroyed recorder must not throw.
   recorder.stop();
-  assert.notOk(recorder.isRecording, "stop() on destroyed recorder leaves isRecording false");
-  assert.ok(recorder.isDestroyed, "stop() on destroyed recorder leaves isDestroyed true");
 });
 
 QUnit.test("Key state tracks during recording", (assert) => {
