@@ -2457,3 +2457,69 @@ QUnit.test("getActiveControl returns null when no target is associated", async (
 
   kb.destroy();
 });
+
+// ──────────────────────────────────────────────
+// A press held across a layout switch
+// ──────────────────────────────────────────────
+
+QUnit.test("A layout switch under a held pointer press cancels the press", async (assert) => {
+  const kb = new KioskKeyboard();
+  await placeAndWait(kb);
+  const typed: string[] = [];
+  kb.attachKeyPress((event) => typed.push(event.getParameter("key") as string));
+
+  const q = getRequiredKeyElement(kb, "q");
+  const start = new Event("touchstart", { bubbles: true });
+  Object.defineProperty(start, "target", { value: q });
+  kb.ontouchstart(start);
+  assert.ok(hasKeyClass(kb, "q", DOM.classes.keyPressed), "Precondition: q reads as pressed");
+
+  // The app (or an autoCompact width swap) changes the layout while the pointer is down.
+  kb.setLayout("numeric");
+  await waitForRender();
+
+  assert.notOk(
+    hasKeyClass(kb, "-", DOM.classes.keyPressed),
+    "The key now seated at q's position is not marked pressed",
+  );
+
+  const end = new Event("touchend", { bubbles: true });
+  Object.defineProperty(end, "target", { value: q });
+  kb.ontouchend(end);
+
+  assert.deepEqual(typed, [], "Releasing types nothing: the pressed key no longer exists");
+
+  kb.destroy();
+});
+
+QUnit.test("A layout key at (0,0) activated with Enter leaves no press on the new (0,0) key", async (assert) => {
+  const kb = new KioskKeyboard({
+    layout: "press-a",
+    customLayouts: [
+      new CustomLayout({
+        name: "press-a",
+        rows: [[{ value: "{layout:press-b}" }, { value: "a" }]],
+      }),
+      new CustomLayout({
+        name: "press-b",
+        rows: [[{ value: "x" }, { value: "y" }]],
+      }),
+    ],
+  });
+  await placeAndWait(kb);
+
+  const toggle = getFirstKeyElement(kb);
+  toggle.focus();
+  toggle.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+  await waitForRender();
+  assert.strictEqual(kb.getLayout(), "press-b", "Precondition: the layout switched");
+
+  const pressed = Array.from(getKeyElements(kb)).filter((el) => el.classList.contains(DOM.classes.keyPressed));
+  assert.deepEqual(
+    pressed.map((el) => el.dataset.key),
+    [],
+    "No key of the new layout reads as pressed while Enter is still down",
+  );
+
+  kb.destroy();
+});
