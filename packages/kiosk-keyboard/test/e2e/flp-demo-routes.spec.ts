@@ -43,3 +43,23 @@ test.describe("docked routes at phone size", () => {
     });
   }
 });
+
+test("hotkeys/sequences: the hint names every continuation and clears with the sequence timeout", async ({ page }) => {
+  await page.goto(appRoute("hotkeys/sequences"));
+  await page.getByText("Press G then I to fire the first sequence.").waitFor({ timeout: 30_000 });
+  // Paused fake timers from here on, so the hint's timer and the sequence timeout
+  // advance only through runFor and the boundary is exact.
+  await page.clock.install();
+  await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1000);
+
+  const hint = page.getByText(/^Waiting for next key/);
+  await page.keyboard.press("g");
+  // UI5 re-renders on a timer of its own, so each check first advances 50ms past its instant.
+  await page.clock.runFor(50);
+  await expect(hint).toHaveText("Waiting for next key (1/2) - press I or S");
+
+  await page.clock.runFor(949);
+  await expect(hint).toBeVisible();
+  await page.clock.runFor(50);
+  await expect(hint).toBeHidden();
+});
