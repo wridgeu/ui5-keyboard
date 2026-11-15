@@ -63,3 +63,17 @@ test("hotkeys/sequences: the hint names every continuation and clears with the s
   await page.clock.runFor(50);
   await expect(hint).toBeHidden();
 });
+
+test("hotkeys/target-bubbling: Escape fires the innermost target around focus", async ({ page }) => {
+  await page.goto(appRoute("hotkeys/target-bubbling"));
+  const log = byAppId(page, "hotkeysTargetBubble", "bubbleLogList");
+  const latest = log.locator("li.sapMLIB").first();
+
+  await byAppId(page, "hotkeysTargetBubble", "outerTargetButton").focus({ timeout: 30_000 });
+  await page.keyboard.press("Escape");
+  await expect(latest).toContainText("outer target fired");
+
+  await byAppId(page, "hotkeysTargetBubble", "bubbleInput-inner").focus();
+  await page.keyboard.press("Escape");
+  await expect(latest).toContainText("inner target fired");
+});

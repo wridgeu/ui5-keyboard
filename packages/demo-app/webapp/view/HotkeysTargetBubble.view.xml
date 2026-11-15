@@ -15,9 +15,9 @@
                     </layoutData>
                     <Panel headerText="Scenario" class="sapUiSmallMarginBottom">
                         <VBox class="sapUiSmallMargin">
-                            <Text text="Two nested target registrations use the same key (Escape). The innermost matching target fires." />
+                            <Text text="Two nested target registrations use the same key (Escape). The innermost target around the focused element fires and stops the key there." />
                             <MessageStrip
-                                text="Pressing Escape repeatedly will eventually resolve to 'outside nested target' because UI5 releases focus from the input after the first Escape, so subsequent presses no longer originate inside the inner target."
+                                text="Escape in the input fires the inner target. Escape on the button, which sits in the outer target but outside the inner one, fires the outer target. Escape anywhere else on the page falls through to the route-wide registration ('outside nested target')."
                                 type="Information"
                                 showIcon="true"
                                 class="sapUiSmallMarginTop" />
@@ -28,6 +28,7 @@
                         <VBox class="sapUiSmallMargin">
                             <VBox id="outerTargetBox" class="sapUiContentPadding sapUiSmallMarginBottom">
                                 <Text text="Outer target" />
+                                <Button id="outerTargetButton" text="Focus me and press Escape" class="sapUiSmallMarginTop" />
                                 <VBox id="innerTargetBox" class="sapUiContentPadding sapUiSmallMarginTop">
                                     <Text text="Inner target" />
                                     <Input id="bubbleInput" placeholder="Focus here and press Escape" class="sapUiSmallMarginTop"
@@ -56,7 +57,7 @@
                             id="bubbleLogList"
                             ariaLabelledBy="bubbleLogTitle"
                             items="{bubbleLog>/entries}"
-                            noDataText="Focus the inner input and press Escape.">
+                            noDataText="Focus the input or the button and press Escape.">
                             <StandardListItem
                                 title="{bubbleLog>event}"
                                 description="{bubbleLog>detail}"
