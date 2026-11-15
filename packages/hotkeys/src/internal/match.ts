@@ -25,7 +25,7 @@ export function getCandidateKeys(event: KeyboardEvent): string[] {
   // event did not already type a letter of its own.
   if (event.code?.startsWith("Key") && !/^[A-Za-z]$/.test(primary)) {
     const codeLetter = event.code.slice(3);
-    if (codeLetter.length === 1 && /^[A-Za-z]$/.test(codeLetter)) {
+    if (/^[A-Za-z]$/.test(codeLetter)) {
       keys.push(codeLetter.toUpperCase());
     }
   }
@@ -36,7 +36,7 @@ export function getCandidateKeys(event: KeyboardEvent): string[] {
   // (AZERTY types "&" from `Digit1`), so the digit is not what was pressed.
   if ((event.shiftKey || event.altKey) && event.code?.startsWith("Digit")) {
     const codeDigit = event.code.slice(5);
-    if (codeDigit.length === 1 && /^[0-9]$/.test(codeDigit) && codeDigit !== primary) {
+    if (/^[0-9]$/.test(codeDigit) && codeDigit !== primary) {
       keys.push(codeDigit);
     }
   }

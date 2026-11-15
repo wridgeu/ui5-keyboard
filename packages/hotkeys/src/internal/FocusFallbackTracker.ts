@@ -63,13 +63,6 @@ export default class FocusFallbackTracker {
 
   destroy(): void {
     this._listenerAbort.abort();
-    this._lastFocusedElement = null;
-    this._lastFocusedAt = 0;
-    this._lastBlurredElement = null;
-    this._lastBlurredAt = 0;
-    this._blurSeq = 0;
-    this._consumedBlurSeq = 0;
-    this._genericRootIds.clear();
   }
 
   // ──────────────────────────────────────────────

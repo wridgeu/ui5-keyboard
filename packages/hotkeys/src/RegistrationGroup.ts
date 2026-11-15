@@ -124,7 +124,7 @@ export default class RegistrationGroup {
     }
 
     for (const h of this._handles) {
-      if (h.isActive) h.unregister();
+      h.unregister();
     }
     this._handles.clear();
     this._destroyed = true;

@@ -448,12 +448,20 @@ QUnit.test("Callback error does not crash", (assert) => {
 
 QUnit.test("preventDefault: false does not prevent default on final key", (assert) => {
   const manager = createHotkeyManager();
+  let called = false;
 
-  manager.register("G E", () => {}, { preventDefault: false });
+  manager.register(
+    "G E",
+    () => {
+      called = true;
+    },
+    { preventDefault: false },
+  );
 
   fireKey("g");
   clock.tick(50);
   const event = fireKey("e");
+  assert.ok(called, "Sequence completed on final key");
   assert.notOk(event.defaultPrevented, "Default not prevented on final key");
 });
 
@@ -461,8 +469,10 @@ QUnit.test("stopPropagation: false allows propagation on final key", (assert) =>
   const manager = createHotkeyManager();
   let propagated = false;
 
-  const listener = () => {
-    propagated = true;
+  // Gate on the final key: intermediate keys never call stopPropagation, so
+  // tracking any keydown would be satisfied by the "g" event regardless.
+  const listener = (e: KeyboardEvent) => {
+    if (e.key === "e") propagated = true;
   };
   document.addEventListener("keydown", listener);
 
@@ -563,13 +573,17 @@ QUnit.test("setOptions: timeout validation rejects invalid values", (assert) => 
 
 QUnit.test("setOptions: update preventDefault", (assert) => {
   const manager = createHotkeyManager();
-  const handle = manager.register("G E", () => {});
+  let called = false;
+  const handle = manager.register("G E", () => {
+    called = true;
+  });
 
   handle.setOptions({ preventDefault: false });
 
   fireKey("g");
   clock.tick(50);
   const event = fireKey("e");
+  assert.ok(called, "Sequence completed on final key");
   assert.notOk(event.defaultPrevented, "Default not prevented on final key after setOptions");
 });
 

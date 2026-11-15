@@ -1,3 +1,5 @@
+import type Control from "sap/ui/core/Control";
+import InstanceManager from "sap/m/InstanceManager";
 import { hasOpenPopup } from "ui5/hotkeys/internal/runtime";
 import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";
 
@@ -62,8 +64,16 @@ QUnit.test("Dialog scope with global fallthrough", (assert) => {
   assert.ok(globalCtrlSCalled, "Global Ctrl+S fires as fallthrough when no dialog-scoped match");
 });
 
-QUnit.test("hasOpenPopup reports false when no UI5 popup is open", (assert) => {
-  // Exercises the real probe (not the InstanceManager stub other tests install):
-  // it reads sap.m.InstanceManager on each call and reports false when nothing is open.
+QUnit.test("hasOpenPopup reads the open state from sap.m.InstanceManager", (assert) => {
+  // Exercises the real probe (not the InstanceManager stub other tests install),
+  // with sap.m loaded so the probe resolves the module instead of falling back to false.
+  const fakeDialog = { close() {} } as unknown as Control;
   assert.notOk(hasOpenPopup(), "No dialog or popover open");
+
+  InstanceManager.addDialogInstance(fakeDialog);
+  try {
+    assert.ok(hasOpenPopup(), "An open dialog is reported");
+  } finally {
+    InstanceManager.removeDialogInstance(fakeDialog);
+  }
 });

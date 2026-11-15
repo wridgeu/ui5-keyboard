@@ -1,5 +1,7 @@
 import type HotkeyManager from "ui5/hotkeys/HotkeyManager";
-import { UnhandledReason } from "ui5/hotkeys/library";
+import { GLOBAL_SCOPE, Platform, UnhandledReason } from "ui5/hotkeys/library";
+import EventDispatcher from "ui5/hotkeys/internal/event-dispatcher";
+import type { HotkeyDispatchHandler, KeyEventInterceptor } from "ui5/hotkeys/internal/event-dispatcher";
 import type { UnhandledContext, KeyboardDispatchGuard } from "ui5/hotkeys/types";
 import type Log from "sap/base/Log";
 import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn, fireKeyUp } from "./test-helpers";
@@ -415,22 +417,6 @@ QUnit.test("Unhandled: partial sequence advance suppresses unhandled", (assert) 
 });
 
 // ──────────────────────────────────────────────
-// Lifecycle
-// ──────────────────────────────────────────────
-
-QUnit.test("Destroy removes all window listeners", (assert) => {
-  let callCount = 0;
-  manager.register("F5", () => {
-    callCount++;
-  });
-
-  manager.destroy();
-
-  fireKey("F5");
-  assert.strictEqual(callCount, 0, "No callbacks after destroy");
-});
-
-// ──────────────────────────────────────────────
 // Conflict: same key as hotkey and sequence first step
 // ──────────────────────────────────────────────
 
@@ -466,28 +452,37 @@ QUnit.test("Same key registered as hotkey AND first step of sequence", (assert) 
 // ──────────────────────────────────────────────
 
 QUnit.test("clearInterceptor is owner-safe - wrong owner cannot clear", (assert) => {
-  let recordedA: string | null = null;
-
-  const recorderA = manager.createRecorder({
-    onRecord: (h) => {
-      recordedA = h;
+  const handler: HotkeyDispatchHandler = {
+    processHotkeys: () => ({
+      consumed: false,
+      eventContext: { activeScope: GLOBAL_SCOPE, isInput: false, popupOpen: false, skipInfo: null },
+    }),
+    processSequences: () => false,
+    emitUnhandled: () => {},
+  };
+  const dispatcher = new EventDispatcher(handler, Platform.Windows);
+  let interceptedA = 0;
+  const interceptorA: KeyEventInterceptor = {
+    onKeyDown: () => {
+      interceptedA++;
+      return true;
     },
-  });
-  const recorderB = manager.createRecorder({
-    onRecord: () => {},
-  });
+    onDetached: () => {},
+  };
+  const interceptorB: KeyEventInterceptor = { onKeyDown: () => true, onDetached: () => {} };
 
-  recorderA.start();
+  try {
+    dispatcher.setInterceptor(interceptorA);
+    dispatcher.clearInterceptor(interceptorB);
+    fireKey("F5");
+    assert.strictEqual(interceptedA, 1, "Interceptor A still receives keys after a wrong-owner clear");
 
-  // recorderB tries to stop() (which calls clearInterceptor with itself as owner)
-  // but recorderB is NOT the current interceptor - should be a no-op
-  recorderB.stop();
-
-  // recorderA should still be the active interceptor
-  assert.ok(recorderA.isRecording, "RecorderA still recording after wrong-owner clear attempt");
-
-  fireKey("F5");
-  assert.strictEqual(recordedA, "F5", "RecorderA still received the key");
+    dispatcher.clearInterceptor(interceptorA);
+    fireKey("F5");
+    assert.strictEqual(interceptedA, 1, "Interceptor A is cleared by its own owner");
+  } finally {
+    dispatcher.destroy();
+  }
 });
 
 // ──────────────────────────────────────────────

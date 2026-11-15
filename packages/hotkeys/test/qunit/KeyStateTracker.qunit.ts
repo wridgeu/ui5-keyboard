@@ -163,11 +163,12 @@ QUnit.test("Repeated keydown does not duplicate held set", (assert) => {
 QUnit.test("Keyup removes held key by code when key value changed", (assert) => {
   const tracker = createHotkeyManager().getKeyStateTracker();
 
-  fireKey("A", { code: "KeyA", shiftKey: true });
-  assert.ok(tracker.isKeyHeld("A"), "Uppercase key is tracked while Shift is held");
+  // "!" and "1" are not case variants of each other, so only the code can pair them.
+  fireKey("!", { code: "Digit1", shiftKey: true });
+  assert.ok(tracker.isKeyHeld("!"), "Shifted symbol is tracked while Shift is held");
 
-  fireKeyUp("a", { code: "KeyA" });
-  assert.notOk(tracker.isKeyHeld("A"), "Held key is cleared using physical key code");
+  fireKeyUp("1", { code: "Digit1" });
+  assert.notOk(tracker.isKeyHeld("!"), "Held key is cleared using physical key code");
   assert.strictEqual(tracker.getHeldKeys().length, 0, "No held keys remain");
 });
 
