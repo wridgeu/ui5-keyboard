@@ -38,7 +38,11 @@ type DeclaredSpec = Omit<CustomLayoutSpec, "middleware"> & {
   readonly middleware?: CustomLayoutSpec["middleware"] | string | number;
 };
 
-const fold = (...specs: DeclaredSpec[]): CustomLayoutFold => foldCustomLayouts(specs as CustomLayoutSpec[], isBuiltIn);
+/** Only `{backspace}` has a built-in accessible name. */
+const hasBuiltInName = (value: string): boolean => value === "{backspace}";
+
+const fold = (...specs: DeclaredSpec[]): CustomLayoutFold =>
+  foldCustomLayouts(specs as CustomLayoutSpec[], isBuiltIn, hasBuiltInName);
 const codes = (f: CustomLayoutFold): DiagnosticCode[] => f.diagnostics.map((d) => d.code);
 
 const VOCAB: DiagnosticVocabulary = {
@@ -49,7 +53,7 @@ const VOCAB: DiagnosticVocabulary = {
 
 describe("custom-layout-fold shape", () => {
   it("no custom layouts folds to the shared empty result", () => {
-    expect(foldCustomLayouts([], isBuiltIn), "the same frozen object").toBe(EMPTY_FOLD);
+    expect(foldCustomLayouts([], isBuiltIn, hasBuiltInName), "the same frozen object").toBe(EMPTY_FOLD);
     expect(EMPTY_FOLD.diagnostics).toEqual([]);
   });
 
@@ -230,6 +234,34 @@ describe("custom-layout-fold diagnostics", () => {
   it("unknown-target: a built-in name needs no rows", () => {
     expect(codes(fold({ name: "ja-kana", suppress: ["Middleware"] }))).toEqual([]);
   });
+
+  it("unnamed-key: an icon-only key with no accessible name, once per value", () => {
+    const f = fold(
+      {
+        name: "x",
+        rows: [
+          [
+            { value: "{p}", label: "" },
+            { value: "{p}", label: "" },
+          ],
+        ],
+      },
+      { name: "y", rows: [[{ value: "{p}", label: "" }]] },
+    );
+    expect(f.diagnostics, "the first occurrence only").toEqual([{ code: "unnamed-key", layout: "x", value: "{p}" }]);
+  });
+
+  it("unnamed-key: an ariaLabel, a built-in name or a visible label names the key", () => {
+    const rows: LayoutDefinition = [
+      [{ value: "{a}", label: "", ariaLabel: "A" }, { value: "{backspace}", label: "" }, { value: "{c}" }],
+    ];
+    expect(codes(fold({ name: "x", rows }))).toEqual([]);
+  });
+
+  it("unnamed-key: only the rows that win are checked", () => {
+    const f = fold({ name: "x", rows: [[{ value: "{p}", label: "" }]] }, { name: "x", rows: ROWS });
+    expect(codes(f), "the shadowed rows never render").toEqual(["duplicate-rows"]);
+  });
 });
 
 describe("describeDiagnostic", () => {
@@ -274,6 +306,20 @@ describe("describeDiagnostic", () => {
     const message = describeDiagnostic({ code: "invalid-variants", layout: "" }, VOCAB);
     expect(message.startsWith('"defaultVariants"')).toBe(true);
     expect(message).not.toContain('for ""');
+  });
+});
+
+describe("key diagnostic wording", () => {
+  it("the key diagnostics keep their wording", () => {
+    expect(describeDiagnostic({ code: "unnamed-key", layout: "x", value: "{p}" }, VOCAB)).toBe(
+      'Icon-only key "{p}" has no accessible name; set ariaLabel on the KeyDefinition.',
+    );
+    expect(describeDiagnostic({ code: "empty-icon", layout: "x", value: "a" }, VOCAB)).toBe(
+      'empty SAP icon URI for key "a", skipping icon',
+    );
+    expect(
+      describeDiagnostic({ code: "empty-icon", layout: "x", value: "{shift}", other: "capsLockIcon" }, VOCAB),
+    ).toBe('empty SAP icon URI for capsLockIcon on key "{shift}", skipping icon');
   });
 });
 

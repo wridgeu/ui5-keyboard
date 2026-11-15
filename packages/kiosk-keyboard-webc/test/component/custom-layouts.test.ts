@@ -497,6 +497,37 @@ describe("kiosk-keyboard - custom layouts", () => {
       el.layout = "qwertz-de";
       await nextRender();
       expect(disarmed(), "and is not repeated on re-render").to.equal(1);
+
+      el.accentVariants = true;
+      await nextRender();
+      el.accentVariants = false;
+      await nextRender();
+      expect(disarmed(), "disarming again is reported again").to.equal(2);
+    });
+  });
+
+  it("an unchanged invalid defaultVariants is not reported again after an unrelated edit", async () => {
+    await withCapturedWarnings(async (messages) => {
+      const extra = customLayout({ name: "extra", rows: [[{ value: "a" }]] });
+      const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+      el.setAttribute("layout", "qwerty");
+      el.setAttribute("accent-variants", "");
+      el.defaultVariants = { A: ["ä"] };
+      el.append(extra);
+      await fixture(el);
+      await nextRender();
+      const reported = (): number => messages.filter((message) => message.includes('"defaultVariants"')).length;
+      expect(reported(), "the invalid table is reported on first render").to.equal(1);
+
+      el.layout = "qwertz-de";
+      await nextRender();
+      extra.rows = [[{ value: "b" }]];
+      await nextRender();
+      expect(reported(), "a clean rebuild of the fold does not re-report the unchanged table").to.equal(1);
+
+      el.defaultVariants = { B: ["ḃ"] };
+      await nextRender();
+      expect(reported(), "a new invalid table is reported").to.equal(2);
     });
   });
 

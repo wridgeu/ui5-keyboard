@@ -3,7 +3,7 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import Log from "sap/base/Log";
 import type { LayoutDefinition, KeyDefinition } from "ui5/kiosk/types";
-import { placeAndWait, tapKey, getRequiredKeyElement } from "./test-helpers";
+import { placeAndWait, tapKey, getRequiredKeyElement, waitForRender } from "./test-helpers";
 
 const sandbox = sinon.createSandbox();
 
@@ -137,4 +137,33 @@ QUnit.test("Icon-only key with no ariaLabel/label warns and falls back to value"
 
   input.destroy();
   kb.destroy();
+});
+
+QUnit.test("The missing-name warning is per keyboard, whatever else is alive on the page", async (assert) => {
+  const warn = sandbox.spy(Log, "warning");
+  const faulty = async (): Promise<KioskKeyboard> => {
+    const kb = new KioskKeyboard({
+      customLayouts: [new CustomLayout({ name: "restart", rows: layoutOf({ value: "{restart-probe}", label: "" }) })],
+      layout: "restart",
+    });
+    await placeAndWait(kb);
+    return kb;
+  };
+  const warnings = (): number =>
+    warn.getCalls().filter((c) => String(c.args[0]).includes('Icon-only key "{restart-probe}"')).length;
+  // A shell-level keyboard outliving the app's, as in a launchpad.
+  const shell = new KioskKeyboard({ layout: "qwerty" });
+  await placeAndWait(shell);
+
+  const app = await faulty();
+  app.invalidate();
+  await waitForRender();
+  assert.strictEqual(warnings(), 1, "one warning, not repeated on re-render");
+
+  app.destroy();
+  const restarted = await faulty();
+  assert.strictEqual(warnings(), 2, "the restarted app's keyboard warns again");
+
+  restarted.destroy();
+  shell.destroy();
 });
