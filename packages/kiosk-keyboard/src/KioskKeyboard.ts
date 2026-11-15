@@ -212,8 +212,8 @@ export default class KioskKeyboard extends Control {
        * and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
        * writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
        * when it holds a stored preference, or a detected value travels back into the
-       * model; take user-driven changes from `layoutChange`, whose `autoDetected`
-       * parameter is `false` for exactly those.
+       * model; take the layout to persist from the `requestedLayout` parameter of
+       * `layoutChange`, which every change carries.
        *
        * @example <caption>XML view</caption>
        * <kiosk:KioskKeyboard layout="qwertz-de" controls="myInput" />
@@ -570,9 +570,21 @@ export default class KioskKeyboard extends Control {
        */
       layoutChange: {
         parameters: {
-          /** The name of the newly active layout. */
+          /** The name of the layout that now renders, which the `layout` property holds. */
           layout: { type: "string" },
-          /** Whether this change was the `autoCompact` width tier resolving, rather than a request. */
+          /**
+           * The name of the layout last requested - by `setLayout()` or a `{layout:*}`
+           * key - which `layout` differs from while the `autoCompact` width tier
+           * renders its compact counterpart. Persist this one to restore a user's choice.
+           *
+           * @since 0.2.0
+           */
+          requestedLayout: { type: "string" },
+          /**
+           * Whether this change was not exactly a request: the `autoCompact` width tier
+           * resolving, a lifted `keyboardType` constraint or a newly declared layout, or a
+           * request the width tier rendered as its compact counterpart.
+           */
           autoDetected: { type: "boolean" },
         },
       },
@@ -951,7 +963,11 @@ export default class KioskKeyboard extends Control {
     this._targetResolverInstance = null;
     this._foldCache = new LayoutFoldCache({
       getCustomLayouts: () => this.getCustomLayouts(),
-      onRebuilt: () => this._autoCompact.reapply(),
+      // Deferred: a rebuild runs inside whatever read the fold, which can be a render.
+      onRebuilt: () =>
+        queueMicrotask(() => {
+          if (!this.isDestroyed()) this._layoutState.refresh();
+        }),
     });
     this._middlewareFactory = null;
     this._layoutState = new LayoutState({
@@ -968,7 +984,6 @@ export default class KioskKeyboard extends Control {
       endComposition: () => this._dropComposition("commit"),
       focusAnchorValue: () => this._focusAnchorValue(),
       reseatFocusAnchor: (value) => this._reseatFocusAnchor(value),
-      reapplyAutoCompact: () => this._autoCompact.reapply(),
       warnTierWriteBack: () => this._warnTierWriteBack(),
     });
     this._checkedDefaultVariants = undefined;
@@ -1425,6 +1440,7 @@ export default class KioskKeyboard extends Control {
     return this._keyboardTypeSource;
   }
 
+  /** Called once the `keyboardType` property holds the new type, which the layout derives from. */
   _setKeyboardTypeSource(source: KeyboardTypeSource): void {
     this._keyboardTypeSource = source;
     // A keyboardType change (explicit, reset, or auto-detected) invalidates
@@ -1438,9 +1454,9 @@ export default class KioskKeyboard extends Control {
     // End any in-progress composition so the next key resolves against the new
     // effective layout, the way a layout switch does.
     this._dropComposition("commit");
-    // A constraint pins the rendered surface and suppresses the tier, so lifting one
-    // re-opens the tier question for the layout that surfaces from under it.
-    this._autoCompact.reapply();
+    // A constraint suspends the width tier, so lifting one re-derives the layout that
+    // surfaces from under it.
+    this._layoutState.refresh();
   }
 
   /**
@@ -1490,8 +1506,8 @@ export default class KioskKeyboard extends Control {
     // Route through _setKeyboardTypeSource so the layout-source reset
     // (webc parity, see _getResolvedLayout) fires for explicit changes too,
     // not just for auto-detect.
-    this._setKeyboardTypeSource("explicit");
     this.setProperty("keyboardType", type);
+    this._setKeyboardTypeSource("explicit");
     if (type !== previous) {
       this.fireKeyboardTypeChange({
         keyboardType: type,
@@ -1517,8 +1533,8 @@ export default class KioskKeyboard extends Control {
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
     // Route through _setKeyboardTypeSource so the layout-source reset fires.
-    this._setKeyboardTypeSource("unset");
     this.setProperty("keyboardType", KeyboardType.Full);
+    this._setKeyboardTypeSource("unset");
     if (KeyboardType.Full !== sPrevious) {
       this.fireKeyboardTypeChange({
         keyboardType: KeyboardType.Full,
@@ -1998,7 +2014,7 @@ export default class KioskKeyboard extends Control {
     Log.warning(
       `"layout" is bound two-way, so the layout autoCompact resolved for the keyboard's own width is written back ` +
         `into the model. Bind it { path: "...", mode: "OneWay" } if it holds a stored preference, and take ` +
-        `user-driven changes from the layoutChange event instead - its "autoDetected" parameter is false for those.`,
+        `the layout to persist from the layoutChange event's "requestedLayout" parameter instead.`,
       undefined,
       "ui5.kiosk.KioskKeyboard",
     );

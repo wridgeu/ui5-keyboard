@@ -17,7 +17,9 @@ interface Mounted {
   /** The fixed-width box the keyboard fills, which is what the tier measures. */
   host: HTMLElement;
   /** Every `layout-change` fired since mount, in order. */
-  changes: LayoutChangeEventDetail[];
+  changes: Omit<LayoutChangeEventDetail, "requestedLayout">[];
+  /** The `requestedLayout` of each of those, in the same order. */
+  requested: string[];
   /** Resizes the box and lets the tier settle. */
   resize(width: number): Promise<void>;
 }
@@ -34,8 +36,13 @@ async function mount(width: number, attributes: Record<string, string>, ...child
   el.append(...children);
   host.appendChild(el);
 
-  const changes: LayoutChangeEventDetail[] = [];
-  el.addEventListener("layout-change", (e) => changes.push((e as CustomEvent<LayoutChangeEventDetail>).detail));
+  const changes: Mounted["changes"] = [];
+  const requested: string[] = [];
+  el.addEventListener("layout-change", (e) => {
+    const { layout, requestedLayout, autoDetected } = (e as CustomEvent<LayoutChangeEventDetail>).detail;
+    changes.push({ layout, autoDetected });
+    requested.push(requestedLayout);
+  });
 
   await fixture(host);
   await settle();
@@ -44,6 +51,7 @@ async function mount(width: number, attributes: Record<string, string>, ...child
     el,
     host,
     changes,
+    requested,
     async resize(next: number) {
       host.style.width = `${next}px`;
       await settle();
@@ -280,6 +288,86 @@ describe("kiosk-keyboard - autoCompact", () => {
     // box never moved, so no resize reports it.
     expect(changes).to.deep.equal([{ layout: "home-c", autoDetected: true }]);
     expect(readDataKeys(el)).to.deep.equal([["hc"]]);
+  });
+
+  it("resolves requests, width, keyboardType, user picks and a late counterpart in one sequence", async () => {
+    const { el, changes, requested, resize } = await mount(
+      WIDE_PX,
+      { layout: "home", "auto-compact": "" },
+      customLayout({ name: "home", rows: home, compact: "home-c" }),
+      customLayout({ name: "home-c", rows: [[{ value: "{layout:away}" }, { value: "hc" }]] }),
+      customLayout({ name: "away", rows: [[{ value: "{layout:pick}" }, { value: "a" }]], compact: "away-c" }),
+      customLayout({ name: "away-c", rows: [[{ value: "ac" }]] }),
+      customLayout({ name: "pick", rows: [[{ value: "{layout:base}" }, { value: "p" }]], layoutRole: "Secondary" }),
+      customLayout({ name: "solo", rows: [[{ value: "s" }]], compact: "solo-c" }),
+    );
+    /** Per step: the rendered layout, and the events and announcement since the last step. */
+    const trace: unknown[] = [];
+    const step = (name: string): void => {
+      const names = requested.splice(0);
+      const events = changes.splice(0).map((change, i) => ({ ...change, requestedLayout: names[i] }));
+      trace.push([name, el.effectiveLayout, events, announcedText()]);
+      resetAnnouncements();
+    };
+
+    step("request A");
+    await resize(NARROW_PX);
+    step("narrow");
+    requireKey(el, "{layout:away}").click();
+    await settle();
+    step("request B while narrow");
+    el.keyboardType = "Numpad";
+    await settle();
+    step("Numpad");
+    el.keyboardType = "Full";
+    await settle();
+    step("Full");
+    await resize(WIDE_PX);
+    step("widen");
+    requireKey(el, "{layout:pick}").click();
+    await settle();
+    step("{layout:pick}");
+    requireKey(el, "{layout:base}").click();
+    await settle();
+    step("{layout:base}");
+    el.layout = "solo";
+    await resize(NARROW_PX);
+    step("request solo, narrow");
+    el.appendChild(customLayout({ name: "solo-c", rows: [[{ value: "sc" }]] }));
+    await settle();
+    step("solo-c slotted");
+
+    expect([trace, readDataKeys(el)]).to.deep.equal([
+      [
+        ["request A", "home", [], ""],
+        [
+          "narrow",
+          "home-c",
+          [{ layout: "home-c", requestedLayout: "home", autoDetected: true }],
+          "Switched to the compact keyboard layout",
+        ],
+        // One change, naming the layout that renders, unannounced.
+        ["request B while narrow", "away-c", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], ""],
+        // The key pick was a user override, which a keyboardType change drops to the
+        // base; the constraint wins, and lifting it re-tiers the base.
+        ["Numpad", "numpad", [{ layout: "away", requestedLayout: "away", autoDetected: false }], ""],
+        ["Full", "away-c", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], ""],
+        [
+          "widen",
+          "away",
+          [{ layout: "away", requestedLayout: "away", autoDetected: true }],
+          "Switched back to the standard keyboard layout",
+        ],
+        ["{layout:pick}", "pick", [{ layout: "pick", requestedLayout: "pick", autoDetected: false }], ""],
+        ["{layout:base}", "away", [{ layout: "away", requestedLayout: "away", autoDetected: false }], ""],
+        // The attribute path is silent, and solo-c is not slotted yet, so the crossing
+        // swaps nothing...
+        ["request solo, narrow", "solo", [], ""],
+        // ...and the counterpart arriving applies without a resize, unannounced.
+        ["solo-c slotted", "solo-c", [{ layout: "solo-c", requestedLayout: "solo", autoDetected: true }], ""],
+      ],
+      [["sc"]],
+    ]);
   });
 
   it("tiers on the threshold custom property rather than a fixed width", async () => {

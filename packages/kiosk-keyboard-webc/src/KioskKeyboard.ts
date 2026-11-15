@@ -205,9 +205,13 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
 /**
  * Fired when the active layout changes (user switch or locale resolution).
  *
- * @param {string} layout - The new layout name.
- * @param {boolean} autoDetected - Whether this change was the `autoCompact` width tier
- *   resolving, rather than a request.
+ * @param {string} layout - The name of the layout that now renders.
+ * @param {string} requestedLayout - The name of the layout last requested, which
+ *   `layout` differs from while the `autoCompact` width tier renders its compact
+ *   counterpart. Persist this one to restore a user's choice. Since 0.2.0.
+ * @param {boolean} autoDetected - Whether this change was not exactly a request: the
+ *   `autoCompact` width tier resolving, a lifted `keyboard-type` constraint or a newly
+ *   slotted layout, or a request the width tier rendered as its compact counterpart.
  * @public
  * @since 0.1.0
  */
@@ -715,7 +719,6 @@ class KioskKeyboard extends UI5Element {
     },
     focusAnchor: () => this._focusAnchor(),
     reseatFocusAnchor: (anchor) => this._reseatFocusAnchor(anchor),
-    reapplyAutoCompact: () => this._autoCompact.reapply(),
     announce: (text) => KioskKeyboard._announcements.announce(text),
   });
   private _keyboardTypeValue: `${KeyboardType}` = "Full";
@@ -1150,9 +1153,9 @@ class KioskKeyboard extends UI5Element {
         previousKeyboardType: previousKeyboardTypeOf(changeInfo.oldValue),
         autoDetected,
       });
-      // A constraint pins the rendered surface and suppresses the tier, so lifting one
-      // re-opens the tier question for the layout that surfaces from under it.
-      this._autoCompact.reapply();
+      // A constraint suspends the width tier, so lifting one re-derives the layout
+      // that surfaces from under it.
+      this._layoutState.refresh();
     }
     if (name === "docked" || name === "autoShow") {
       this._autoShow.sync();
@@ -1429,7 +1432,8 @@ class KioskKeyboard extends UI5Element {
   /** Owns the folded view of the `customLayouts` slot and its diagnostics. */
   private readonly _foldCache = new LayoutFoldCache({
     getCustomLayouts: () => this.customLayouts,
-    onRebuilt: () => this._autoCompact.reapply(),
+    // Deferred: a rebuild runs inside whatever read the fold, which can be a render.
+    onRebuilt: () => queueMicrotask(() => this._layoutState.refresh()),
     hasBuiltInName: (value) => SPECIAL_KEY_LABELS[value] !== undefined,
   });
   private _middlewareFactory: (() => CompositionMiddleware) | null = null;

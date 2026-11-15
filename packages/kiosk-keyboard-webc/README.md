@@ -351,7 +351,7 @@ kb.layout; // "ja-kana"          - what you asked for
 kb.effectiveLayout; // "ja-kana-compact"  - what is on screen right now
 ```
 
-`effectiveLayout` is read-only and has no attribute. To be told when it changes rather than polling it, listen for `layout-change`, whose `autoDetected` flag separates a width swap from a request.
+`effectiveLayout` is read-only and has no attribute. To be told when it changes rather than polling it, listen for `layout-change`. Its `requestedLayout` names the layout last asked for - by the attribute, a `{layout:*}` key or the session reset - whatever the width rendered it as, so it is the one to persist.
 
 > [!NOTE]
 > The UI5 control splits this differently: `KioskKeyboard#getLayout()` returns the **effective** layout, because a UI5 control property is live control state rather than an author declaration. Port `kb.effectiveLayout` to `kb.getLayout()`, not to the control's `layout` setting. See [Custom Layouts](../kiosk-keyboard/README.md#custom-layouts) in the control's README.
@@ -380,14 +380,14 @@ Valid values: `"Full"`, `"Numpad"`. This attribute takes priority over `inputmod
 
 ## Events
 
-| Event                   | Detail                                                                          | Description                                                                                                                                                                       |
-| ----------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `key-press`             | `{ key: string, shiftKey: boolean, char?: string }`                             | Fired on key click. Cancelable. `char` is the resolved character (after shift); `undefined` for action/F-keys.                                                                    |
-| `after-open`            | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the docked keyboard enters the open state. `activeElement` is the input that's now active. State-change hook only; not a CSS transition-end event.                     |
-| `after-close`           | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the docked keyboard enters the closed state. `activeElement` is the input that was active just before closing. State-change hook only; not a CSS transition-end event. |
-| `layout-change`         | `{ layout: string, autoDetected: boolean }`                                     | Fired when layout switches. `autoDetected` marks an `auto-compact` width swap rather than a request.                                                                              |
-| `keyboard-type-change`  | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                                                                                                 |
-| `active-control-change` | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the active control changes (auto-show focus switch or programmatic `setTargetElement`).                                                                                |
+| Event                   | Detail                                                                          | Description                                                                                                                                                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key-press`             | `{ key: string, shiftKey: boolean, char?: string }`                             | Fired on key click. Cancelable. `char` is the resolved character (after shift); `undefined` for action/F-keys.                                                                                                          |
+| `after-open`            | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the docked keyboard enters the open state. `activeElement` is the input that's now active. State-change hook only; not a CSS transition-end event.                                                           |
+| `after-close`           | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the docked keyboard enters the closed state. `activeElement` is the input that was active just before closing. State-change hook only; not a CSS transition-end event.                                       |
+| `layout-change`         | `{ layout: string, requestedLayout: string, autoDetected: boolean }`            | Fired once per change of the rendered layout. `layout` is what renders, `requestedLayout` the layout last asked for - persist that one. `autoDetected` is `false` only when what renders is exactly what was requested. |
+| `keyboard-type-change`  | `{ keyboardType: string, previousKeyboardType: string, autoDetected: boolean }` | Fired when keyboard type changes.                                                                                                                                                                                       |
+| `active-control-change` | `{ activeElement: HTMLInputElement \| HTMLTextAreaElement \| null }`            | Fired when the active control changes (auto-show focus switch or programmatic `setTargetElement`).                                                                                                                      |
 
 ## Text Insertion
 

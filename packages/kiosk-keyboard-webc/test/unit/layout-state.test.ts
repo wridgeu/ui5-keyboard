@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { LayoutState } from "../../src/core/layout-state.js";
-import { EMPTY_FOLD } from "../../src/core/custom-layout-fold.js";
-import type { KeyboardType } from "../../src/types.js";
+import { EMPTY_FOLD, foldCustomLayouts } from "../../src/core/custom-layout-fold.js";
+import { isBuiltInLayout } from "../../src/core/layout-registry.js";
+import type { CustomLayoutSpec, KeyboardType, LayoutChangeEventDetail } from "../../src/types.js";
 
 /** A host over a local layout variable and a keyboardType box, recording every `layout-change`. */
 function createHost(attribute = "qwerty", locale = "qwerty") {
@@ -22,7 +23,6 @@ function createHost(attribute = "qwerty", locale = "qwerty") {
     endComposition: () => {},
     focusAnchor: () => ({ value: null, focused: false }),
     reseatFocusAnchor: () => {},
-    reapplyAutoCompact: () => {},
     announce: () => {},
   });
   state.seed();
@@ -86,5 +86,174 @@ describe("LayoutState.seed", () => {
     state.applyKeySwitch("base");
     expect(box.current, "the surface stays on the authored layout").to.equal("qwertz-de");
     expect(box.changes, "a non-switch fires nothing").to.deep.equal([]);
+  });
+});
+
+describe("LayoutState golden sequence", () => {
+  /** Rows are irrelevant here: only the names, counterparts and roles are read. */
+  const rows = [[{ value: "x" }]];
+  const specs: CustomLayoutSpec[] = [
+    { name: "home", rows, compact: "home-c" },
+    { name: "home-c", rows },
+    { name: "away", rows, compact: "away-c" },
+    { name: "away-c", rows },
+    { name: "pick", rows, secondary: true },
+    { name: "solo", rows, compact: "solo-c" },
+  ];
+
+  /**
+   * A host whose width tier behaves like `AutoCompactController`: a verdict reaches the
+   * state only when it differs from the last one.
+   */
+  function createGoldenHost() {
+    const box = {
+      current: "",
+      keyboardType: "Full" as `${KeyboardType}`,
+      fold: foldCustomLayouts(specs, isBuiltInLayout, () => false),
+      changes: [] as LayoutChangeEventDetail[],
+      announced: [] as string[],
+      shiftResets: 0,
+    };
+    let applied: boolean | null = null;
+    const state = new LayoutState({
+      getCurrentLayout: () => box.current,
+      setCurrentLayout: (name) => {
+        box.current = name;
+      },
+      getLayoutAttribute: () => "qwerty",
+      getLocaleLayout: () => "qwerty",
+      getKeyboardType: () => box.keyboardType,
+      getFold: () => box.fold,
+      fireLayoutChange: (p) => {
+        box.changes.push(p);
+      },
+      resetShiftState: () => {
+        box.shiftResets++;
+      },
+      endComposition: () => {},
+      focusAnchor: () => ({ value: null, focused: false }),
+      reseatFocusAnchor: () => {},
+      announce: (text) => {
+        box.announced.push(text);
+      },
+    });
+    const resize = (narrow: boolean): void => {
+      if (narrow === applied) return;
+      const crossed = applied !== null;
+      applied = narrow;
+      state.applyTier(narrow, crossed);
+    };
+    /** What the element's `keyboardType` invalidation does. */
+    const setKeyboardType = (type: `${KeyboardType}`): void => {
+      box.keyboardType = type;
+      state.clearUserOverride();
+      state.refresh();
+    };
+    /** What the fold cache does when a slotted layout arrives. */
+    const slot = (spec: CustomLayoutSpec): void => {
+      box.fold = foldCustomLayouts([...specs, spec], isBuiltInLayout, () => false);
+      state.refresh();
+    };
+    state.seed();
+    resize(false);
+    return { box, state, resize, setKeyboardType, slot };
+  }
+
+  const COMPACTED = "Switched to the compact keyboard layout";
+  const UNCOMPACTED = "Switched back to the standard keyboard layout";
+
+  it("requests, width, keyboardType, user picks and a late counterpart resolve in one sequence", () => {
+    const { box, state, resize, setKeyboardType, slot } = createGoldenHost();
+    /** Per step: the resolved layout, and the events and announcements since the last step. */
+    const trace: unknown[] = [];
+    const step = (name: string): void => {
+      trace.push([name, state.resolvedName(), box.changes.splice(0), box.announced.splice(0)]);
+    };
+
+    state.applyAttribute("home");
+    step("request A");
+    resize(true);
+    step("narrow");
+    state.applyKeySwitch("away");
+    step("request B while narrow");
+    setKeyboardType("Numpad");
+    step("Numpad");
+    setKeyboardType("Full");
+    step("Full");
+    resize(false);
+    step("widen");
+    state.applyKeySwitch("pick");
+    step("{layout:pick}");
+    state.applyKeySwitch("base");
+    step("{layout:base}");
+    state.applyAttribute("solo");
+    resize(true);
+    step("request solo, narrow");
+    slot({ name: "solo-c", rows });
+    step("solo-c slotted");
+
+    expect(trace).to.deep.equal([
+      // The attribute path is silent about what it was asked for.
+      ["request A", "home", [], []],
+      ["narrow", "home-c", [{ layout: "home-c", requestedLayout: "home", autoDetected: true }], [COMPACTED]],
+      // One change, naming the layout that renders, unannounced.
+      ["request B while narrow", "away-c", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], []],
+      // The key pick was a user override, which a keyboardType change drops to the
+      // base; the constraint wins, and lifting it re-tiers the base.
+      ["Numpad", "numpad", [{ layout: "away", requestedLayout: "away", autoDetected: false }], []],
+      ["Full", "away-c", [{ layout: "away-c", requestedLayout: "away", autoDetected: true }], []],
+      ["widen", "away", [{ layout: "away", requestedLayout: "away", autoDetected: true }], [UNCOMPACTED]],
+      ["{layout:pick}", "pick", [{ layout: "pick", requestedLayout: "pick", autoDetected: false }], []],
+      ["{layout:base}", "away", [{ layout: "away", requestedLayout: "away", autoDetected: false }], []],
+      // solo-c is not registered yet, so the crossing swaps nothing...
+      ["request solo, narrow", "solo", [], []],
+      // ...and the counterpart arriving applies without a resize, unannounced.
+      ["solo-c slotted", "solo-c", [{ layout: "solo-c", requestedLayout: "solo", autoDetected: true }], []],
+    ]);
+  });
+
+  it("a constraint holds the tiered layout under it until it lifts", () => {
+    const { box, state, resize, setKeyboardType } = createGoldenHost();
+    state.applyAttribute("home");
+    resize(true);
+    box.changes.length = 0;
+    const trace: unknown[] = [];
+    const step = (name: string): void => {
+      trace.push([name, state.resolvedName(), box.current, box.changes.splice(0)]);
+    };
+
+    setKeyboardType("Numpad");
+    step("Numpad while narrow");
+    resize(false);
+    step("widen under the constraint");
+    setKeyboardType("Full");
+    step("lift");
+
+    expect(trace).to.deep.equal([
+      ["Numpad while narrow", "numpad", "home-c", []],
+      ["widen under the constraint", "numpad", "home-c", []],
+      ["lift", "home", "home", [{ layout: "home", requestedLayout: "home", autoDetected: true }]],
+    ]);
+  });
+
+  it("every request resets the typing context once, a re-selection and a tiered one included", () => {
+    const { box, state, resize } = createGoldenHost();
+    const resets: number[] = [];
+    const count = (): void => {
+      resets.push(box.shiftResets);
+      box.shiftResets = 0;
+    };
+    box.shiftResets = 0;
+
+    state.applyAttribute("home");
+    count();
+    state.applyAttribute("home");
+    count();
+    resize(true);
+    count();
+    state.applyKeySwitch("away");
+    count();
+
+    expect(resets, "a switch, a re-selection, a width swap, a tiered request").to.deep.equal([1, 1, 1, 1]);
   });
 });

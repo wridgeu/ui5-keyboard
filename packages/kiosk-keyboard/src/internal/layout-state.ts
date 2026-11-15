@@ -20,6 +20,12 @@ import type { KeyboardType } from "../library";
  */
 type LayoutSource = "external" | "user";
 
+/**
+ * What re-derived the layout: a request, a width verdict, or an input the state reads
+ * but does not own (the `keyboardType`, the folded layout table).
+ */
+type CommitCause = "request" | "tier" | "refresh";
+
 /** The slice of the control the layout state reads and writes back into. */
 interface LayoutStateHost {
   /** The `layout` property: the layout on screen, not the last one asked for. */
@@ -28,27 +34,27 @@ interface LayoutStateHost {
   setLayoutProperty(name: string): void;
   getKeyboardType(): KeyboardType;
   getFold(): CustomLayoutFold;
-  fireLayoutChange(parameters: { layout: string; autoDetected: boolean }): void;
+  fireLayoutChange(parameters: { layout: string; requestedLayout: string; autoDetected: boolean }): void;
   /** Selecting a layout always resets the typing context. */
   resetShiftState(): void;
   endComposition(): void;
   /** The key focus sits on, captured before a switch re-renders the grid. */
   focusAnchorValue(): string | null;
   reseatFocusAnchor(value: string | null): void;
-  /** A change re-opens the width-tier question at an unchanged width. */
-  reapplyAutoCompact(): void;
   warnTierWriteBack(): void;
 }
 
 /**
- * Owns which layout is active and who asked for it: the base (alphabetic) layout
- * `{layout:base}` returns to, the layout last requested, the source that drove the
- * current one, and the tier announcement waiting on a render.
+ * Owns which layout is active and who asked for it. It stores only inputs - the
+ * layout last requested, the base (alphabetic) layout `{layout:base}` returns to, the
+ * source that drove the current one, and the `autoCompact` width verdict - and
+ * derives the layout to render from them in {@link _commit}, the one place the
+ * `layout` property changes. It also holds the tier announcement waiting on a render.
  *
- * Two entry points, deliberately distinct. {@link perform} is a *request* -
- * `setLayout` and the `{layout:*}` key - validated against the registry and kept as
- * the layout to swap back to. {@link applyTier} is an *arrangement* the `autoCompact`
- * width observer imposes, which must leave the request alone.
+ * Three entry points: {@link perform} is a *request* - `setLayout` and the
+ * `{layout:*}` key - validated against the registry and kept as the layout to swap
+ * back to; {@link applyTier} records the width verdict; {@link refresh} re-derives
+ * after an input the control owns changed.
  */
 export default class LayoutState {
   private readonly _host: LayoutStateHost;
@@ -57,6 +63,8 @@ export default class LayoutState {
   /** The layout last asked for, which the width tier resolves its counterpart against. */
   private _requested = "";
   private _source: LayoutSource = "external";
+  /** Whether the `autoCompact` width tier last reported the keyboard too narrow. */
+  private _narrow = false;
   /** Live-region text for a width-driven swap, held until the render it triggers is done. */
   private _pendingAnnouncement: string | null = null;
 
@@ -87,7 +95,7 @@ export default class LayoutState {
    */
   clearUserOverride(): void {
     if (this._source !== "user") return;
-    // Explicit, not left to `_apply`: a pick of a primary layout is already the base,
+    // Explicit, not left to `_commit`: a pick of a primary layout is already the base,
     // so the request below is a no-op that would leave the source at "user".
     this._source = "external";
     this.perform(this._base, "external", "held as the base layout");
@@ -109,8 +117,9 @@ export default class LayoutState {
 
   /**
    * Requests a layout: normalize (trim + lowercase) -> validate against the registry
-   * (warn and bail when unregistered) -> apply -> fire `layoutChange` on a real
-   * change. Returns whether the layout changed.
+   * (warn and bail when unregistered) -> record -> commit. Selecting a layout always
+   * resets the typing context (shift/caps-lock), even a re-selection of the active
+   * layout. Returns whether the layout changed.
    *
    * @param rawName Requested layout name; normalized here.
    * @param source  Who drove the switch.
@@ -127,67 +136,35 @@ export default class LayoutState {
       return false;
     }
     this._requested = name;
+    if (getLayoutMeta(name, this._host.getFold().layoutMeta)?.secondary !== true) {
+      this._base = name;
+    }
     // A request supersedes any tier announcement still waiting on a render, which
     // would otherwise name the layout this switch just replaced.
     this._pendingAnnouncement = null;
-    const changed = this._apply(name, source);
-    if (changed) {
-      this._host.fireLayoutChange({ layout: name, autoDetected: false });
-    }
-    // A new request re-opens the tier question at an unchanged width, which no
-    // resize would report.
-    this._host.reapplyAutoCompact();
+    const changed = this._commit("request", source);
+    if (!changed) this._host.resetShiftState();
     return changed;
   }
 
   /**
-   * Applies the `autoCompact` width tier: the requested layout's compact counterpart
-   * while the keyboard is too narrow for it, the requested layout itself once the room
-   * returns. Called from `AutoCompactBehavior` on a frame of its own, never from
-   * the observation callback.
-   *
-   * Deliberately not routed through {@link perform}: it must leave the requested
-   * layout alone, or the first swap would erase the layout it has to swap back to. An
-   * unregistered counterpart resolves to no swap rather than to the default layout,
-   * since a consumer who names a missing one should keep the layout they asked for.
+   * Records the `autoCompact` width verdict: the requested layout's compact
+   * counterpart renders while the keyboard is too narrow for it, the requested layout
+   * itself once the room returns. Called from `AutoCompactBehavior` on a frame of its
+   * own, never from the observation callback. `crossed` is whether the verdict
+   * replaces a known previous one, which is what gets announced.
    */
   applyTier(narrow: boolean, crossed: boolean): void {
-    // Numpad and Numeric pin the rendered surface to their own layout, so tiering
-    // would fire `layoutChange` naming a layout that is not the one on screen.
-    if (constrainedLayoutName(this._host.getKeyboardType()) !== null) return;
+    this._narrow = narrow;
+    this._commit("tier", this._source, crossed);
+  }
 
-    const fold = this._host.getFold();
-    const requested = this._requested;
-    const compact = narrow ? getLayoutMeta(requested, fold.layoutMeta)?.compact : undefined;
-    const target = compact ?? requested;
-    if (target === this._host.getLayout()) return;
-    if (!registryGetLayout(target, fold.layouts)) return;
-
-    // The tier is an arrangement, not a request, so it must not become the base:
-    // `{layout:base}`, `resetLayout()` and `reset()` all return to the layout that
-    // was asked for. `_apply` promotes any non-secondary name it applies, so the
-    // base is restored around it.
-    const base = this._base;
-    const changed = this._apply(target, this._source);
-    this._base = base;
-    if (changed) {
-      // Announced only on a width the user crossed: the one layout change with no
-      // interaction behind it. A keyboard that was always this narrow rearranged
-      // nothing they had seen, and a requested switch re-seats focus onto the key it
-      // followed, which announces itself.
-      //
-      // The direction rather than the layout's name - an identifier the user never
-      // chose, which would enter a translated sentence untranslated. Two texts, not
-      // one: a live region speaks on change, and consecutive announcements always
-      // alternate direction.
-      if (crossed) {
-        this._pendingAnnouncement = narrow
-          ? getText("ARIA_LAYOUT_COMPACTED", "Switched to the compact keyboard layout")
-          : getText("ARIA_LAYOUT_UNCOMPACTED", "Switched back to the standard keyboard layout");
-      }
-      this._host.warnTierWriteBack();
-      this._host.fireLayoutChange({ layout: target, autoDetected: true });
-    }
+  /**
+   * Re-derives the layout after an input the control owns changed under it: the
+   * `keyboardType` constraint or the folded layout table.
+   */
+  refresh(): void {
+    this._commit("refresh");
   }
 
   /**
@@ -207,33 +184,59 @@ export default class LayoutState {
   }
 
   /**
-   * State-application step of {@link perform}: track the base (alphabetic) layout,
-   * record who drove the switch, and write the `layout` property. The caller
-   * validates `name` against the registry first. Returns whether the property value
-   * actually changed.
-   *
-   * Selecting a layout always resets the typing context (shift/caps-lock), even a
-   * re-selection of the active layout. The `source` only changes on a real switch so
-   * a no-op re-selection can't silently flip the constraint-override.
+   * The layout to render under the constraint: the requested layout's registered
+   * compact counterpart while the keyboard is narrow, the requested layout otherwise.
+   * An unregistered counterpart resolves to the requested layout rather than to the
+   * default one, since a consumer who names a missing one should keep the layout they
+   * asked for. A `keyboardType` constraint suspends the tier: it pins the rendered
+   * surface, so a counterpart would name a layout that is not on screen.
    */
-  private _apply(name: string, source: LayoutSource): boolean {
-    if (getLayoutMeta(name, this._host.getFold().layoutMeta)?.secondary !== true) {
-      this._base = name;
-    }
-    const changed = name !== this._host.getLayout();
-    const anchorValue = changed ? this._host.focusAnchorValue() : null;
-    if (changed) {
-      this._source = source;
-      // A real layout switch ends any in-progress composition so the next key
-      // resolves the new layout's middleware. Covers both programmatic
-      // setLayout() and the {layout:*} key path.
-      this._host.endComposition();
-    }
+  private _target(constrained: boolean): string {
+    const requested = this._requested;
+    if (!this._narrow || constrained) return requested;
+    const fold = this._host.getFold();
+    const compact = getLayoutMeta(requested, fold.layoutMeta)?.compact;
+    return compact !== undefined && registryGetLayout(compact, fold.layouts) ? compact : requested;
+  }
+
+  /**
+   * Derives the layout to render and, when it differs from the `layout` property,
+   * switches to it: ends any in-progress composition, resets the typing context,
+   * writes the property, re-seats focus on the key it followed and fires
+   * `layoutChange`. The `source` only changes on a real switch so a no-op can't
+   * silently flip the constraint-override. Under a `keyboardType` constraint only a
+   * request moves the layout; the rest waits for the constraint to lift. Returns
+   * whether the layout changed.
+   *
+   * `autoDetected` is whether the change was not exactly a request: a width verdict or
+   * a changed input, or a request the tier rendered as its compact counterpart - the
+   * changes a two-way binding of `layout` is warned about. A width the user crossed is
+   * announced, by direction rather than by the layout's name - an identifier the user
+   * never chose, which would enter a translated sentence untranslated. Two texts, not
+   * one: a live region speaks on change, and consecutive announcements always
+   * alternate direction.
+   */
+  private _commit(cause: CommitCause, source = this._source, crossed = false): boolean {
+    const constrained = constrainedLayoutName(this._host.getKeyboardType()) !== null;
+    if (constrained && cause !== "request") return false;
+    const target = this._target(constrained);
+    if (target === this._host.getLayout()) return false;
+
+    const anchorValue = this._host.focusAnchorValue();
+    this._source = source;
+    this._host.endComposition();
     this._host.resetShiftState();
-    this._host.setLayoutProperty(name);
-    if (changed) {
-      this._host.reseatFocusAnchor(anchorValue);
+    this._host.setLayoutProperty(target);
+    this._host.reseatFocusAnchor(anchorValue);
+
+    const autoDetected = cause !== "request" || target !== this._requested;
+    if (crossed) {
+      this._pendingAnnouncement = this._narrow
+        ? getText("ARIA_LAYOUT_COMPACTED", "Switched to the compact keyboard layout")
+        : getText("ARIA_LAYOUT_UNCOMPACTED", "Switched back to the standard keyboard layout");
     }
-    return changed;
+    if (autoDetected) this._host.warnTierWriteBack();
+    this._host.fireLayoutChange({ layout: target, requestedLayout: this._requested, autoDetected });
+    return true;
   }
 }

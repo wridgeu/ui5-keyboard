@@ -162,38 +162,6 @@ QUnit.test("Drops an observation that does not cross the threshold", async (asse
   assert.deepEqual(applied, [true], "still narrow, so the verdict is unchanged");
 });
 
-QUnit.test("reapply() re-tiers at an unchanged width", async (assert) => {
-  behavior.syncObserver(dom);
-  observer().deliver(300);
-  await nextFrame();
-  assert.deepEqual(applied, [true], "the observation is applied");
-
-  // The host asks for this when the layout the tier resolves against changes,
-  // which no resize reports.
-  behavior.reapply();
-  await nextFrame();
-
-  assert.deepEqual(applied, [true, true], "the same verdict is applied again");
-});
-
-QUnit.test("reapply() costs nothing before the first observation", async (assert) => {
-  // The host wires this to every input the tier reads, most of which move while
-  // autoCompact is off. With no width on record there is nothing to re-resolve:
-  // the first observation still to come carries the verdict.
-  enabled = false;
-  behavior.syncObserver(dom);
-  const booked = sinon.spy(window, "requestAnimationFrame");
-  try {
-    behavior.reapply();
-    assert.strictEqual(booked.callCount, 0, "no frame was booked");
-  } finally {
-    booked.restore();
-  }
-
-  await nextFrame();
-  assert.deepEqual(applied, [], "and no tier was applied");
-});
-
 QUnit.test("Drops a pending application when autoCompact goes off before the frame", async (assert) => {
   behavior.syncObserver(dom);
   observer().deliver(300);
