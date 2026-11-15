@@ -120,6 +120,7 @@
     "@ui5/webcomponents-theming": "~2.26.0"
   },
   "devDependencies": {
+    "@esm-bundle/chai": "^4.3.4-fix.0",
     "@open-wc/testing": "~5.0.0",
     "@playwright/test": "~1.62.1",
     "@ui5/webcomponents-tools": "2.26.0",

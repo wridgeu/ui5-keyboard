@@ -5,6 +5,9 @@ export default {
   files: "test/component/**/*.test.ts",
   nodeResolve: true,
   browsers: [playwrightLauncher({ product: "chromium" })],
+  // Module scripts run in document order, so the helper patches chai before any test file loads.
+  testRunnerHtml: (testFramework) =>
+    `<!DOCTYPE html><html><head></head><body><script type="module" src="/test/helpers/clone-safe-assertion-errors.ts"></script><script type="module" src="${testFramework}"></script></body></html>`,
   plugins: [
     esbuildPlugin({
       ts: true,
