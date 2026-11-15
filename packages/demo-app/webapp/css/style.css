@@ -28,9 +28,9 @@
 
 /* Docked-keyboard pages: add bottom padding so the page content
    can be scrolled above the fixed-position keyboard.
-   Must match the UI5 selector .sapMPage.sapUiContentPadding > section
-   which sets padding: 1rem via shorthand. */
-.sapMPage.demoDockedPage > section {
+   Must outrank .sapMPage.sapUiContentPadding > section, which UI5 and the
+   phone-width rules below set via the padding shorthand. */
+.sapMPage.sapUiContentPadding.demoDockedPage > section {
   padding-bottom: 22rem;
 }
 
