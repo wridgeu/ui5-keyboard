@@ -527,6 +527,24 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(document.activeElement, "focus stayed on the input the user pressed").to.equal(input);
   });
 
+  it("returns focus to the target input after a pointer-picked variant", async () => {
+    const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);
+    // A pointer hold never moves focus off the input, so that is where it returns.
+    input.focus();
+    await holdOpen(requireKey(kb, "a"));
+    pointerUp();
+    expect(kb.shadowRoot!.activeElement, "precondition: the popup holds focus").to.equal(optionEls(kb)[0]);
+
+    optionEls(kb)[2]!.click(); // â
+    await renderFinished();
+    expect(input.value).to.equal("â");
+    expect(document.activeElement, "focus is back on the target input").to.equal(input);
+    // Focus returned before the insert, so the glyph took the native edit path
+    // and sits on the input's own undo stack.
+    document.execCommand("undo");
+    expect(input.value, "the variant insert is undoable").to.equal("");
+  });
+
   it("restores focus to the origin key when Escape closes the popup", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     const aKey = requireKey(kb, "a");

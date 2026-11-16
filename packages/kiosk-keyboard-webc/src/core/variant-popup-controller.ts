@@ -113,6 +113,12 @@ export class VariantPopupController {
    * re-anchor parks the new key here and opens it from the teardown.
    */
   private _pendingKeyEl: HTMLElement | null = null;
+  /**
+   * What held focus outside the keyboard when the popup opened (the target input
+   * for a pointer hold), and where focus returns on dismiss. `null` when focus
+   * was on a key (the context-menu gesture), which returns to the origin key.
+   */
+  private _returnFocusEl: HTMLElement | null = null;
 
   private readonly _onPointerDown = (e: Event): void => {
     if (e instanceof PointerEvent) this._start(e);
@@ -251,6 +257,11 @@ export class VariantPopupController {
             KIOSK_KEYBOARD_DOM.selectors.keyByPosition(state.anchorKey.row, state.anchorKey.col),
           ) ?? null;
       if (!anchor) return;
+      const active = document.activeElement;
+      this._returnFocusEl =
+        active instanceof HTMLElement && active !== document.body && active !== this._host.getShadowRoot()?.host
+          ? active
+          : null;
       popover.opener = anchor;
       popover.addEventListener("close", this._onPopoverClose, { once: true });
       popover.open = true;
@@ -362,9 +373,11 @@ export class VariantPopupController {
   // ── Commit / close teardown ──
 
   private _commit(glyph: string): void {
-    this._host.insertVariant(glyph);
     this._committing = true;
+    // Close first so focus is back on the target before the insert, which then
+    // takes the native (undoable) edit path.
     this.close();
+    this._host.insertVariant(glyph);
   }
 
   /**
@@ -397,6 +410,8 @@ export class VariantPopupController {
     this._committing = false;
     // Read before the state write below un-renders the popup.
     const hadFocus = this._popupEl()?.contains(this._host.getShadowRoot()?.activeElement ?? null) ?? false;
+    const returnTo = this._returnFocusEl;
+    this._returnFocusEl = null;
     this._host.setPopupState(null);
     this._focusPending = false;
     // Only drop the click suppression once the press that armed it has ended.
@@ -407,10 +422,13 @@ export class VariantPopupController {
     // A commit already spoke through the inserted glyph; only a cancel is a
     // dismissal worth announcing.
     if (!committed) this._host.announceDismiss();
-    // Restore focus to the origin key only when focus was still inside the popup
-    // (Escape, keyboard commit, option click). An outside press that moved focus
-    // elsewhere keeps it there.
-    if (hadFocus) this._host.focusKey(state.anchorKey);
+    // Return focus to what held it before the popup opened, else the origin key,
+    // only when focus was still inside the popup (Escape, commit, option click).
+    // An outside press that moved focus elsewhere keeps it there.
+    if (hadFocus) {
+      if (returnTo?.isConnected) returnTo.focus();
+      else this._host.focusKey(state.anchorKey);
+    }
 
     // Hand the popup to a key that asked for it while this one was closing. The
     // state write above un-rendered the popover, so the next render takes the

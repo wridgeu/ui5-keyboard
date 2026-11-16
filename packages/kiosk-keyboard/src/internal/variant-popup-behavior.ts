@@ -124,8 +124,13 @@ export default class VariantPopupBehavior {
   private _activeIndex = 0;
   /** Whether the open popup lays out right-to-left; drives both the option order and the arrow polarity. */
   private _rtl = false;
-  /** The key the open popup belongs to; focus returns here on dismiss. */
+  /** The key the open popup belongs to. */
   private _anchorKeyEl: HTMLElement | null = null;
+  /**
+   * What held focus when the popup opened, and where it returns on dismiss: the
+   * target input for a pointer hold, the key for the context-menu gesture.
+   */
+  private _returnFocusEl: HTMLElement | null = null;
   /**
    * Set while a press-opened popup owes its origin key a swallowed lift-off, so
    * that tap does not also insert the base glyph. Gated by `_originKeyValue`,
@@ -277,6 +282,7 @@ export default class VariantPopupBehavior {
     if (this._popover) {
       this._teardownOpenState();
       this._anchorKeyEl = null;
+      this._returnFocusEl = null;
       this._popover = null;
     }
     // The label is rendered into the static area (not a child), so release it.
@@ -331,6 +337,8 @@ export default class VariantPopupBehavior {
 
   private _open(anchorKeyEl: HTMLElement, { base, glyphs }: VariantResolution): void {
     this._anchorKeyEl = anchorKeyEl;
+    const active = document.activeElement;
+    this._returnFocusEl = active instanceof HTMLElement && active !== document.body ? active : null;
     // Only a press owes a lift-off; the right-click path has none to swallow.
     this._consumeRelease = this._pressLive;
     this._originKeyValue = anchorKeyEl.dataset.key ?? null;
@@ -561,6 +569,7 @@ export default class VariantPopupBehavior {
     const popover = this._popover;
     if (!popover) return;
     const anchor = this._anchorKeyEl;
+    const returnTo = this._returnFocusEl?.isConnected ? this._returnFocusEl : anchor;
     const hadFocus = popover.getDomRef()?.contains(document.activeElement) ?? false;
 
     // Restore the anchor key's normal pressed transform: the popup no longer
@@ -569,6 +578,7 @@ export default class VariantPopupBehavior {
 
     this._teardownOpenState();
     this._anchorKeyEl = null;
+    this._returnFocusEl = null;
     this._popover = null;
     // The content (grid/buttons) and label stay on the closed Popover for the
     // close animation; they are torn down at the next `_open` (destroyContent /
@@ -578,11 +588,11 @@ export default class VariantPopupBehavior {
       popover.close();
     }
 
-    // Restore focus to the origin key when focus was inside the popup (Escape,
-    // keyboard commit, click on an option). An outside press that moved focus
-    // elsewhere keeps it there.
-    if (hadFocus && anchor && document.contains(anchor)) {
-      anchor.focus();
+    // Return focus to what held it before the popup opened (falling back to the
+    // origin key) when focus was inside the popup (Escape, commit, click on an
+    // option). An outside press that moved focus elsewhere keeps it there.
+    if (hadFocus && returnTo && document.contains(returnTo)) {
+      returnTo.focus();
     }
 
     if (announce) this._host.announceDismiss();
