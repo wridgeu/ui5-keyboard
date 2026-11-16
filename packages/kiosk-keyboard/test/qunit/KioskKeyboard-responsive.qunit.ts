@@ -1,4 +1,5 @@
 import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 import { KeyboardType } from "ui5/kiosk/library";
 import { setMeasuredHeight, placeAndWait, waitForRender, rootRemPx } from "./test-helpers";
 
@@ -484,5 +485,109 @@ QUnit.test("Height breakpoints still fire when root has extra consumer padding",
   assert.ok(dom.classList.contains(DOM.classes.rootCqShort), "cqShort applied despite extra padding");
   assert.notOk(dom.classList.contains(DOM.classes.rootCqTiny), "Not tiny at 15rem with padding");
 
+  kb.destroy();
+});
+
+// ──────────────────────────────────────────────
+// Key floor vs. row width
+// ──────────────────────────────────────────────
+
+QUnit.module("KioskKeyboard key floor fits the row", {
+  afterEach() {
+    const fixture = document.getElementById("qunit-fixture");
+    if (fixture) fixture.innerHTML = "";
+  },
+});
+
+/** A keyboard placed in a host of `width` px, so a re-render cannot drop the width. */
+async function placeAtWidth(kb: KioskKeyboard, width: number): Promise<HTMLElement> {
+  const host = document.createElement("div");
+  host.style.width = `${width}px`;
+  document.getElementById("qunit-fixture")!.appendChild(host);
+  kb.placeAt(host);
+  await waitForRender();
+  return kb.getDomRef()! as HTMLElement;
+}
+
+/**
+ * Every row fits its own box, and its keys span no further than the row: a centered
+ * row that overflows spills past both edges, so both are checked.
+ */
+function assertRowsFit(assert: Assert, dom: HTMLElement, label: string): void {
+  const rows = Array.from(dom.querySelectorAll<HTMLElement>(DOM.selectors.row));
+  assert.ok(rows.length > 0, `${label}: rows rendered`);
+  rows.forEach((row, ri) => {
+    assert.ok(
+      row.scrollWidth <= row.clientWidth,
+      `${label}: row ${ri} fits (needs ${row.scrollWidth}px, has ${row.clientWidth}px)`,
+    );
+    const box = row.getBoundingClientRect();
+    const keys = Array.from(row.querySelectorAll<HTMLElement>(DOM.selectors.key), (k) => k.getBoundingClientRect());
+    const left = Math.min(...keys.map((k) => k.left));
+    const right = Math.max(...keys.map((k) => k.right));
+    assert.ok(
+      left >= box.left - 0.5 && right <= box.right + 0.5,
+      `${label}: row ${ri} keys span ${left.toFixed(1)}-${right.toFixed(
+        1,
+      )} inside ${box.left.toFixed(1)}-${box.right.toFixed(1)}`,
+    );
+  });
+}
+
+QUnit.test("A full 12-key row stays inside the keyboard across the narrow band", async (assert) => {
+  // Row widths 321-331px: above the 20rem tier, below 12 keys at 24px plus 11 gaps of 4px.
+  for (const width of [347, 350, 354, 357]) {
+    const kb = new KioskKeyboard({
+      layout: "ja-kana-compact",
+      autoCompact: false,
+    });
+    const dom = await placeAtWidth(kb, width);
+    const firstRow = dom.querySelector<HTMLElement>(DOM.selectors.row)!;
+    assert.strictEqual(
+      firstRow.querySelectorAll(DOM.selectors.key).length,
+      12,
+      `${width}px: first row carries 12 keys`,
+    );
+    assert.ok(
+      firstRow.clientWidth >= 321 && firstRow.clientWidth <= 331,
+      `${width}px: row width ${firstRow.clientWidth}px sits in the band a floored row overflows`,
+    );
+    assertRowsFit(assert, dom, `${width}px`);
+    kb.destroy();
+    document.getElementById("qunit-fixture")!.innerHTML = "";
+  }
+});
+
+QUnit.test("A 13-key custom row stays inside the keyboard", async (assert) => {
+  const row = Array.from("abcdefghijklm", (value) => ({ value }));
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "thirteen", rows: [row] })],
+    layout: "thirteen",
+    autoCompact: false,
+  });
+  const dom = await placeAtWidth(kb, 370);
+  assert.strictEqual(dom.querySelectorAll(DOM.selectors.key).length, 13, "the custom row renders 13 keys");
+  assertRowsFit(assert, dom, "370px");
+  kb.destroy();
+});
+
+QUnit.test("Keys hold the 24px floor where a full row fits it", async (assert) => {
+  // A 6x spacebar leaves the ten 1x keys a flex share under 24px (22.75px at 400px),
+  // so only the floor holds them there; the eleven floored keys still fit the row.
+  const row = [...Array.from("abcdefghij", (value) => ({ value })), { value: " ", width: "space" as const }];
+  const kb = new KioskKeyboard({
+    customLayouts: [new CustomLayout({ name: "spacebar", rows: [row] })],
+    layout: "spacebar",
+    autoCompact: false,
+  });
+  const dom = await placeAtWidth(kb, 400);
+  const floor = Math.max(1.5 * rootRemPx(), 24);
+  const widths = Array.from(
+    dom.querySelectorAll<HTMLElement>(DOM.selectors.key),
+    (k) => k.getBoundingClientRect().width,
+  );
+  assert.strictEqual(widths.length, 11, "the custom row renders 11 keys");
+  const narrowest = Math.min(...widths);
+  assert.ok(narrowest >= floor - 0.01, `narrowest key ${narrowest.toFixed(2)}px holds the ${floor}px floor`);
   kb.destroy();
 });

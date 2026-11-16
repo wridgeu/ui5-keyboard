@@ -65,13 +65,24 @@ Narrow keyboards recover room for a full row of floored keys from the inter-key 
 ### Target size floor
 
 ```css
+.kiosk-row {
+  --_kiosk-keyboard-row-gap: var(--_kiosk-keyboard-key-gap);
+  gap: var(--_kiosk-keyboard-row-gap);
+}
+
 .kiosk-key {
-  min-inline-size: max(1.5rem, 24px);
+  min-inline-size: min(
+    max(1.5rem, 24px),
+    (100cqi - (var(--_kiosk-keyboard-row-keys, 1) - 1) * var(--_kiosk-keyboard-row-gap, 0px)) /
+      var(--_kiosk-keyboard-row-keys, 1)
+  );
   min-block-size: max(1.5rem, 24px);
 }
 ```
 
 Keys hold a 24 CSS px floor on both axes for WCAG 2.5.8 (AA). The `max()` grows the floor with the root font-size while keeping it at the criterion's absolute pixel value on a page that shrinks the root.
+
+The inline floor is capped at the width a full row leaves each key. Each row carries its key count as a private custom property (written by the kiosk renderer and the webc template) and its effective gap, and `100cqi` on a key resolves against the keyboard root's content box, which is the row's width. A row that fits its keys at 24px keeps the full floor; a denser one, such as a 12-key row in a keyboard whose content box is 321-331px wide (12 × 24px + 11 × 4px = 332px), gives every key the same fitting width instead of overflowing.
 
 Below the 20rem container tier, `min-inline-size` is lifted to 0 on non-numpad keys and the keys shrink to fit. At a 320px viewport the keyboard root is 280px wide and the 0.75rem container padding on each side leaves 256px of content, while the default QWERTY digit row is 12 width units (ten digits plus a double-width Backspace) and the criterion's Spacing exception requires 24px centre to centre, so the row needs 288px. That exceeds the content width and also the full 280px root at zero padding, so no combination of key width and gap makes it conform. A center-justified row that overflows is clipped at both edges and loses its outermost keys, so reachability takes precedence: every key stays on screen and SC 2.5.8 is not met below that tier.
 

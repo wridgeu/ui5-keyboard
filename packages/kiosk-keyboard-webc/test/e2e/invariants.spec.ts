@@ -79,6 +79,8 @@ type KeyBox = {
   height: number;
   /** Whether a hit test at the key's centre lands on the key or its own content. */
   reachable: boolean;
+  /** Inline size each key gets when its row's keys share the row equally beside its gaps. */
+  rowFit: number;
 };
 
 type Geometry = {
@@ -124,7 +126,10 @@ async function readGeometry(page: Page, hostId: string): Promise<Geometry> {
           const box = k.getBoundingClientRect();
           // Retargets to the host from `document`, so hit test inside the shadow tree.
           const hit = shadow.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+          const row = k.parentElement!;
+          const n = row.querySelectorAll(keySel).length;
           return {
+            rowFit: (row.clientWidth - (n - 1) * parseFloat(getComputedStyle(row).columnGap)) / n,
             key: k.getAttribute(keyAttr) ?? "",
             left: box.left,
             right: box.right,
@@ -214,8 +219,9 @@ test("keys stay inside the keyboard box", async ({ page }) => {
 });
 
 // WCAG 2.5.8 (AA) asks for 24x24. The inline half of the floor is lifted inside
-// `@container keyboard (max-width: 20rem)`, where holding it pushes the densest
-// rows out of the box; the block half holds at every width. The regime follows
+// `@container keyboard (max-width: 20rem)`, and above it is capped at the width a
+// row too dense for 24px keys leaves each of them; the block half holds at every
+// width. The regime follows
 // the measured container width, so a fixture that caps its own width is checked
 // against the same rule as the viewport-wide ones.
 test("keys hold the target-size floor their container tier allows", async ({ page }) => {
@@ -230,7 +236,7 @@ test("keys hold the target-size floor their container tier allows", async ({ pag
       );
       if (inlineFloored) {
         expect(cap.width, `${id} "${cap.key}" under the inline target-size floor`).toBeGreaterThanOrEqual(
-          floor - EPSILON,
+          Math.min(floor, cap.rowFit) - EPSILON,
         );
       } else {
         expect(cap.reachable, `${id} "${cap.key}" is not hit-testable`).toBe(true);

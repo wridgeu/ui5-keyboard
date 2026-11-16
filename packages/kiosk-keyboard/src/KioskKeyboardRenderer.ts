@@ -128,6 +128,8 @@ const KioskKeyboardRenderer = {
     if (rowKind) {
       rm.attr(KIOSK_KEYBOARD_DOM.attributes.rowKind, rowKind);
     }
+    // Read by the key's inline floor, which caps itself to fit this many keys.
+    rm.style("--_ui5KioskKeyboard-rowKeys", row.length);
     rm.openEnd();
 
     row.forEach((key, ci) => {
