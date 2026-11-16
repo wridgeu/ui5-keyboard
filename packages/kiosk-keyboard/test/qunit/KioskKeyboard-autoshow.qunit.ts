@@ -618,3 +618,53 @@ QUnit.test("Two docked keyboards with auto-show do not fight over same input", a
   docked1.destroy();
   docked2.destroy();
 });
+
+// A web component such as `ui5-input` keeps its native input in an open shadow
+// root, so a document-level focusin is retargeted to the host element.
+const ShadowInputWrapper = Control.extend("test.ShadowInputWrapper", {
+  metadata: { properties: {} },
+  renderer: {
+    apiVersion: 2,
+    render(rm: RenderManager, ctrl: Control) {
+      rm.openStart("div", ctrl).openEnd().close("div");
+    },
+  },
+  onAfterRendering(this: Control) {
+    this.getDomRef()!.attachShadow({ mode: "open" }).innerHTML = '<input type="text">';
+  },
+}) as new () => Control;
+
+QUnit.test(
+  "autoType returns to Full when focus moves from a Numpad input to a shadow-DOM text input",
+  async (assert) => {
+    const numberInput = new Input({ type: "Number" });
+    const shadowInput = new ShadowInputWrapper();
+    numberInput.placeAt("qunit-fixture");
+    shadowInput.placeAt("qunit-fixture");
+
+    const kb = new KioskKeyboard({
+      docked: true,
+      autoShow: true,
+      autoType: true,
+      controls: [numberInput.getId(), shadowInput.getId()],
+    });
+    await placeAndWait(kb);
+
+    (numberInput.getFocusDomRef() as HTMLElement).focus();
+    await nextUIUpdate();
+    assert.strictEqual(kb.getKeyboardType(), KeyboardType.Numpad, "precondition: the number input switched to Numpad");
+
+    shadowInput.getDomRef()!.shadowRoot!.querySelector("input")!.focus();
+    // Give a wrongly scheduled deferred close its frame before asserting it did not run.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await nextUIUpdate();
+
+    assert.strictEqual(kb.getActiveControl(), shadowInput, "Target followed focus to the shadow-DOM input");
+    assert.strictEqual(kb.getKeyboardType(), KeyboardType.Full, "Text input inside a shadow root is detected as Full");
+    assert.ok(kb.isOpen(), "Keyboard stays open across the move");
+
+    numberInput.destroy();
+    shadowInput.destroy();
+    kb.destroy();
+  },
+);

@@ -30,7 +30,8 @@ export default class FocusClaimService {
   }
 
   resolveClaimableControl(target: EventTarget | null): Control | null {
-    if (!FocusClaimService.isTextualInput(target)) return null;
+    if (!(target instanceof HTMLElement)) return null;
+    if (!FocusClaimService.isTextualInput(FocusClaimService.focusedWithin(target))) return null;
     if (this.shouldDeferToNative()) return null;
 
     const ui5Control = Element.closestTo(target);
@@ -55,6 +56,20 @@ export default class FocusClaimService {
     }
 
     return null;
+  }
+
+  /**
+   * The element that actually holds focus under `el`. A focus event or
+   * `document.activeElement` reaching the document from a web component
+   * (`ui5-input`) is retargeted to the host, while its native input sits in an
+   * open shadow root; the host stays the node `Element.closestTo` resolves.
+   */
+  private static focusedWithin(el: HTMLElement): globalThis.Element {
+    let focused: globalThis.Element = el;
+    while (focused.shadowRoot?.activeElement) {
+      focused = focused.shadowRoot.activeElement;
+    }
+    return focused;
   }
 
   private static isTextualInput(el: EventTarget | null): el is HTMLInputElement | HTMLTextAreaElement {
