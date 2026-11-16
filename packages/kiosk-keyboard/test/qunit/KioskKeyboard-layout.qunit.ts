@@ -442,7 +442,7 @@ QUnit.test("setKeyboardType round trip (Numpad -> Full) returns a user pick to t
 
   kb.setKeyboardType(KeyboardType.Full);
   await waitForRender();
-  assert.strictEqual(kb.getLayout(), "qwertz-de", "The lifted constraint lands on the base layout");
+  assert.strictEqual(kb.getEffectiveLayout(), "qwertz-de", "The lifted constraint lands on the base layout");
   assert.ok(getKeyElement(kb, "z"), "The base surface renders");
   assert.deepEqual(
     events,
@@ -1354,5 +1354,26 @@ QUnit.test("a custom layout shadowing a built-in can un-mark its secondary role"
 
   assert.strictEqual(kb.getBaseLayout(), "numeric", "a declared Base role overrides the built-in secondary flag");
 
+  kb.destroy();
+});
+
+QUnit.test("layoutChange does not fire for the keyboardType the constructor settings start on", (assert) => {
+  const changes: object[] = [];
+  const kb = new KioskKeyboard({
+    layoutChange: (e) => {
+      const { layout, effectiveLayout, reason } = e.getParameters();
+      changes.push({ layout, effectiveLayout, reason });
+    },
+    keyboardType: KeyboardType.Numeric,
+  });
+  assert.strictEqual(kb.getEffectiveLayout(), "numeric", "precondition: the constraint renders");
+  assert.deepEqual(changes, [], "the layout the control starts on is not a change");
+
+  kb.setKeyboardType(KeyboardType.Full);
+  assert.deepEqual(
+    changes,
+    [{ layout: "qwerty", effectiveLayout: "qwerty", reason: "keyboardType" }],
+    "lifting the constraint reports against the layout the control started on",
+  );
   kb.destroy();
 });

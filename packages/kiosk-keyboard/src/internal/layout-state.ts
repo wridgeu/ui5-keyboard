@@ -83,22 +83,37 @@ export default class LayoutState {
   private _narrow = false;
   /** Live-region text for a width-driven swap, held until the render it triggers is done. */
   private _pendingAnnouncement: string | null = null;
-  /** The intent and the effective layout `layoutChange` last reported, or was seeded with. */
+  /** The intent and the effective layout `layoutChange` last reported, or the control started on. */
   private _reportedLayout = "";
   private _reportedEffective = "";
+  /** Whether the constructor settings are still being applied, which report nothing. */
+  private _seeding = false;
 
   constructor(host: LayoutStateHost) {
     this._host = host;
   }
 
-  /** Seeds every layout from the locale default, before any request and without an event. */
+  /**
+   * Seeds every layout from the locale default, before any request, and silences
+   * `layoutChange` until {@link settle}.
+   */
   seed(name: string): void {
     this._base = name;
     this._requested = name;
     this._current = name;
     this._rendered = this.resolvedName();
-    this._reportedLayout = name;
-    this._reportedEffective = name;
+    this._seeding = true;
+  }
+
+  /**
+   * Ends the window {@link seed} opened: the layouts the constructor settings produced
+   * are the ones the control starts on, which `layoutChange` does not report.
+   */
+  settle(): void {
+    if (!this._seeding) return;
+    this._seeding = false;
+    this._reportedLayout = this._host.getLayout();
+    this._reportedEffective = this.resolvedName();
   }
 
   getBaseLayout(): string {
@@ -280,6 +295,7 @@ export default class LayoutState {
    * last reported: one event for a change of either or both, none for a no-op.
    */
   private _report(reason: LayoutChangeReason): void {
+    if (this._seeding) return;
     const layout = this._host.getLayout();
     const effectiveLayout = this.resolvedName();
     if (layout === this._reportedLayout && effectiveLayout === this._reportedEffective) return;

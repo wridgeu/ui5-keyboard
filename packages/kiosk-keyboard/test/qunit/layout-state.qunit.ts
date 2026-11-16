@@ -33,6 +33,7 @@ function createHost() {
     reseatFocusAnchor: () => {},
   });
   state.seed("qwerty");
+  state.settle();
   return { box, state };
 }
 
@@ -129,6 +130,7 @@ function createGoldenHost() {
     state.refresh(Layouts);
   };
   state.seed("qwerty");
+  state.settle();
   resize(false);
   return { box, state, resize, setKeyboardType, declare };
 }

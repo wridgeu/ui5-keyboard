@@ -871,7 +871,8 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Applies `customLayouts` in its own pass before everything else, then injects the
-   * locale-detected layout when the caller named none.
+   * locale-detected layout when the caller named none. The layout the settings produce
+   * is the one the control starts on, so `layoutChange` reports nothing for it.
    *
    * The custom layouts go through `super.applySettings` rather than being read out of
    * `mSettings`: that is what makes an object literal and a `CustomLayout` instance the
@@ -901,7 +902,9 @@ export default class KioskKeyboard extends Control {
       layout: registryGetLocaleLayout(fold.localeLayouts, fold.layouts),
       ...rest,
     };
-    return super.applySettings(second, oScope);
+    super.applySettings(second, oScope);
+    this._layoutState.settle();
+    return this;
   }
 
   override init(): void {
