@@ -9,8 +9,11 @@
             <PageAccessibleLandmarkInfo rootRole="None" headerRole="Banner" />
         </landmarkInfo>
         <content>
-            <HBox class="sapUiSmallMarginBottom" gap="1rem">
+            <HBox wrap="Wrap" class="sapUiSmallMarginBottom" gap="1rem">
                 <Panel headerText="Layout Switcher">
+                    <layoutData>
+                        <FlexItemData growFactor="1" baseSize="0" minWidth="16rem" />
+                    </layoutData>
                     <VBox class="sapUiSmallMargin">
                         <Text text="Five layouts are declared on the keyboard as &lt;kiosk:CustomLayout&gt; child elements, with no controller code configuring them. They demonstrate KeyDefinition options such as width, type, icon, unicode values, label overrides, and dual icon+label rendering. The Arabic pad ships as its own element, &lt;demo:ArabicDigitsCustomLayout&gt;, carrying its rows and keycap language together." />
                         <HBox class="sapUiSmallMarginTop" wrap="Wrap">
@@ -42,10 +45,13 @@
                     </VBox>
                 </Panel>
                 <Panel headerText="Status">
+                    <layoutData>
+                        <FlexItemData baseSize="20rem" />
+                    </layoutData>
                     <VBox class="sapUiSmallMargin">
                         <HBox>
                             <Label text="Active Layout:" class="sapUiSmallMarginEnd" />
-                            <ObjectStatus text="{state>/customActiveLayout}" state="Success" />
+                            <ObjectStatus id="activeLayoutStatus" text="{state>/customActiveLayout}" state="Success" />
                         </HBox>
                         <HBox>
                             <Label text="Last Key:" class="sapUiSmallMarginEnd" />

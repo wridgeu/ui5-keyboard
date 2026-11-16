@@ -17,7 +17,7 @@
                         <VBox class="sapUiSmallMargin">
                             <Text text="Two nested target registrations use the same key (Escape). The innermost target around the focused element fires and stops the key there." />
                             <MessageStrip
-                                text="Escape in the input fires the inner target. Escape on the button, which sits in the outer target but outside the inner one, fires the outer target. Escape anywhere else on the page falls through to the route-wide registration ('outside nested target')."
+                                text="Escape in the input fires the inner target. Escape on the button, which sits in the outer target but outside the inner one, fires the outer target. Escape anywhere else on the page falls through to the route-wide registration ('outside nested target'). The first Escape within about a second (1.2s) of focus leaving the button or input still fires that element's target, because the focus fallback remembers the last focused element briefly after a blur."
                                 type="Information"
                                 showIcon="true"
                                 class="sapUiSmallMarginTop" />
