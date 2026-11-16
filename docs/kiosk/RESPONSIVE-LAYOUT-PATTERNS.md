@@ -141,7 +141,7 @@ The two are declared as a pair, so the switch is a property rather than code:
 
 The keyboard's own box is what is measured, so an embedded keyboard tiers on the room it was granted rather than on the viewport, and the compact form is taken at or below 22rem (352px) and given back above it. Override that with the `--ui5KioskKeyboard-autoCompactThreshold` custom property (`--kiosk-keyboard-auto-compact-threshold` on the web component, where the attribute is `auto-compact`). The property is off by default and dormant while off: the observer behind it is not constructed until it is switched on.
 
-A swap never overrides an explicit choice. The layout you set stays the one the tier resolves against, so a `setLayout` call or a `{layout:*}` key still wins and is re-tiered from there - the romaji layout's かな key names the wide form, and on a narrow keyboard the tier immediately takes it back to `ja-kana-compact`. `layoutChange` fires with `autoDetected: true` for a swap and `false` for a request, so a listener can tell the two apart.
+A swap never overrides an explicit choice. The layout you set stays the one the tier resolves against, so a `setLayout` call or a `{layout:*}` key still wins and is re-tiered from there - the romaji layout's かな key names the wide form, and on a narrow keyboard the tier immediately takes it back to `ja-kana-compact`. `layoutChange` fires with `reason: "width"` for a swap and `"api"` or `"user"` for a request, so a listener can tell the two apart; a swap changes only `getEffectiveLayout()`, never the `layout` property.
 
 A layout of your own names its counterpart with the `compact` property of a `customLayouts` entry, which may point at a built-in or at another custom layout:
 

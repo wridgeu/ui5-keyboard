@@ -238,7 +238,7 @@ export default class KioskProgrammatic extends BaseController {
     const viewModel = this._getViewModel();
     viewModel.setProperty("/kioskIsOpen", kb.isOpen());
     viewModel.setProperty("/kioskKeyboardType", kb.getKeyboardType());
-    viewModel.setProperty("/kioskLayout", kb.getLayout());
+    viewModel.setProperty("/kioskLayout", kb.getEffectiveLayout());
   }
 
   private _getViewModel(): JSONModel {

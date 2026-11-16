@@ -308,6 +308,25 @@ export enum FKeyMode {
 }
 
 /**
+ * What changed the layout, carried by the `layout-change` event's `reason`.
+ *
+ * @public
+ * @since 0.2.0
+ */
+export enum LayoutChangeReason {
+  /** A `{layout:*}` key. */
+  User = "user",
+  /** The `layout` property or attribute, or `reset()`. */
+  Api = "api",
+  /** The `auto-compact` width tier swapping in or out a compact counterpart. */
+  Width = "width",
+  /** The `keyboard-type` constraint taking effect or lifting. */
+  KeyboardTypeChange = "keyboardType",
+  /** The slotted layouts changed: the requested layout or its counterpart arrived or left. */
+  Layouts = "layouts",
+}
+
+/**
  * Whether a layout is an auxiliary surface or a base alphabetic layout. A secondary
  * layout is never tracked as the base, so `{layout:base}` returns to the alphabetic
  * layout it was reached from.
@@ -378,23 +397,26 @@ export interface KeyPressEventDetail {
  * @since 0.1.0
  */
 export interface LayoutChangeEventDetail {
-  /** The name of the layout that now renders. */
+  /**
+   * The layout asked for, as the `layout` property holds it: what the app set, or a
+   * primary layout the user picked with a `{layout:*}` key. The locale layout while
+   * `layout` is empty. Persist this one to restore a user's choice.
+   */
   layout: string;
   /**
-   * The name of the layout last requested - by the `layout` attribute, a
-   * `{layout:*}` key or the session reset - which `layout` differs from while the
-   * `autoCompact` width tier renders its compact counterpart. Persist this one to
-   * restore a user's choice.
+   * The layout that now renders, as `effectiveLayout` reports it: `layout` after a
+   * secondary `{layout:*}` pick, the `keyboard-type` constraint, the `auto-compact`
+   * width tier and the registry fallback.
    *
    * @since 0.2.0
    */
-  requestedLayout: string;
+  effectiveLayout: string;
   /**
-   * Whether this change was not exactly a request: the `autoCompact` width tier
-   * resolving, a lifted `keyboardType` constraint or a newly declared layout, or a
-   * request the width tier rendered as its compact counterpart.
+   * What changed it.
+   *
+   * @since 0.2.0
    */
-  autoDetected: boolean;
+  reason: `${LayoutChangeReason}`;
 }
 
 /**

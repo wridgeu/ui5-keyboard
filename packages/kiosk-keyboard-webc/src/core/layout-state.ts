@@ -4,7 +4,7 @@ import { constrainedLayoutName } from "./layout-constraint.js";
 import { getRegisteredLayout, resolveLayoutName } from "./layout-registry.js";
 import { getText } from "./i18n.js";
 import { LAYOUT_BASE } from "./key-token.js";
-import type { KeyboardType, LayoutChangeEventDetail } from "../types.js";
+import type { KeyboardType, LayoutChangeEventDetail, LayoutChangeReason } from "../types.js";
 
 /**
  * Whether the active layout was last set by a user-driven `{layout:X}` key tap
@@ -16,6 +16,8 @@ import type { KeyboardType, LayoutChangeEventDetail } from "../types.js";
  * `"external"`.
  */
 type LayoutSource = "user" | "external";
+
+type Reason = `${LayoutChangeReason}`;
 
 /**
  * What re-derived the layout: a `{layout:*}` key or the session reset, the `layout`
@@ -37,6 +39,8 @@ interface LayoutStateHost {
   setCurrentLayout(name: string): void;
   /** The `layout` attribute as authored, which may name a not-yet-slotted layout. */
   getLayoutAttribute(): string;
+  /** Writes the `layout` property, which reflects to the attribute. */
+  setLayoutAttribute(name: string): void;
   /** Locale-derived default, honoring the per-instance locale and layout overrides. */
   getLocaleLayout(): string;
   getKeyboardType(): `${KeyboardType}`;
@@ -62,6 +66,13 @@ interface LayoutStateHost {
  * derives the layout to render from them in {@link _commit}, the one place
  * `_currentLayout` changes.
  *
+ * Two layouts are public. The `layout` property is the *intent*: what the app set, or
+ * a primary layout the user picked with a `{layout:*}` key, which it reflects the way
+ * `<details open>` reflects a user toggle - never a secondary pick, a width swap, a
+ * constraint or a registry fallback. {@link resolvedName} is the *effective* layout,
+ * the one on screen, with all of those applied. `layout-change` fires once per change
+ * of either, from {@link _report}.
+ *
  * Three *request* entry points, one per way the element accepts a layout - the
  * `layout` attribute, a `{layout:*}` key, and the reset that ends a session - plus
  * {@link applyTier} for the width verdict and {@link refresh} for the inputs the
@@ -71,10 +82,13 @@ interface LayoutStateHost {
  * is populated asynchronously by `_processChildren`, so a custom layout appended in
  * the same task is not in the fold yet and an early check would reject a name that is
  * about to be perfectly valid. {@link resolvedName} reports the fallback from the
- * render pass instead, where the fold is authoritative.
+ * render pass instead, where the fold is authoritative, and {@link settle} reports
+ * there what such a request changed.
  */
 export class LayoutState {
   private readonly _host: LayoutStateHost;
+  /** The intent as last written, normalized; empty while the locale layout stands in. */
+  private _intent = "";
   /** The base (alphabetic) layout `{layout:base}` and the session reset return to. */
   private _base = "";
   /** The layout last asked for, which the width tier resolves its counterpart against. */
@@ -82,6 +96,13 @@ export class LayoutState {
   private _source: LayoutSource = "external";
   /** Whether the `autoCompact` width tier last reported the keyboard too narrow. */
   private _narrow = false;
+  /** The intent and the effective layout `layout-change` last reported, or was seeded with. */
+  private _reportedLayout = "";
+  private _reportedEffective = "";
+  /** The effective layout the switch effects last ran for: the one on screen. */
+  private _rendered = "";
+  /** The reason of a report held until {@link settle}, while the fold may still be filling. */
+  private _held: Reason | null = null;
   /** Caps the unregistered-layout warning at one per distinct name. */
   private readonly _warnedUnregistered = new Set<string>();
 
@@ -90,19 +111,24 @@ export class LayoutState {
   }
 
   /**
-   * Seeds the base, the requested layout and the layout on screen on connect, once.
-   * A `layout` attribute naming a secondary layout is rendered but is not the base,
-   * which falls through to the locale layout so `{layout:base}` and the session reset
-   * still return to an alphabetic layout. Seating `_currentLayout` here keeps the first
-   * `{layout:*}` tap from announcing the layout already on screen as a change.
+   * Seeds the intent, the base, the requested layout and the layout on screen on
+   * connect, once, without an event. A `layout` attribute naming a secondary layout
+   * is rendered but is not the base, which falls through to the locale layout so
+   * `{layout:base}` and the session reset still return to an alphabetic layout.
+   * Seating `_currentLayout` here keeps the first `{layout:*}` tap from announcing the
+   * layout already on screen as a change.
    */
   seed(): void {
     if (this._base) return;
     const attribute = this._host.getLayoutAttribute().trim().toLowerCase();
     const secondary = getLayoutMeta(attribute, this._host.getFold().layoutMeta)?.secondary === true;
+    this._intent = attribute;
     this._requested = attribute || this._host.getLocaleLayout();
     this._base = attribute && !secondary ? attribute : this._host.getLocaleLayout();
     this._host.setCurrentLayout(this._requested);
+    this._reportedLayout = this._intentName();
+    this._reportedEffective = this._resolve().resolved;
+    this._rendered = this._reportedEffective;
   }
 
   /**
@@ -117,12 +143,19 @@ export class LayoutState {
     // Explicit, not left to `_commit`: a pick of a primary layout is already the base,
     // so the request below is a no-op that would leave the source at "user".
     this._source = "external";
-    this.resetToBase();
+    this.resetToBase("keyboardType");
   }
 
-  /** Applies the `layout` attribute, unconditionally - see the class doc for why. */
+  /**
+   * Applies the `layout` attribute, unconditionally - see the class doc for why. The
+   * value the intent already holds is a no-op, which is also what keeps a reflected
+   * user pick from re-entering here as a request.
+   */
   applyAttribute(rawName: string): void {
-    this._request(rawName.trim().toLowerCase(), "attribute", "external");
+    const name = rawName.trim().toLowerCase();
+    if (name === this._intent) return;
+    this._intent = name;
+    this._request(name, "attribute", "external", "api");
   }
 
   /** Applies a `{layout:*}` key, whose target the fold is authoritative about by now. */
@@ -132,15 +165,20 @@ export class LayoutState {
       console.warn(`[kiosk-keyboard] Layout "${layoutName}" referenced by a {layout:*} key is not registered.`);
       return;
     }
-    this._request(isBase ? this._fallbackBase() : layoutName, "request", isBase ? "external" : "user");
+    const name = isBase ? this._fallbackBase() : layoutName;
+    if (getLayoutMeta(name, this._host.getFold().layoutMeta)?.secondary !== true) this._writeIntent(name);
+    this._request(name, "request", isBase ? "external" : "user", "user");
   }
 
   /**
    * Returns the active surface to the base (alphabetic) layout, mirroring the kiosk
-   * twin's `resetLayout()`. Fires `layout-change` only on a real change.
+   * twin's `resetLayout()`, and makes it the intent. Fires `layout-change` only on a
+   * real change.
    */
-  resetToBase(): void {
-    this._request(this._fallbackBase(), "request", "external");
+  resetToBase(reason: Reason = "api"): void {
+    const name = this._fallbackBase();
+    this._writeIntent(name);
+    this._request(name, "request", "external", reason);
   }
 
   /**
@@ -153,14 +191,28 @@ export class LayoutState {
   applyTier(narrow: boolean, crossed: boolean): void {
     this._narrow = narrow;
     this._commit("tier", this._source, crossed);
+    this._report("width");
   }
 
   /**
    * Re-derives the layout after an input the element owns changed under it: the
-   * `keyboardType` constraint or the folded layout table.
+   * `keyboardType` constraint or the folded layout table, which `reason` names.
    */
-  refresh(): void {
+  refresh(reason: Reason): void {
     this._commit("refresh");
+    this._report(reason);
+  }
+
+  /**
+   * Called from the render pass, where the slot has settled: reports what an attribute
+   * request naming a not-yet-slotted layout changed, now that the fold says what it
+   * renders as.
+   */
+  settle(): void {
+    const reason = this._held;
+    if (reason === null) return;
+    this._held = null;
+    this._report(reason);
   }
 
   /**
@@ -173,10 +225,7 @@ export class LayoutState {
    * this name, so none of them can key off a layout other than the one rendered.
    */
   resolvedName(): string {
-    const current = this._host.getCurrentLayout() || this._fallbackBase();
-    const requested =
-      this._source === "user" ? current : (constrainedLayoutName(this._host.getKeyboardType()) ?? current);
-    const resolved = resolveLayoutName(requested, this._host.getFold().layouts);
+    const { requested, resolved } = this._resolve();
     if (resolved !== requested && requested && !this._warnedUnregistered.has(requested)) {
       this._warnedUnregistered.add(requested);
       console.warn(
@@ -186,21 +235,48 @@ export class LayoutState {
     return resolved;
   }
 
+  /** {@link resolvedName} without the unregistered-layout warning, and the name it resolved. */
+  private _resolve(
+    current = this._host.getCurrentLayout() || this._fallbackBase(),
+    source = this._source,
+  ): { requested: string; resolved: string } {
+    const requested = source === "user" ? current : (constrainedLayoutName(this._host.getKeyboardType()) ?? current);
+    return { requested, resolved: resolveLayoutName(requested, this._host.getFold().layouts) };
+  }
+
+  /** The intent `layout-change` reports: the locale layout while the attribute is empty. */
+  private _intentName(): string {
+    return this._intent || this._host.getLocaleLayout();
+  }
+
+  /** Makes a layout the intent and reflects it to the `layout` attribute, unless it already is. */
+  private _writeIntent(name: string): void {
+    if (name === this._intentName()) return;
+    this._intent = name;
+    this._host.setLayoutAttribute(name);
+  }
+
   /** The layout a `{layout:base}` key and the session reset fall back through. */
   private _fallbackBase(): string {
     return this._base || this._host.getLayoutAttribute() || this._host.getLocaleLayout();
   }
 
   /**
-   * Records a request and commits it. Selecting a layout always resets shift/caps-lock,
-   * even a re-selection of the active layout.
+   * Records a request, commits and reports it. Selecting a layout always resets
+   * shift/caps-lock, even a re-selection of the active layout. An attribute naming a
+   * layout the fold does not hold yet holds its report for {@link settle}, so a layout
+   * appended in the same task is not first reported as the fallback it never paints.
    */
-  private _request(name: string, cause: "request" | "attribute", source: LayoutSource): void {
+  private _request(name: string, cause: "request" | "attribute", source: LayoutSource, reason: Reason): void {
     this._requested = name;
     if (getLayoutMeta(name, this._host.getFold().layoutMeta)?.secondary !== true) {
       this._base = name;
     }
     if (!this._commit(cause, source)) this._host.resetShiftState();
+    if (cause === "attribute" && name && !getRegisteredLayout(name, this._host.getFold().layouts)) {
+      this._held ??= reason;
+    }
+    this._report(reason);
   }
 
   /**
@@ -220,37 +296,41 @@ export class LayoutState {
   }
 
   /**
-   * Derives the layout to render and, when it differs from the one on screen, switches
-   * to it: cancels any held key press, ends any in-progress composition, resets the
-   * typing context, re-seats focus on the key it followed and fires `layout-change`.
-   * The `source` only changes on a real switch so a no-op can't silently flip the
-   * constraint-override. Under a
-   * `keyboardType` constraint only a request moves the layout; the rest waits for the
-   * constraint to lift. Returns whether the layout changed.
+   * Derives the layout to render and, when the effective layout differs from the one
+   * on screen - whatever moved it: a request, the width tier, a constraint, or a
+   * layout slotted or removed - switches to it: cancels any held key press, ends any
+   * in-progress composition, resets the typing context and re-seats focus on the key
+   * it followed. The `source` only changes with the tiered layout so a no-op can't
+   * silently flip the constraint-override. Under a `keyboardType` constraint only a
+   * request moves the tiered layout; the rest waits for the constraint to lift.
+   * Returns whether the effective layout changed.
    *
-   * `autoDetected` is whether the change was not exactly a request: a width verdict or
-   * a changed input, or a request the tier rendered as its compact counterpart. The
-   * attribute path fires only in that second case - a consumer who set the attribute
-   * knows what they asked for. A width the user crossed is announced, by direction
-   * rather than by the layout's name - an identifier the user never chose, which would
-   * enter a translated sentence untranslated. Two texts, not one: a live region speaks
-   * on change, and consecutive announcements always alternate direction.
+   * A width the user crossed is announced, by direction rather than by the layout's
+   * name - an identifier the user never chose, which would enter a translated sentence
+   * untranslated. Two texts, not one: a live region speaks on change, and consecutive
+   * announcements always alternate direction.
    */
   private _commit(cause: CommitCause, source = this._source, crossed = false): boolean {
     const constrained = constrainedLayoutName(this._host.getKeyboardType()) !== null;
-    if (constrained && (cause === "tier" || cause === "refresh")) return false;
-    const target = this._target(constrained);
-    if (target === this._host.getCurrentLayout()) return false;
+    const current = this._host.getCurrentLayout();
+    const target = constrained && (cause === "tier" || cause === "refresh") ? current : this._target(constrained);
+    const nextSource = target === current ? this._source : source;
+    const effective = this._resolve(target || this._fallbackBase(), nextSource).resolved;
+    if (effective === this._rendered) {
+      if (target !== current) this._host.setCurrentLayout(target);
+      this._source = nextSource;
+      return false;
+    }
 
     const anchor = this._host.focusAnchor();
     this._host.setCurrentLayout(target);
-    this._source = source;
+    this._source = nextSource;
+    this._rendered = effective;
     this._host.cancelPress();
     this._host.endComposition();
     this._host.resetShiftState();
     this._host.reseatFocusAnchor(anchor);
 
-    const autoDetected = (cause !== "request" && cause !== "attribute") || target !== this._requested;
     if (crossed) {
       this._host.announce(
         this._narrow
@@ -258,9 +338,21 @@ export class LayoutState {
           : getText("ARIA_LAYOUT_UNCOMPACTED", "Switched back to the standard keyboard layout"),
       );
     }
-    if (cause !== "attribute" || autoDetected) {
-      this._host.fireLayoutChange({ layout: target, requestedLayout: this._requested, autoDetected });
-    }
     return true;
+  }
+
+  /**
+   * Fires `layout-change` when the intent or the effective layout differs from the pair
+   * last reported: one event for a change of either or both, none for a no-op. Silent
+   * while a report is held for {@link settle}.
+   */
+  private _report(reason: Reason): void {
+    if (this._held !== null) return;
+    const layout = this._intentName();
+    const effectiveLayout = this._resolve().resolved;
+    if (layout === this._reportedLayout && effectiveLayout === this._reportedEffective) return;
+    this._reportedLayout = layout;
+    this._reportedEffective = effectiveLayout;
+    this._host.fireLayoutChange({ layout, effectiveLayout, reason });
   }
 }

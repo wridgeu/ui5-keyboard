@@ -70,11 +70,11 @@ QUnit.test("Target switch on a picked layout returns to the base layout", async 
 
   tapKey(kb, "{layout:numeric}");
   await waitForRender();
-  assert.strictEqual(kb.getLayout(), "numeric", "Precondition: the user picked the numeric layout");
+  assert.strictEqual(kb.getEffectiveLayout(), "numeric", "Precondition: the user picked the numeric layout");
 
   input2.focus();
   await waitForRender();
-  assert.strictEqual(kb.getLayout(), "qwerty", "Target switch returned the dropped pick to the base layout");
+  assert.strictEqual(kb.getEffectiveLayout(), "qwerty", "Target switch returned the dropped pick to the base layout");
 
   input1.destroy();
   input2.destroy();

@@ -42,7 +42,7 @@ Use these imports for application code:
 - `ui5/kiosk/layouts/nav-row-compact` - the same eight nav keys as two rows of four, for keyboards too narrow to seat them on one line
 - `ui5/kiosk/middleware/*` - individual middleware-factory modules (e.g. `middleware/kana-dakuten`, `middleware/hangul-compose`); import the factory to supply custom middleware as a `CustomLayout`'s `middleware` (built-ins are already bundled)
 
-`ui5/kiosk/library` re-exports the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type, for inspecting the defaults; a `variants` table merges onto them per base letter, so extending them needs no spread. It also exports the `KeyboardLayout`, `KeyboardType`, `MobileKeyboard`, `FKeyMode`, `LayoutRole` and `LayoutFacet` enums, the `KeyName` and `NativeDispatchableKeyNames` constants, and the `ControlID`, `LayoutRows` and `VariantOverrideTable` property types. The module and those exported names are stable, the table's contents are additive: a minor release may add entries, while removing or reordering existing ones is breaking.
+`ui5/kiosk/library` re-exports the built-in `LATIN_DIACRITIC_VARIANTS` table and the `VariantTable` type, for inspecting the defaults; a `variants` table merges onto them per base letter, so extending them needs no spread. It also exports the `KeyboardLayout`, `KeyboardType`, `MobileKeyboard`, `FKeyMode`, `LayoutChangeReason`, `LayoutRole` and `LayoutFacet` enums, the `KeyName` and `NativeDispatchableKeyNames` constants, and the `ControlID`, `LayoutRows` and `VariantOverrideTable` property types. The module and those exported names are stable, the table's contents are additive: a minor release may add entries, while removing or reordering existing ones is breaking.
 
 Customization is per control via the `customLayouts` aggregation of `ui5.kiosk.CustomLayout` elements, plus the `defaultVariants` property for the accent table applied under every layout. The static surface carries no layout registration:
 
@@ -80,7 +80,7 @@ Stable exports from the bundle entry:
 
 - `KioskKeyboard` class (custom element, tag `<kiosk-keyboard>`)
 - `CustomLayout` class (custom element, tag `<kiosk-keyboard-custom-layout>`)
-- Enum exports: `FKeyMode`, `KeyboardType`, `LayoutFacet`, `LayoutRole`, `MobileKeyboard`
+- Enum exports: `FKeyMode`, `KeyboardType`, `LayoutChangeReason`, `LayoutFacet`, `LayoutRole`, `MobileKeyboard`
 - Type exports: `KioskKeyboardDomContract`, `KeyPressEventDetail`, `LayoutChangeEventDetail`, `KeyboardTypeChangeEventDetail`, `ActiveControlChangeEventDetail`, `OpenStateChangeEventDetail`, `KeyDefinition`, `KeyRow`, `LayoutDefinition`, `CustomLayoutSpec`, `KeyWidth`, `KeyType`, `SpecialKeyValue`, `CompositionMiddleware`, `I18nResolver`, `TargetResolver`
 
 Customization is per element via the `customLayouts` slot of `<kiosk-keyboard-custom-layout>` elements, plus the `defaultVariants` property for the accent table applied under every layout. The static surface is read-only:

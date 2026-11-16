@@ -1,3 +1,4 @@
+import { LayoutChangeReason } from "ui5/kiosk/library";
 import { KeyboardType } from "ui5/kiosk/library";
 import Event from "sap/ui/base/Event";
 import { MobileKeyboard } from "ui5/kiosk/library";
@@ -18,15 +19,19 @@ declare module "./KioskKeyboard" {
     interface $KioskKeyboardSettings extends $ControlSettings {
 
         /**
-         * Active layout name. Only effective when keyboardType is "Full".
-        Auto-detected from the UI5 locale when omitted.
+         * The layout asked for. Auto-detected from the UI5 locale when omitted.
         
-        This holds the layout on screen, not the last one asked for: a `{layout:*}` key
-        and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
-        writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
-        when it holds a stored preference, or a detected value travels back into the
-        model; take the layout to persist from the `requestedLayout` parameter of
-        `layoutChange`, which every change carries.
+        This is the intent, not the layout on screen: a secondary `{layout:*}` pick
+        (numbers, symbols, F-keys, navigation), a `keyboardType` constraint, an
+        `autoCompact` width swap and the registry fallback all change what renders
+        without writing here, the way `sap.f.FlexibleColumnLayout` keeps its `layout`
+        while the columns shown follow the width. Read `getEffectiveLayout()` for
+        the one that rendered. A `{layout:*}` key naming a primary layout is the user
+        choosing one, and is written here, so a two-way binding persists that choice
+        and nothing else.
+        
+        Setting the value it already holds is a no-op, so a binding refresh does not
+        undo a secondary pick; `resetLayout()` returns to the base layout.
          *
          * @since 0.1.0
          */
@@ -104,9 +109,10 @@ declare module "./KioskKeyboard" {
         `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
         with the `compact` property of a `customLayouts` entry.
         
-        The swap fires `layoutChange` with `autoDetected: true` and never overrides an
-        explicit choice: the layout you set stays the one it resolves against, so a
-        `setLayout` or a `{layout:*}` key still wins and is re-tiered from there.
+        The swap fires `layoutChange` with `reason: "width"`, changes
+        `getEffectiveLayout()` only, and never overrides an explicit choice: the layout
+        you set stays the one it resolves against, so a `setLayout` or a `{layout:*}`
+        key still wins and is re-tiered from there.
         
         The width is taken from the keyboard's own box, so an embedded keyboard tiers
         on the room it was granted rather than on the viewport. Override the threshold
@@ -230,8 +236,9 @@ declare module "./KioskKeyboard" {
         keyPress?: (event: KioskKeyboard$KeyPressEvent) => void;
 
         /**
-         * Fired when the active layout changes (via a `{layout:name}` key
-        or programmatic `setLayout()` call).
+         * Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+        one event when both change together. Not fired for the layout the control
+        starts on.
          *
          * @since 0.1.0
          */
@@ -275,15 +282,19 @@ declare module "./KioskKeyboard" {
         /**
          * Gets current value of property "layout".
          *
-         * Active layout name. Only effective when keyboardType is "Full".
-        Auto-detected from the UI5 locale when omitted.
+         * The layout asked for. Auto-detected from the UI5 locale when omitted.
         
-        This holds the layout on screen, not the last one asked for: a `{layout:*}` key
-        and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
-        writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
-        when it holds a stored preference, or a detected value travels back into the
-        model; take the layout to persist from the `requestedLayout` parameter of
-        `layoutChange`, which every change carries.
+        This is the intent, not the layout on screen: a secondary `{layout:*}` pick
+        (numbers, symbols, F-keys, navigation), a `keyboardType` constraint, an
+        `autoCompact` width swap and the registry fallback all change what renders
+        without writing here, the way `sap.f.FlexibleColumnLayout` keeps its `layout`
+        while the columns shown follow the width. Read `getEffectiveLayout()` for
+        the one that rendered. A `{layout:*}` key naming a primary layout is the user
+        choosing one, and is written here, so a two-way binding persists that choice
+        and nothing else.
+        
+        Setting the value it already holds is a no-op, so a binding refresh does not
+        undo a secondary pick; `resetLayout()` returns to the base layout.
          *
          * @since 0.1.0
          * Default value is: "qwerty"
@@ -294,15 +305,19 @@ declare module "./KioskKeyboard" {
         /**
          * Sets a new value for property "layout".
          *
-         * Active layout name. Only effective when keyboardType is "Full".
-        Auto-detected from the UI5 locale when omitted.
+         * The layout asked for. Auto-detected from the UI5 locale when omitted.
         
-        This holds the layout on screen, not the last one asked for: a `{layout:*}` key
-        and an `autoCompact` width swap both write it, the way `sap.f.DynamicPage`
-        writes `headerExpanded` on a scroll-driven collapse. Bind it `mode: "OneWay"`
-        when it holds a stored preference, or a detected value travels back into the
-        model; take the layout to persist from the `requestedLayout` parameter of
-        `layoutChange`, which every change carries.
+        This is the intent, not the layout on screen: a secondary `{layout:*}` pick
+        (numbers, symbols, F-keys, navigation), a `keyboardType` constraint, an
+        `autoCompact` width swap and the registry fallback all change what renders
+        without writing here, the way `sap.f.FlexibleColumnLayout` keeps its `layout`
+        while the columns shown follow the width. Read `getEffectiveLayout()` for
+        the one that rendered. A `{layout:*}` key naming a primary layout is the user
+        choosing one, and is written here, so a two-way binding persists that choice
+        and nothing else.
+        
+        Setting the value it already holds is a no-op, so a binding refresh does not
+        undo a secondary pick; `resetLayout()` returns to the base layout.
          *
          * @since 0.1.0
          * When called with a value of "null" or "undefined", the default value of the property will be restored.
@@ -529,9 +544,10 @@ declare module "./KioskKeyboard" {
         `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
         with the `compact` property of a `customLayouts` entry.
         
-        The swap fires `layoutChange` with `autoDetected: true` and never overrides an
-        explicit choice: the layout you set stays the one it resolves against, so a
-        `setLayout` or a `{layout:*}` key still wins and is re-tiered from there.
+        The swap fires `layoutChange` with `reason: "width"`, changes
+        `getEffectiveLayout()` only, and never overrides an explicit choice: the layout
+        you set stays the one it resolves against, so a `setLayout` or a `{layout:*}`
+        key still wins and is re-tiered from there.
         
         The width is taken from the keyboard's own box, so an embedded keyboard tiers
         on the room it was granted rather than on the viewport. Override the threshold
@@ -555,9 +571,10 @@ declare module "./KioskKeyboard" {
         `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
         with the `compact` property of a `customLayouts` entry.
         
-        The swap fires `layoutChange` with `autoDetected: true` and never overrides an
-        explicit choice: the layout you set stays the one it resolves against, so a
-        `setLayout` or a `{layout:*}` key still wins and is re-tiered from there.
+        The swap fires `layoutChange` with `reason: "width"`, changes
+        `getEffectiveLayout()` only, and never overrides an explicit choice: the layout
+        you set stays the one it resolves against, so a `setLayout` or a `{layout:*}`
+        key still wins and is re-tiered from there.
         
         The width is taken from the keyboard's own box, so an embedded keyboard tiers
         on the room it was granted rather than on the viewport. Override the threshold
@@ -1112,8 +1129,9 @@ declare module "./KioskKeyboard" {
         /**
          * Attaches event handler "fn" to the "layoutChange" event of this "KioskKeyboard".
          *
-         * Fired when the active layout changes (via a `{layout:name}` key
-        or programmatic `setLayout()` call).
+         * Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+        one event when both change together. Not fired for the layout the control
+        starts on.
          *
          * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
@@ -1129,8 +1147,9 @@ declare module "./KioskKeyboard" {
         /**
          * Attaches event handler "fn" to the "layoutChange" event of this "KioskKeyboard".
          *
-         * Fired when the active layout changes (via a `{layout:name}` key
-        or programmatic `setLayout()` call).
+         * Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+        one event when both change together. Not fired for the layout the control
+        starts on.
          *
          * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
@@ -1147,8 +1166,9 @@ declare module "./KioskKeyboard" {
         /**
          * Detaches event handler "fn" from the "layoutChange" event of this "KioskKeyboard".
          *
-         * Fired when the active layout changes (via a `{layout:name}` key
-        or programmatic `setLayout()` call).
+         * Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+        one event when both change together. Not fired for the layout the control
+        starts on.
          *
          * @since 0.1.0
          * The passed function and listener object must match the ones used for event registration.
@@ -1163,18 +1183,22 @@ declare module "./KioskKeyboard" {
         /**
          * Fires event "layoutChange" to attached listeners.
          *
-         * Fired when the active layout changes (via a `{layout:name}` key
-        or programmatic `setLayout()` call).
+         * Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+        one event when both change together. Not fired for the layout the control
+        starts on.
          *
          * @since 0.1.0
          *
          * @param parameters Parameters to pass along with the event
-         * @param [mParameters.layout] Fired when the active layout changes (via a `{layout:name}` key
-        or programmatic `setLayout()` call).
-         * @param [mParameters.requestedLayout] Fired when the active layout changes (via a `{layout:name}` key
-        or programmatic `setLayout()` call).
-         * @param [mParameters.autoDetected] Fired when the active layout changes (via a `{layout:name}` key
-        or programmatic `setLayout()` call).
+         * @param [mParameters.layout] Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+        one event when both change together. Not fired for the layout the control
+        starts on.
+         * @param [mParameters.effectiveLayout] Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+        one event when both change together. Not fired for the layout the control
+        starts on.
+         * @param [mParameters.reason] Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+        one event when both change together. Not fired for the layout the control
+        starts on.
          *
          * @returns Reference to "this" in order to allow method chaining
          */
@@ -1466,15 +1490,16 @@ declare module "./KioskKeyboard" {
 
     /**
      * Interface describing the parameters of KioskKeyboard's 'layoutChange' event.
-     * Fired when the active layout changes (via a `{layout:name}` key
-    or programmatic `setLayout()` call).
+     * Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+    one event when both change together. Not fired for the layout the control
+    starts on.
      *
      * @since 0.1.0
      */
     export interface KioskKeyboard$LayoutChangeEventParameters {
         layout?: string;
-        requestedLayout?: string;
-        autoDetected?: boolean;
+        effectiveLayout?: string;
+        reason?: LayoutChangeReason;
     }
 
     /**
@@ -1537,8 +1562,9 @@ declare module "./KioskKeyboard" {
 
     /**
      * Type describing the KioskKeyboard's 'layoutChange' event.
-     * Fired when the active layout changes (via a `{layout:name}` key
-    or programmatic `setLayout()` call).
+     * Fired once per change of the `layout` property or of `getEffectiveLayout()`,
+    one event when both change together. Not fired for the layout the control
+    starts on.
      *
      * @since 0.1.0
      */

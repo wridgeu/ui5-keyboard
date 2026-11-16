@@ -203,15 +203,18 @@ const SPECIAL_KEY_LABELS: Record<string, string> = {
  */
 @event("after-close", { bubbles: true })
 /**
- * Fired when the active layout changes (user switch or locale resolution).
+ * Fired once per change of `layout` or `effectiveLayout`, one event when both change
+ * together. Not fired for the layout the element starts on.
  *
- * @param {string} layout - The name of the layout that now renders.
- * @param {string} requestedLayout - The name of the layout last requested, which
- *   `layout` differs from while the `autoCompact` width tier renders its compact
- *   counterpart. Persist this one to restore a user's choice. Since 0.2.0.
- * @param {boolean} autoDetected - Whether this change was not exactly a request: the
- *   `autoCompact` width tier resolving, a lifted `keyboard-type` constraint or a newly
- *   slotted layout, or a request the width tier rendered as its compact counterpart.
+ * @param {string} layout - The layout asked for, as the `layout` property holds it;
+ *   the locale layout while `layout` is empty. Persist this one to restore a user's
+ *   choice.
+ * @param {string} effectiveLayout - The layout that now renders, as
+ *   `effectiveLayout` reports it. Since 0.2.0.
+ * @param {string} reason - What changed it: `"user"` (a `{layout:*}` key), `"api"`
+ *   (the `layout` property or `reset()`), `"width"` (the `auto-compact` tier),
+ *   `"keyboardType"` (the constraint taking effect or lifting) or `"layouts"` (the
+ *   slotted layouts changed). Since 0.2.0.
  * @public
  * @since 0.1.0
  */
@@ -406,11 +409,17 @@ class KioskKeyboard extends UI5Element {
    * (see {@link KioskKeyboard.getLocaleLayout getLocaleLayout}). Per-instance
    * locale overrides can be supplied with the `locales` of a slotted custom layout.
    *
-   * This is the declaration, not the layout on screen: a `{layout:*}` key, a
-   * `keyboard-type` constraint and an `auto-compact` width swap all change what
-   * renders without writing here, the way `src` stays put while the image the
-   * browser picked shows up in `currentSrc`. Read {@link effectiveLayout} for the
-   * one that rendered.
+   * This is the intent, not the layout on screen: a secondary `{layout:*}` pick
+   * (numbers, symbols, F-keys, navigation), a `keyboard-type` constraint and an
+   * `auto-compact` width swap all change what renders without writing here, the way
+   * `src` stays put while the image the browser picked shows up in `currentSrc`.
+   * Read {@link effectiveLayout} for the one that rendered. A `{layout:*}` key naming
+   * a primary layout is the user choosing one, and is written here and reflected to
+   * the attribute the way `<details open>` reflects a user toggle; persist this
+   * value to restore that choice.
+   *
+   * Setting the value it already holds is a no-op, as for any property, so it does
+   * not undo a secondary pick on its own; `reset()` returns to the base layout.
    *
    * @default ""
    * @public
@@ -425,7 +434,7 @@ class KioskKeyboard extends UI5Element {
    * applied. Read-only, and not reflected to an attribute: it is a resolved value,
    * not a declaration, so it follows `UI5Element.effectiveDir` rather than `layout`.
    *
-   * Changes to it are announced by `layout-change`; this getter is for reading the
+   * Every change to it fires one `layout-change`; this getter is for reading the
    * state at any other moment.
    *
    * @public
@@ -610,9 +619,10 @@ class KioskKeyboard extends UI5Element {
    * `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own with
    * the `compact` property of a `<kiosk-keyboard-custom-layout>`.
    *
-   * The swap fires `layout-change` with `autoDetected: true` and never overrides an
-   * explicit choice: the layout you set stays the one it resolves against, so the
-   * `layout` property or a `{layout:*}` key still wins and is re-tiered from there.
+   * The swap fires `layout-change` with `reason: "width"`, changes `effectiveLayout`
+   * only, and never overrides an explicit choice: the layout you set stays the one it
+   * resolves against, so the `layout` property or a `{layout:*}` key still wins and is
+   * re-tiered from there.
    *
    * The width is taken from the keyboard's own box, so an embedded keyboard tiers on
    * the room it was granted rather than on the viewport. Override the threshold with
@@ -704,6 +714,9 @@ class KioskKeyboard extends UI5Element {
       this._currentLayout = name;
     },
     getLayoutAttribute: () => this.layout,
+    setLayoutAttribute: (name) => {
+      this.layout = name;
+    },
     getLocaleLayout: () => this._localeLayout(),
     getKeyboardType: () => this.keyboardType,
     getFold: () => this._foldCache.get(),
@@ -1118,6 +1131,10 @@ class KioskKeyboard extends UI5Element {
     this._restoreKeyFocus = false;
   }
 
+  override onBeforeRendering(): void {
+    this._layoutState.settle();
+  }
+
   override onAfterRendering(): void {
     // Announce pending live region text (from show/close/shift). Queue is
     // drained sequentially with a small gap so AT clients pick up each entry.
@@ -1185,7 +1202,7 @@ class KioskKeyboard extends UI5Element {
       });
       // A constraint suspends the width tier, so lifting one re-derives the layout
       // that surfaces from under it.
-      this._layoutState.refresh();
+      this._layoutState.refresh("keyboardType");
     }
     if (name === "docked" || name === "autoShow") {
       this._autoShow.sync();
@@ -1334,7 +1351,8 @@ class KioskKeyboard extends UI5Element {
   /**
    * Resets the keyboard to a fresh input context: clears the shift/caps
    * latch, aborts any in-progress composition, cancels backspace auto-repeat,
-   * dismisses the accent-variant popover, and returns to the base layout.
+   * dismisses the accent-variant popover, and returns to the base layout, which
+   * becomes the `layout` - dropping a secondary `{layout:*}` pick.
    *
    * Deliberately leaves the bound target value, the active target, docked
    * visibility, and all developer configuration untouched, so a reused
@@ -1463,7 +1481,7 @@ class KioskKeyboard extends UI5Element {
   private readonly _foldCache = new LayoutFoldCache({
     getCustomLayouts: () => this.customLayouts,
     // Deferred: a rebuild runs inside whatever read the fold, which can be a render.
-    onRebuilt: () => queueMicrotask(() => this._layoutState.refresh()),
+    onRebuilt: () => queueMicrotask(() => this._layoutState.refresh("layouts")),
     hasBuiltInName: (value) => SPECIAL_KEY_LABELS[value] !== undefined,
   });
   private _middlewareFactory: (() => CompositionMiddleware) | null = null;
