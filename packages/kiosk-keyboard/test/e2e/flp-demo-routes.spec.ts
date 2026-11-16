@@ -85,6 +85,8 @@ test.describe("control cards at phone width", () => {
     ["kiosk/docked", "kioskDocked", "mobileKeyboardSegments", "fKeyModeSegments"],
     ["kiosk/focus-scenarios", "kioskFocusScenarios", "focusInput2"],
     ["kiosk/i18n-extensibility", "kioskI18nExtensibility", "i18nModeSegments"],
+    ["kiosk/programmatic", "kioskProgrammatic", "useQwertyNavCompactButton"],
+    ["kiosk/custom-layouts", "kioskCustomLayouts", "activeLayoutStatus"],
   ]) {
     test(`${route}: controls stay inside their panel, labels untruncated`, async ({ page }) => {
       await page.goto(appRoute(route));
@@ -97,9 +99,10 @@ test.describe("control cards at phone width", () => {
           const truncated = [...el.querySelectorAll(".sapMSegBBtnInner")]
             .filter((t) => t.scrollWidth > t.clientWidth)
             .map((t) => t.textContent);
-          return { right: box.right, panelRight: panel.right, truncated };
+          return { right: box.right, panelRight: panel.right, viewport: window.innerWidth, truncated };
         });
         expect(fit.right, localId).toBeLessThanOrEqual(fit.panelRight);
+        expect(fit.panelRight, localId).toBeLessThanOrEqual(fit.viewport);
         expect(fit.truncated, localId).toEqual([]);
       }
     });
