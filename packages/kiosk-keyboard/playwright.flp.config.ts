@@ -18,7 +18,10 @@ const __dirname = import.meta.dirname;
 
 export default defineConfig({
   testDir: "./test/e2e",
-  testMatch: /flp-.*\.spec\.ts/,
+  // Anchored to the file name: a checkout path containing "flp-" must not pull in every spec.
+  testMatch: /(^|[\\/])flp-[^\\/]*\.spec\.ts$/,
+  // The first FLP load bundles the web components on demand; the specs' 30s waits need room inside the test.
+  timeout: 90_000,
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
