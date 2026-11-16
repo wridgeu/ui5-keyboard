@@ -151,6 +151,23 @@ describe("ShiftState", () => {
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(false);
     });
+
+    it("a key typed while shift is already off still closes the double-tap window", () => {
+      const spy = vi.spyOn(performance, "now");
+      spy.mockReturnValue(1000);
+      state.toggle();
+      spy.mockReturnValue(1100);
+      state.toggle(); // caps lock
+      spy.mockReturnValue(2000);
+      state.toggle(); // caps lock -> off, opens a window at t=2000
+      spy.mockReturnValue(2100);
+      state.autoRelease(); // typed a letter with shift off
+      spy.mockReturnValue(2200);
+      state.toggle(); // inside 400 ms of the last tap, but a key came between
+      expect(state.isShifted).toBe(true);
+      expect(state.isCapsLock).toBe(false);
+      spy.mockRestore();
+    });
   });
 
   describe("reset()", () => {
@@ -243,6 +260,23 @@ describe("ShiftState", () => {
       state.toggle(); // should start fresh shift, not caps lock
       expect(state.isShifted).toBe(true);
       expect(state.isCapsLock).toBe(false);
+    });
+
+    it("closes the double-tap window even when the physical state matches the mode", () => {
+      const spy = vi.spyOn(performance, "now");
+      spy.mockReturnValue(1000);
+      state.toggle();
+      spy.mockReturnValue(1100);
+      state.toggle(); // caps lock
+      spy.mockReturnValue(2000);
+      state.toggle(); // caps lock -> off, opens a window at t=2000
+      spy.mockReturnValue(2100);
+      state.syncFromPhysical(false, false); // physical keystroke, mode stays Off
+      spy.mockReturnValue(2200);
+      state.toggle();
+      expect(state.isShifted).toBe(true);
+      expect(state.isCapsLock).toBe(false);
+      spy.mockRestore();
     });
   });
 });
