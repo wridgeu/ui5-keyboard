@@ -579,6 +579,35 @@ QUnit.test("Escape dismisses the popup without inserting", async (assert) => {
   cleanup(kb, input);
 });
 
+// Focus returns to whatever held it before the popup opened: the target input
+// for a pointer hold (the press never moved focus off it), the key for the
+// keyboard's context-menu gesture.
+QUnit.test("a pointer-picked variant returns focus to the target input", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  release(kb, aKey);
+  assert.ok(getPopup()?.contains(document.activeElement), "precondition: the open popup holds focus");
+  tapOption(getOptions().find((o) => glyphOf(o) === "ä")!);
+  assert.strictEqual(input.getValue(), "ä", "the variant was committed");
+  assert.strictEqual(document.activeElement, input.getFocusDomRef(), "focus is back on the target input");
+  cleanup(kb, input);
+});
+
+QUnit.test("a keyboard-opened popup returns focus to its key on commit", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  aKey.focus();
+  const contextMenu = new Event("contextmenu", { bubbles: true, cancelable: true });
+  Object.defineProperty(contextMenu, "target", { value: aKey, writable: false });
+  kb.oncontextmenu(contextMenu);
+  assert.strictEqual(document.activeElement, getOptions()[0], "precondition: the popup took focus from the key");
+  keydownOnPopup("Enter");
+  assert.strictEqual(input.getValue(), "à", "the variant was committed");
+  assert.strictEqual(document.activeElement, aKey, "focus is back on the key that opened the popup");
+  cleanup(kb, input);
+});
+
 // The popup is part of the keyboard's surface, so a disabled keyboard shows
 // none: left open, its options still reach the commit path and type.
 QUnit.test("disabling the keyboard dismisses an open popup", async (assert) => {
