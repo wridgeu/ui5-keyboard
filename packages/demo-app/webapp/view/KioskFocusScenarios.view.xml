@@ -22,7 +22,7 @@
                     <VBox class="sapUiSmallMargin">
                         <!-- 1. Multiple controls - keyboard stays open on tab -->
                         <Label text="1. Tab between targeted inputs - keyboard stays open" design="Bold" class="sapUiTinyMarginBottom" />
-                        <HBox>
+                        <HBox wrap="Wrap">
                             <VBox class="sapUiSmallMarginEnd">
                                 <Label text="Input 1 (targeted)" labelFor="focusInput1" />
                                 <Input id="focusInput1" placeholder="Targeted" width="14rem" />

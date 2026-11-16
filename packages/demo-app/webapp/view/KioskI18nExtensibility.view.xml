@@ -17,7 +17,7 @@
             <!-- i18n Mode selector -->
             <Panel headerText="i18n Mode" class="sapUiSmallMarginBottom">
                 <VBox class="sapUiSmallMargin">
-                    <SegmentedButton width="100%" selectedKey="{i18nDemo>/activeMode}" selectionChange=".onModeChange">
+                    <SegmentedButton id="i18nModeSegments" width="100%" contentMode="ContentFit" selectedKey="{i18nDemo>/activeMode}" selectionChange=".onModeChange">
                         <items>
                             <SegmentedButtonItem key="default" text="Default" />
                             <SegmentedButtonItem key="french" text="French" />
