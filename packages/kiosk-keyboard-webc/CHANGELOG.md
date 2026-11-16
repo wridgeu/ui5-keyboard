@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.2.0](https://github.com/wridgeu/ui5-keyboard/compare/kiosk-keyboard-webc-v0.1.0...kiosk-keyboard-webc-v0.2.0) (2026-11-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **keyboard:** `layoutChange` / `layout-change` no longer carry `requestedLayout` or `autoDetected`. Persist `layout` (the intent) where you persisted `requestedLayout`; read `effectiveLayout` for what renders; branch on `reason` where you branched on `autoDetected` ("width", "keyboardType" and "layouts" were auto-detected). In the UI5 control, `layout` / `getLayout()` now hold the intent rather than the layout on screen: read `getEffectiveLayout()` for what renders. A secondary `{layout:*}` pick no longer writes `layout`, and `setLayout()` with the current value is a no-op - call `resetLayout()` to drop a secondary pick. In the web component a primary `{layout:*}` pick now writes and reflects `layout`, and `layout-change` also fires for a change the `layout` attribute asked for.
+* **keyboard:** a request while autoCompact holds the keyboard narrow fires one layout-change naming the layout that renders (e.g. home-c) instead of one for the request and one for the counterpart a frame later. autoDetected is now false only when what renders is exactly what was requested; a request rendered as its compact counterpart reports true. Every layout-change carries a new requestedLayout naming the layout last asked for; consumers that persisted the layout from autoDetected: false events should persist requestedLayout from any event.
+
+### Features
+
+* **keyboard:** derive the webc rendered layout from its inputs ([25a47b8](https://github.com/wridgeu/ui5-keyboard/commit/25a47b86e1f6115db23b5e2b8744ea6eeb5c7bcb))
+* **keyboard:** separate the layout intent from the effective layout ([41621c6](https://github.com/wridgeu/ui5-keyboard/commit/41621c69e4c7c092cfe39f4afe6cfae8059cad95))
+
+
+### Bug Fixes
+
+* **keyboard:** apply the switch effects to every effective-layout change ([ba3f65f](https://github.com/wridgeu/ui5-keyboard/commit/ba3f65f8ee2b68ec509fe0b94ad8a608bf35ebf8))
+* **keyboard:** break the shift double-tap on any key in between ([09cf7da](https://github.com/wridgeu/ui5-keyboard/commit/09cf7da356bf75d358f55a067c0c6fa8d549539e))
+* **keyboard:** cancel a held key press when the layout switches ([ccd608e](https://github.com/wridgeu/ui5-keyboard/commit/ccd608e886a72407258f9579b213a1fb03ee0e66))
+* **keyboard:** cancel a held key press when the layout switches ([d13b8db](https://github.com/wridgeu/ui5-keyboard/commit/d13b8dbdcb15df38962f809c6fbc7cd3368d7e29))
+* **keyboard:** check write-time diagnostics once per input ([7a53bc5](https://github.com/wridgeu/ui5-keyboard/commit/7a53bc51b361230c8de8eaee807c82f99bcf5507))
+* **keyboard:** check write-time diagnostics once per input ([899a7c9](https://github.com/wridgeu/ui5-keyboard/commit/899a7c95cb253f42d6ba48a591e61f0f4a4cca6b))
+* **keyboard:** close the shift double-tap window on every non-shift key ([d910ae4](https://github.com/wridgeu/ui5-keyboard/commit/d910ae4294a7f7e96065fea0d79fb0a4a795aff8))
+* **keyboard:** return focus to the target input after a pointer variant pick ([7e864ec](https://github.com/wridgeu/ui5-keyboard/commit/7e864eccbed2524fa174cbe4b419f36bcc6ea3f8))
+* **keyboard:** return focus to the target input after a pointer variant pick ([8e82b05](https://github.com/wridgeu/ui5-keyboard/commit/8e82b055a6188a46002d07de0bcc9e7ba0452257))
+* **styles:** shrink the key floor only as far as a full row needs ([6c6dfb8](https://github.com/wridgeu/ui5-keyboard/commit/6c6dfb88738cafaf3dacbe2e01e6bce42465d8f3))
+* **styles:** shrink the key floor only as far as a full row needs ([a4fbf79](https://github.com/wridgeu/ui5-keyboard/commit/a4fbf7959a1a256b9a42d1d30deaf47187645155))
+* **webc:** report failing assertions on dom nodes instead of hanging wtr ([9f46bd4](https://github.com/wridgeu/ui5-keyboard/commit/9f46bd40d45f60bf392be80c034fe3756b96e8bf))
+* **webc:** report failing assertions on dom nodes instead of hanging wtr ([6c525d4](https://github.com/wridgeu/ui5-keyboard/commit/6c525d473802ac734e7db5ab7befa5718c54fffb))
+
 ## 0.1.0 (2026-09-13)
 
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.1](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-hotkeys-v0.1.0...ui5-lib-hotkeys-v0.1.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* **test:** clear the qunit report before the port check ([dc5bbca](https://github.com/wridgeu/ui5-keyboard/commit/dc5bbcad84b712fcefe9403aba0415e6714618ec))
+* **test:** clear the qunit report before the port check ([2860c6e](https://github.com/wridgeu/ui5-keyboard/commit/2860c6eb53a39c5ddd77b6bd9d640a20a6d27b7d))
+
+
+### Code Refactoring
+
+* **hotkeys:** derive held keys and index registrations directly ([af5a8ee](https://github.com/wridgeu/ui5-keyboard/commit/af5a8ee39a5fc173c8b10669da21947c982fa1b1))
+* **hotkeys:** derive held keys and index registrations directly ([524f631](https://github.com/wridgeu/ui5-keyboard/commit/524f6311ab0c8296b201727e9c3379207d2e0887))
+* **hotkeys:** drop guards and resets with no observable effect ([5a29672](https://github.com/wridgeu/ui5-keyboard/commit/5a2967249525759c1f70c9b13a58250b19e8040c))
+* **hotkeys:** let sequencemanager take hotkey options and return the public shapes ([e95c8a0](https://github.com/wridgeu/ui5-keyboard/commit/e95c8a045cb9aa91c0b98e9af6b47637d98c17ed))
+* **hotkeys:** let sequencemanager take hotkey options and return the public shapes ([60bd3ba](https://github.com/wridgeu/ui5-keyboard/commit/60bd3ba9417aa6d136f73ee0b48c62c00d562b56))
+
 ## 0.1.0 (2026-09-13)
 
 
