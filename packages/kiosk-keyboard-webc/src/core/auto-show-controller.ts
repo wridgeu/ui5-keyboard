@@ -26,9 +26,8 @@ export type AutoShowHost = HTMLElement & {
 /**
  * Bridge to the host's private state and behaviors that have no 1:1 element
  * equivalent: reading the active target / controls / keyboard-type provenance,
- * and the actions that delegate back to the control so the cancelable events,
- * composition reset, inputmode suppression, and physical-key highlight all stay
- * on it.
+ * and the actions that delegate back to the control so the events and every
+ * resource bound to the target stay on it.
  */
 export interface AutoShowBridge {
   getTargetElement(): HTMLInputElement | HTMLTextAreaElement | null;
@@ -37,15 +36,10 @@ export interface AutoShowBridge {
   getKeyboardTypeSource(): KeyboardTypeSource;
   resolveInputFrom(el: HTMLElement): HTMLInputElement | HTMLTextAreaElement | null;
   setKeyboardTypeInternal(value: `${KeyboardType}`): void;
-  setTarget(el: HTMLInputElement | HTMLTextAreaElement | null, source: TargetSource): void;
-  /** Resets shift and commits/drops the middleware for a fresh target context. */
-  resetTargetContext(): void;
+  /** The host's one target transition: composition, shift, inputmode claim, physical keys, event. */
+  retarget(el: HTMLInputElement | HTMLTextAreaElement | null, source: TargetSource): void;
   show(): void;
   close(): void;
-  restoreInputMode(): void;
-  suppressInputMode(): void;
-  syncPhysicalKeyHighlight(): void;
-  fireActiveControlChange(el: HTMLInputElement | HTMLTextAreaElement | null): void;
 }
 
 /**
@@ -118,27 +112,12 @@ export class AutoShowController {
     const inputEl = this._resolveAutoShowTarget(e);
     if (!inputEl) return;
 
-    const targetChanged = this._bridge.getTargetElement() !== inputEl;
-    if (targetChanged) {
-      // Real switch: fresh context, so reset shift and end any composition.
-      this._bridge.resetTargetContext();
-    }
-    this._bridge.setTarget(inputEl, "autoShow");
-    this._detectKeyboardType(inputEl, targetChanged);
+    // Detection reads the authored inputmode, so it runs before the retarget an
+    // open keyboard follows with inputmode="none" on the new target.
+    this._detectKeyboardType(inputEl, this._bridge.getTargetElement() !== inputEl);
+    this._bridge.retarget(inputEl, "autoShow");
     this.cancelPendingClose();
-
-    if (!this._host.open) {
-      this._bridge.show();
-      this._bridge.syncPhysicalKeyHighlight();
-    } else if (targetChanged) {
-      this._bridge.restoreInputMode();
-      this._bridge.suppressInputMode();
-      this._bridge.syncPhysicalKeyHighlight();
-    }
-
-    if (targetChanged) {
-      this._bridge.fireActiveControlChange(inputEl);
-    }
+    if (!this._host.open) this._bridge.show();
   }
 
   /**
@@ -162,9 +141,7 @@ export class AutoShowController {
   }
 
   /**
-   * Detects the keyboard type before the open. This may trigger onInvalidation
-   * for keyboardType, but the target is already set so subsequent logic is safe.
-   * A refocus of the already-active target is not detectable while the keyboard
+   * Detects the keyboard type before the open. A refocus of the already-active target is not detectable while the keyboard
    * is open: that element carries the inputmode="none" suppression written on
    * its previous focus, which masks an authored numeric/decimal/tel value, so it
    * keeps the type it already has. Closed, no target carries the mask, so a
@@ -198,7 +175,7 @@ export class AutoShowController {
 
       if (this._host.open) this._bridge.close();
       if (this._bridge.getTargetSource() === "autoShow") {
-        this._bridge.setTarget(null, "explicit");
+        this._bridge.retarget(null, "explicit");
       }
     });
   }

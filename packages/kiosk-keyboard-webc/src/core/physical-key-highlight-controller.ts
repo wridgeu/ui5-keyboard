@@ -4,8 +4,6 @@ import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
 export interface PhysicalKeyHighlightHost {
   /** Live shadow root accessor (read at event time, never snapshotted). */
   getShadowRoot(): ShadowRoot | null;
-  /** Resolves the native input/textarea the physical-key listeners attach to. */
-  resolveTarget(): HTMLInputElement | HTMLTextAreaElement | null;
   /**
    * Records the currently highlighted data-key (lowercased) or `null`. Kept on
    * the host because the JSX template binds the highlight class from it.
@@ -21,9 +19,9 @@ export interface PhysicalKeyHighlightHost {
  * virtual key for visual feedback, and the host's shift state mirrors the
  * physical Shift / CapsLock modifiers.
  *
- * The keydown/keyup/blur listeners live on the resolved target (not the host),
- * so `sync()` re-binds them whenever the target changes and `teardown()` drops
- * them on disconnect. The highlighted-key value itself stays on the host (the
+ * The keydown/keyup/blur listeners live on the resolved target (not the host):
+ * the host's target transition calls `bind()` with whatever it now resolves, and
+ * `teardown()` drops them on disconnect. The highlighted-key value itself stays on the host (the
  * template reads it), updated here through `setHighlightedKey`.
  */
 export class PhysicalKeyHighlightController {
@@ -41,7 +39,7 @@ export class PhysicalKeyHighlightController {
   };
 
   /**
-   * @param _host Live access to the shadow root, resolved target, highlight slot, and shift sync.
+   * @param _host Live access to the shadow root, highlight slot, and shift sync.
    * @param _nativeDispatchableKeys Function/navigation keys mapped to `{fkey:*}` data-keys.
    */
   constructor(
@@ -89,11 +87,8 @@ export class PhysicalKeyHighlightController {
     this._host.setHighlightedKey(null);
   }
 
-  /** Re-binds the physical-key listeners to the current resolved target. */
-  sync(): void {
-    const target = this._host.resolveTarget();
-
-    // Skip if target unchanged and still connected to DOM
+  /** Moves the physical-key listeners onto `target`, or drops them for `null`. */
+  bind(target: HTMLInputElement | HTMLTextAreaElement | null): void {
     if (target === this._target && (!target || target.isConnected)) return;
 
     this._abort?.abort();

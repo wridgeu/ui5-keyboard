@@ -40,14 +40,9 @@ function makeBridge(): AutoShowBridge {
     getKeyboardTypeSource: () => "unset",
     resolveInputFrom: () => null,
     setKeyboardTypeInternal: vi.fn(),
-    setTarget: vi.fn(),
-    resetTargetContext: vi.fn(),
+    retarget: vi.fn(),
     show: vi.fn(),
     close: vi.fn(),
-    restoreInputMode: vi.fn(),
-    suppressInputMode: vi.fn(),
-    syncPhysicalKeyHighlight: vi.fn(),
-    fireActiveControlChange: vi.fn(),
   };
 }
 
@@ -113,15 +108,16 @@ describe("AutoShowController auto-type detection vs. inputmode suppression", () 
       ...makeBridge(),
       getTargetElement: () => target,
       resolveInputFrom: (el) => (el === input ? input : null),
-      setTarget: vi.fn((el) => {
+      // The real retarget moves an open keyboard's NativeInputModeSuppression
+      // claim, which stamps the live element - the mask an authored inputmode
+      // disappears behind.
+      retarget: vi.fn((el) => {
         target = el;
+        if (host.open && el) el.setAttribute("inputmode", "none");
       }),
       setKeyboardTypeInternal: vi.fn((value) => {
         host.keyboardType = value;
       }),
-      // The real bridge delegates to NativeInputModeSuppression, which stamps
-      // the live element - the mask an authored inputmode disappears behind.
-      suppressInputMode: vi.fn(() => input.setAttribute("inputmode", "none")),
     };
 
     controller = new AutoShowController(host, bridge);

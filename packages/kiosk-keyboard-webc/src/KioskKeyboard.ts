@@ -725,12 +725,7 @@ class KioskKeyboard extends UI5Element {
     },
     resetShiftState: () => this._shiftState.reset(),
     cancelPress: () => this._cancelPress(),
-    endComposition: () => {
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
-    },
+    endComposition: () => this._endComposition("commit"),
     focusAnchor: () => this._focusAnchor(),
     reseatFocusAnchor: (anchor) => this._reseatFocusAnchor(anchor),
     announce: (text) => KioskKeyboard._announcements.announce(text),
@@ -780,7 +775,7 @@ class KioskKeyboard extends UI5Element {
 
   // ── Inputmode suppression (ref-counted, shared across instances) ──
   /** Owns the `inputmode="none"` swap and its cross-instance refcount. */
-  private readonly _inputModeSuppression = new NativeInputModeSuppression(() => this._resolveTarget());
+  private readonly _inputModeSuppression = new NativeInputModeSuppression(() => this._resolvedTarget());
 
   // ── Multi-keyboard instance isolation ──
   private static readonly _instances = new Set<KioskKeyboard>();
@@ -811,25 +806,9 @@ class KioskKeyboard extends UI5Element {
     getKeyboardTypeSource: () => this._keyboardTypeSource,
     resolveInputFrom: (el) => this._resolveInputFrom(el),
     setKeyboardTypeInternal: (value) => this._setKeyboardTypeInternal(value),
-    setTarget: (el, source) => {
-      this._targetElement = el;
-      this._targetSource = source;
-    },
-    resetTargetContext: () => {
-      this._shiftState.reset();
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
-    },
+    retarget: (el, source) => this._retarget(el, source),
     show: () => this.show(),
     close: () => this.close(),
-    restoreInputMode: () => this._inputModeSuppression.restore(),
-    suppressInputMode: () => this._inputModeSuppression.suppress(),
-    syncPhysicalKeyHighlight: () => this._physicalKeyHighlight.sync(),
-    fireActiveControlChange: (el) => {
-      this.fireDecoratorEvent("active-control-change", { activeElement: el });
-    },
   });
 
   // ── Physical keyboard highlight ──
@@ -837,7 +816,6 @@ class KioskKeyboard extends UI5Element {
   private readonly _physicalKeyHighlight = new PhysicalKeyHighlightController(
     {
       getShadowRoot: () => this.shadowRoot,
-      resolveTarget: () => this._resolveTarget(),
       setHighlightedKey: (value) => {
         this._highlightedKey = value;
       },
@@ -1038,7 +1016,7 @@ class KioskKeyboard extends UI5Element {
     this._layoutState.seed();
 
     this._autoShow.sync();
-    this._physicalKeyHighlight.sync();
+    this._physicalKeyHighlight.bind(this._resolvedTarget());
 
     if (this.docked) {
       this._attachEscapeListener();
@@ -1094,10 +1072,7 @@ class KioskKeyboard extends UI5Element {
   }
 
   override onExitDOM(): void {
-    if (this._middleware) {
-      this._middleware.reset();
-      this._middleware = null;
-    }
+    this._endComposition("reset");
     KioskKeyboard._instances.delete(this);
     if (KioskKeyboard._instances.size === 0) KioskKeyboard._announcements.teardown();
     this._autoShow.teardown();
@@ -1190,11 +1165,8 @@ class KioskKeyboard extends UI5Element {
       this._shiftState.reset();
       // The surface swap ends any in-progress composition: commit the preedit
       // and drop the middleware so the next key resolves against the new
-      // effective layout (mirrors _applyLayout).
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
+      // effective layout.
+      this._endComposition("commit");
       this.fireDecoratorEvent("keyboard-type-change", {
         keyboardType: this.keyboardType,
         previousKeyboardType: previousKeyboardTypeOf(changeInfo.oldValue),
@@ -1203,6 +1175,9 @@ class KioskKeyboard extends UI5Element {
       // A constraint suspends the width tier, so lifting one re-derives the layout
       // that surfaces from under it.
       this._layoutState.refresh("keyboardType");
+    }
+    if (name === "controls") {
+      this._syncTargetBindings();
     }
     if (name === "docked" || name === "autoShow") {
       this._autoShow.sync();
@@ -1263,8 +1238,7 @@ class KioskKeyboard extends UI5Element {
       const input = this._resolveTarget();
       if (input) {
         input.focus();
-        this._targetElement = input;
-        this._targetSource = "explicit";
+        this._retarget(input, "explicit");
       }
     }
     this._inputModeSuppression.suppress();
@@ -1287,37 +1261,7 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   setTargetElement(el: HTMLInputElement | HTMLTextAreaElement | null): void {
-    const previous = this._targetElement;
-
-    // Restore the old target's inputmode before switching so it's not left suppressed.
-    if (this._openValue) {
-      this._inputModeSuppression.restore();
-    }
-
-    // Reset shift/caps and end the composition only on a real switch; a same-input
-    // re-set is a caret reposition that keeps both (parity with the UI5 twin). The
-    // middleware holds the old input's preedit offsets, so it must not outlive it.
-    if (el !== previous) {
-      this._shiftState.reset();
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
-    }
-
-    this._targetElement = el;
-    this._targetSource = "explicit";
-
-    if (this._openValue) {
-      this._inputModeSuppression.suppress();
-    }
-    // Always sync highlight: cleans up listeners on the old target even
-    // when the keyboard is closed, preventing a listener leak.
-    this._physicalKeyHighlight.sync();
-
-    if (el !== previous) {
-      this.fireDecoratorEvent("active-control-change", { activeElement: el });
-    }
+    this._retarget(el, "explicit");
   }
 
   /**
@@ -1334,6 +1278,7 @@ class KioskKeyboard extends UI5Element {
    */
   setTargetResolver(resolver: TargetResolver | null): void {
     this._targetResolver = resolver;
+    this._syncTargetBindings();
   }
 
   /**
@@ -1369,10 +1314,7 @@ class KioskKeyboard extends UI5Element {
   reset(): void {
     // Abort (not commit) any in-progress composition: reset discards the
     // interaction rather than flushing a half-formed syllable to the target.
-    if (this._middleware) {
-      this._middleware.reset();
-      this._middleware = null;
-    }
+    this._endComposition("reset");
     this._backspaceRepeat.stop();
     if (this._variantPopup) this._variantGesture.close();
     this._variantGesture.stop();
@@ -1812,12 +1754,9 @@ class KioskKeyboard extends UI5Element {
   private _ensureMiddleware(): CompositionMiddleware | null {
     const factory = getMiddlewareFactory(this._layoutState.resolvedName(), this._foldCache.get().middleware);
     if (factory !== this._middlewareFactory) {
-      if (this._middleware) {
-        // Commit the buffer to the target: `reset()` would drop a half-typed syllable,
-        // and the preedit `commit()` finalises is already written into the input.
-        this._middleware.commit();
-        this._middleware = null;
-      }
+      // Commit the buffer to the target: `reset()` would drop a half-typed syllable,
+      // and the preedit `commit()` finalises is already written into the input.
+      this._endComposition("commit");
       this._middlewareFactory = factory;
     }
     if (!this._middleware && factory) this._middleware = factory();
@@ -2021,11 +1960,52 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
+   * Ends the live composition: `commit` finalises the preedit in the input it was
+   * typed into, `reset` discards it. Either way the middleware goes, since it holds
+   * that input's preedit offsets.
+   */
+  private _endComposition(how: "commit" | "reset"): void {
+    if (!this._middleware) return;
+    if (how === "commit") this._middleware.commit();
+    else this._middleware.reset();
+    this._middleware = null;
+  }
+
+  /**
+   * The one target transition. A real switch commits the composition, resets
+   * shift (a same-input re-set is a caret reposition that keeps both, as in the
+   * UI5 twin) and fires `active-control-change`; every call re-points the
+   * target-bound resources at what the keyboard now resolves. Disconnect
+   * teardown is the only other writer of the target, and fires nothing.
+   */
+  private _retarget(el: HTMLInputElement | HTMLTextAreaElement | null, source: TargetSource): void {
+    const switched = el !== this._targetElement;
+    if (switched) {
+      this._endComposition("commit");
+      this._shiftState.reset();
+    }
+    this._targetElement = el;
+    this._targetSource = source;
+    this._syncTargetBindings();
+    if (switched) this.fireDecoratorEvent("active-control-change", { activeElement: el });
+  }
+
+  /**
+   * Moves an open keyboard's inputmode claim and the physical-key listeners onto
+   * the resolved target. Also run when `controls` or the resolver changes what
+   * that is without a new explicit target.
+   */
+  private _syncTargetBindings(): void {
+    if (this._openValue) {
+      this._inputModeSuppression.restore();
+      this._inputModeSuppression.suppress();
+    }
+    this._physicalKeyHighlight.bind(this._resolvedTarget());
+  }
+
+  /**
    * The element that receives typed characters. Assigning it keeps the host's
-   * `aria-controls` pointed at the current target, so every write site - the
-   * auto-show callback, `setTargetElement`, the auto-target in `_performOpen`,
-   * the stale-target purge and disconnect teardown - stays in sync through the
-   * one accessor rather than a sync call each could forget.
+   * `aria-controls` pointed at the current target.
    */
   private get _targetElement(): HTMLInputElement | HTMLTextAreaElement | null {
     return this._targetElementValue;
@@ -2060,15 +2040,18 @@ class KioskKeyboard extends UI5Element {
     return node instanceof Element ? node.id : "";
   }
 
+  /** The resolved target, after retiring a target that has left the document. */
   private _resolveTarget(): HTMLInputElement | HTMLTextAreaElement | null {
-    if (this._targetElement) {
-      if (!this._targetElement.isConnected) {
-        this._targetElement = null;
-        this._targetSource = "explicit";
-      } else {
-        return this._targetElement;
-      }
-    }
+    if (this._targetElement && !this._targetElement.isConnected) this._retarget(null, "explicit");
+    return this._resolvedTarget();
+  }
+
+  /**
+   * The connected target, else the single `controls` entry's input. Side-effect
+   * free, so the target transition itself can read it.
+   */
+  private _resolvedTarget(): HTMLInputElement | HTMLTextAreaElement | null {
+    if (this._targetElement?.isConnected) return this._targetElement;
     const ids = this._controlsList;
     if (ids.length === 1) {
       const el = document.getElementById(ids[0]!);
