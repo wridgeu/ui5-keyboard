@@ -509,6 +509,8 @@ The scope stack controls which hotkeys are active. The global scope is always at
 
 Matching order: the dispatcher checks the topmost scope first. If no scoped handler matches the key, global-scope handlers fire as a fallback. In the diagram above, a hotkey registered with `scope: "confirmDialog"` fires first; if no match is found there, global handlers are checked. Handlers in `"detail"` do not fire while `"confirmDialog"` is on top.
 
+Hotkey matching reads the active scope once per keydown, so a scope pushed or released inside a hotkey callback applies to hotkey matching from the next key. The same keydown's sequence step already sees the new scope.
+
 Scope stack guards:
 
 - `pushScope("__global__")` throws. The global scope is always present and must not be pushed manually.
@@ -518,6 +520,8 @@ Scope stack guards:
 #### Popup Overlay Pattern
 
 Dialogs and popovers typically push a dedicated scope so their hotkeys shadow the parent view. When the popup closes, releasing the scope restores the parent's hotkeys automatically. The release is safe after a route change too: router integration replaces only its own entry, so the dialog's entry stays on top until the dialog releases it.
+
+Release the handle from the dialog's close event (`afterClose`): Escape and `closeOnNavigation` close the dialog too, and the router never clears a manually pushed scope.
 
 ```ts
 // In a controller that opens a confirmation dialog:
