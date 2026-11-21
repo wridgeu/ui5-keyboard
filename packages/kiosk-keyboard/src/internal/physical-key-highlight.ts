@@ -2,6 +2,7 @@ import Element from "sap/ui/core/Element";
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract";
 import { keyPositionOf, type KeyPosition } from "./dom";
 import { NativeDispatchableKeyNames } from "../library";
+import { isDispatchedFKey } from "./fkey-controller";
 import type { ShiftState } from "./shift-state";
 
 /** Maps non-derivable KeyboardEvent.key names to special-key data-key values. */
@@ -90,11 +91,12 @@ export default class PhysicalKeyHighlight {
    * delegates to visual key highlighting.
    */
   private _onPhysicalKey(event: DelegatedKeyboardEvent, down: boolean): void {
-    this._highlightKey(event.key, down);
-
     // UI5 event delegation wraps the native event; unwrap to access
     // getModifierState which is not forwarded to the wrapper.
     const native = event.originalEvent ?? event;
+    if (isDispatchedFKey(native)) return;
+
+    this._highlightKey(event.key, down);
     const capsLock = typeof native.getModifierState === "function" && native.getModifierState("CapsLock");
     this._shiftState.syncFromPhysical(native.shiftKey, capsLock);
   }

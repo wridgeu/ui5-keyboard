@@ -20,6 +20,14 @@ export interface FKeyHost {
   handleNavigationKey(fkeyName: string, extend: boolean): void;
 }
 
+/** The keydowns {@link FKeyController} dispatched itself, so no physical-key reader mistakes one for hardware. */
+const dispatchedKeydowns = new WeakSet<Event>();
+
+/** Whether `event` is a keydown the keyboard synthesized for an on-screen F-key rather than a physical key. */
+export function isDispatchedFKey(event: Event): boolean {
+  return dispatchedKeydowns.has(event);
+}
+
 /**
  * Dispatches an F-key according to `fKeyMode` (mirrors the web component's
  * `_handleFKey`). The cancelable keyPress is expected to have already fired and
@@ -124,6 +132,7 @@ export default class FKeyController {
       cancelable: true,
       shiftKey,
     });
+    dispatchedKeydowns.add(nativeEvent);
 
     return this._resolveNativeFKeyTarget().dispatchEvent(nativeEvent);
   }

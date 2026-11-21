@@ -386,6 +386,32 @@ QUnit.test("Physical F-key highlights virtual F-key", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("Native fKeyMode: the dispatched keydown is not read back as a physical key", async (assert) => {
+  const input = new Input();
+  const kb = new KioskKeyboard({
+    layout: "test-qwerty-fk",
+    controls: [input.getId()],
+    fKeyMode: FKeyMode.Native,
+    customLayouts: [new CustomLayout({ name: "test-qwerty-fk", rows: qwertyFk })],
+  });
+  input.placeAt("qunit-fixture");
+  await placeAndWait(kb);
+  input.focus();
+
+  tapKey(kb, "{shift}");
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  assert.ok(isCapsLock(kb), "Precondition: Caps Lock is latched");
+
+  tapKey(kb, "{fkey:F3}");
+  await waitForRender();
+  assert.ok(isCapsLock(kb), "Caps Lock survives the natively dispatched F-key");
+  assert.notOk(hasKeyClass(kb, "{fkey:F3}", DOM.classes.keyHighlight), "the tapped keycap is not mirrored as held");
+
+  input.destroy();
+  kb.destroy();
+});
+
 QUnit.test("Native fKeyMode dispatches keydown and runs native action", async (assert) => {
   const input = new Input();
   const kb = new KioskKeyboard({
