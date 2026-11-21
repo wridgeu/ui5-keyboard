@@ -922,3 +922,59 @@ QUnit.test("suppressInPopups: setOptions updates suppression", (assert) => {
   fireKey("i");
   assert.strictEqual(count, 1, "Sequence fires after setOptions({ suppressInPopups: false })");
 });
+
+QUnit.test(
+  "onPending: a sequence unregistered by an earlier onPending in the same keydown is not notified",
+  (assert) => {
+    const manager = createHotkeyManager();
+    const pendingB: number[] = [];
+    // Declared before `a` so a's onPending can reach it; assigned right after.
+    let b: { unregister(): void } | null = null;
+
+    manager.register("x g i", () => {}, {
+      onPending: (info) => {
+        if (info.completedSteps === 2) b!.unregister();
+      },
+    });
+    b = manager.register("x g h", () => {}, {
+      onPending: (info) => {
+        pendingB.push(info.completedSteps);
+      },
+    });
+
+    fireKey("x");
+    fireKey("g");
+
+    assert.deepEqual(pendingB, [1], "b is notified for x, not for g after it was unregistered");
+  },
+);
+
+QUnit.test("onPending: a sibling sequence starts when no callback destroys the manager", (assert) => {
+  const manager = createHotkeyManager();
+  let pendingB = 0;
+  manager.register("g i", () => {}, { onPending: () => {} });
+  manager.register("g h", () => {}, {
+    onPending: () => {
+      pendingB++;
+    },
+  });
+
+  fireKey("g");
+
+  assert.strictEqual(pendingB, 1, "b is notified on g");
+});
+
+QUnit.test("onPending: destroying the manager from onPending stops sibling sequences", (assert) => {
+  const manager = createHotkeyManager();
+  let pendingB = 0;
+  manager.register("g i", () => {}, { onPending: () => manager.destroy() });
+  manager.register("g h", () => {}, {
+    onPending: () => {
+      pendingB++;
+    },
+  });
+
+  fireKey("g");
+
+  assert.strictEqual(pendingB, 0, "b is not notified after the manager was destroyed");
+});
