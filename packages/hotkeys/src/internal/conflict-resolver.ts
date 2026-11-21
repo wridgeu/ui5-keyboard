@@ -29,11 +29,8 @@ export default class ConflictResolver {
   ): void {
     if (conflictBehavior === ConflictBehavior.Allow) return;
 
-    // Callback (lazy) targets resolve to an element only at dispatch time, so two
-    // callback-target hotkeys cannot be compared by element here. Matching them by
-    // hotkey alone produced false conflicts - a blocking throw (Error) or a silent
-    // removal (Replace) of a registration that may target a different element. Skip
-    // conflict handling for them; genuine overlaps are resolved at dispatch time.
+    // Callback targets resolve to an element only at dispatch time, so they
+    // cannot be compared here; skip conflict handling for them.
     if (target?.kind === "callback") {
       Log.debug(
         `Conflict check skipped for callback-target hotkey "${normalizedHotkey}" in scope "${scope}" ` +
@@ -44,7 +41,6 @@ export default class ConflictResolver {
       return;
     }
 
-    // Use scope-bucket lookup instead of iterating all registrations
     const bucket = this._store.getBucket(scope);
     if (!bucket) return;
     const regs = target === null ? bucket.untargeted : this._store.getTargetRegistrations(bucket, target.el);

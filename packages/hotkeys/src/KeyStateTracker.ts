@@ -8,13 +8,8 @@ const LOG_COMPONENT = "ui5.hotkeys.KeyStateTracker";
 /**
  * Tracks which keys are currently held down.
  *
- * Receives events from EventDispatcher via `processKeyDown`, `processKeyUp`,
- * and `processBlur` - does NOT own any DOM listeners.
- *
  * Includes a macOS fix for stuck keys when a modifier is released
  * (Cmd+Tab swallows the Tab keyup on macOS).
- *
- * Plain class - no UI5 lifecycle dependency.
  *
  * @public - exported for type usage. Obtain an instance via
  * `HotkeyManager.getKeyStateTracker()`.

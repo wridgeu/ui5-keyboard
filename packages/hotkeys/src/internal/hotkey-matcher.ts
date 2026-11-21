@@ -107,7 +107,6 @@ export default class HotkeyMatcher {
         }
 
         if (!resolved || !pathSet.has(resolved)) {
-          // Target resolved but not in path
           if (resolved && skipInfo && matchesKeyboardEvent(event, reg.parsedHotkey)) {
             recordSkip(skipInfo, UnhandledReason.TargetMismatch, reg, this._toRegistrationInfo);
           }

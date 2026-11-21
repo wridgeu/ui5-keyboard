@@ -144,13 +144,10 @@ class ScopeEntry implements ScopeHandle {
 /**
  * Keyboard shortcut manager for UI5 applications.
  *
- * Owns an internal EventDispatcher that attaches `keydown`, `keyup` and `blur`
- * listeners to `window` and dispatches matching hotkeys to registered callbacks
- * based on scope, input state, and dialog state. Focus tracking adds two more
- * on `document`, owned by FocusFallbackTracker.
- *
- * Extends `sap.ui.base.Object` for proper UI5 lifecycle integration
- * (metadata, destroy pattern).
+ * Dispatches matching hotkeys to registered callbacks based on scope, input
+ * state, and dialog state. Attaches capture-phase keydown/keyup and a blur
+ * listener to `window`, plus capture focusin/focusout on `document`;
+ * `destroy()` removes them all.
  *
  * @example
  * ```ts
@@ -382,7 +379,7 @@ export default class HotkeyManager extends BaseObject {
   // ──────────────────────────────────────────────
 
   /**
-   * Create a HotkeyRecorder. Keeps EventDispatcher internal.
+   * Create a HotkeyRecorder bound to this manager.
    *
    * @param options - Recorder callbacks (onRecord, onCancel).
    * @since 0.1.0
@@ -816,7 +813,6 @@ export default class HotkeyManager extends BaseObject {
     const target = getEventTarget(event);
     const isInput = isInputElement(target);
 
-    // Check popup state (lazy-loaded)
     const popupOpen = hasOpenPopup();
 
     const skipInfo: SkipInfo | null = this._unhandledCallback !== null ? { reason: UnhandledReason.NoMatch } : null;

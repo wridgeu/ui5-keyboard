@@ -23,8 +23,7 @@ export interface KeyEventInterceptor {
 
 /**
  * Event context produced by processHotkeys and forwarded to processSequences
- * and emitUnhandled through the dispatcher pipeline return value - no mutable
- * shared state.
+ * and emitUnhandled through the dispatcher pipeline return value.
  * @internal
  */
 export interface EventContext {
@@ -36,8 +35,7 @@ export interface EventContext {
 
 /**
  * Result of processHotkeys - carries both the consumed flag and the
- * event context that the later pipeline steps need. Eliminates the need
- * for temporal coupling via a shared mutable field.
+ * event context that the later pipeline steps need.
  * @internal
  */
 export interface HotkeyDispatchResult {
@@ -106,7 +104,7 @@ class DispatchGuard implements KeyboardDispatchGuard {
  * Owns all DOM listeners (`window` capture for keydown/keyup, `window` bubble for blur),
  * provides a deterministic 7-step dispatch pipeline, and exposes an RAII-style suspend guard.
  *
- * Instantiated and owned by HotkeyManager - not a singleton.
+ * Instantiated and owned by HotkeyManager.
  *
  * @internal - not part of the public API.
  */

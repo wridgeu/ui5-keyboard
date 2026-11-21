@@ -96,9 +96,6 @@ interface ActiveMatch {
  * Receives pre-filtered key events from the EventDispatcher's `window` listener
  * (no own listener) and matches multi-key sequences (e.g., ["G", "E"]
  * for go-to-editor).
- *
- * Receives a scope provider callback from HotkeyManager to access the
- * active scope without a reverse singleton dependency.
  */
 export default class SequenceManager {
   private _registrations: Map<string, SequenceRegistration> = new Map();
@@ -382,7 +379,7 @@ export default class SequenceManager {
   }
 
   private _indexRegistration(reg: SequenceRegistration): void {
-    // Registrations are guaranteed non-empty: register() rejects empty sequences.
+    // parseSequenceSteps only routes strings with >= 2 steps here.
     const firstKey = reg.parsedSteps[0]!.key;
     let keyMap = this._scopeKeyIndex.get(reg.scope);
     if (!keyMap) {
@@ -398,7 +395,6 @@ export default class SequenceManager {
   }
 
   private _deindexRegistration(reg: SequenceRegistration): void {
-    // Registrations are guaranteed non-empty: register() rejects empty sequences.
     const firstKey = reg.parsedSteps[0]!.key;
     const keyMap = this._scopeKeyIndex.get(reg.scope);
     if (!keyMap) return;

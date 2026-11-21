@@ -93,8 +93,8 @@ type Modifier = "Ctrl" | "Control" | "Shift" | "Alt" | "Meta" | "Mod" | "Cmd" | 
 /**
  * Type-safe hotkey string with IDE autocomplete for known combinations.
  *
- * The `(string & {})` escape hatch ensures all existing `string` callers
- * still compile, while IDEs suggest known key/modifier combinations.
+ * The `(string & {})` member accepts any string while IDEs still suggest
+ * known key/modifier combinations.
  *
  * @since 0.1.0
  */
@@ -233,6 +233,11 @@ export interface HotkeyOptions {
    * not yet available).
    *
    * For nested targets with the same key, the innermost matching target fires.
+   *
+   * A static `Element` also matches a later node with the same `id`, so a UI5
+   * rerender that replaces the node keeps the binding. For a control, prefer
+   * the callback form (`() => control.getDomRef()`), which always resolves to
+   * the current node.
    *
    * **Dispatch order:** Target-scoped handlers fire before untargeted handlers.
    * A target-scoped match with `stopPropagation: true` (the default) prevents

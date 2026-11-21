@@ -19,7 +19,7 @@ export interface HotkeyRecorderOptions {
 /**
  * Records a keyboard shortcut from user input.
  *
- * Not a singleton - multiple recorders may exist (e.g., one per settings row).
+ * Multiple recorders may exist (e.g., one per settings row).
  * Created via `HotkeyManager.createRecorder()`.
  *
  * Usage:
@@ -54,7 +54,7 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
   }
 
   /**
-   * Start recording. Sets this recorder as the EventDispatcher's interceptor.
+   * Start recording. Starting a recorder detaches any other recorder that is currently recording.
    *
    * @since 0.1.0
    */
