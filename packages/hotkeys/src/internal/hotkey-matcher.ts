@@ -97,14 +97,10 @@ export default class HotkeyMatcher {
       const bucket = this._index.getBucket(scope);
       if (!bucket || bucket.callbackTargets.size === 0) continue;
 
-      for (const reg of bucket.callbackTargets) {
-        // callbackTargets only ever holds callback-target registrations.
-        const target = reg.options.target;
-        if (target?.kind !== "callback") continue;
-
+      for (const [reg, resolveTarget] of bucket.callbackTargets) {
         let resolved: Element | null;
         try {
-          resolved = target.fn();
+          resolved = resolveTarget();
         } catch (error) {
           Log.warning(`target callback threw for "${reg.normalizedHotkey}": ${error}`, undefined, LOG_COMPONENT);
           continue;

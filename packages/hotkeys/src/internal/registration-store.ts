@@ -9,8 +9,8 @@ interface ScopeRegistrationBucket {
   targets: Map<EventTarget, Set<HotkeyRegistration>>;
   /** Secondary index: element id → registrations, for nodes replaced by a rerender. */
   targetIdIndex: Map<string, Set<HotkeyRegistration>>;
-  /** Registrations with callback-based targets, resolved lazily at dispatch time. */
-  callbackTargets: Set<HotkeyRegistration>;
+  /** Registrations with callback-based targets → that callback, resolved lazily at dispatch time. */
+  callbackTargets: Map<HotkeyRegistration, () => Element | null>;
 }
 
 /**
@@ -108,7 +108,7 @@ export default class RegistrationStore {
     }
 
     if (target.kind === "callback") {
-      bucket.callbackTargets.add(registration);
+      bucket.callbackTargets.set(registration, target.fn);
       return;
     }
 
@@ -174,7 +174,7 @@ export default class RegistrationStore {
         untargeted: new Set<HotkeyRegistration>(),
         targets: new Map<EventTarget, Set<HotkeyRegistration>>(),
         targetIdIndex: new Map<string, Set<HotkeyRegistration>>(),
-        callbackTargets: new Set<HotkeyRegistration>(),
+        callbackTargets: new Map<HotkeyRegistration, () => Element | null>(),
       };
       this._byScope.set(scope, bucket);
     }

@@ -208,7 +208,8 @@ export default class HotkeyManager extends BaseObject {
       processHotkeys: (e) => this._processHotkeys(e),
       processSequences: (e, ctx) => this._processSequences(e, ctx),
       resetSequences: () => this._sequenceManager?.reset(),
-      emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx),
+      emitSuspended: (e) => this._emitSuspended(e),
+      emitUnhandled: (e, ctx) => this._emitUnhandled(e, ctx),
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
     this._focusFallback = new FocusFallbackTracker();
@@ -596,7 +597,7 @@ export default class HotkeyManager extends BaseObject {
     // The three bucket sections are disjoint: the index files each registration
     // under exactly one of them, and target swaps deindex before reindexing.
     const result: HotkeyRegistrationInfo[] = [];
-    const add = (regs: Set<HotkeyRegistration>) => {
+    const add = (regs: Iterable<HotkeyRegistration>) => {
       for (const reg of regs) {
         result.push(this._toRegistrationInfo(reg));
       }
@@ -606,7 +607,7 @@ export default class HotkeyManager extends BaseObject {
     for (const regs of bucket.targets.values()) {
       add(regs);
     }
-    add(bucket.callbackTargets);
+    add(bucket.callbackTargets.keys());
 
     if (this._sequenceManager) {
       result.push(...this._sequenceManager.getRegistrations().filter((r) => r.scope === normalizedScope));
@@ -850,56 +851,41 @@ export default class HotkeyManager extends BaseObject {
   }
 
   /**
-   * Emit an unhandled callback.
-   *
-   * When `forcedReason` is non-null (e.g., Suspended), it is used directly
-   * with no `skippedRegistration`. When null, uses `hotkeyContext` forwarded
-   * from `_processHotkeys` via the dispatcher pipeline return value.
+   * Emit the unhandled callback for a keydown blocked by suspension. The
+   * matching pipeline never ran, so the context is read fresh.
    */
-  private _emitUnhandled(
-    event: KeyboardEvent,
-    forcedReason: UnhandledReason | null,
-    hotkeyContext: EventContext | null,
-  ): void {
+  private _emitSuspended(event: KeyboardEvent): void {
     if (!this._unhandledCallback) return;
-
-    let reason: UnhandledReason;
-    let skippedRegistration: HotkeyRegistrationInfo | undefined;
-    let activeScope: string;
-    let isInput: boolean;
-    let popupOpen: boolean;
-
-    if (forcedReason !== null) {
-      // Forced reason (e.g., Suspended) - compute fresh context since
-      // _processHotkeys was never called for this event.
-      reason = forcedReason;
-      activeScope = this.getActiveScope();
-      const target = getEventTarget(event);
-      isInput = isInputElement(target);
-      popupOpen = hasOpenPopup();
-    } else {
-      // Use context forwarded from _processHotkeys - the dispatcher always
-      // provides it when no forced reason is set.
-      const context = hotkeyContext!;
-      activeScope = context.activeScope;
-      isInput = context.isInput;
-      popupOpen = context.popupOpen;
-      const skipInfo = context.skipInfo;
-      reason = skipInfo?.reason ?? UnhandledReason.NoMatch;
-      skippedRegistration = skipInfo?.registration;
-    }
-
-    const context: UnhandledContext = {
+    this._invokeUnhandled({
       event,
-      reason,
-      activeScope,
-      isInput,
-      isPopupOpen: popupOpen,
-      skippedRegistration,
-    };
+      reason: UnhandledReason.Suspended,
+      activeScope: this.getActiveScope(),
+      isInput: isInputElement(getEventTarget(event)),
+      isPopupOpen: hasOpenPopup(),
+      skippedRegistration: undefined,
+    });
+  }
 
+  /**
+   * Emit the unhandled callback for a keydown nothing consumed, with the
+   * most specific skip reason `_processHotkeys` recorded.
+   */
+  private _emitUnhandled(event: KeyboardEvent, eventContext: EventContext): void {
+    if (!this._unhandledCallback) return;
+    const { skipInfo } = eventContext;
+    this._invokeUnhandled({
+      event,
+      reason: skipInfo?.reason ?? UnhandledReason.NoMatch,
+      activeScope: eventContext.activeScope,
+      isInput: eventContext.isInput,
+      isPopupOpen: eventContext.popupOpen,
+      skippedRegistration: skipInfo?.registration,
+    });
+  }
+
+  private _invokeUnhandled(context: UnhandledContext): void {
     try {
-      this._unhandledCallback(context);
+      this._unhandledCallback?.(context);
     } catch (error) {
       Log.error("Unhandled-key callback threw", error instanceof Error ? error : String(error), LOG_COMPONENT);
     }

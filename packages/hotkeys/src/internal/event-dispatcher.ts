@@ -1,5 +1,5 @@
 import Log from "sap/base/Log";
-import { Platform, UnhandledReason } from "../library";
+import { Platform } from "../library";
 import { MODIFIER_KEYS } from "./constants";
 import { INTERNAL_TOKEN } from "./internal-token";
 import type { SkipInfo } from "./skip-reason";
@@ -59,14 +59,10 @@ export interface HotkeyDispatchHandler {
   processSequences(event: KeyboardEvent, eventContext: EventContext): boolean;
   /** Drop pending sequence matches: a key the sequence step never sees breaks the sequence. */
   resetSequences(): void;
-  /**
-   * Unhandled emission - called when the event was not consumed.
-   * `forcedReason` is set by the dispatcher when the event was blocked before reaching
-   * the matching pipeline (e.g., `Suspended`); `eventContext` is null in that case.
-   * When null, uses `eventContext` from processHotkeys to determine the most
-   * specific reason.
-   */
-  emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null, eventContext: EventContext | null): void;
+  /** Unhandled emission for a keydown blocked by suspension before matching ran. */
+  emitSuspended(event: KeyboardEvent): void;
+  /** Unhandled emission for a keydown nothing consumed, with the context from processHotkeys. */
+  emitUnhandled(event: KeyboardEvent, eventContext: EventContext): void;
 }
 
 /**
@@ -309,7 +305,7 @@ export default class EventDispatcher {
     // Step 4: Suspend guard check
     if (this._guards.size > 0) {
       this._handler.resetSequences();
-      this._handler.emitUnhandled(event, UnhandledReason.Suspended, null);
+      this._handler.emitSuspended(event);
       return;
     }
 
@@ -327,7 +323,7 @@ export default class EventDispatcher {
 
     // Step 7: Unhandled emission - passes eventContext from step 5 explicitly
     if (!hotkeyResult.consumed && !sequenceConsumed) {
-      this._handler.emitUnhandled(event, null, hotkeyResult.eventContext);
+      this._handler.emitUnhandled(event, hotkeyResult.eventContext);
     }
   }
 

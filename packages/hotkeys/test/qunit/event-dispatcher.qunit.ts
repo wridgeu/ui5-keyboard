@@ -515,6 +515,7 @@ QUnit.test("clearInterceptor is owner-safe - wrong owner cannot clear", (assert)
     }),
     processSequences: () => false,
     resetSequences: () => {},
+    emitSuspended: () => {},
     emitUnhandled: () => {},
   };
   const dispatcher = new EventDispatcher(handler, Platform.Windows);
