@@ -32,7 +32,7 @@ function _getLanguage(): string {
 }
 
 /**
- * Initialize the i18n bundle. Called once during component registration.
+ * Initialize the i18n bundle. Called once, from the `Assets.ts` import.
  * Uses the UI5 WC framework's async bundle loading.
  *
  * The bundle resolves after first render in non-English locales, so any
@@ -98,7 +98,7 @@ export function getText(key: string, fallback: string, ...args: (string | number
   const i18nText = lookupI18nText(key);
   const defaultText = i18nText?.defaultText ?? fallback;
 
-  // Try the UI5 WC i18n bundle first (locale-aware). The bundle runs
+  // A loaded bundle overrides the formatted default. The bundle runs
   // MessageFormat, so `{0}`/`{1}` placeholders are filled from `args`.
   let resolved = _formatMessage(defaultText, args);
   if (_bundle && i18nText) {

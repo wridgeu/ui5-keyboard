@@ -292,7 +292,7 @@ class KioskKeyboard extends UI5Element {
    * @param sources Layout names and row arrays, in the order they should appear.
    * @returns The composed rows, ready to use as a custom layout's `rows`.
    *
-   * @example A navigation row above the built-in German layout
+   * Example, a navigation row above the built-in German layout:
    * ```ts
    * import navRow from "kiosk-keyboard-webc/layouts/nav-row";
    *
@@ -377,8 +377,7 @@ class KioskKeyboard extends UI5Element {
    * If the resolver throws, the error is logged and the default text is used.
    * Pass `null` to clear a previously set resolver.
    *
-   * Example (the `@example` tag is intentionally avoided: it is rejected by
-   * the CEM dev-mode validation; see docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md):
+   * Example:
    * ```ts
    * // Add French translations
    * KioskKeyboard.setI18nResolver((key, locale, defaultText) => {
@@ -778,7 +777,7 @@ class KioskKeyboard extends UI5Element {
   /** Owns the `inputmode="none"` swap and its cross-instance refcount. */
   private readonly _inputModeSuppression = new NativeInputModeSuppression(() => this._resolvedTarget());
 
-  // ── Multi-keyboard instance isolation ──
+  // ── Page-wide state shared by all instances ──
   private static readonly _instances = new Set<KioskKeyboard>();
   private static _pendingI18nRefresh = false;
   private static _nextAutoId = 0;
@@ -830,7 +829,7 @@ class KioskKeyboard extends UI5Element {
     NATIVE_DISPATCHABLE_KEYS,
   );
 
-  // ── Bound listeners (document-level) ──
+  // ── Bound listeners ──
   private readonly _boundEscape = (e: Event) => {
     if (e instanceof KeyboardEvent) this._onDocumentEscape(e);
   };
@@ -1316,16 +1315,16 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * Recomputes responsive height classes from the current live DOM.
+   * Recomputes the responsive height tier (the host's `cq-tier` attribute) from the current live DOM.
    *
    * Call this after runtime styling changes that alter intrinsic keyboard height
    * without producing a reliable resize signal, for example when compact mode
    * or custom CSS vars change the underlying natural content height within a
    * fixed-height host.
    *
-   * The class update is deferred to the next animation frame to avoid
-   * forced reflow. Query the DOM for responsive classes after a
-   * `requestAnimationFrame` callback, not synchronously.
+   * The update is deferred to the next animation frame to avoid forced
+   * reflow. Read `cq-tier` after a `requestAnimationFrame` callback, not
+   * synchronously.
    *
    * @public
    * @since 0.1.0
@@ -1654,15 +1653,8 @@ class KioskKeyboard extends UI5Element {
       if (!allowed) return;
       this._shiftState.toggle();
 
-      // Optimistic DOM update: apply shift-active / caps-lock classes
-      // immediately for instant visual feedback, before the rAF-deferred
-      // Preact re-render cycle.  The template class binding maintains the
-      // state across subsequent re-renders (same pattern as the physical-key
-      // highlight controller's _highlightKey).
-      // Preact will redundantly setAttribute("class", ...) on the next
-      // render because its VDOM-to-VDOM diff always detects a change
-      // (class objects are freshly created each render, never === equal).
-      // The redundant DOM write is idempotent and harmless.
+      // Apply the classes now; the template re-derives them on the rAF render
+      // (pinned by the "shift feedback latency" tests).
       const isShifted = this._shiftState.isShifted;
       const isCaps = this._shiftState.isCapsLock;
       keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyShiftActive, isShifted);
@@ -1747,7 +1739,7 @@ class KioskKeyboard extends UI5Element {
   /**
    * One Backspace deletion for an auto-repeat tick: fires the cancelable
    * `key-press`, runs composition middleware, then deletes one grapheme.
-   * Mirrors the `{backspace}` branch of `_onKeyClick`. Returns `false` only
+   * Mirrors the `{backspace}` branch of `_performKeyAction`. Returns `false` only
    * when the key fired but nothing was deleted (empty input / read-only /
    * cursor at start), which stops the repeat.
    */
@@ -1872,7 +1864,7 @@ class KioskKeyboard extends UI5Element {
     this._autoReleaseShift();
   }
 
-  // ── Layout switch / F-key handling ──
+  // ── F-key handling ──
 
   private _handleFKeyPress(fkeyName: string, shifted: boolean): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });

@@ -167,9 +167,10 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
         ))}
       </div>
       {/* Accent-variant popup. Hosted in a `ui5-popover` (top-layer, unclipped)
-          for placement, collision handling, outside-click / Escape dismissal,
-          and focus restore; onAfterRendering sets the opener and open state
-          imperatively. The option toolbar below is our slotted content. */}
+          for placement, collision handling and outside-click / Escape dismissal;
+          focus return is the controller's (`preventFocusRestore`).
+          onAfterRendering sets the opener and open state imperatively. The
+          option toolbar below is our slotted content. */}
       {variantPopup ? (
         <ui5-popover
           class={KIOSK_KEYBOARD_DOM.classes.variantPopupHost}

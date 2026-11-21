@@ -68,7 +68,7 @@ export class PhysicalKeyHighlightController {
   private _highlightKey(physicalKey: string, pressed: boolean): void {
     const dataKey = this._physicalKeyToDataKey(physicalKey);
 
-    // Immediate DOM manipulation for instant visual feedback
+    // _highlightedKey is not reactive: paint now; the template keeps it across unrelated re-renders.
     if (pressed) {
       const selector = `${KIOSK_KEYBOARD_DOM.selectors.keyByValue(dataKey)}, ${KIOSK_KEYBOARD_DOM.selectors.keyByShiftValue(physicalKey)}`;
       const el = this._host.getShadowRoot()?.querySelector<HTMLElement>(selector);
