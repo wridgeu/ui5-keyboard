@@ -119,6 +119,27 @@ QUnit.test("A trusted modifier keyup releases it and stuck keys in one change on
   assert.deepEqual(changes, [[]], "One change releases Meta and the stuck Tab together");
 });
 
+QUnit.test("A trusted event that releases a stuck modifier reports one change", (assert) => {
+  const tracker = createHotkeyManager().getKeyStateTracker() as KeyStateTracker;
+  const changes: string[][] = [];
+  tracker.setChangeCallback((keys) => changes.push([...keys]));
+
+  fireKey("Alt", { altKey: true, code: "AltRight" });
+  changes.length = 0;
+  tracker.processKeyDown(trustedKeyEvent("a", { code: "KeyA" }));
+  assert.deepEqual(changes, [["a"]], "keydown: the release and the press land together");
+
+  fireKey("Alt", { altKey: true, code: "AltRight" });
+  changes.length = 0;
+  tracker.processKeyDown(trustedKeyEvent("a", { code: "KeyA" }));
+  assert.deepEqual(changes, [["a"]], "keydown repeat of a held key still reports the release");
+
+  fireKey("Alt", { altKey: true, code: "AltRight" });
+  changes.length = 0;
+  tracker.processKeyUp(trustedKeyEvent("a", { code: "KeyA" }));
+  assert.deepEqual(changes, [[]], "keyup: the release and the key's own release land together");
+});
+
 QUnit.test("Synthetic key events do not release held modifiers", (assert) => {
   const tracker = createHotkeyManager().getKeyStateTracker() as KeyStateTracker;
 

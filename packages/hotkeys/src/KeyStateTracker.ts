@@ -79,14 +79,18 @@ export default class KeyStateTracker {
    * @internal
    */
   processKeyDown(event: KeyboardEvent): void {
-    if (this._releaseStaleModifiers(event)) this._notifyChange();
+    const released = this._releaseStaleModifiers(event);
+    if (this._recordKeyDown(event) || released) this._notifyChange();
+  }
+
+  private _recordKeyDown(event: KeyboardEvent): boolean {
     const key = event.key;
     const code = event.code;
     let changed = false;
 
     if (code) {
       const previousKey = this._heldByCode.get(code);
-      if (previousKey === key) return;
+      if (previousKey === key) return false;
 
       if (previousKey !== undefined) {
         changed = this._decrementHeldKey(previousKey) || changed;
@@ -95,13 +99,10 @@ export default class KeyStateTracker {
       this._heldByCode.set(code, key);
       changed = this._incrementHeldKey(key) || changed;
     } else {
-      if (this._heldKeyCounts.has(key)) return;
+      if (this._heldKeyCounts.has(key)) return false;
       changed = this._incrementHeldKey(key);
     }
-
-    if (changed) {
-      this._notifyChange();
-    }
+    return changed;
   }
 
   /**
@@ -110,19 +111,19 @@ export default class KeyStateTracker {
    * @internal
    */
   processKeyUp(event: KeyboardEvent): void {
-    if (this._releaseStaleModifiers(event)) this._notifyChange();
+    const released = this._releaseStaleModifiers(event);
+    if (this._recordKeyUp(event) || released) this._notifyChange();
+  }
+
+  private _recordKeyUp(event: KeyboardEvent): boolean {
     const key = event.key;
 
     // macOS stuck-key fix: When a modifier is released,
     // clear all non-modifier keys. On macOS, Cmd+Tab swallows the Tab keyup,
     // leaving it permanently "stuck".
     if (this._platform === Platform.Mac && MODIFIER_KEYS.has(key)) {
-      let changed = this._clearNonModifierKeys();
-      changed = this._releaseKeyEventIdentity(event) || changed;
-      if (changed) {
-        this._notifyChange();
-      }
-      return;
+      const changed = this._clearNonModifierKeys();
+      return this._releaseKeyEventIdentity(event) || changed;
     }
 
     let changed = this._releaseKeyEventIdentity(event);
@@ -133,10 +134,7 @@ export default class KeyStateTracker {
       const alternateCaseKey = key === key.toLowerCase() ? key.toUpperCase() : key.toLowerCase();
       changed = this._decrementHeldKey(alternateCaseKey);
     }
-
-    if (changed) {
-      this._notifyChange();
-    }
+    return changed;
   }
 
   /**
