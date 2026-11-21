@@ -21,6 +21,12 @@ export class NativeInputModeSuppression {
   private static readonly _suppressions = new WeakMap<HTMLElement, { original: string | null; refCount: number }>();
   private _suppressedElement: HTMLElement | null = null;
 
+  /** The `inputmode` the page authored on `el`, beneath any suppression of it. */
+  static authoredInputMode(el: HTMLElement): string | null {
+    const state = NativeInputModeSuppression._suppressions.get(el);
+    return state ? state.original : el.getAttribute("inputmode");
+  }
+
   /** @param _resolveTarget Live access to the resolved native input/textarea. */
   constructor(private readonly _resolveTarget: () => HTMLInputElement | HTMLTextAreaElement | null) {}
 

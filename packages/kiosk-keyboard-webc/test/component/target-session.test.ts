@@ -169,3 +169,30 @@ describe("kiosk-keyboard - Native F-key dispatch and the physical-key mirror", (
     expect(hasClass(kb, "{shift}", DOM.classes.keyShiftActive)).to.equal(true);
   });
 });
+
+describe("kiosk-keyboard - auto-type on refocus", () => {
+  it("re-detects from the authored inputmode after resetKeyboardType while open", async () => {
+    const box = await fixture<HTMLDivElement>(html`
+      <div>
+        <input id="b4-num" inputmode="numeric" />
+        <kiosk-keyboard docked auto-show auto-type mobile-keyboard="Custom" layout="qwerty"></kiosk-keyboard>
+      </div>
+    `);
+    const kb = box.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+    const input = box.querySelector<HTMLInputElement>("#b4-num")!;
+    await renderFinished();
+    input.focus();
+    await settle();
+    expect(kb.keyboardType, "precondition: detected on first focus").to.equal("Numpad");
+
+    kb.resetKeyboardType();
+    await settle();
+    expect(kb.keyboardType, "precondition: reset to Full").to.equal("Full");
+    kb.shadowRoot!.querySelector<HTMLElement>('[role="button"][tabindex="0"]')!.focus();
+    input.focus();
+    await settle();
+
+    expect(kb.open, "precondition: still open").to.equal(true);
+    expect(kb.keyboardType).to.equal("Numpad");
+  });
+});

@@ -1,4 +1,5 @@
 import { detectKeyboardType } from "./keyboard-type-detector.js";
+import { NativeInputModeSuppression } from "./native-inputmode-suppression.js";
 import type { KeyboardType } from "../types.js";
 
 /** Why the active target was set; drives focusout cleanup policy. */
@@ -112,9 +113,7 @@ export class AutoShowController {
     const inputEl = this._resolveAutoShowTarget(e);
     if (!inputEl) return;
 
-    // Detection reads the authored inputmode, so it runs before the retarget an
-    // open keyboard follows with inputmode="none" on the new target.
-    this._detectKeyboardType(inputEl, this._bridge.getTargetElement() !== inputEl);
+    this._detectKeyboardType(inputEl);
     this._bridge.retarget(inputEl, "autoShow");
     this.cancelPendingClose();
     if (!this._host.open) this._bridge.show();
@@ -141,17 +140,12 @@ export class AutoShowController {
   }
 
   /**
-   * Detects the keyboard type before the open. A refocus of the already-active target is not detectable while the keyboard
-   * is open: that element carries the inputmode="none" suppression written on
-   * its previous focus, which masks an authored numeric/decimal/tel value, so it
-   * keeps the type it already has. Closed, no target carries the mask, so a
-   * target set ahead of the first focus by setTargetElement() is still read
-   * from its authored markup.
+   * Detects the keyboard type from the authored markup, read beneath the
+   * inputmode="none" this or another keyboard wrote to suppress the native one.
    */
-  private _detectKeyboardType(inputEl: HTMLInputElement | HTMLTextAreaElement, targetChanged: boolean): void {
-    if (!targetChanged && this._host.open) return;
+  private _detectKeyboardType(inputEl: HTMLInputElement | HTMLTextAreaElement): void {
     if (!this._host.autoType || this._bridge.getKeyboardTypeSource() === "explicit") return;
-    const detected = detectKeyboardType(inputEl);
+    const detected = detectKeyboardType(inputEl, NativeInputModeSuppression.authoredInputMode(inputEl));
     if (detected !== this._host.keyboardType) {
       this._bridge.setKeyboardTypeInternal(detected);
     }
