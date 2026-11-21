@@ -419,6 +419,10 @@ class KioskKeyboard extends UI5Element {
    * Every change to it fires one `layout-change`; this getter is for reading the
    * state at any other moment.
    *
+   * The default is the locale's layout; `"qwerty"` is the fallback for a locale
+   * with none.
+   *
+   * @default "qwerty"
    * @public
    * @since 0.1.0
    */
