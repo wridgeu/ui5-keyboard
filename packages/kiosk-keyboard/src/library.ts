@@ -363,15 +363,14 @@ export { LATIN_DIACRITIC_VARIANTS } from "./internal/latin-variants";
 // library object at runtime, publishing an undefined ui5.kiosk member.
 export type { VariantTable } from "./internal/latin-variants";
 
+// The interface generator emits no `| null` union of its own for a custom type, so
+// the null lives in the alias, and a registered `DataType` name with no exported
+// alias of the same name makes the generator emit an import of a module that does
+// not exist. `VariantOverrideTable` is not spelled `VariantTable`: that name is
+// already exported above as the non-nullable table type consumers spread.
 /**
- * The shapes the row and variant-table properties accept, each `null` for "not
- * supplied". The interface generator emits no `| null` union of its own for a custom
- * type, so the null lives in the alias, and a registered `DataType` name with no
- * exported alias of the same name makes the generator emit an import of a module that
- * does not exist.
- *
- * `VariantOverrideTable` is deliberately not spelled `VariantTable`: that name is
- * already exported above as the non-nullable table type consumers spread.
+ * The rows a CustomLayout accepts, and the variant table the variants properties
+ * accept; `null` when not supplied.
  *
  * @public
  * @since 0.1.0

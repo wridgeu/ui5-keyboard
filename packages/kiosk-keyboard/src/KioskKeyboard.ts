@@ -1260,7 +1260,7 @@ export default class KioskKeyboard extends Control {
    * by an edit to a custom layout the active layout does not read.
    *
    * The cache is dropped **before** `super`, because `Control.prototype.invalidate`
-   * returns early while a rendering pass is in flight.
+   * returns early during the `onBeforeRendering` phase.
    */
   override invalidate(oOrigin?: ManagedObject): void {
     if (oOrigin instanceof CustomLayout) this._foldCache.drop();
@@ -1553,9 +1553,6 @@ export default class KioskKeyboard extends Control {
   setKeyboardType(type: KeyboardType): this {
     const previous = this.getKeyboardType();
     this.setProperty("keyboardType", type);
-    // Route through _setKeyboardTypeSource so the layout-source reset
-    // (webc parity, see _getResolvedLayout) fires for explicit changes too,
-    // not just for auto-detect.
     this._setKeyboardTypeSource("explicit");
     if (type !== previous) {
       this.fireKeyboardTypeChange({
@@ -1582,7 +1579,6 @@ export default class KioskKeyboard extends Control {
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
     this.setProperty("keyboardType", KeyboardType.Full);
-    // Route through _setKeyboardTypeSource so the layout-source reset fires.
     this._setKeyboardTypeSource("unset");
     if (KeyboardType.Full !== sPrevious) {
       this.fireKeyboardTypeChange({
@@ -2087,9 +2083,6 @@ export default class KioskKeyboard extends Control {
     if (held instanceof Popover) {
       popover = held;
     } else {
-      // Derive a stable id from the control (as UI5 core controls id their own
-      // internal sub-controls, e.g. sap.m.Select's `<id>-list`), rather than an
-      // auto-generated `__popoverN`.
       popover = new Popover(`${this.getId()}-variantPopover`, {
         showHeader: false,
         showArrow: true,

@@ -185,7 +185,7 @@ export function insertText(
   if (element) {
     setTargetValue(element, newValue, dom);
   } else {
-    // Target control destroyed - fall back to raw DOM value
+    // No owning UI5 element: write the DOM directly.
     dom.value = newValue;
   }
   try {
