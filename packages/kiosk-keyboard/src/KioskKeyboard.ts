@@ -1014,7 +1014,7 @@ export default class KioskKeyboard extends Control {
         this.fireLayoutChange(parameters);
       },
       resetShiftState: () => this._shiftState.reset(),
-      cancelPress: () => this._cancelAllPresses(),
+      leaveSurface: () => this._leaveSurface(),
       endComposition: () => this._dropComposition("commit"),
       focusAnchorValue: () => this._focusAnchorValue(),
       reseatFocusAnchor: (value) => this._reseatFocusAnchor(value),
@@ -1158,8 +1158,7 @@ export default class KioskKeyboard extends Control {
       // A disabled keyboard takes no input: every press ends, and the accent popup,
       // which renders into the static area where the disabled styling does not
       // reach it, closes rather than keep committing.
-      this._cancelAllPresses();
-      this._variantPopup.dismissOpen();
+      this._leaveSurface();
     }
     // The renderer handles the disabled CSS class (ui5KioskKeyboard--disabled)
     // and per-key aria-disabled attributes at render time. Uses setProperty
@@ -1180,8 +1179,7 @@ export default class KioskKeyboard extends Control {
       this._redirectFocusToTargetIfOwned();
       // A hidden keyboard holds no press, popup or open state (escape listener,
       // native keyboard suppression), docked or not.
-      this._cancelAllPresses();
-      this._variantPopup.dismissOpen();
+      this._leaveSurface();
       this.close();
     }
     return super.setVisible(isVisible);
@@ -1350,8 +1348,7 @@ export default class KioskKeyboard extends Control {
     this._dropComposition("reset");
     // A fresh input context cannot leave a keycap painted, a blur listener armed,
     // or a pending touchend still able to type.
-    this._cancelAllPresses();
-    this._variantPopup.dismissOpen();
+    this._leaveSurface();
     this._shiftState.reset();
     // Returns to the base layout and re-renders; fires layoutChange only on a
     // real change.
@@ -1722,8 +1719,7 @@ export default class KioskKeyboard extends Control {
     // closes: a keyboard sliding out of view cannot leave a keycap painted, a
     // blur listener armed, a popup floating over the page, or a pending touchend
     // still able to type into the target it just left.
-    this._cancelAllPresses();
-    this._variantPopup.dismissOpen();
+    this._leaveSurface();
     this._targetSession.fireChangeIfDirty();
     this._dockSession = null;
     this._nativeKbSuppression.restore();
@@ -2242,13 +2238,22 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Ends every press, pointer and keyboard, without activating any, and abandons
-   * a re-anchor a hold parked. What the keyboard does when the presses lose their
-   * surface: hide, disable, close, reset, layout change, exit.
+   * a re-anchor a hold parked.
    */
   private _cancelAllPresses(): void {
     this._variantPopup.cancelPending();
     for (const id of Array.from(this._presses.keys())) this._endPress(id);
     this._clearKeyboardPressedState();
+  }
+
+  /**
+   * The keyboard surface went away or changed under the user (hide, disable,
+   * close, reset, layout change): every press ends and the accent popup, whose
+   * options were resolved from that surface, is abandoned.
+   */
+  private _leaveSurface(): void {
+    this._cancelAllPresses();
+    this._variantPopup.abandon();
   }
 
   /**

@@ -40,10 +40,10 @@ interface LayoutStateHost {
   /** Selecting a layout always resets the typing context. */
   resetShiftState(): void;
   /**
-   * Abandons a key press still held: the keycap under it now shows another key, so
-   * its release must not type that one.
+   * Leaves the surface on screen: a key press still held must not type the key
+   * that now sits under it, and an open accent popup offers the old layout's glyphs.
    */
-  cancelPress(): void;
+  leaveSurface(): void;
   endComposition(): void;
   /** The key focus sits on, captured before a switch re-renders the grid. */
   focusAnchorValue(): string | null;
@@ -249,9 +249,9 @@ export default class LayoutState {
   /**
    * Derives the layout to render and, when the effective layout differs from the one
    * on screen - whatever moved it: a request, the width tier, a constraint, or a
-   * layout declared or removed - switches to it: cancels any held key press, ends any
-   * in-progress composition, resets the typing context, re-renders and re-seats focus
-   * on the key it followed. The `source` only changes with the tiered layout so a
+   * layout declared or removed - switches to it: leaves the old surface (held
+   * presses, an open accent popup), ends any in-progress composition, resets the
+   * typing context, re-renders and re-seats focus on the key it followed. The `source` only changes with the tiered layout so a
    * no-op can't silently flip the constraint-override. Under a `keyboardType`
    * constraint only a request moves the tiered layout; the rest waits for the
    * constraint to lift. Returns whether the effective layout changed.
@@ -273,7 +273,7 @@ export default class LayoutState {
     }
 
     const anchorValue = this._host.focusAnchorValue();
-    this._host.cancelPress();
+    this._host.leaveSurface();
     this._host.endComposition();
     this._host.resetShiftState();
     this._current = target;

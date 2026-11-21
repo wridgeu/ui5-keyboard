@@ -274,6 +274,16 @@ export default class VariantPopupBehavior {
     return true;
   }
 
+  /**
+   * The keyboard surface the popup belongs to went away or changed: ends any
+   * hold, drops a parked re-anchor and dismisses an open popup without
+   * committing. Owes no swallowed release, since the press it was for is gone.
+   */
+  abandon(): void {
+    this.stop();
+    this.dismissOpen();
+  }
+
   destroy(): void {
     this.stop();
     this._pendingAnchorKeyEl = null;
