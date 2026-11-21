@@ -250,11 +250,8 @@ export default class FocusFallbackTracker {
   private _getActiveElementPath(activeElement: Element): EventTarget[] {
     const path: EventTarget[] = [];
     let current: Node | null = activeElement;
-    let depth = 0;
-    const MAX_DEPTH = 1000;
 
-    while (current && depth < MAX_DEPTH) {
-      depth++;
+    while (current) {
       path.push(current);
 
       if (current.parentNode) {
@@ -262,17 +259,13 @@ export default class FocusFallbackTracker {
         continue;
       }
 
-      const root = current.getRootNode?.();
+      const root = current.getRootNode();
       if (root instanceof ShadowRoot && root.host) {
         current = root.host;
         continue;
       }
 
       current = null;
-    }
-
-    if (depth >= MAX_DEPTH) {
-      Log.warning("MAX_DEPTH reached while building active-element path.", undefined, LOG_COMPONENT);
     }
 
     if (!path.includes(document)) {

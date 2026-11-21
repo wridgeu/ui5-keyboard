@@ -27,7 +27,7 @@ const EDITABLE_INPUT_TYPES: ReadonlySet<string> = new Set([
  * `event.composedPath()[0]` returns the original target inside the shadow tree.
  */
 export function getEventTarget(event: Event): EventTarget | null {
-  return event.composedPath?.()[0] ?? event.target;
+  return event.composedPath()[0] ?? event.target;
 }
 
 /**

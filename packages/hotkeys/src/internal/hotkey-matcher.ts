@@ -187,17 +187,11 @@ export default class HotkeyMatcher {
   }
 
   /**
-   * Get the event's composed path with a defensive fallback.
+   * The event's composed path, augmented with focus ancestry by the focus-fallback tracker.
    */
   private _getEventPath(event: KeyboardEvent): EventTarget[] {
-    const path = event.composedPath?.();
-    const resolvedPath =
-      path && path.length > 0
-        ? [...path]
-        : [event.target, document, window].filter((x): x is EventTarget => x !== null && x !== undefined);
-
+    const resolvedPath = event.composedPath();
     this._focusFallback.augmentPath(event, resolvedPath);
-
     return resolvedPath;
   }
 }

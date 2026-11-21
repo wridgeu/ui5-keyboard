@@ -754,38 +754,6 @@ QUnit.test("Recorder stopImmediatePropagation blocks non-library window listener
 });
 
 // ──────────────────────────────────────────────
-// composedPath fallback
-// ──────────────────────────────────────────────
-
-QUnit.test("composedPath fallback - event with empty composedPath uses target fallback", (assert) => {
-  const target = document.createElement("div");
-  fixture.appendChild(target);
-
-  let fired = false;
-  manager.register(
-    "Escape",
-    () => {
-      fired = true;
-    },
-    { target },
-  );
-
-  // Dispatch via window where we can control composedPath via mock
-  const event2 = new KeyboardEvent("keydown", {
-    key: "Escape",
-    bubbles: true,
-    cancelable: true,
-  });
-  // Override composedPath on the event
-  Object.defineProperty(event2, "composedPath", { value: () => [] });
-  Object.defineProperty(event2, "target", { value: target });
-  window.dispatchEvent(event2);
-
-  // With fallback [event.target, document, window], the target element IS in the path
-  assert.ok(fired, "Target-scoped hotkey fires via composedPath fallback");
-});
-
-// ──────────────────────────────────────────────
 // Interceptor replacement logs warning
 // ──────────────────────────────────────────────
 
