@@ -698,10 +698,10 @@ class KioskKeyboard extends UI5Element {
   @property({ type: Object, noAttribute: true })
   _variantPopup: VariantPopupState | null = null;
 
-  // ── Backing field for the `open` getter/setter below.
-  //    Direct writes intentionally bypass the setter when the host is being
-  //    torn down or when invalidation flow already ran in the same tick. ──
+  /** Backing field for `open`. */
   private _openValue = false;
+  /** Set while `_storeOpen` writes `open`, so the setter stores without opening or closing. */
+  private _storingOpen = false;
 
   // ── Non-reactive internal state ──
 
@@ -793,9 +793,12 @@ class KioskKeyboard extends UI5Element {
     });
   }
 
-  // ── Listener controllers (one per feature; presence == attached) ──
-  private _hostAbort: AbortController | null = null;
-  private _escapeAbort: AbortController | null = null;
+  /**
+   * The connected session: non-null from `onEnterDOM` to `onExitDOM`, and the
+   * signal every host-scoped listener is armed on. While it is null the host is
+   * detached, and property changes are recorded without arming anything.
+   */
+  private _session: AbortController | null = null;
 
   // ── Auto-show (document focusin/focusout) ──
   /** Owns the focus listeners, deferred close, and cross-instance claim checks. */
@@ -967,6 +970,7 @@ class KioskKeyboard extends UI5Element {
   set open(value: boolean) {
     if (this._openValue === value) return;
     this._openValue = value;
+    if (this._storingOpen) return;
     // Not `isConnected`: a custom-element upgrade of already-parsed markup runs
     // the attribute setters while connected but long before UI5Element's async
     // connectedCallback reaches onEnterDOM, which applies the pending value.
@@ -980,6 +984,17 @@ class KioskKeyboard extends UI5Element {
 
   get open(): boolean {
     return this._openValue;
+  }
+
+  /**
+   * Writes `open` through the framework accessor, so the reflected attribute
+   * follows, without the open/close side effects: for teardown and for an open
+   * `_performOpen` rejects, neither of which is a close to announce.
+   */
+  private _storeOpen(value: boolean): void {
+    this._storingOpen = true;
+    this.open = value;
+    this._storingOpen = false;
   }
 
   private get _controlsList(): string[] {
@@ -1008,7 +1023,11 @@ class KioskKeyboard extends UI5Element {
     // hook twice with no onExitDOM between. An armed host session is what says a
     // previous entry already ran: everything below is either idempotent or
     // re-armed against a fresh signal, except the one-shot open side effects.
-    const reEntered = this._hostAbort !== null;
+    const reEntered = this._session !== null;
+    // Abort first: an overwritten controller can never release what it armed.
+    this._session?.abort();
+    this._session = new AbortController();
+    const { signal } = this._session;
 
     KioskKeyboard._instances.add(this);
     this._autoShow.register();
@@ -1018,9 +1037,7 @@ class KioskKeyboard extends UI5Element {
     this._autoShow.sync();
     this._physicalKeyHighlight.bind(this._resolvedTarget());
 
-    if (this.docked) {
-      this._attachEscapeListener();
-    }
+    document.addEventListener("keydown", this._boundEscape, { capture: true, signal });
 
     // Handle open=true set before DOM connection (same pattern as ui5-dialog).
     // Delegate unconditionally - _performOpen() already resets _openValue when
@@ -1034,11 +1051,6 @@ class KioskKeyboard extends UI5Element {
     // Touch events need { passive: false } for preventDefault() which JSX can't express.
     // touchstart prevents input blur; touchend processes the key press (because
     // preventDefault on touchstart suppresses the browser's synthesized click).
-    //
-    // Abort first: an overwritten controller can never release what it armed.
-    this._hostAbort?.abort();
-    this._hostAbort = new AbortController();
-    const { signal } = this._hostAbort;
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false, signal });
     this.shadowRoot!.addEventListener("touchend", this._boundTouchEnd, { signal });
 
@@ -1080,19 +1092,18 @@ class KioskKeyboard extends UI5Element {
     this._responsiveSizing.teardown();
     this._autoCompact.teardown();
     this._inputModeSuppression.restore();
-    this._detachEscapeListener();
     this._backspaceRepeat.stop();
     this._variantGesture.stop();
     this._variantPopup = null;
-    this._hostAbort?.abort();
-    this._hostAbort = null;
+    this._session?.abort();
+    this._session = null;
     // Fire after-close before disconnecting so direct listeners still see it.
-    // Not `this.open = false`: _performClose() would queue a "keyboard closed"
-    // announcement onto a queue the last instance out has just torn down, for a
-    // live region that leaves the page with this element.
+    // Not _performClose(): it would queue a "keyboard closed" announcement onto a
+    // queue the last instance out has just torn down, for a live region that
+    // leaves the page with this element.
     if (this._openValue) {
       const activeElement = this._targetElement;
-      this._openValue = false;
+      this._storeOpen(false);
       this.fireDecoratorEvent("after-close", { activeElement });
     }
 
@@ -1176,21 +1187,17 @@ class KioskKeyboard extends UI5Element {
       // that surfaces from under it.
       this._layoutState.refresh("keyboardType");
     }
+    // Detached: the value is recorded, and onEnterDOM arms what it asks for.
+    if (!this._session) return;
     if (name === "controls") {
       this._syncTargetBindings();
     }
     if (name === "docked" || name === "autoShow") {
       this._autoShow.sync();
     }
-    if (name === "docked") {
-      if (this.docked) {
-        this._attachEscapeListener();
-      } else {
-        // Close the keyboard before detaching - avoids stuck open state
-        // and leaked inputmode suppression when docked is toggled off while open.
-        this.open = false;
-        this._detachEscapeListener();
-      }
+    // Undocking closes, so the inputmode suppression is not left behind.
+    if (name === "docked" && !this.docked) {
+      this.open = false;
     }
   }
 
@@ -1221,14 +1228,12 @@ class KioskKeyboard extends UI5Element {
   private _performOpen(): void {
     if (!this.docked) {
       console.warn("[kiosk-keyboard] open has no effect when docked=false.");
-      // Write backing field directly - going through the setter would trigger
-      // _performClose() and fire a spurious after-close for a keyboard that
-      // never actually opened (same pattern as ui5-dialog's openPopup rejection).
-      this._openValue = false;
+      // Not a close: the keyboard never opened, so no after-close.
+      this._storeOpen(false);
       return;
     }
     if (this._shouldDeferToNative()) {
-      this._openValue = false;
+      this._storeOpen(false);
       return;
     }
     this._autoShow.cancelPendingClose();
@@ -2085,22 +2090,8 @@ class KioskKeyboard extends UI5Element {
     return KioskKeyboard._getCoarsePointerQuery().matches;
   }
 
-  private _attachEscapeListener(): void {
-    if (this._escapeAbort) return;
-    this._escapeAbort = new AbortController();
-    document.addEventListener("keydown", this._boundEscape, {
-      capture: true,
-      signal: this._escapeAbort.signal,
-    });
-  }
-
-  private _detachEscapeListener(): void {
-    this._escapeAbort?.abort();
-    this._escapeAbort = null;
-  }
-
   private _onDocumentEscape(e: KeyboardEvent): void {
-    if (e.key !== "Escape") return;
+    if (e.key !== "Escape" || !this.docked) return;
     // An open variant popup takes the Escape first: dismiss it (and stop the
     // event) instead of closing the docked keyboard underneath it.
     if (this._variantPopup) {

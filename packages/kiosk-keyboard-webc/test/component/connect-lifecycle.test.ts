@@ -109,4 +109,83 @@ describe("connect lifecycle", () => {
     expect(kb.open, "the keyboard is open").to.equal(true);
     expect(opened, "the second onEnterDOM does not re-open an open keyboard").to.equal(1);
   });
+
+  async function settle(): Promise<void> {
+    for (let i = 0; i < 3; i++) {
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+      await nextRender();
+    }
+  }
+
+  it("a detached keyboard arms no listeners and does not open on reattach", async () => {
+    const host = container();
+    const input = document.createElement("input");
+    const kb = makeKeyboard();
+    kb.mobileKeyboard = "Custom";
+    host.append(input, kb);
+    await nextRender();
+    kb.remove();
+    const events: string[] = [];
+    kb.addEventListener("active-control-change", () => events.push("active-control-change"));
+    kb.addEventListener("after-open", () => events.push("after-open"));
+
+    kb.docked = true;
+    kb.autoShow = true;
+    input.focus();
+    await settle();
+    expect(kb.open, "detached").to.equal(false);
+
+    host.append(kb);
+    await settle();
+    expect(kb.open, "reattached").to.equal(false);
+    expect(events).to.deep.equal([]);
+  });
+
+  it("auto-show still opens after a detach and reattach", async () => {
+    const host = container();
+    const input = document.createElement("input");
+    const kb = makeKeyboard();
+    kb.mobileKeyboard = "Custom";
+    kb.docked = true;
+    kb.autoShow = true;
+    host.append(input, kb);
+    await nextRender();
+    kb.remove();
+    host.append(kb);
+    await settle();
+
+    input.focus();
+    await settle();
+    expect(kb.open).to.equal(true);
+  });
+
+  it("a rejected open leaves no open attribute", async () => {
+    const kb = makeKeyboard();
+    kb.setAttribute("open", "");
+    await captureConsole("warn", async () => {
+      container().append(kb);
+      await settle();
+    });
+
+    expect(kb.open).to.equal(false);
+    expect(kb.hasAttribute("open")).to.equal(false);
+  });
+
+  it("moving an open keyboard drops the open attribute with the property", async () => {
+    const host = container();
+    const kb = makeKeyboard();
+    kb.mobileKeyboard = "Custom";
+    kb.docked = true;
+    host.append(kb);
+    await nextRender();
+    kb.show();
+    await settle();
+    expect(kb.hasAttribute("open"), "precondition: open reflected").to.equal(true);
+
+    kb.remove();
+    host.append(kb);
+    await settle();
+    expect(kb.open).to.equal(false);
+    expect(kb.hasAttribute("open")).to.equal(false);
+  });
 });
