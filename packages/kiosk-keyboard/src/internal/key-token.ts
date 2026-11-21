@@ -49,11 +49,11 @@ export function parseKeyAction(value: string): KeyAction {
 /**
  * Whether a key spends a latched one-shot Shift.
  *
- * The spending set is a pure function of the key (#240): every key that acts on
+ * The spending set is a pure function of the key: every key that acts on
  * the target spends the latch - a character, `{backspace}`, `{enter}`, an
  * `{fkey:*}`, an unrecognized `{...}` token, a committed accent variant, or a
- * key the composition middleware consumed - and a veto does not change that
- * (#241), because the latch is consumed to produce the payload. The two
+ * key the composition middleware consumed - and a veto does not change that,
+ * because the latch is consumed to produce the payload. The two
  * exceptions are the modifier itself and `{layout:*}`, which resets the whole
  * typing context rather than spending anything.
  *
