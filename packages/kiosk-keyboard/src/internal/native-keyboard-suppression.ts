@@ -19,6 +19,14 @@ interface NativeKeyboardSuppressionHost {
 export default class NativeKeyboardSuppression extends BaseObject {
   private _host: NativeKeyboardSuppressionHost;
   private _suppressedInputId: string | null = null;
+  /** The suppressed target, whose renderer writes no `inputmode="none"` back on a re-render. */
+  private _suppressedTarget: Element | null = null;
+  private readonly _rerenderDelegate = {
+    canSkipRendering: true,
+    onAfterRendering: () => {
+      if (this._suppressedInputId) this._resolveInputDom(this._suppressedInputId)?.setAttribute("inputmode", "none");
+    },
+  };
   private static readonly _suppressions = new Map<string, InputModeSuppressionState>();
 
   constructor(host: NativeKeyboardSuppressionHost) {
@@ -61,11 +69,15 @@ export default class NativeKeyboardSuppression extends BaseObject {
 
     dom.setAttribute("inputmode", "none");
     this._suppressedInputId = inputId;
+    this._suppressedTarget = Element.getElementById(inputId) ?? null;
+    this._suppressedTarget?.addEventDelegate(this._rerenderDelegate);
   }
 
   restore(): void {
     const inputId = this._suppressedInputId;
     if (!inputId) return;
+    this._suppressedTarget?.removeEventDelegate(this._rerenderDelegate);
+    this._suppressedTarget = null;
 
     const state = NativeKeyboardSuppression._suppressions.get(inputId);
     if (!state) {

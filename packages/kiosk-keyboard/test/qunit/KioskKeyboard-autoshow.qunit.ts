@@ -367,6 +367,29 @@ QUnit.test("Hidden keyboard target does not block auto-show", async (assert) => 
   dockedKb.destroy();
 });
 
+QUnit.test("A re-render of the target keeps its native keyboard suppressed while open", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ docked: true, autoShow: true, mobileKeyboard: MobileKeyboard.Custom });
+  kb.placeAt("qunit-fixture");
+  await waitForRender();
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  inputDom.focus();
+  await nextUIUpdate();
+  assert.ok(kb.isOpen(), "precondition: open");
+
+  input.setValueState("Error");
+  await nextUIUpdate();
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "the patched input is still suppressed");
+
+  kb.close();
+  input.setValueState("None");
+  await nextUIUpdate();
+  assert.notOk(inputDom.hasAttribute("inputmode"), "after close a re-render does not suppress it again");
+  kb.destroy();
+  input.destroy();
+});
+
 QUnit.test("setVisible(false) closes the keyboard and restores inputmode", async (assert) => {
   const input = new Input();
   input.placeAt("qunit-fixture");

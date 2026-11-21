@@ -16,6 +16,11 @@ function makeHost(activeTargetId: string, mobileKeyboard = MobileKeyboard.Custom
   };
 }
 
+/** A stand-in for the UI5 element that owns `input`, as `Element.getElementById` returns it. */
+function fakeElement(input: HTMLInputElement | null): never {
+  return { getFocusDomRef: () => input, addEventDelegate() {}, removeEventDelegate() {} } as never;
+}
+
 /**
  * Places a real <input> in the fixture and returns the inputId
  * and native element.
@@ -38,7 +43,7 @@ QUnit.test("suppress sets inputmode=none, restore removes it", (assert) => {
   const { inputId, input } = registerInputElement("input1");
   const stub = sinon.stub(Element, "getElementById");
   try {
-    stub.withArgs(inputId).returns({ getFocusDomRef: () => input } as never);
+    stub.withArgs(inputId).returns(fakeElement(input));
 
     const host = makeHost(inputId);
     const suppression = new NativeKeyboardSuppression(host);
@@ -61,7 +66,7 @@ QUnit.test("suppress preserves original inputmode and restores it", (assert) => 
   input.setAttribute("inputmode", "numeric");
   const stub = sinon.stub(Element, "getElementById");
   try {
-    stub.withArgs(inputId).returns({ getFocusDomRef: () => input } as never);
+    stub.withArgs(inputId).returns(fakeElement(input));
 
     const host = makeHost(inputId);
     const suppression = new NativeKeyboardSuppression(host);
@@ -83,7 +88,7 @@ QUnit.test("destroy calls restore", (assert) => {
   const { inputId, input } = registerInputElement("input3");
   const stub = sinon.stub(Element, "getElementById");
   try {
-    stub.withArgs(inputId).returns({ getFocusDomRef: () => input } as never);
+    stub.withArgs(inputId).returns(fakeElement(input));
 
     const host = makeHost(inputId);
     const suppression = new NativeKeyboardSuppression(host);
@@ -109,7 +114,7 @@ QUnit.test("two instances suppress the same input, single restore keeps it suppr
   const { inputId, input } = registerInputElement("shared1");
   const stub = sinon.stub(Element, "getElementById");
   try {
-    stub.withArgs(inputId).returns({ getFocusDomRef: () => input } as never);
+    stub.withArgs(inputId).returns(fakeElement(input));
 
     const a = new NativeKeyboardSuppression(makeHost(inputId));
     const b = new NativeKeyboardSuppression(makeHost(inputId));
@@ -139,7 +144,7 @@ QUnit.test("original inputmode is correctly restored after multi-instance releas
   input.setAttribute("inputmode", "tel");
   const stub = sinon.stub(Element, "getElementById");
   try {
-    stub.withArgs(inputId).returns({ getFocusDomRef: () => input } as never);
+    stub.withArgs(inputId).returns(fakeElement(input));
 
     const a = new NativeKeyboardSuppression(makeHost(inputId));
     const b = new NativeKeyboardSuppression(makeHost(inputId));
@@ -163,7 +168,7 @@ QUnit.test("re-suppress after restore does not corrupt ref count", (assert) => {
   const { inputId, input } = registerInputElement("shared4");
   const stub = sinon.stub(Element, "getElementById");
   try {
-    stub.withArgs(inputId).returns({ getFocusDomRef: () => input } as never);
+    stub.withArgs(inputId).returns(fakeElement(input));
 
     const a = new NativeKeyboardSuppression(makeHost(inputId));
     const b = new NativeKeyboardSuppression(makeHost(inputId));
@@ -196,8 +201,8 @@ QUnit.test("switching targets restores the previous input before suppressing the
   const { inputId: id2, input: input2 } = registerInputElement("switch2");
   const stub = sinon.stub(Element, "getElementById");
   try {
-    stub.withArgs(id1).returns({ getFocusDomRef: () => input1 } as never);
-    stub.withArgs(id2).returns({ getFocusDomRef: () => input2 } as never);
+    stub.withArgs(id1).returns(fakeElement(input1));
+    stub.withArgs(id2).returns(fakeElement(input2));
 
     let activeId = id1;
     const host = {
@@ -233,7 +238,7 @@ QUnit.test("restore is safe when DOM element has been removed", (assert) => {
   const { inputId, input } = registerInputElement("removed1");
   const stub = sinon.stub(Element, "getElementById");
   try {
-    stub.withArgs(inputId).returns({ getFocusDomRef: () => input } as never);
+    stub.withArgs(inputId).returns(fakeElement(input));
 
     const suppression = new NativeKeyboardSuppression(makeHost(inputId));
 
@@ -258,7 +263,7 @@ QUnit.test("suppress is a no-op when shouldDeferToNative returns true", (assert)
   const { inputId, input } = registerInputElement("native1");
   const stub = sinon.stub(Element, "getElementById");
   try {
-    stub.withArgs(inputId).returns({ getFocusDomRef: () => input } as never);
+    stub.withArgs(inputId).returns(fakeElement(input));
 
     const suppression = new NativeKeyboardSuppression(makeHost(inputId, MobileKeyboard.Native));
 
@@ -293,7 +298,7 @@ QUnit.test("an input destroyed while suppressed leaves no entry to mask a new in
   let current: HTMLInputElement | null = first.input;
   const stub = sinon.stub(Element, "getElementById");
   try {
-    stub.withArgs("reused-id").callsFake(() => (current ? ({ getFocusDomRef: () => current } as never) : undefined));
+    stub.withArgs("reused-id").callsFake(() => (current ? fakeElement(current) : undefined));
     const suppression = new NativeKeyboardSuppression(makeHost("reused-id"));
 
     suppression.suppress();
