@@ -1,7 +1,7 @@
 import { ConflictBehavior, GLOBAL_SCOPE, Platform } from "ui5/hotkeys/library";
 import type { UnhandledContext } from "ui5/hotkeys/types";
 import type Log from "sap/base/Log";
-import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn, fireKeyUp } from "./test-helpers";
 import { stubPopupOpen } from "./popup-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
@@ -1401,6 +1401,7 @@ QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert)
     altKey: true,
   });
   Object.defineProperty(altEvent, "location", { value: 2 }); // Right Alt
+  Object.defineProperty(altEvent, "code", { value: "AltRight" });
   document.dispatchEvent(altEvent);
 
   // Now fire 'e' with both ctrlKey and altKey (AltGr+E)
@@ -1456,6 +1457,7 @@ QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
     altKey: true,
   });
   Object.defineProperty(altEvent, "location", { value: 1 }); // Left Alt
+  Object.defineProperty(altEvent, "code", { value: "AltLeft" });
   document.dispatchEvent(altEvent);
 
   fireKey("e", { ctrlKey: true, altKey: true });
@@ -1478,6 +1480,7 @@ QUnit.test("AltGr: guard only active on Windows", (assert) => {
     altKey: true,
   });
   Object.defineProperty(altEvent, "location", { value: 2 });
+  Object.defineProperty(altEvent, "code", { value: "AltRight" });
   document.dispatchEvent(altEvent);
 
   fireKey("e", { ctrlKey: true, altKey: true });
@@ -1492,12 +1495,11 @@ QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
     called = true;
   });
 
-  // No prior Alt keydown - _lastAltLocation stays 0
   fireKey("e", { ctrlKey: true, altKey: true });
   assert.ok(called, "Ctrl+Alt+E fires without prior Alt (location=0)");
 });
 
-QUnit.test("AltGr: stale right-Alt state is cleared after non-Alt keydown", (assert) => {
+QUnit.test("AltGr: releasing right Alt ends the AltGr state", (assert) => {
   const manager = createHotkeyManager(Platform.Windows);
   let called = false;
 
@@ -1505,20 +1507,38 @@ QUnit.test("AltGr: stale right-Alt state is cleared after non-Alt keydown", (ass
     called = true;
   });
 
-  const altEvent = new KeyboardEvent("keydown", {
-    key: "Alt",
-    bubbles: true,
-    cancelable: true,
-    altKey: true,
-  });
-  Object.defineProperty(altEvent, "location", { value: 2 });
-  document.dispatchEvent(altEvent);
-
-  // Alt is no longer held on this event, so stale AltGr state should be reset.
-  fireKey("x");
+  fireKey("Alt", { altKey: true, code: "AltRight", location: 2 });
+  fireKeyUp("Alt", { code: "AltRight", location: 2 });
   fireKey("e", { ctrlKey: true, altKey: true });
 
-  assert.ok(called, "Ctrl+Alt hotkey fires after stale AltGr state reset");
+  assert.ok(called, "Ctrl+Alt hotkey fires once right Alt is released");
+});
+
+QUnit.test("AltGr: a Ctrl+LeftAlt combo recorded after AltGr typing fires", (assert) => {
+  const manager = createHotkeyManager(Platform.Windows);
+  let calls = 0;
+
+  // Type a character with AltGr, then release it.
+  fireKey("Alt", { altKey: true, code: "AltRight", location: 2 });
+  fireKey("q", { ctrlKey: true, altKey: true, code: "KeyQ" });
+  fireKeyUp("q", { ctrlKey: true, altKey: true, code: "KeyQ" });
+  fireKeyUp("Alt", { code: "AltRight", location: 2 });
+
+  const recorder = manager.createRecorder({
+    onRecord: (hotkey) => {
+      manager.register(hotkey, () => {
+        calls++;
+      });
+    },
+  });
+  recorder.start();
+  fireKey("Control", { ctrlKey: true, code: "ControlLeft" });
+  fireKey("Alt", { ctrlKey: true, altKey: true, code: "AltLeft", location: 1 });
+  fireKey("k", { ctrlKey: true, altKey: true, code: "KeyK" });
+  assert.notOk(recorder.isRecording, "The recorder captured the combo");
+
+  fireKey("k", { ctrlKey: true, altKey: true, code: "KeyK" });
+  assert.strictEqual(calls, 1, "The recorded Ctrl+Alt+K fires with left Alt held");
 });
 
 // ──────────────────────────────────────────────

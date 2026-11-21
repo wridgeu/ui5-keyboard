@@ -60,6 +60,14 @@ export default class KeyStateTracker {
   }
 
   /**
+   * Whether a key with this `KeyboardEvent.code` is currently held.
+   * @internal Read by EventDispatcher's AltGr guard.
+   */
+  isCodeHeld(code: string): boolean {
+    return this._heldByCode.has(code);
+  }
+
+  /**
    * Set a callback that fires whenever the held keys change.
    *
    * Pass `null` to remove a previously registered callback.

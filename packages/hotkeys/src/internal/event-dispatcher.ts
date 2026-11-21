@@ -128,8 +128,6 @@ export default class EventDispatcher {
   // Recorder tracking for lifecycle management
   private readonly _trackedRecorders: Set<HotkeyRecorder> = new Set();
 
-  // AltGr detection - tracks location of last Alt keydown
-  private _lastAltLocation = 0;
   private _platform: Platform;
 
   // One controller detaches all window listeners atomically in destroy().
@@ -334,7 +332,6 @@ export default class EventDispatcher {
 
   private _onBlur(): void {
     this._keyStateTracker.processBlur();
-    this._lastAltLocation = 0;
   }
 
   // ──────────────────────────────────────────────
@@ -342,30 +339,24 @@ export default class EventDispatcher {
   // ──────────────────────────────────────────────
 
   /**
-   * Pre-filter and AltGr state tracking.
-   *
    * Filters out IME composition, modifier-only presses, and AltGr character
-   * input. Also tracks `_lastAltLocation` for the AltGr heuristic.
-   *
-   * Returns true if the event should be silently dropped.
+   * input. Returns true if the event should be silently dropped.
    */
   private _preFilterEvent(event: KeyboardEvent): boolean {
-    // Track AltGr state
-    if (event.key === "Alt") {
-      this._lastAltLocation = event.location;
-    } else if (!event.altKey) {
-      this._lastAltLocation = 0;
-    }
-
     // IME composition - not a hotkey attempt
     if (event.isComposing || event.keyCode === 229) return true;
 
     // Pure modifier key press - not a hotkey attempt
     if (MODIFIER_KEYS.has(event.key)) return true;
 
-    // AltGr guard: on Windows, AltGr sends both ctrlKey+altKey.
+    // AltGr guard: on Windows, AltGr sends both ctrlKey+altKey while the right Alt key is held.
     if (this._platform === Platform.Windows && event.getModifierState("AltGraph")) return true;
-    if (this._platform === Platform.Windows && event.ctrlKey && event.altKey && this._lastAltLocation === 2)
+    if (
+      this._platform === Platform.Windows &&
+      event.ctrlKey &&
+      event.altKey &&
+      this._keyStateTracker.isCodeHeld("AltRight")
+    )
       return true;
 
     return false;
