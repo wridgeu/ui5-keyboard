@@ -1131,14 +1131,6 @@ export default class KioskKeyboard extends Control {
     // @ts-expect-error removeDelegate is an internal UI5 API not exposed in @openui5/types
     this.removeDelegate(this._keyGridNav);
     this._keyGridNav.destroy();
-
-    // After this instance restored its own inputmode suppression (via the
-    // extension teardown above, where NativeKeyboardSuppression.destroy runs),
-    // clear any page-level bookkeeping that outlived all instances - defensive
-    // against an orphaned entry from an input destroyed mid-suppression.
-    if (wasLastInstance) {
-      NativeKeyboardSuppression._clearAll();
-    }
   }
 
   // ── Public API: property overrides ──

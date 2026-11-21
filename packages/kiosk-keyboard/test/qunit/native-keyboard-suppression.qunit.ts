@@ -286,3 +286,36 @@ QUnit.test("suppress is a no-op when active target is empty", (assert) => {
 
   suppression.destroy();
 });
+
+QUnit.test("an input destroyed while suppressed leaves no entry to mask a new input under its id", (assert) => {
+  const first = registerInputElement("reused-id");
+  first.input.setAttribute("inputmode", "numeric");
+  let current: HTMLInputElement | null = first.input;
+  const stub = sinon.stub(Element, "getElementById");
+  try {
+    stub.withArgs("reused-id").callsFake(() => (current ? ({ getFocusDomRef: () => current } as never) : undefined));
+    const suppression = new NativeKeyboardSuppression(makeHost("reused-id"));
+
+    suppression.suppress();
+    first.input.remove();
+    current = null;
+    suppression.restore();
+
+    const second = document.createElement("input");
+    second.setAttribute("inputmode", "decimal");
+    fixture.appendChild(second);
+    current = second;
+    suppression.suppress();
+    suppression.restore();
+
+    assert.strictEqual(
+      second.getAttribute("inputmode"),
+      "decimal",
+      "the new input gets its own authored inputmode back",
+    );
+    suppression.destroy();
+  } finally {
+    stub.restore();
+    fixture.innerHTML = "";
+  }
+});
