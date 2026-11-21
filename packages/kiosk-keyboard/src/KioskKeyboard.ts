@@ -92,6 +92,8 @@ function changedPointers(event: PressEvent): PressPointer[] {
 /** One pointer held on a key, owning everything its press armed. */
 interface Press {
   readonly keyEl: HTMLElement;
+  /** The key `keyEl` carried when pressed; a re-render can patch another key into it. */
+  readonly key: string | undefined;
   /** Detaches this press's window-blur safety net. */
   readonly blur: AbortController;
   /** The Backspace auto-repeat, armed only for an enabled `{backspace}` press. */
@@ -1052,6 +1054,15 @@ export default class KioskKeyboard extends Control {
     // each external sync below is idempotent and independently event/observer-driven.
     this._keyGridNav.setRootRef(this._rootDomRef());
     this._syncDockedDomState();
+
+    // A render that keeps the layout name can still seat another key where a
+    // finger is held (an edit to the active custom layout).
+    for (const press of this._presses.values()) {
+      if (press.keyEl.dataset.key !== press.key) {
+        this._leaveSurface();
+        break;
+      }
+    }
 
     const pendingAnnouncement = this._layoutState.takePendingAnnouncement();
     if (pendingAnnouncement !== null) {
@@ -2151,7 +2162,7 @@ export default class KioskKeyboard extends Control {
         ? new BackspaceRepeatBehavior(() => this._performBackspaceRepeatTick())
         : null;
     const hold = this._variantPopup.onPress(el, enabled);
-    this._presses.set(id, { keyEl: el, blur, repeat, hold });
+    this._presses.set(id, { keyEl: el, key: el.dataset.key, blur, repeat, hold });
     el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
   }
 

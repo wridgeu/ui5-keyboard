@@ -2,7 +2,8 @@ import KioskKeyboard from "ui5/kiosk/KioskKeyboard";
 import Input from "sap/m/Input";
 import { BACKSPACE_AUTO_REPEAT } from "ui5/kiosk/internal/auto-repeat";
 import { VARIANT_HOLD_MS } from "ui5/kiosk/internal/variant-popup-behavior";
-import { destroyKeyboards, getRequiredKeyElement, hasKeyClass, placeAndWait } from "./test-helpers";
+import { destroyKeyboards, getRequiredKeyElement, hasKeyClass, placeAndWait, waitForRender } from "./test-helpers";
+import CustomLayout from "ui5/kiosk/CustomLayout";
 
 // Pointer presses as a touchscreen delivers them: every touch event names the
 // fingers it changed in `changedTouches`, each with its own `identifier`, and a
@@ -153,5 +154,27 @@ QUnit.test("a press after a window blur gets a live safety net of its own", asyn
   touch(kb, "touchstart", w, 1);
   window.dispatchEvent(new Event("blur"));
   assert.notOk(hasKeyClass(kb, "w", DOM.classes.keyPressed), "the second press is ended by the next blur too");
+  input.destroy();
+});
+
+QUnit.test("an edit to the active custom layout under a held key types neither key", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+  const layout = new CustomLayout({ name: "edited", rows: [[{ value: "b" }, { value: "z" }]] });
+  const kb = new KioskKeyboard({ customLayouts: [layout], layout: "edited", controls: [input.getId()] });
+  await placeAndWait(kb);
+  input.focus();
+  const held = getRequiredKeyElement(kb, "b");
+
+  touch(kb, "touchstart", held, 1);
+  layout.setRows([[{ value: "d" }, { value: "z" }]]);
+  await waitForRender();
+  assert.strictEqual(held.dataset.key, "d", "precondition: the render patched another key into the held element");
+  touch(kb, "touchend", held, 1);
+  assert.strictEqual(input.getValue(), "", "the release types nothing");
+
+  touch(kb, "touchstart", held, 2);
+  touch(kb, "touchend", held, 2);
+  assert.strictEqual(input.getValue(), "d", "a fresh tap types the new key");
   input.destroy();
 });
