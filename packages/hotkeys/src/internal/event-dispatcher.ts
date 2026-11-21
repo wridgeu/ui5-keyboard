@@ -220,6 +220,11 @@ export default class EventDispatcher {
     }
   }
 
+  /** Whether `interceptor` currently receives keydowns. */
+  isInterceptor(interceptor: KeyEventInterceptor): boolean {
+    return this._interceptor === interceptor;
+  }
+
   // ──────────────────────────────────────────────
   // Recorder tracking
   // ──────────────────────────────────────────────
