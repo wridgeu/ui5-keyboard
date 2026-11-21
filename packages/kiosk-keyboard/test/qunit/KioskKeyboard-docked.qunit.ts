@@ -45,6 +45,31 @@ QUnit.test("show() opens docked keyboard", async (assert) => {
   kb.destroy();
 });
 
+QUnit.test("A re-render of an open docked keyboard never writes it closed", async (assert) => {
+  const kb = new KioskKeyboard();
+  kb.setDocked(true);
+  await placeAndWait(kb);
+  kb.show();
+
+  const root = kb.getDomRef()!;
+  const records: MutationRecord[] = [];
+  const observer = new MutationObserver((batch) => records.push(...batch));
+  observer.observe(root, { attributes: true, attributeFilter: ["class"], attributeOldValue: true });
+  kb.invalidate();
+  await waitForRender();
+  records.push(...observer.takeRecords());
+  observer.disconnect();
+
+  assert.ok(kb.isOpen(), "precondition: still open");
+  assert.notOk(
+    records.some((record) => record.oldValue?.split(" ").includes(DOM.classes.rootClosed)),
+    "the closed class was never on the root during the render",
+  );
+  assert.notOk(hasKeyboardClass(kb, DOM.classes.rootClosed), "and is not on it after");
+
+  kb.destroy();
+});
+
 QUnit.test("close() closes docked keyboard", async (assert) => {
   const kb = new KioskKeyboard();
   kb.setDocked(true);

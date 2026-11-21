@@ -57,8 +57,7 @@ const KioskKeyboardRenderer = {
 
     if (oControl.getDocked()) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.rootDocked);
-      // Start closed; onAfterRendering syncs with _open state
-      rm.class(KIOSK_KEYBOARD_DOM.classes.rootClosed);
+      if (!oControl.isOpen()) rm.class(KIOSK_KEYBOARD_DOM.classes.rootClosed);
     }
 
     if (!oControl.getEnabled()) {
