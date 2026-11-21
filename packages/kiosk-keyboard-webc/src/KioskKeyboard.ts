@@ -1294,10 +1294,15 @@ class KioskKeyboard extends UI5Element {
       this._inputModeSuppression.restore();
     }
 
-    // Reset shift/caps only on a real switch; a same-input re-set is a caret
-    // reposition that keeps the armed shift (parity with the UI5 twin).
+    // Reset shift/caps and end the composition only on a real switch; a same-input
+    // re-set is a caret reposition that keeps both (parity with the UI5 twin). The
+    // middleware holds the old input's preedit offsets, so it must not outlive it.
     if (el !== previous) {
       this._shiftState.reset();
+      if (this._middleware) {
+        this._middleware.commit();
+        this._middleware = null;
+      }
     }
 
     this._targetElement = el;
