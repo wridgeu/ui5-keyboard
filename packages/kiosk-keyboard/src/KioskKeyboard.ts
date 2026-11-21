@@ -660,7 +660,8 @@ export default class KioskKeyboard extends Control {
        */
       afterOpen: {},
       /**
-       * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+       * Fired when the docked keyboard closes: by `close()`, or by destroying it while open
+       * (not tied to CSS transition end).
        *
        * @since 0.1.0
        */
@@ -1125,8 +1126,11 @@ export default class KioskKeyboard extends Control {
     this._variantPopup.destroy();
     this._cancelAllPresses();
     for (const ext of this._extensions) ext.destroy();
+    const wasOpen = this._dockSession !== null;
     this._dockSession?.escape.abort();
     this._dockSession = null;
+    // Not close(): it would announce "keyboard closed" from a control that is leaving the page.
+    if (wasOpen) this.fireAfterClose();
     // @ts-expect-error removeDelegate is an internal UI5 API not exposed in @openui5/types
     this.removeDelegate(this._keyGridNav);
     this._keyGridNav.destroy();

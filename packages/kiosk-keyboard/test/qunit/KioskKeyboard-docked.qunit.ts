@@ -113,6 +113,42 @@ QUnit.test("setDocked(false) closes an open keyboard and restores inputmode", as
   kb.destroy();
 });
 
+QUnit.test("destroy() of an open docked keyboard fires afterClose and restores inputmode", async (assert) => {
+  const input = new Input();
+  input.placeAt("qunit-fixture");
+
+  const kb = new KioskKeyboard({
+    docked: true,
+    mobileKeyboard: MobileKeyboard.Custom,
+    controls: [input.getId()],
+  });
+  await placeAndWait(kb);
+
+  const inputDom = input.getFocusDomRef() as HTMLInputElement;
+  kb.show();
+  assert.strictEqual(inputDom.getAttribute("inputmode"), "none", "precondition: inputmode suppressed while open");
+
+  let afterCloseCount = 0;
+  kb.attachEvent("afterClose", () => afterCloseCount++);
+  kb.destroy();
+
+  assert.strictEqual(afterCloseCount, 1, "afterClose fired once on destroy");
+  assert.notStrictEqual(inputDom.getAttribute("inputmode"), "none", "inputmode restored on destroy");
+
+  input.destroy();
+});
+
+QUnit.test("destroy() of a closed docked keyboard fires no afterClose", async (assert) => {
+  const kb = new KioskKeyboard({ docked: true });
+  await placeAndWait(kb);
+
+  let afterCloseCount = 0;
+  kb.attachEvent("afterClose", () => afterCloseCount++);
+  kb.destroy();
+
+  assert.strictEqual(afterCloseCount, 0, "no afterClose for a keyboard that was never open");
+});
+
 QUnit.test("show() is idempotent", async (assert) => {
   const kb = new KioskKeyboard();
   kb.setDocked(true);
