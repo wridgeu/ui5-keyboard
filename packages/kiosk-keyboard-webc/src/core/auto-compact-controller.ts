@@ -21,30 +21,13 @@ export interface AutoCompactHost {
 /**
  * Owns the width measurement behind the `autoCompact` property.
  *
- * Layout data is the one responsive dimension CSS cannot reach: a `@container`
- * rule can restyle a row but not re-seat its keys, and arrow-key navigation moves
- * on the resolved layout's coordinates rather than on rendered geometry. So the
- * tier that picks between a layout and its compact counterpart is measured here
- * and applied by the host.
+ * Separate from `ResponsiveSizingController`, which bails for docked, numpad and
+ * unconstrained keyboards exactly when this tier must still resolve, and whose
+ * measurement pass a width read would add forced layout to; allocates nothing
+ * while `autoCompact` is off.
  *
- * Deliberately a second `ResizeObserver` rather than a branch inside
- * `ResponsiveSizingController`. That controller returns early for docked and
- * numpad keyboards and again when the keyboard is not height-constrained, which is
- * the common case and exactly when this tier still has to resolve; and its
- * measurement pass is pinned by a "no forced layout reads during shift toggle"
- * perf test that a width read would break. Keeping the two apart also keeps this
- * one dormant: it observes nothing, and allocates no observer, while `autoCompact`
- * is off, which is the default.
- *
- * The tier is applied from a `requestAnimationFrame`, never from the observation
- * callback, which coalesces several observations in one frame into a single
- * application. It is not a guard against the "ResizeObserver loop completed with
- * undelivered notifications" failure #180 recorded against the height tiers:
- * applying the tier synchronously was measured to produce none, because #180 wrote
- * `classList` inside the callback and resized the observed box within the same
- * delivery, whereas a layout swap re-renders asynchronously in both frameworks and
- * so never re-enters observation. That measurement proves the absence of a symptom,
- * not of the hazard, so the frame stays.
+ * The tier is applied from a `requestAnimationFrame`, coalescing a frame's
+ * observations into one application.
  */
 export class AutoCompactController {
   private _resizeObserver: ResizeObserver | null = null;

@@ -18,9 +18,7 @@ import qwertyEs from "../layouts/qwerty-es.js";
 // Module-level singleton - shared across all component instances (and across
 // micro-frontends if they import the same module). Built eagerly from direct
 // data imports and sealed at module load: every layout is genuinely referenced
-// here, so a bundler cannot drop the definitions. Side-effect imports +
-// `_registerBuiltInLayout` self-registration would instead be tree-shaken out
-// of the production bundle. There is no public mutation API: per-app
+// here, so a bundler cannot drop the definitions. There is no public mutation API: per-app
 // customization is done with the `customLayouts` slot on the element.
 const layouts: ReadonlyMap<string, LayoutDefinition> = new Map([
   ["qwerty", qwerty],

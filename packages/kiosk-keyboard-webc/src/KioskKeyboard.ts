@@ -1,11 +1,5 @@
-// Main entry point: defines the component class.
-//
-// The built-in layouts and composition middleware are pulled into the module
-// graph as genuine value imports by their registries (core/layout-registry.js
-// and core/middleware-registry.js, which build their maps from direct imports).
-// They are therefore bundled wherever this entry is (including the
-// ui5-tooling-modules wrapper that resolves the main entry from the CEM) and
-// cannot be dropped by tree-shaking. Side-effect-only imports would be.
+// The layout and middleware registries build their maps from direct imports, so
+// every built-in ships wherever this entry does (see core/layout-registry.ts).
 
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import customElement from "@ui5/webcomponents-base/dist/decorators/customElement.js";
@@ -56,6 +50,7 @@ import { constrainedLayoutName, reconcileBaseSwitch } from "./core/layout-constr
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
+import type { KeyboardTypeSource, TargetSource } from "./core/auto-show-controller.js";
 import { FKeyController, NATIVE_DISPATCHABLE_KEYS } from "./core/fkey-controller.js";
 import { KeyGridNavigation } from "./core/key-grid-navigation.js";
 import {
@@ -104,7 +99,6 @@ const SAP_ICON_PREFIX = "sap-icon://";
 /** Icon for a `{layout:base}` key kept under the Numpad/Numeric constraint. */
 const LAYOUT_RETURN_ICON = SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.layoutReturn;
 
-// ── Valid enum values for string properties (derived from enums) ──
 const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(Object.values(KeyboardType));
 const VALID_FKEY_MODES: ReadonlySet<string> = new Set(Object.values(FKeyMode));
 const VALID_MOBILE_KEYBOARDS: ReadonlySet<string> = new Set(Object.values(MobileKeyboard));
@@ -129,17 +123,6 @@ function previousKeyboardTypeOf(oldValue: PropertyValue): `${KeyboardType}` {
   const match = Object.values(KeyboardType).find((name) => name === oldValue);
   return match ?? "Full";
 }
-
-// ── Internal provenance types ──
-
-/**
- * Who last set keyboardType. "auto:VALUE" = set by _setKeyboardTypeInternal for VALUE;
- * "reset" = resetKeyboardType() handing the property back without claiming it.
- */
-type KeyboardTypeSource = "unset" | "explicit" | "reset" | `auto:${string}`;
-
-/** Why _targetElement was set: drives focusout cleanup policy. */
-type TargetSource = "autoShow" | "explicit";
 
 /** Display and ARIA labels for built-in special keys. */
 // The open `string` key is the contract: `_getKeyLabel` and `_getKeyAriaLabel` look this up by
@@ -456,11 +439,7 @@ class KioskKeyboard extends UI5Element {
    */
   @property()
   set keyboardType(value: `${KeyboardType}`) {
-    // An explicit value claims the property and holds auto-type detection off until
-    // `resetKeyboardType()`. A value `_setKeyboardTypeInternal` pre-tagged `auto:<value>`
-    // is a detection result and does not claim it, nor does a `resetKeyboardType()` call,
-    // which hands the property back; an invalid one falls back to the default without
-    // claiming it.
+    // See KeyboardTypeSource.
     if (isInvalidEnumValue("keyboardType", value, VALID_KEYBOARD_TYPES)) {
       this._keyboardTypeSource = "unset";
       this._keyboardTypeValue = "Full";
@@ -773,7 +752,6 @@ class KioskKeyboard extends UI5Element {
     },
   });
 
-  // ── Inputmode suppression (ref-counted, shared across instances) ──
   /** Owns the `inputmode="none"` swap and its cross-instance refcount. */
   private readonly _inputModeSuppression = new NativeInputModeSuppression(() => this._resolvedTarget());
 
@@ -800,7 +778,6 @@ class KioskKeyboard extends UI5Element {
    */
   private _session: AbortController | null = null;
 
-  // ── Auto-show (document focusin/focusout) ──
   /** Owns the focus listeners, deferred close, and cross-instance claim checks. */
   private readonly _autoShow = new AutoShowController(this, {
     getTargetElement: () => this._targetElement,
@@ -814,7 +791,6 @@ class KioskKeyboard extends UI5Element {
     close: () => this.close(),
   });
 
-  // ── Physical keyboard highlight ──
   /** Owns the physical-key highlight listeners and physical-modifier shift sync. */
   private readonly _physicalKeyHighlight = new PhysicalKeyHighlightController(
     {
@@ -868,11 +844,9 @@ class KioskKeyboard extends UI5Element {
    */
   private _releaseSwallow: { value: string | null } | null = null;
 
-  // ── Backspace press-and-hold auto-repeat ──
   /** Owns the pointer gesture and repeat timer. */
   private readonly _backspaceRepeat = new BackspaceRepeatController(this, () => this._performBackspaceRepeatDelete());
 
-  // ── Accent-variant long-press popup ──
   /** Owns the hold/right-click gesture that opens the accent-variant popup. */
   private readonly _variantGesture = new VariantPopupController({
     getShadowRoot: () => this.shadowRoot,
@@ -897,25 +871,21 @@ class KioskKeyboard extends UI5Element {
     },
   });
 
-  // ── Responsive sizing (ResizeObserver-driven height classes) ──
-  /** Owns the ResizeObserver and height-responsive class application. */
+  /** Owns the ResizeObserver and the height tier. */
   private readonly _responsiveSizing = new ResponsiveSizingController(this);
 
-  // ── Auto-compact (ResizeObserver-driven layout width tier) ──
   /** Owns the width measurement behind the `autoCompact` property. */
   private readonly _autoCompact = new AutoCompactController({
     isEnabled: () => this.autoCompact,
     applyTier: (narrow) => this._layoutState.applyTier(narrow),
   });
 
-  // ── F-key dispatch ──
   /** Owns `fKeyMode`-driven F-key dispatch (native keydown + caret navigation). */
   private readonly _fKeyController = new FKeyController({
     getFKeyMode: () => this.fKeyMode,
     resolveTarget: () => this._resolveTarget(),
   });
 
-  // ── Arrow-key grid navigation ──
   /** Owns roving-tabindex grid navigation and the last-focused-key tracking. */
   private readonly _keyGridNav = new KeyGridNavigation({
     getResolvedLayout: () => this._getResolvedLayout(),
@@ -942,10 +912,6 @@ class KioskKeyboard extends UI5Element {
    *
    * Setting `open = true` opens the keyboard (equivalent to `show()`),
    * setting it to `false` closes it (equivalent to `close()`).
-   *
-   * Follows the same reactive-property-on-setter pattern used by
-   * `@ui5/webcomponents` Popup/Dialog (the `@property` decorator makes
-   * the attribute observable so UI5 bridge controls can bind to it).
    *
    * @default false
    * @public
@@ -1024,18 +990,13 @@ class KioskKeyboard extends UI5Element {
 
     document.addEventListener("keydown", this._boundEscape, { capture: true, signal });
 
-    // Handle open=true set before DOM connection (same pattern as ui5-dialog).
-    // Delegate unconditionally - _performOpen() already resets _openValue when
-    // !docked or native-deferred, preventing stale open state. Not on a re-entry:
-    // the keyboard is already open, and opening it again would fire a second
-    // after-open and announce the opening to a screen reader twice.
+    // Apply an open=true set before connection. Not on a re-entry: a second
+    // after-open would announce the opening twice.
     if (this._openValue && !reEntered) {
       this._performOpen();
     }
 
-    // Touch events need { passive: false } for preventDefault() which JSX can't express.
-    // touchstart prevents input blur; touchend processes the key press (because
-    // preventDefault on touchstart suppresses the browser's synthesized click).
+    // { passive: false } for touchstart's preventDefault, which JSX cannot express.
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false, signal });
     this.shadowRoot!.addEventListener("touchend", this._boundTouchEnd, { signal });
 
@@ -1126,12 +1087,7 @@ class KioskKeyboard extends UI5Element {
       if (tabStop && this.shadowRoot?.activeElement !== tabStop) tabStop.focus();
     }
 
-    // Sync observer targets so newly rendered root elements are observed.
-    // Responsive height classes live on the host element (not in shadow DOM),
-    // so they survive template re-renders and don't need reapplication here.
-    // Actual height class updates are handled by the ResizeObserver callback
-    // (coalesced via rAF in the controller), avoiding forced reflow in the
-    // render frame.
+    // Re-point the height observer at the freshly rendered root.
     const root = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root) ?? null;
     if (root) this._responsiveSizing.syncObserverTargets(root);
 
@@ -1156,10 +1112,8 @@ class KioskKeyboard extends UI5Element {
       // back onto the current type is not a change.
       if (this.keyboardType === changeInfo.oldValue) return;
       const autoDetected = this._keyboardTypeSource === `auto:${this.keyboardType}`;
-      // Both an auto tag and the reset marker fold back before the event fires, so a
-      // listener that sets the type synchronously can claim the property.
       if (this._keyboardTypeSource !== "explicit") this._keyboardTypeSource = "unset";
-      // Reset user layout switch and shift state - a keyboardType change implies a new layout context
+      // A new keyboard type is a new layout context.
       this._layoutState.clearUserOverride();
       this._shiftState.reset();
       // The surface swap ends any in-progress composition: commit the preedit
@@ -1280,8 +1234,7 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   resetKeyboardType(): void {
-    // The marker keeps the setter from claiming the property; `onInvalidation` folds it
-    // to "unset" and reports the change as not auto-detected. The trailing clear covers
+    // See KeyboardTypeSource. The trailing clear covers
     // the paths that never reach `onInvalidation`: an unchanged value, for which the
     // framework skips the setter, and a pre-render call, for which invalidation is
     // suppressed. It runs only while the marker survived, so a type claimed from inside
@@ -1334,10 +1287,6 @@ class KioskKeyboard extends UI5Element {
     if (!root) return;
 
     this._responsiveSizing.syncObserverTargets(root);
-
-    // Schedule responsive class update via rAF to avoid forced reflow.
-    // Host element classes survive shadow DOM re-renders, so synchronous
-    // reapplication is unnecessary.
     this._responsiveSizing.scheduleClassUpdate();
   }
 
@@ -1614,10 +1563,7 @@ class KioskKeyboard extends UI5Element {
     const action = parseKeyAction(value);
     this._performKeyAction(action, keyEl, value, shifted);
 
-    // One key, one decision: which keys spend a latched one-shot Shift is a
-    // pure function of the key, so it is asked once here rather than left to
-    // whichever branch of `_performKeyAction` remembers to call
-    // `_autoReleaseShift()`.
+    // Whether the key spends a one-shot Shift depends on the key alone (spendsOneShotShift).
     if (spendsOneShotShift(action.kind)) this._autoReleaseShift();
   }
 
@@ -1666,7 +1612,7 @@ class KioskKeyboard extends UI5Element {
     // key-press + composition pass. `char` is the text that would be inserted;
     // `undefined` for keys that insert nothing (actions and unknown tokens). A
     // lone "{"/"}" matches only one end, so it stays a literal character.
-    // Its Shift/Caps form when shifted (incl. CapsLock ß -> ẞ, #169), else the base value.
+    // Its Shift/Caps form when shifted (incl. CapsLock ß -> ẞ), else the base value.
     const char =
       action.kind === "char" ? (shifted ? shiftedGlyph(value, shiftValue, this._capsLock) : value) : undefined;
 
@@ -1675,7 +1621,6 @@ class KioskKeyboard extends UI5Element {
 
     const target = this._resolveTarget();
 
-    // ── Composition middleware ──
     const middleware = this._ensureMiddleware();
     if (middleware && target && middleware.handleKey(value, target)) return;
 
@@ -1696,9 +1641,7 @@ class KioskKeyboard extends UI5Element {
     }
 
     if (action.kind === "unknown") {
-      // key-press already fired (with char: undefined); do NOT insert the
-      // literal braces - that was a silent footgun (a mistyped `{bcksp}`, or a
-      // custom `{paste}` key with no handler, typed the text "{bcksp}").
+      // key-press fired with char: undefined; inserting would type "{bcksp}" for a typo'd token.
       console.warn(
         `[kiosk-keyboard] Unrecognized key token "${value}": not a built-in special key. Ignoring (no text inserted).`,
       );
@@ -1714,8 +1657,6 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // Exhaustiveness: every KeyAction kind is handled above. A new variant fails
-    // to compile at this assertNever.
     return assertNever(action);
   }
 
@@ -1841,14 +1782,8 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * Inserts a chosen variant through the same cursor-aware path a normal char
-   * key uses: fires the cancelable `key-press` first (a consumer's
-   * preventDefault vetoes the insert), routes the glyph through the composition
-   * middleware so a committed variant can seed or continue composition exactly
-   * like a pressed key, falls back to a literal insert when the middleware does
-   * not consume it. A committed variant is a character key, and
-   * `spendsOneShotShift("char")` is true on every branch, the vetoed one
-   * included. Called by the popup controller on commit.
+   * Commits a variant glyph like a char key: cancelable key-press, then
+   * middleware, then literal insert; always spends a one-shot Shift.
    */
   private _insertVariant(glyph: string): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: glyph, shiftKey: this._shifted, char: glyph });

@@ -76,9 +76,6 @@ interface VariantPopupControllerHost {
  * rather than caching a reference, and drives the reactive popup state
  * through `host.getPopupState()` / `setPopupState()` so the host template
  * re-renders from it.
- *
- * The hold threshold is shared with the sibling `kiosk-keyboard` package by
- * hand (see the CLAUDE.md no-shared-core convention); only the wiring differs.
  */
 export class VariantPopupController {
   /** The pending single-shot hold timer that opens the popup, or `null` when unarmed. */
@@ -93,8 +90,7 @@ export class VariantPopupController {
    * Set while a commit is closing the popup, so the shared teardown announces a
    * dismissal only for a genuine cancel (Escape, outside press, key press).
    * Scoped to one popup session: every open clears it, so no close path can
-   * leave it stuck and silence later dismissals. Mirrors the sibling
-   * kiosk-keyboard package's `_dismiss(announce)` discriminator.
+   * leave it stuck and silence later dismissals.
    */
   private _committing = false;
   /**
@@ -321,7 +317,7 @@ export class VariantPopupController {
     let next = state.activeIndex;
     // In RTL the options render right-to-left, so ArrowRight moves to the
     // lower (visually next) index and ArrowLeft to the higher; Up/Down stay
-    // absolute. Mirrors the sibling kiosk-keyboard popup.
+    // absolute.
     const rtl = this._host.isRtl();
     const clamp = (i: number): number => Math.max(0, Math.min(i, last));
 

@@ -3,16 +3,23 @@ import { NativeInputModeSuppression } from "./native-inputmode-suppression.js";
 import type { KeyboardType } from "../types.js";
 
 /** Why the active target was set; drives focusout cleanup policy. */
-type TargetSource = "autoShow" | "explicit";
+export type TargetSource = "autoShow" | "explicit";
 
-/** Who last set keyboardType; `auto:VALUE` = auto-detected for VALUE, `reset` = handed back. */
-type KeyboardTypeSource = "unset" | "explicit" | "reset" | `auto:${string}`;
+/**
+ * Who last set keyboardType. An explicit value ("explicit") claims the property and
+ * holds auto-type detection off until `resetKeyboardType()`. "auto:VALUE" is a
+ * detection result `_setKeyboardTypeInternal` tagged for VALUE, and "reset" is
+ * `resetKeyboardType()` handing the property back; neither claims it, and both fold
+ * to "unset" in `onInvalidation` before `keyboard-type-change` fires, so a listener
+ * that sets the type synchronously can claim it. An invalid value falls back to the
+ * default without claiming.
+ */
+export type KeyboardTypeSource = "unset" | "explicit" | "reset" | `auto:${string}`;
 
 /**
  * The host keyboard element. Live element/property state (visibility, the
  * docked/autoShow/autoType flags, keyboard type, shadow root, containment) is
- * read directly off it, with no accessor wrappers - matching the sibling
- * `ResponsiveSizingController` host pattern.
+ * read directly off it, with no accessor wrappers.
  */
 export type AutoShowHost = HTMLElement & {
   readonly disabled: boolean;
@@ -51,9 +58,7 @@ export interface AutoShowBridge {
  * Multi-keyboard isolation lives here too: a live registry of controllers lets
  * one instance avoid claiming an input another keyboard already targets. The
  * host registers/unregisters its controller in step with its own connected
- * lifecycle. Uses the kiosk `auto-show-behavior.ts` as the responsibility
- * reference; the webc DOM specifics (resolving live elements, the `controls`
- * id matching) differ.
+ * lifecycle.
  */
 export class AutoShowController {
   /** All live keyboards' controllers, for cross-instance claim checks. */

@@ -29,9 +29,8 @@ export type ResponsiveSizingHost = HTMLElement & {
  * Observes the host element (and the rendered shadow root) with a
  * ResizeObserver and, on resize (coalesced via rAF), reflects a `cq-tier`
  * attribute (`short` / `tiny`, absent when unconstrained) on the host when it
- * is externally height-constrained. The tier lives on the host (not in shadow
- * DOM) so consumer overrides win; an attribute rather than a class so framework
- * `className` reconciliation cannot clobber it. Width styling is CSS
+ * is externally height-constrained (why a host attribute: see
+ * `KIOSK_KEYBOARD_DOM.attributes.cqTier`). Width styling is CSS
  * `@container`; the layout-swapping width tier is AutoCompactController.
  *
  * The block axis cannot follow suit. A block-axis `@container` query needs
@@ -131,8 +130,6 @@ export class ResponsiveSizingController {
 
     const cs = getComputedStyle(root);
 
-    // ── Height ── (the tier lives on the host so consumer overrides always win)
-    //
     // Both heights below must be read with the tier cleared: it changes key
     // sizing, so measuring while it is applied makes the outcome depend on the
     // previous outcome, which oscillates.
@@ -156,7 +153,7 @@ export class ResponsiveSizingController {
 
     // Compare against the host content box, not the host border box. This
     // keeps height breakpoints accurate when consumers add host padding/borders,
-    // and measures untransformed layout pixels, matching the kiosk twin.
+    // and measures untransformed layout pixels.
     const hostHeight = this._getHostContentHeight();
 
     // Only apply when externally constrained (host height < natural content height).
@@ -166,7 +163,6 @@ export class ResponsiveSizingController {
       return;
     }
 
-    // px per rem, read once here from the root font-size.
     const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const shortThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-short-threshold", 16, remPx);
     const tinyThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-tiny-threshold", 12, remPx);

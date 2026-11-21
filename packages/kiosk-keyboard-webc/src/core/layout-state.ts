@@ -173,8 +173,7 @@ export class LayoutState {
   }
 
   /**
-   * Returns the active surface to the base (alphabetic) layout, mirroring the kiosk
-   * twin's `resetLayout()`, and makes it the intent. Fires `layout-change` only on a
+   * Returns the active surface to the base (alphabetic) layout and makes it the intent. Fires `layout-change` only on a
    * real change.
    */
   resetToBase(reason: Reason = "api"): void {
