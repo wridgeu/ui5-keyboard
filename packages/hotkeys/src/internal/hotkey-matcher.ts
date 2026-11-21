@@ -4,7 +4,7 @@ import { GLOBAL_SCOPE } from "./constants";
 import { findMatchInScope, type FindMatchOptions } from "./dispatch-core";
 import { matchesKeyboardEvent } from "./match";
 import { recordSkip, type SkipInfo } from "./skip-reason";
-import type RegistrationIndex from "./registration-index";
+import type RegistrationStore from "./registration-store";
 import type FocusFallbackTracker from "./FocusFallbackTracker";
 import type { HotkeyRegistration } from "./types";
 import type { HotkeyRegistrationInfo } from "../types";
@@ -21,13 +21,13 @@ type MatchOptions = Omit<FindMatchOptions, "registrations">;
  * for the unhandled-callback, and leaves execution
  * (preventDefault/stopPropagation/callback) to the manager.
  *
- * Reads the shared registration index; resolves the event path through
+ * Reads the shared registration store; resolves the event path through
  * the focus-fallback tracker; maps registrations to public info via the
  * injected callback (the manager owns that conversion).
  */
 export default class HotkeyMatcher {
   constructor(
-    private readonly _index: RegistrationIndex,
+    private readonly _index: RegistrationStore,
     private readonly _focusFallback: FocusFallbackTracker,
     private readonly _toRegistrationInfo: (reg: HotkeyRegistration) => HotkeyRegistrationInfo,
   ) {}

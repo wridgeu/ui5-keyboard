@@ -13,7 +13,7 @@ import { assertImmutableSetOptions } from "./internal/immutable-options";
 import FocusFallbackTracker from "./internal/FocusFallbackTracker";
 import { getEventTarget, isInputElement } from "./internal/dom";
 import { parseHotkey, formatParsed, parseSequenceSteps } from "./internal/parse";
-import RegistrationIndex from "./internal/registration-index";
+import RegistrationStore from "./internal/registration-store";
 import ConflictResolver from "./internal/conflict-resolver";
 import HotkeyMatcher from "./internal/hotkey-matcher";
 import { resolveEnabled } from "./internal/resolve-enabled";
@@ -149,8 +149,7 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
  * @since 0.1.0
  */
 export default class HotkeyManager extends BaseObject {
-  private _registrations: Map<string, HotkeyRegistration> = new Map();
-  private _registrationIndex: RegistrationIndex = new RegistrationIndex();
+  private _registrations: RegistrationStore = new RegistrationStore();
   private _scopeStack: string[] = [GLOBAL_SCOPE];
   private _platform: Platform;
   private _groups: Set<RegistrationGroup> = new Set();
@@ -192,10 +191,8 @@ export default class HotkeyManager extends BaseObject {
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
     this._focusFallback = new FocusFallbackTracker();
-    this._conflictResolver = new ConflictResolver(this._registrationIndex, (reg) => this._removeRegistration(reg));
-    this._matcher = new HotkeyMatcher(this._registrationIndex, this._focusFallback, (reg) =>
-      this._toRegistrationInfo(reg),
-    );
+    this._conflictResolver = new ConflictResolver(this._registrations);
+    this._matcher = new HotkeyMatcher(this._registrations, this._focusFallback, (reg) => this._toRegistrationInfo(reg));
 
     Log.info("HotkeyManager initialized", undefined, LOG_COMPONENT);
   }
@@ -207,21 +204,6 @@ export default class HotkeyManager extends BaseObject {
     if (this._destroyed) {
       throw new Error(`Cannot call ${method}() on a destroyed HotkeyManager`);
     }
-  }
-
-  /**
-   * Canonical registration removal: mark inactive, then drop from the scope
-   * index and the id map. Returns `false` (a no-op) when the registration is
-   * already inactive. The single removal path shared by `unregister()` and the
-   * conflict resolver's "replace" policy, so the multi-store update cannot
-   * desync.
-   */
-  private _removeRegistration(registration: HotkeyRegistration): boolean {
-    if (!registration.active) return false;
-    registration.active = false;
-    this._registrationIndex.deindex(registration);
-    this._registrations.delete(registration.id);
-    return true;
   }
 
   // ──────────────────────────────────────────────
@@ -265,8 +247,7 @@ export default class HotkeyManager extends BaseObject {
       options: resolved,
     };
 
-    this._registrations.set(id, registration);
-    this._registrationIndex.index(registration);
+    this._registrations.add(registration);
 
     Log.debug(
       `Registered hotkey "${normalizedHotkey}" (id: ${id}, scope: ${resolved.scope})`,
@@ -294,7 +275,7 @@ export default class HotkeyManager extends BaseObject {
         return null;
       },
       unregister: () => {
-        if (this._removeRegistration(registration)) {
+        if (this._registrations.remove(registration)) {
           Log.debug(`Unregistered hotkey "${normalizedHotkey}" (id: ${id})`, undefined, LOG_COMPONENT);
         }
       },
@@ -315,10 +296,9 @@ export default class HotkeyManager extends BaseObject {
               opts.scope,
               nextTarget,
               opts.conflictBehavior,
+              registration,
             );
-            this._registrationIndex.deindex(registration);
-            opts.target = nextTarget;
-            this._registrationIndex.index(registration);
+            this._registrations.retarget(registration, nextTarget);
           }
         }
         applyUpdatableOptions(opts, newOptions);
@@ -529,7 +509,7 @@ export default class HotkeyManager extends BaseObject {
    */
   getRegistrationsForScope(scopeId: string): ReadonlyArray<HotkeyRegistrationInfo> {
     const normalizedScope = resolveScopeOrGlobal(scopeId);
-    const bucket = this._registrationIndex.getBucket(normalizedScope);
+    const bucket = this._registrations.getBucket(normalizedScope);
     if (!bucket) return [];
 
     // The three bucket sections are disjoint: the index files each registration
@@ -726,12 +706,7 @@ export default class HotkeyManager extends BaseObject {
       this._sequenceManager = null;
     }
 
-    for (const reg of this._registrations.values()) {
-      reg.active = false;
-    }
-
     this._registrations.clear();
-    this._registrationIndex.clear();
     this._scopeStack = [GLOBAL_SCOPE];
     this._unhandledCallback = null;
 
