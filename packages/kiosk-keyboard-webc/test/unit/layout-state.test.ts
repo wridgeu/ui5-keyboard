@@ -68,7 +68,7 @@ function createHost(attribute = "qwerty", locale = "qwerty", fold: CustomLayoutF
   /** What the element's `keyboardType` invalidation does. */
   const setKeyboardType = (type: `${KeyboardType}`): void => {
     box.keyboardType = type;
-    state.clearUserOverride();
+    state.clearUserOverride("keyboardType");
     state.refresh("keyboardType");
   };
   /** What the fold cache does when the slot changes. */
@@ -112,7 +112,7 @@ describe("LayoutState.clearUserOverride", () => {
   it("clearUserOverride leaves a programmatic layout alone", () => {
     const { box, state, setAttribute } = createHost();
     setAttribute("numeric");
-    state.clearUserOverride();
+    state.clearUserOverride("keyboardType");
     expect(box.current).to.equal("numeric");
     expect(state.resolvedName()).to.equal("numeric");
   });

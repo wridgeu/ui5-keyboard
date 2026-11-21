@@ -1118,7 +1118,7 @@ class KioskKeyboard extends UI5Element {
       const autoDetected = this._keyboardTypeSource === `auto:${this.keyboardType}`;
       if (this._keyboardTypeSource !== "explicit") this._keyboardTypeSource = "unset";
       // A new keyboard type is a new layout context.
-      this._layoutState.clearUserOverride();
+      this._layoutState.clearUserOverride("keyboardType");
       this._shiftState.reset();
       // The surface swap ends any in-progress composition: commit the preedit
       // and drop the middleware so the next key resolves against the new
@@ -1907,16 +1907,18 @@ class KioskKeyboard extends UI5Element {
 
   /**
    * The one target transition. A real switch commits the composition, resets
-   * shift (a same-input re-set is a caret reposition that keeps both, as in the
-   * UI5 twin) and fires `active-control-change`; every call re-points the
-   * target-bound resources at what the keyboard now resolves. Disconnect
-   * teardown is the only other writer of the target, and fires nothing.
+   * shift and drops a `{layout:*}` pick back to the base (a same-input re-set is
+   * a caret reposition that keeps all three, as in the UI5 twin) and fires
+   * `active-control-change`; every call re-points the target-bound resources at
+   * what the keyboard now resolves. Disconnect teardown is the only other writer
+   * of the target, and fires nothing.
    */
   private _retarget(el: HTMLInputElement | HTMLTextAreaElement | null, source: TargetSource): void {
     const switched = el !== this._targetElement;
     if (switched) {
       this._endComposition("commit");
       this._shiftState.reset();
+      this._layoutState.clearUserOverride("user");
     }
     this._targetElement = el;
     this._targetSource = source;
