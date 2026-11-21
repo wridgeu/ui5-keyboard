@@ -86,9 +86,7 @@ type UpdatableOptionKey = keyof typeof UPDATABLE_OPTION_DEFAULTS;
 /** Every value an updatable option can hold, as declared on the resolved options. */
 type UpdatableOptionValue = ResolvedHotkeyOptions[UpdatableOptionKey];
 
-// SAFETY: `UPDATABLE_OPTION_DEFAULTS` is a const object literal that nothing writes to, so
-// the strings `Object.keys` returns are exactly the `UpdatableOptionKey` union that
-// `keyof typeof` derives from that same literal.
+// SAFETY: Object.keys of a const literal that nothing writes to.
 const UPDATABLE_OPTION_KEYS = Object.keys(UPDATABLE_OPTION_DEFAULTS) as UpdatableOptionKey[];
 
 /**
@@ -100,10 +98,7 @@ function applyUpdatableOptions(target: ResolvedHotkeyOptions, source: Partial<Up
   for (const key of UPDATABLE_OPTION_KEYS) {
     const value = source[key];
     if (value !== undefined) {
-      // SAFETY: `key` ranges over `UPDATABLE_OPTION_KEYS`, so it names a field `target`
-      // declares. The assertion restates those fields under their common value type, which
-      // is what TypeScript needs to accept a write whose key is a union rather than a single
-      // literal; `source` and `target` declare the same type per key.
+      // SAFETY: TS cannot type a write through a union key; source and target share per-key types.
       (target as Record<UpdatableOptionKey, UpdatableOptionValue>)[key] = value;
     }
   }
@@ -172,13 +167,11 @@ export default class HotkeyManager extends BaseObject {
   private _groups: Set<RegistrationGroup> = new Set();
   private _destroyed = false;
 
-  // Optional callback for unhandled key events
   private _unhandledCallback: UnhandledCallback | null = null;
 
-  // Centralized event dispatcher - owns all DOM listeners
   private _dispatcher: EventDispatcher;
 
-  // Lazily created SequenceManager (created on first sequence registration via register())
+  // Created on first sequence registration.
   private _sequenceManager: SequenceManager | null = null;
 
   private _focusFallback: FocusFallbackTracker;
@@ -216,9 +209,6 @@ export default class HotkeyManager extends BaseObject {
     Log.info("HotkeyManager initialized", undefined, LOG_COMPONENT);
   }
 
-  /**
-   * Guard: throw if the manager has been destroyed.
-   */
   private _assertAlive(method: string): void {
     if (this._destroyed) {
       throw new Error(`Cannot call ${method}() on a destroyed HotkeyManager`);
@@ -251,7 +241,6 @@ export default class HotkeyManager extends BaseObject {
     const normalizedHotkey = formatParsed(parsedHotkey);
     const id = `hk_${++idSeq}`;
 
-    // Conflict detection within the same scope
     this._conflictResolver.resolve(normalizedHotkey, resolved.scope, resolved.target, resolved.conflictBehavior);
 
     this._logValidationWarnings(normalizedHotkey);
@@ -304,7 +293,7 @@ export default class HotkeyManager extends BaseObject {
         }
         assertImmutableSetOptions(newOptions);
         const opts = registration.options;
-        // Special case: target swap requires normalization + re-indexing + conflict management
+        // A target swap re-runs conflict resolution and re-indexes.
         if (newOptions.target !== undefined) {
           const nextTarget = resolveTarget(newOptions.target);
           if (!sameTarget(opts.target, nextTarget)) {
@@ -643,9 +632,6 @@ export default class HotkeyManager extends BaseObject {
     return this._platform;
   }
 
-  /**
-   * Convert an internal registration to the public flat info shape.
-   */
   private _toRegistrationInfo(reg: HotkeyRegistration): HotkeyRegistrationInfo {
     const opts = reg.options;
     const enabled = resolveEnabled(opts.enabled, `"${reg.normalizedHotkey}"`, LOG_COMPONENT);
@@ -674,7 +660,6 @@ export default class HotkeyManager extends BaseObject {
     callback: HotkeyCallback,
     options?: HotkeyOptions,
   ): HotkeyRegistrationHandle {
-    // Warn about options that are not applicable to sequences
     if (options?.target) {
       Log.warning(
         `Option "target" is ignored for sequence "${hotkey}" - element targeting is not supported for sequences`,
@@ -686,9 +671,6 @@ export default class HotkeyManager extends BaseObject {
     return this._getSequenceManager().registerSequence(hotkey, steps, callback, options);
   }
 
-  /**
-   * Get or create the internal SequenceManager.
-   */
   private _getSequenceManager(): SequenceManager {
     if (!this._sequenceManager) {
       this._sequenceManager = new SequenceManager(() => this.getActiveScope(), this._platform);
@@ -825,7 +807,6 @@ export default class HotkeyManager extends BaseObject {
       this._executeMatch(event, targetMatch);
     }
 
-    // Pass 2: untargeted registrations (only if no target match stopped propagation)
     if (!targetMatch || !targetMatch.options.stopPropagation) {
       const untargetedMatch = this._matcher.matchUntargeted(event, activeScope, isInput, popupOpen, skipInfo);
       if (untargetedMatch) {

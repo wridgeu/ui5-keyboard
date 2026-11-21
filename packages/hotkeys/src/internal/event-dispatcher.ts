@@ -63,10 +63,6 @@ export interface HotkeyDispatchHandler {
   emitUnhandled(event: KeyboardEvent, eventContext: EventContext): void;
 }
 
-/**
- * Internal guard implementation for suspend guards.
- * @internal
- */
 class DispatchGuard implements KeyboardDispatchGuard {
   private _active = true;
   private _owner: EventDispatcher | null;
@@ -113,13 +109,11 @@ export default class EventDispatcher {
   private _keyStateTracker: KeyStateTracker;
   private _destroyed = false;
 
-  // Suspend guard state
   private readonly _guards: Set<DispatchGuard> = new Set();
 
   // Interceptor slot (e.g., HotkeyRecorder)
   private _interceptor: KeyEventInterceptor | null = null;
 
-  // Recorder tracking for lifecycle management
   private readonly _trackedRecorders: Set<HotkeyRecorder> = new Set();
 
   private _platform: Platform;
@@ -139,9 +133,6 @@ export default class EventDispatcher {
     window.addEventListener("blur", this._onBlur.bind(this), { signal });
   }
 
-  /**
-   * Access the owned KeyStateTracker instance.
-   */
   get keyStateTracker(): KeyStateTracker {
     return this._keyStateTracker;
   }
@@ -173,9 +164,6 @@ export default class EventDispatcher {
     return guard;
   }
 
-  /**
-   * Whether dispatch is currently suspended (any guard active).
-   */
   isDispatchSuspended(): boolean {
     return this._guards.size > 0;
   }
@@ -223,9 +211,6 @@ export default class EventDispatcher {
   // Recorder tracking
   // ──────────────────────────────────────────────
 
-  /**
-   * Track a recorder for lifecycle management.
-   */
   trackRecorder(recorder: HotkeyRecorder): void {
     this._trackedRecorders.add(recorder);
   }
@@ -249,7 +234,6 @@ export default class EventDispatcher {
     if (this._destroyed) return;
     this._destroyed = true;
 
-    // Remove all DOM listeners first
     this._listenerAbort.abort();
 
     for (const guard of this._guards) {

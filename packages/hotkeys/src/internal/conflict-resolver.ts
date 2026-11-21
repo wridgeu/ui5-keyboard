@@ -50,7 +50,6 @@ export default class ConflictResolver {
       reg !== self && reg.normalizedHotkey === normalizedHotkey;
 
     if (conflictBehavior === ConflictBehavior.Replace) {
-      // Collect ALL matches so we remove every conflicting registration
       const conflicts: HotkeyRegistration[] = [];
       for (const reg of regs) {
         if (isConflicting(reg)) {

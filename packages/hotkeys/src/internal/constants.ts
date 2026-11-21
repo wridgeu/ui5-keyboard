@@ -139,7 +139,6 @@ export const KEY_DISPLAY_SYMBOLS: Readonly<Record<string, string>> = {
  * @since 0.1.0
  */
 export function normalizeKeyName(key: string): string {
-  // Check aliases first
   const alias = KEY_ALIASES[key];
   if (alias) {
     return alias;
@@ -152,12 +151,10 @@ export function normalizeKeyName(key: string): string {
     return lowerAlias;
   }
 
-  // Single character: uppercase letters
   if (key.length === 1) {
     return key.toUpperCase();
   }
 
-  // Function keys: normalize casing (f5 -> F5)
   const fnMatch = /^[fF]([1-9]|1\d|2[0-4])$/.exec(key);
   if (fnMatch) {
     return `F${fnMatch[1]}`;

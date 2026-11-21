@@ -54,9 +54,7 @@ type UpdatableOptionKey = keyof typeof UPDATABLE_OPTION_DEFAULTS;
 /** Every value an updatable option can hold, as declared on the registration. */
 type UpdatableOptionValue = SequenceRegistration[UpdatableOptionKey];
 
-// SAFETY: `UPDATABLE_OPTION_DEFAULTS` is a const object literal that nothing writes to, so
-// the strings `Object.keys` returns are exactly the `UpdatableOptionKey` union that
-// `keyof typeof` derives from that same literal.
+// SAFETY: Object.keys of a const literal that nothing writes to.
 const UPDATABLE_OPTION_KEYS = Object.keys(UPDATABLE_OPTION_DEFAULTS) as UpdatableOptionKey[];
 
 /**
@@ -69,10 +67,7 @@ function applyUpdatableOptions(target: SequenceRegistration, source: SequenceOpt
   for (const key of UPDATABLE_OPTION_KEYS) {
     const value = source[key];
     if (value !== undefined) {
-      // SAFETY: `key` ranges over `UPDATABLE_OPTION_KEYS`, so it names a field `target`
-      // declares. The assertion restates those fields under their common value type, which
-      // is what TypeScript needs to accept a write whose key is a union rather than a single
-      // literal; `source` and `target` declare the same type per key.
+      // SAFETY: TS cannot type a write through a union key; source and target share per-key types.
       (target as Record<UpdatableOptionKey, UpdatableOptionValue>)[key] = value;
     }
   }

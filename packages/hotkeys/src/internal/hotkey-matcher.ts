@@ -165,7 +165,6 @@ export default class HotkeyMatcher {
       logComponent: LOG_COMPONENT,
     };
 
-    // Active scope first
     const activeScopeMatch = findMatchInScope({
       ...matchOpts,
       registrations: this._index.getUntargetedRegistrations(activeScope),
@@ -173,7 +172,6 @@ export default class HotkeyMatcher {
     });
     if (activeScopeMatch) return activeScopeMatch;
 
-    // Global scope fallback
     if (activeScope !== GLOBAL_SCOPE) {
       return findMatchInScope({
         ...matchOpts,

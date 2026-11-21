@@ -104,7 +104,7 @@ export default class KeyStateTracker {
   }
 
   /**
-   * Process a keyup event - decrements ref-count, includes macOS stuck-key fix.
+   * Process a keyup event - decrements ref-count.
    * Called by EventDispatcher.
    * @internal
    */

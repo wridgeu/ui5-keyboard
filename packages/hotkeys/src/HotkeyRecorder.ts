@@ -127,31 +127,26 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
   onKeyDown(event: KeyboardEvent): boolean {
     if (!this.isRecording) return false;
 
-    // Block all keyboard input during recording
     event.preventDefault();
     event.stopImmediatePropagation();
 
     const key = event.key;
 
-    // Escape → cancel
     if (key === "Escape") {
       this.cancel();
       return true;
     }
 
-    // Backspace/Delete with no modifiers → clear
     const noModifiers = !event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey;
     if ((key === "Backspace" || key === "Delete") && noModifiers) {
       this._stopAndRecord("");
       return true;
     }
 
-    // Modifier-only → wait for action key
     if (MODIFIER_KEYS.has(key)) {
       return true;
     }
 
-    // Valid combo - convert to hotkey string
     const hotkey = keyboardEventToHotkey(event);
     if (hotkey !== null) {
       this._stopAndRecord(hotkey);
