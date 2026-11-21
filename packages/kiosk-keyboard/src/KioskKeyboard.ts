@@ -1233,6 +1233,19 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Custom setter for autoCompact - switching it off gives the requested layout back
+   * rather than leaving the arrangement a width picked with nothing left to undo it.
+   *
+   * @public
+   * @since 0.1.0
+   */
+  setAutoCompact(autoCompact: boolean): this {
+    this.setProperty("autoCompact", autoCompact);
+    if (!autoCompact) this._layoutState.applyTier(false, false);
+    return this;
+  }
+
+  /**
    * Applies the `autoCompact` width tier. Called from {@link AutoCompactBehavior}
    * on a frame of its own, never from the observation callback.
    */

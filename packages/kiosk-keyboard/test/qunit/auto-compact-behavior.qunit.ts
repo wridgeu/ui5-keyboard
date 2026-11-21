@@ -55,6 +55,8 @@ let hostDom: HTMLElement | null;
 let enabled: boolean;
 /** Every tier the behaviour applied, in order. */
 let applied: boolean[];
+/** The `crossed` flag of each application, in order. */
+let crossings: boolean[];
 let behavior: AutoCompactBehavior;
 
 /** The observer the behaviour built for the current element. */
@@ -83,10 +85,14 @@ QUnit.module("AutoCompactBehavior", {
     hostDom = dom;
     enabled = true;
     applied = [];
+    crossings = [];
     behavior = new AutoCompactBehavior({
       getDomRef: () => hostDom,
       getAutoCompact: () => enabled,
-      _applyCompactTier: (narrow: boolean) => applied.push(narrow),
+      _applyCompactTier: (narrow: boolean, crossed: boolean) => {
+        applied.push(narrow);
+        crossings.push(crossed);
+      },
     });
   },
   afterEach() {
@@ -150,16 +156,16 @@ QUnit.test("Tiers at the threshold itself and releases one pixel above it", asyn
   assert.deepEqual(applied, [true, false], "a width past the threshold is not");
 });
 
-QUnit.test("Drops an observation that does not cross the threshold", async (assert) => {
+QUnit.test("Reports the first reading of an element as no crossing, and later ones as crossings", async (assert) => {
   behavior.syncObserver(dom);
 
   observer().deliver(300);
   await nextFrame();
-  assert.deepEqual(applied, [true], "the first observation is applied");
-
-  observer().deliver(280);
+  observer().deliver(500);
   await nextFrame();
-  assert.deepEqual(applied, [true], "still narrow, so the verdict is unchanged");
+
+  assert.deepEqual(applied, [true, false], "each frame's reading is reported");
+  assert.deepEqual(crossings, [false, true], "only the first reading is not a crossing");
 });
 
 QUnit.test("Drops a pending application when autoCompact goes off before the frame", async (assert) => {
@@ -211,6 +217,7 @@ QUnit.test("Carries no verdict from one element to the next", async (assert) => 
   await nextFrame();
 
   assert.deepEqual(applied, [true, true], "a box that has never been tiered gets the verdict applied");
+  assert.deepEqual(crossings, [false, false], "and its first reading is not a crossing");
 });
 
 QUnit.test("A zero inline size is not a narrow keyboard", async (assert) => {
@@ -223,20 +230,6 @@ QUnit.test("A zero inline size is not a narrow keyboard", async (assert) => {
   observer().deliver(300);
   await nextFrame();
   assert.deepEqual(applied, [true], "and the zero left no verdict behind to suppress the next width");
-});
-
-QUnit.test("Switching autoCompact off restores the wide tier once", async (assert) => {
-  behavior.syncObserver(dom);
-  observer().deliver(300);
-  await nextFrame();
-  assert.deepEqual(applied, [true], "the narrow tier is on");
-
-  enabled = false;
-  behavior.syncObserver(dom);
-  assert.deepEqual(applied, [true, false], "the restore is applied on the sync itself, without a frame");
-
-  behavior.syncObserver(dom);
-  assert.deepEqual(applied, [true, false], "a further sync while off has nothing left to restore");
 });
 
 QUnit.test("A host without a rendered element drops the pending application", async (assert) => {

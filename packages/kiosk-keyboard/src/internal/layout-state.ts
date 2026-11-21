@@ -79,7 +79,7 @@ export default class LayoutState {
   /** The effective layout the switch effects last ran for: the one on screen. */
   private _rendered = "";
   private _source: LayoutSource = "external";
-  /** Whether the `autoCompact` width tier last reported the keyboard too narrow. */
+  /** The `autoCompact` width verdict: whether the keyboard is too narrow for the requested layout. */
   private _narrow = false;
   /** Live-region text for a width-driven swap, held until the render it triggers is done. */
   private _pendingAnnouncement: string | null = null;
@@ -193,8 +193,9 @@ export default class LayoutState {
    * Records the `autoCompact` width verdict: the requested layout's compact
    * counterpart renders while the keyboard is too narrow for it, the requested layout
    * itself once the room returns. Called from `AutoCompactBehavior` on a frame of its
-   * own, never from the observation callback. `crossed` is whether the verdict
-   * replaces a known previous one, which is what gets announced.
+   * own, never from the observation callback, and with `false` when `autoCompact`
+   * goes off. `crossed` is whether the verdict replaces a measured one, which is
+   * what gets announced.
    */
   applyTier(narrow: boolean, crossed: boolean): void {
     this._narrow = narrow;
