@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.2.0](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-kiosk-keyboard-v0.1.0...ui5-lib-kiosk-keyboard-v0.2.0) (2026-11-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **keyboard:** `layoutChange` / `layout-change` no longer carry `requestedLayout` or `autoDetected`. Persist `layout` (the intent) where you persisted `requestedLayout`; read `effectiveLayout` for what renders; branch on `reason` where you branched on `autoDetected` ("width", "keyboardType" and "layouts" were auto-detected). In the UI5 control, `layout` / `getLayout()` now hold the intent rather than the layout on screen: read `getEffectiveLayout()` for what renders. A secondary `{layout:*}` pick no longer writes `layout`, and `setLayout()` with the current value is a no-op - call `resetLayout()` to drop a secondary pick. In the web component a primary `{layout:*}` pick now writes and reflects `layout`, and `layout-change` also fires for a change the `layout` attribute asked for.
+* **keyboard:** a request while autoCompact holds the keyboard narrow fires one layoutChange naming the layout that renders (e.g. home-c) instead of one for the request and one for the counterpart a frame later. autoDetected is now false only when what renders is exactly what was requested; a request rendered as its compact counterpart reports true. Every layoutChange carries a new requestedLayout parameter naming the layout last asked for; consumers that persisted the layout from autoDetected: false events should persist requestedLayout from any event.
+
+### Features
+
+* **keyboard:** derive the kiosk rendered layout from its inputs ([cd87fdc](https://github.com/wridgeu/ui5-keyboard/commit/cd87fdc7a90fd698edfd25c79a9382c6f5fa84e6))
+* **keyboard:** separate the layout intent from the effective layout ([41621c6](https://github.com/wridgeu/ui5-keyboard/commit/41621c69e4c7c092cfe39f4afe6cfae8059cad95))
+
+
+### Bug Fixes
+
+* **demo:** give controller-built controls stable ids and pin the flp spec to them ([92d3562](https://github.com/wridgeu/ui5-keyboard/commit/92d35626bb4185799b12cd277a3f85a353c857b6))
+* **demo:** give controller-built controls stable ids and pin the flp spec to them ([47e414d](https://github.com/wridgeu/ui5-keyboard/commit/47e414d0d996e744dfc52fe44770bca30268d8ae))
+* **demo:** keep docked-page bottom padding at phone widths ([ffc7906](https://github.com/wridgeu/ui5-keyboard/commit/ffc790609211fda52e35cd5babdee5765993e394))
+* **demo:** keep kiosk control rows inside their cards at phone width ([c7828b4](https://github.com/wridgeu/ui5-keyboard/commit/c7828b487a79143ba3a671f0464f429653beb237))
+* **demo:** list every sequence continuation and clear the hint on timeout ([e6a5868](https://github.com/wridgeu/ui5-keyboard/commit/e6a5868dcac00eda38ce84a492cfb029ad8ff451))
+* **demo:** make the outer bubbling target reachable ([48c24a6](https://github.com/wridgeu/ui5-keyboard/commit/48c24a6b9346a334a1c41cf0993e2e411796e3ca))
+* **demo:** QA findings on docked padding, sequences hint, bubbling target, phone-width cards ([bc330e2](https://github.com/wridgeu/ui5-keyboard/commit/bc330e2bcb7278e2922d7f395153750ef9c48977))
+* **demo:** wrap programmatic and custom-layouts cards at phone width ([449f69b](https://github.com/wridgeu/ui5-keyboard/commit/449f69b207d554422d144780aee75e4798870e7e))
+* **demo:** wrap programmatic and custom-layouts cards at phone width ([c335cce](https://github.com/wridgeu/ui5-keyboard/commit/c335cce72b432bfcec4e4eb4d961a382a8cdfac9))
+* **keyboard:** apply the switch effects to every effective-layout change ([ba3f65f](https://github.com/wridgeu/ui5-keyboard/commit/ba3f65f8ee2b68ec509fe0b94ad8a608bf35ebf8))
+* **keyboard:** auto-type a ui5-input focused after a numpad target ([0d4ce92](https://github.com/wridgeu/ui5-keyboard/commit/0d4ce927e714e723be5e3c47f035ac8b6c5b22c5))
+* **keyboard:** break the shift double-tap on any key in between ([09cf7da](https://github.com/wridgeu/ui5-keyboard/commit/09cf7da356bf75d358f55a067c0c6fa8d549539e))
+* **keyboard:** cancel a held key press when the layout switches ([ccd608e](https://github.com/wridgeu/ui5-keyboard/commit/ccd608e886a72407258f9579b213a1fb03ee0e66))
+* **keyboard:** cancel a held key press when the layout switches ([d13b8db](https://github.com/wridgeu/ui5-keyboard/commit/d13b8dbdcb15df38962f809c6fbc7cd3368d7e29))
+* **keyboard:** check write-time diagnostics once per input ([7a53bc5](https://github.com/wridgeu/ui5-keyboard/commit/7a53bc51b361230c8de8eaee807c82f99bcf5507))
+* **keyboard:** check write-time diagnostics once per input ([899a7c9](https://github.com/wridgeu/ui5-keyboard/commit/899a7c95cb253f42d6ba48a591e61f0f4a4cca6b))
+* **keyboard:** claim a focused input inside an open shadow root ([514af1a](https://github.com/wridgeu/ui5-keyboard/commit/514af1a961aee7cf2f2da468bc006e034c6a06c3))
+* **keyboard:** close the shift double-tap window on every non-shift key ([d910ae4](https://github.com/wridgeu/ui5-keyboard/commit/d910ae4294a7f7e96065fea0d79fb0a4a795aff8))
+* **keyboard:** report no layout change for the constructor settings ([7870b47](https://github.com/wridgeu/ui5-keyboard/commit/7870b47629ba6e3b2b235082c3aeebc5051039a7))
+* **keyboard:** return focus to the target input after a pointer variant pick ([7e864ec](https://github.com/wridgeu/ui5-keyboard/commit/7e864eccbed2524fa174cbe4b419f36bcc6ea3f8))
+* **keyboard:** return focus to the target input after a pointer variant pick ([8e82b05](https://github.com/wridgeu/ui5-keyboard/commit/8e82b055a6188a46002d07de0bcc9e7ba0452257))
+* **kiosk:** keep the physical-key mirror off keys a layout change re-seats ([c0063a4](https://github.com/wridgeu/ui5-keyboard/commit/c0063a40c266b3dcbd0055702904e6cd61d5c15a))
+* **kiosk:** keep the physical-key mirror off keys a layout change re-seats ([203942b](https://github.com/wridgeu/ui5-keyboard/commit/203942ba3a3fa35c0410f0ab1c096903695f6a16))
+* **styles:** shrink the key floor only as far as a full row needs ([6c6dfb8](https://github.com/wridgeu/ui5-keyboard/commit/6c6dfb88738cafaf3dacbe2e01e6bce42465d8f3))
+* **styles:** shrink the key floor only as far as a full row needs ([a4fbf79](https://github.com/wridgeu/ui5-keyboard/commit/a4fbf7959a1a256b9a42d1d30deaf47187645155))
+* **test:** clear the qunit report before the port check ([dc5bbca](https://github.com/wridgeu/ui5-keyboard/commit/dc5bbcad84b712fcefe9403aba0415e6714618ec))
+* **test:** clear the qunit report before the port check ([2860c6e](https://github.com/wridgeu/ui5-keyboard/commit/2860c6eb53a39c5ddd77b6bd9d640a20a6d27b7d))
+
+
+### Code Refactoring
+
+* **kiosk:** arm auto-show listeners from one docked-and-autoshow sync ([a3dcebe](https://github.com/wridgeu/ui5-keyboard/commit/a3dcebe59a2ee0d62131c748e54a1abfe72d1022))
+* **kiosk:** arm auto-show listeners from one docked-and-autoshow sync ([6b89921](https://github.com/wridgeu/ui5-keyboard/commit/6b8992178e1399e00c21d911640444fed8d8f24c))
+
 ## 0.1.0 (2026-09-13)
 
 
