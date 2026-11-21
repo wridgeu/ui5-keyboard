@@ -14,7 +14,6 @@ import CustomLayout from "./CustomLayout";
 import { isValidVariantTable } from "./internal/custom-layout-fold";
 import LayoutFoldCache from "./internal/layout-fold-cache";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
-import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
@@ -1034,14 +1033,9 @@ export default class KioskKeyboard extends Control {
       handleNavigationKey: (fkeyName, extend) => this._targetSession.handleNavigationKey(fkeyName, extend),
     });
 
-    // Detect locale-appropriate default layout. This runs before
-    // applySettings, so it resolves against the built-in locale map alone;
-    // applySettings re-resolves once the instance maps are known.
-    const localeLayout = registryGetLocaleLayout();
-    this._layoutState.seed(localeLayout);
-    if (localeLayout !== DEFAULT_LAYOUT) {
-      this.setLayout(localeLayout);
-    }
+    // Seeded from the built-in locale map; applySettings, which always follows
+    // init, sets the layout the instance's own maps resolve to.
+    this._layoutState.seed(registryGetLocaleLayout());
   }
 
   onLocalizationChanged(): void {
