@@ -303,8 +303,8 @@ The constructor takes an optional `Platform` (`new HotkeyManager(Platform.Mac)`)
 | -------------------------------------- | ---------------------------------------------------------------------------- |
 | `register(hotkey, callback, options?)` | Register a shortcut or sequence (space-separated keys), returns a handle     |
 | `createGroup()`                        | Create a registration group for collective cleanup                           |
-| `pushScope(scopeId)`                   | Push a scope onto the stack                                                  |
-| `popScope(scopeId)`                    | Pop the top scope (ID must match current top)                                |
+| `pushScope(scopeId)`                   | Push a scope onto the stack, returns a handle that releases this entry       |
+| `popScope(scopeId)`                    | Remove the topmost entry with this ID, wherever it sits                      |
 | `getActiveScope()`                     | Get the current top-of-stack scope                                           |
 | `getScopeStack()`                      | Get a snapshot of the full scope stack (bottom-to-top)                       |
 | `resetToGlobalScope()`                 | Pop all non-global scopes in one call                                        |
@@ -495,7 +495,7 @@ If multiple controllers repeat the same `createGroup` / `destroyAll` pattern, wr
 
 #### Scope Stacking
 
-The scope stack controls which hotkeys are active. The global scope is always at the bottom and cannot be pushed or removed. Each `pushScope()` adds a layer on top; `popScope()` removes it.
+The scope stack controls which hotkeys are active. The global scope is always at the bottom and cannot be pushed or removed. Each `pushScope()` adds a layer on top and returns a `ScopeHandle`; `handle.release()` removes exactly that layer, wherever it sits by then.
 
 ```
                   ┌─────────────────┐
@@ -512,18 +512,19 @@ Matching order: the dispatcher checks the topmost scope first. If no scoped hand
 Scope stack guards:
 
 - `pushScope("__global__")` throws. The global scope is always present and must not be pushed manually.
-- `pushScope(x)` where `x` is already the top of the stack throws. This catches duplicate pushes from router integration firing twice for the same route.
+- `pushScope(x)` where `x` is already the top of the stack throws. This catches an accidental double push for the same scope.
+- `popScope(x)` removes the topmost entry with ID `x`, even when other scopes sit above it. When no entry has that ID (it was already released, popped or reset), it logs a warning and changes nothing. Prefer `handle.release()`: it removes the entry it was returned for, never another entry with the same ID.
 
 #### Popup Overlay Pattern
 
-Dialogs and popovers typically push a dedicated scope so their hotkeys shadow the parent view. When the popup closes, removing the scope restores the parent's hotkeys automatically.
+Dialogs and popovers typically push a dedicated scope so their hotkeys shadow the parent view. When the popup closes, releasing the scope restores the parent's hotkeys automatically. The release is safe after a route change too: router integration replaces only its own entry, so the dialog's entry stays on top until the dialog releases it.
 
 ```ts
 // In a controller that opens a confirmation dialog:
 onOpenConfirmDialog(): void {
   this._confirmGroup = this.getHotkeyManager().createGroup();
 
-  this.getHotkeyManager().pushScope("confirmDialog");
+  this._confirmScope = this.getHotkeyManager().pushScope("confirmDialog");
 
   this._confirmGroup.register("Escape", () => this.onCloseConfirmDialog(), {
     scope: "confirmDialog",
@@ -537,7 +538,7 @@ onOpenConfirmDialog(): void {
 
 onCloseConfirmDialog(): void {
   this._confirmGroup.destroyAll();
-  this.getHotkeyManager().popScope("confirmDialog");
+  this._confirmScope.release();
   // Parent view's hotkeys are now active again
 }
 ```
@@ -554,7 +555,7 @@ this._hotkeys.enableRouterIntegration(this.getRouter());
 this.getRouter().initialize();
 ```
 
-When the user navigates between routes, the router handler automatically resets to global scope and pushes the matched route name. When no route matches the hash, the router's `bypassed` event resets to global scope without pushing anything, so the not-found target does not inherit the previous route's scope. Dialog scopes still require manual `pushScope`/`popScope` since they are not route-based.
+The group owns one scope stack entry named after the matched route. On navigation it replaces that entry in place, so scopes pushed above it (an open dialog's) stay on top until their owner releases them. When no route matches the hash, the router's `bypassed` event removes the route entry, so the not-found target does not inherit the previous route's scope. Dialog scopes still require manual `pushScope` and `release()` since they are not route-based.
 
 Calling `enableRouterIntegration()` again (e.g., on Component re-entry in FLP) silently replaces the previous router.
 

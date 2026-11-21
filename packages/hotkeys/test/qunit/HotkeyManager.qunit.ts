@@ -275,14 +275,74 @@ QUnit.test("Scoped handler takes priority over global for same key", (assert) =>
   assert.notOk(globalCalled, "Global Escape suppressed by scoped match");
 });
 
-QUnit.test("popScope throws on mismatch", (assert) => {
+QUnit.test("popScope removes a scope that is not on top", (assert) => {
   const manager = createHotkeyManager();
   manager.pushScope("editor");
+  manager.pushScope("dialog");
 
-  assert.throws(() => manager.popScope("dialog"), /Cannot pop scope/, "Throws on scope mismatch");
-
-  // Cleanup
   manager.popScope("editor");
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "dialog"], "Only the editor entry is removed");
+});
+
+QUnit.test("popScope removes the topmost entry of a scope pushed twice", (assert) => {
+  const manager = createHotkeyManager();
+  const lower = manager.pushScope("editor");
+  manager.pushScope("dialog");
+  const upper = manager.pushScope("editor");
+
+  manager.popScope("editor");
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "editor", "dialog"], "The upper editor entry is removed");
+  assert.ok(lower.isActive, "The lower entry's handle stays active");
+  assert.notOk(upper.isActive, "The upper entry's handle is released");
+});
+
+QUnit.test("popScope of a scope not on the stack is a no-op that warns", (assert) => {
+  const manager = createHotkeyManager();
+  manager.pushScope("editor");
+  const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
+  const warnSpy = sandbox.spy(LogModule, "warning");
+
+  manager.popScope("dialog");
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "editor"], "Stack unchanged");
+  assert.ok(
+    warnSpy.getCalls().some((c) => String(c.args[0]).includes('"dialog"')),
+    "Warns about the missing scope",
+  );
+});
+
+QUnit.test("pushScope handle: release removes its own entry wherever it sits", (assert) => {
+  const manager = createHotkeyManager();
+  const editor = manager.pushScope("editor");
+  manager.pushScope("dialog");
+  assert.strictEqual(editor.id, "editor", "Handle carries the normalized id");
+  assert.ok(editor.isActive, "Active while on the stack");
+
+  editor.release();
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "dialog"], "Only the released entry is removed");
+  assert.notOk(editor.isActive, "Inactive after release");
+
+  editor.release();
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "dialog"], "Second release is a no-op");
+});
+
+QUnit.test("pushScope handle: release after a reset leaves a newer same-id entry alone", (assert) => {
+  const manager = createHotkeyManager();
+  const stale = manager.pushScope("editor");
+  manager.resetToGlobalScope();
+  assert.notOk(stale.isActive, "Reset releases the entry");
+
+  manager.pushScope("editor");
+  stale.release();
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "editor"], "The newer entry stays");
+});
+
+QUnit.test("pushScope handle: release after manager destroy does not throw", (assert) => {
+  const manager = createHotkeyManager();
+  const handle = manager.pushScope("editor");
+  manager.destroy();
+
+  handle.release();
+  assert.notOk(handle.isActive, "Inactive after destroy");
 });
 
 QUnit.test("popScope throws when only global scope remains", (assert) => {

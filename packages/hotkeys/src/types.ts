@@ -421,3 +421,26 @@ export interface KeyboardDispatchGuard {
   /** Whether this guard is still actively suspending dispatch. */
   readonly isActive: boolean;
 }
+
+// ──────────────────────────────────────────────
+// Scope handle
+// ──────────────────────────────────────────────
+
+/**
+ * Handle for one scope stack entry, returned by `HotkeyManager.pushScope()`.
+ *
+ * `release()` removes this entry wherever it sits in the stack, so entries
+ * pushed by independent owners (a dialog, router integration) can be removed
+ * in any order. Release is idempotent and never touches another entry with
+ * the same id.
+ *
+ * @since 0.2.0
+ */
+export interface ScopeHandle {
+  /** The normalized scope id of this entry. */
+  readonly id: string;
+  /** Remove this entry from the scope stack. Idempotent. */
+  release(): void;
+  /** Whether this entry is still on the scope stack. */
+  readonly isActive: boolean;
+}

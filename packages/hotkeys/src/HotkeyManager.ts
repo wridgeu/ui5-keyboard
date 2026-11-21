@@ -30,6 +30,7 @@ import type {
   HotkeyRegistrationInfo,
   KeyboardDispatchGuard,
   KeyStateTrackerApi,
+  ScopeHandle,
   UnhandledContext,
   UnhandledCallback,
   UpdatableHotkeyOptions,
@@ -122,6 +123,24 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
   return resolved;
 }
 
+/** One scope stack entry; its identity, not its id, is what `release()` removes. */
+class ScopeEntry implements ScopeHandle {
+  active = true;
+
+  constructor(
+    readonly id: string,
+    private readonly _remove: (entry: ScopeEntry) => void,
+  ) {}
+
+  get isActive(): boolean {
+    return this.active;
+  }
+
+  release(): void {
+    this._remove(this);
+  }
+}
+
 /**
  * Keyboard shortcut manager for UI5 applications.
  *
@@ -150,7 +169,8 @@ function resolveOptions(options?: HotkeyOptions): ResolvedHotkeyOptions {
  */
 export default class HotkeyManager extends BaseObject {
   private _registrations: RegistrationStore = new RegistrationStore();
-  private _scopeStack: string[] = [GLOBAL_SCOPE];
+  /** Bottom entry is always the global scope. */
+  private _scopeStack: ScopeEntry[] = [this._createScopeEntry(GLOBAL_SCOPE)];
   private _platform: Platform;
   private _groups: Set<RegistrationGroup> = new Set();
   private _destroyed = false;
@@ -395,48 +415,50 @@ export default class HotkeyManager extends BaseObject {
    * Push a new scope onto the stack. Hotkeys registered in this scope
    * become active, while non-global hotkeys in other scopes are paused.
    *
+   * @returns A handle whose `release()` removes exactly this entry, wherever
+   *   it sits in the stack by then.
+   * @throws Error for the global scope, or for the scope that is already on top.
    * @since 0.1.0
    */
-  pushScope(scopeId: string): void {
+  pushScope(scopeId: string): ScopeHandle {
     this._assertAlive("pushScope");
-    const normalized = resolveRequiredScope(scopeId);
+    const normalized = this._resolvePushableScope(scopeId);
 
-    if (normalized === GLOBAL_SCOPE) {
-      throw new Error("Cannot push the global scope: it is always at the bottom of the stack");
-    }
-
-    const top = this._scopeStack.at(-1);
-    if (top === normalized) {
+    if (this.getActiveScope() === normalized) {
       throw new Error(`Cannot push scope "${normalized}": it is already the active scope`);
     }
 
-    this._scopeStack.push(normalized);
+    const entry = this._createScopeEntry(normalized);
+    this._scopeStack.push(entry);
     Log.debug(`Pushed scope "${normalized}" (stack depth: ${this._scopeStack.length})`, undefined, LOG_COMPONENT);
+    return entry;
   }
 
   /**
-   * Pop the top scope from the stack.
+   * Remove the topmost stack entry with this scope id, wherever it sits.
    *
-   * @param scopeId - The scope to pop. Must match the top of the stack
-   *   (prevents mismatched push/pop pairs).
-   * @throws Error if the stack would be emptied (global scope cannot be popped)
-   *   or if the scopeId does not match the top.
+   * Entries above it stay in place, so a dialog closing after a route change
+   * removes its own scope without disturbing the route's. When no entry has
+   * this id (it was already released, popped or reset), the call logs a
+   * warning and changes nothing.
+   *
+   * @param scopeId - The scope to remove.
+   * @throws Error for the global scope, which cannot be popped.
    * @since 0.1.0
    */
   popScope(scopeId: string): void {
     this._assertAlive("popScope");
     const normalized = resolveRequiredScope(scopeId);
-    if (this._scopeStack.length <= 1) {
+    if (normalized === GLOBAL_SCOPE) {
       throw new Error("Cannot pop the global scope");
     }
 
-    const top = this._scopeStack.at(-1)!;
-    if (top !== normalized) {
-      throw new Error(`Cannot pop scope "${normalized}": current top of stack is "${top}"`);
+    const index = this.getScopeStack().lastIndexOf(normalized);
+    if (index === -1) {
+      Log.warning(`Cannot pop scope "${normalized}": it is not on the scope stack`, undefined, LOG_COMPONENT);
+      return;
     }
-
-    this._scopeStack.pop();
-    Log.debug(`Popped scope "${top}" (stack depth: ${this._scopeStack.length})`, undefined, LOG_COMPONENT);
+    this._removeScopeEntry(this._scopeStack[index]!);
   }
 
   /**
@@ -445,7 +467,7 @@ export default class HotkeyManager extends BaseObject {
    * @since 0.1.0
    */
   getActiveScope(): string {
-    return this._scopeStack.at(-1)!;
+    return this._scopeStack.at(-1)!.id;
   }
 
   /**
@@ -466,7 +488,7 @@ export default class HotkeyManager extends BaseObject {
    * @since 0.1.0
    */
   getScopeStack(): readonly string[] {
-    return [...this._scopeStack];
+    return this._scopeStack.map((e) => e.id);
   }
 
   /**
@@ -481,8 +503,63 @@ export default class HotkeyManager extends BaseObject {
     this._assertAlive("resetToGlobalScope");
     if (this._scopeStack.length > 1) {
       const depth = this._scopeStack.length - 1;
-      this._scopeStack = [GLOBAL_SCOPE];
+      this._clearScopeStack();
       Log.debug(`Reset to global scope (popped ${depth} scope(s))`, undefined, LOG_COMPONENT);
+    }
+  }
+
+  /**
+   * Router integration's single scope entry: replace `previous` in place with
+   * `scopeId`, so entries pushed above it (open dialogs) stay on top; push
+   * when `previous` is no longer on the stack; remove it when `scopeId` is
+   * null. Returns the entry now owned by the caller.
+   * @internal Called by RegistrationGroup.
+   */
+  _replaceScope(previous: ScopeHandle | null, scopeId: string | null): ScopeHandle | null {
+    this._assertAlive("_replaceScope");
+    const index = previous instanceof ScopeEntry && previous.active ? this._scopeStack.indexOf(previous) : -1;
+    if (scopeId === null) {
+      previous?.release();
+      return null;
+    }
+    const normalized = this._resolvePushableScope(scopeId);
+    if (index === -1) {
+      const entry = this._createScopeEntry(normalized);
+      this._scopeStack.push(entry);
+      return entry;
+    }
+    const current = this._scopeStack[index]!;
+    if (current.id === normalized) return current;
+    current.active = false;
+    const entry = this._createScopeEntry(normalized);
+    this._scopeStack[index] = entry;
+    Log.debug(`Replaced scope "${current.id}" with "${normalized}"`, undefined, LOG_COMPONENT);
+    return entry;
+  }
+
+  private _resolvePushableScope(scopeId: string): string {
+    const normalized = resolveRequiredScope(scopeId);
+    if (normalized === GLOBAL_SCOPE) {
+      throw new Error("Cannot push the global scope: it is always at the bottom of the stack");
+    }
+    return normalized;
+  }
+
+  private _createScopeEntry(id: string): ScopeEntry {
+    return new ScopeEntry(id, (entry) => this._removeScopeEntry(entry));
+  }
+
+  private _removeScopeEntry(entry: ScopeEntry): void {
+    if (!entry.active) return;
+    entry.active = false;
+    this._scopeStack.splice(this._scopeStack.indexOf(entry), 1);
+    Log.debug(`Popped scope "${entry.id}" (stack depth: ${this._scopeStack.length})`, undefined, LOG_COMPONENT);
+  }
+
+  /** Drop every entry above the global one, marking their handles released. */
+  private _clearScopeStack(): void {
+    for (const entry of this._scopeStack.splice(1)) {
+      entry.active = false;
     }
   }
 
@@ -707,7 +784,7 @@ export default class HotkeyManager extends BaseObject {
     }
 
     this._registrations.clear();
-    this._scopeStack = [GLOBAL_SCOPE];
+    this._clearScopeStack();
     this._unhandledCallback = null;
 
     Log.info("HotkeyManager destroyed", undefined, LOG_COMPONENT);
