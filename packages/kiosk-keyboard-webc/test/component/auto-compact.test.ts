@@ -413,4 +413,17 @@ describe("kiosk-keyboard - autoCompact", () => {
     expect(changes).to.deep.equal([{ layout: "home", effectiveLayout: "home-c", reason: "width" }]);
     expect(readDataKeys(el)).to.deep.equal([["hc"]]);
   });
+
+  it("gives the requested layout back when switched off right after a reconnect", async () => {
+    const { el, host } = await mount(NARROW_PX, { layout: "home", "auto-compact": "" }, ...pair());
+    expect(el.effectiveLayout, "precondition: tiered").to.equal("home-c");
+
+    el.remove();
+    host.append(el);
+    el.autoCompact = false;
+    await settle();
+
+    expect(el.effectiveLayout).to.equal("home");
+    expect(readDataKeys(el)).to.deep.equal([["{layout:away}", "h"]]);
+  });
 });

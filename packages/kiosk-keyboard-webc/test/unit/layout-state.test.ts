@@ -17,6 +17,7 @@ function createHost(attribute = "qwerty", locale = "qwerty", fold: CustomLayoutF
     attribute,
     current: "",
     keyboardType: "Full" as `${KeyboardType}`,
+    autoCompact: true,
     fold,
     changes: [] as LayoutChangeEventDetail[],
     announced: [] as string[],
@@ -36,6 +37,7 @@ function createHost(attribute = "qwerty", locale = "qwerty", fold: CustomLayoutF
     },
     getLocaleLayout: () => locale,
     getKeyboardType: () => box.keyboardType,
+    isAutoCompactEnabled: () => box.autoCompact,
     getFold: () => box.fold,
     fireLayoutChange: (p) => {
       box.changes.push(p);
@@ -180,26 +182,39 @@ describe("LayoutState golden sequence", () => {
     { name: "solo", rows, compact: "solo-c" },
   ];
 
-  /**
-   * A host whose width tier behaves like `AutoCompactController`: a verdict reaches the
-   * state only when it differs from the last one.
-   */
+  /** A host whose width tier reports a verdict the way `AutoCompactController` does. */
   function createGoldenHost() {
     const host = createHost(
       "qwerty",
       "qwerty",
       foldCustomLayouts(specs, isBuiltInLayout, () => false),
     );
-    let applied: boolean | null = null;
-    const resize = (narrow: boolean): void => {
-      if (narrow === applied) return;
-      const crossed = applied !== null;
-      applied = narrow;
-      host.state.applyTier(narrow, crossed);
-    };
+    const resize = (narrow: boolean): void => host.state.applyTier(narrow);
     resize(false);
     return { ...host, resize };
   }
+
+  it("a narrow verdict resolves to no counterpart while autoCompact is off", () => {
+    const { box, state, resize, setAttribute } = createGoldenHost();
+    setAttribute("home");
+    resize(true);
+    expect(state.resolvedName(), "precondition: tiered").toBe("home-c");
+
+    box.autoCompact = false;
+    state.refresh("layouts");
+    expect(state.resolvedName()).toBe("home");
+  });
+
+  it("announces a crossing, not a first verdict after none", () => {
+    const { box, state, resize, setAttribute } = createGoldenHost();
+    setAttribute("home");
+
+    state.applyTier(null);
+    resize(true);
+    expect(box.announced, "a first verdict after none crossed nothing").toEqual([]);
+    resize(false);
+    expect(box.announced).toEqual(["Switched back to the standard keyboard layout"]);
+  });
 
   const COMPACTED = "Switched to the compact keyboard layout";
   const UNCOMPACTED = "Switched back to the standard keyboard layout";

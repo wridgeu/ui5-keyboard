@@ -12,12 +12,10 @@ export interface AutoCompactHost {
   /** Whether `autoCompact` is on. */
   isEnabled(): boolean;
   /**
-   * Reports the tier verdict. The host owns which layout that resolves to. `crossed` is
-   * whether this verdict replaces a known previous one, which is what separates a
-   * width the user just crossed from the first resolution of a keyboard that was
-   * always this wide.
+   * Reports each measured verdict, or `null` once `autoCompact` is off. The host
+   * holds the verdict and owns which layout it resolves to.
    */
-  applyTier(narrow: boolean, crossed: boolean): void;
+  applyTier(narrow: boolean | null): void;
 }
 
 /**
@@ -59,8 +57,6 @@ export class AutoCompactController {
    * measured, which costs no layout. `null` until the first observation lands.
    */
   private _observedInline: number | null = null;
-  /** Last tier applied, so an observation that does not cross the threshold is dropped. */
-  private _appliedNarrow: boolean | null = null;
 
   constructor(private readonly _host: AutoCompactHost) {}
 
@@ -71,12 +67,10 @@ export class AutoCompactController {
    */
   syncObserver(root: HTMLElement | null): void {
     if (!root || !this._host.isEnabled()) {
-      // Switching the feature off gives the requested layout back rather than
-      // stranding the keyboard on the arrangement a width picked, which with the
-      // observer gone nothing else could undo.
-      const restore = this._appliedNarrow === true && !this._host.isEnabled();
       this.teardown();
-      if (restore) this._host.applyTier(false, false);
+      // Off withdraws the verdict, so the requested layout comes back rather than
+      // the keyboard being stranded on the arrangement a width picked.
+      if (!this._host.isEnabled()) this._host.applyTier(null);
       return;
     }
     if (this._observedRoot === root) return;
@@ -114,9 +108,6 @@ export class AutoCompactController {
     }
     this._observedRoot = null;
     this._observedInline = null;
-    // A later element carries its own width; a stale verdict would suppress its
-    // first real observation.
-    this._appliedNarrow = null;
   }
 
   private _applyTier(): void {
@@ -133,10 +124,6 @@ export class AutoCompactController {
     const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const threshold = (Number.isNaN(rem) ? DEFAULT_THRESHOLD_REM : rem) * remPx;
 
-    const narrow = this._observedInline <= threshold;
-    if (narrow === this._appliedNarrow) return;
-    const crossed = this._appliedNarrow !== null;
-    this._appliedNarrow = narrow;
-    this._host.applyTier(narrow, crossed);
+    this._host.applyTier(this._observedInline <= threshold);
   }
 }

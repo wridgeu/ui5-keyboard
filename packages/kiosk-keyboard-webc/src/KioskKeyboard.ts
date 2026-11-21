@@ -719,6 +719,7 @@ class KioskKeyboard extends UI5Element {
     },
     getLocaleLayout: () => this._localeLayout(),
     getKeyboardType: () => this.keyboardType,
+    isAutoCompactEnabled: () => this.autoCompact,
     getFold: () => this._foldCache.get(),
     fireLayoutChange: (parameters) => {
       this.fireDecoratorEvent("layout-change", parameters);
@@ -912,7 +913,7 @@ class KioskKeyboard extends UI5Element {
   /** Owns the width measurement behind the `autoCompact` property. */
   private readonly _autoCompact = new AutoCompactController({
     isEnabled: () => this.autoCompact,
-    applyTier: (narrow, crossed) => this._layoutState.applyTier(narrow, crossed),
+    applyTier: (narrow) => this._layoutState.applyTier(narrow),
   });
 
   // ── F-key dispatch ──

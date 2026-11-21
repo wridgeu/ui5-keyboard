@@ -50,7 +50,7 @@ const THRESHOLD_PX = 22 * 16;
 describe("AutoCompactController", () => {
   let root: HTMLElement;
   let enabled: boolean;
-  let applyTier: ReturnType<typeof vi.fn<(narrow: boolean) => void>>;
+  let applyTier: ReturnType<typeof vi.fn<(narrow: boolean | null) => void>>;
   let controller: AutoCompactController;
 
   /** The observer the controller built for the current root. */
@@ -66,7 +66,7 @@ describe("AutoCompactController", () => {
     root = document.createElement("div");
     document.body.appendChild(root);
     enabled = true;
-    applyTier = vi.fn<(narrow: boolean) => void>();
+    applyTier = vi.fn<(narrow: boolean | null) => void>();
     controller = new AutoCompactController({ isEnabled: () => enabled, applyTier });
   });
 
@@ -109,7 +109,7 @@ describe("AutoCompactController", () => {
     expect(applyTier, "nothing applied inside the callback").not.toHaveBeenCalled();
 
     await nextFrame();
-    expect(applyTier.mock.calls).toEqual([[true, false]]);
+    expect(applyTier.mock.calls).toEqual([[true]]);
   });
 
   it("coalesces several observations in one frame into a single tier application", async () => {
@@ -121,7 +121,7 @@ describe("AutoCompactController", () => {
     await nextFrame();
 
     // The last width wins, and only it is applied.
-    expect(applyTier.mock.calls).toEqual([[true, false]]);
+    expect(applyTier.mock.calls).toEqual([[true]]);
   });
 
   it("tiers at the threshold itself and releases one pixel above it", async () => {
@@ -129,27 +129,21 @@ describe("AutoCompactController", () => {
 
     observer().deliver(THRESHOLD_PX);
     await nextFrame();
-    expect(applyTier.mock.calls, "a width equal to the threshold is narrow").toEqual([[true, false]]);
+    expect(applyTier.mock.calls, "a width equal to the threshold is narrow").toEqual([[true]]);
 
     observer().deliver(THRESHOLD_PX + 1);
     await nextFrame();
-    // The second verdict replaces a known first one, so it is a width that was crossed.
-    expect(applyTier.mock.calls, "a width past the threshold is not").toEqual([
-      [true, false],
-      [false, true],
-    ]);
+    expect(applyTier.mock.calls, "a width past the threshold is not").toEqual([[true], [false]]);
   });
 
-  it("drops an observation that does not cross the threshold", async () => {
+  it("reports every observation's verdict, holding none of its own", async () => {
     controller.syncObserver(root);
 
     observer().deliver(300);
     await nextFrame();
-    expect(applyTier).toHaveBeenCalledTimes(1);
-
     observer().deliver(280);
     await nextFrame();
-    expect(applyTier, "still narrow, so the verdict is unchanged").toHaveBeenCalledTimes(1);
+    expect(applyTier.mock.calls, "the host, not the sensor, drops a repeat").toEqual([[true], [true]]);
   });
 
   it("drops a pending tier application when autoCompact goes off before the frame", async () => {
@@ -179,6 +173,7 @@ describe("AutoCompactController", () => {
     controller.syncObserver(root);
 
     expect(observer().disconnected).toBe(true);
+    expect(applyTier.mock.calls, "off withdraws the verdict").toEqual([[null]]);
   });
 
   it("a null root disconnects", () => {
@@ -188,11 +183,11 @@ describe("AutoCompactController", () => {
     expect(observer().disconnected).toBe(true);
   });
 
-  it("carries no verdict from one root to the next", async () => {
+  it("reports the next root's verdict after a root swap", async () => {
     controller.syncObserver(root);
     observer().deliver(300);
     await nextFrame();
-    expect(applyTier.mock.calls).toEqual([[true, false]]);
+    expect(applyTier.mock.calls).toEqual([[true]]);
 
     const replacement = document.createElement("div");
     document.body.appendChild(replacement);
@@ -201,12 +196,7 @@ describe("AutoCompactController", () => {
       observer().deliver(300);
       await nextFrame();
 
-      // Same verdict, but on a box that has never been tiered, so it has to be applied,
-      // and as that box's first verdict it crossed nothing.
-      expect(applyTier.mock.calls).toEqual([
-        [true, false],
-        [true, false],
-      ]);
+      expect(applyTier.mock.calls).toEqual([[true], [true]]);
     } finally {
       replacement.remove();
     }
