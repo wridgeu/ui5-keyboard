@@ -9,6 +9,13 @@ import { keyPositionOf, type KeyPosition } from "./dom-utils.js";
  */
 export const VARIANT_HOLD_MS = 450;
 
+/**
+ * What a press's release owes its trailing click: nothing, a swallow of the click
+ * on the key the hold opened (`"origin"`), or a swallow of whichever key the
+ * click lands on (`"any"`, after a touch drag-release commit uncovers another).
+ */
+export type ReleaseSwallow = "none" | "origin" | "any";
+
 /** Reactive accent-variant popup state the host template renders from. */
 export interface VariantPopupState {
   anchorKey: KeyPosition;
@@ -54,8 +61,6 @@ interface VariantPopupControllerHost {
   announceDismiss(): void;
   /** Restores focus to the key at this grid position once the popup has closed. */
   focusKey(pos: KeyPosition): void;
-  /** Signal that a touch drag-release just committed, so the host swallows the trailing synthesized touchend. */
-  notifyTouchCommit(): void;
 }
 
 /**
@@ -63,7 +68,8 @@ interface VariantPopupControllerHost {
  * press-and-hold / right-click gesture that opens it, the single-shot hold
  * timer, the roving-tabindex keyboard navigation and option-click commit, the
  * touch drag-release commit, and the popover DOM wiring (opener, one-shot
- * close teardown, focus restore).
+ * close teardown, focus restore). The host owns the press: it forwards the
+ * press's pointerup to `release` and its pointercancel to `cancel`.
  *
  * The popup DOM lives in the host's shadow root (a `ui5-popover` templated by
  * the host); this controller queries it live through `host.getShadowRoot()`
@@ -77,21 +83,11 @@ interface VariantPopupControllerHost {
 export class VariantPopupController {
   /** The pending single-shot hold timer that opens the popup, or `null` when unarmed. */
   private _holdTimer: ReturnType<typeof setTimeout> | null = null;
-  /**
-   * Set once the hold (or right-click) opened a popup; swallows the single
-   * trailing `click` the opening gesture produces on release so lifting off
-   * does not also insert the base character. Gated by `_originValue` and reset
-   * on the next press, on the consuming click, and when the popup closes, so
-   * a later activation of another key is never wrongly swallowed.
-   */
-  private _suppressNextClick = false;
-  /** `data-key` value of the key the current suppression is bound to. */
-  private _originValue: string | null = null;
   /** The variant key the current hold is armed on (for leave detection). */
   private _keyEl: HTMLElement | null = null;
   /** Pointer id of the active hold, so an unrelated release does not end it. */
   private _pointerId: number | null = null;
-  /** Whether the current gesture has already opened the popup. */
+  /** Whether the current hold has opened the popup. */
   private _opened = false;
   /**
    * Set while a commit is closing the popup, so the shared teardown announces a
@@ -108,12 +104,6 @@ export class VariantPopupController {
    */
   private _focusPending = false;
   /**
-   * The key waiting to claim the popup while the previous session closes. The
-   * popover only takes a new opener on the render after it is un-rendered, so a
-   * re-anchor parks the new key here and opens it from the teardown.
-   */
-  private _pendingKeyEl: HTMLElement | null = null;
-  /**
    * What held focus outside the keyboard when the popup opened (the target input
    * for a pointer hold), and where focus returns on dismiss. `null` when focus
    * was on a key (the context-menu gesture), which returns to the origin key.
@@ -123,12 +113,6 @@ export class VariantPopupController {
   private readonly _onPointerDown = (e: Event): void => {
     if (e instanceof PointerEvent) this._start(e);
   };
-  private readonly _onPointerUp = (e: Event): void => {
-    if (e instanceof PointerEvent) this._end(e);
-  };
-  private readonly _onPointerCancel = (e: Event): void => {
-    if (e instanceof PointerEvent) this._abort(e);
-  };
   private readonly _onPointerLeave = (): void => {
     // Sliding off the key before the hold fires cancels it; after the popup is
     // open the leave listener is already removed so a drag onto the popup keeps
@@ -137,7 +121,7 @@ export class VariantPopupController {
   };
   private readonly _onContextMenu = (e: Event): void => this._openFromContextMenu(e);
   /** One-shot teardown bound to the popover's `close` event on each open. */
-  private readonly _onPopoverClose = (): void => this._teardown();
+  private readonly _onPopoverClose = (): void => this._teardown(true);
 
   constructor(private readonly _host: VariantPopupControllerHost) {}
 
@@ -158,17 +142,11 @@ export class VariantPopupController {
     }
   }
 
-  /**
-   * Wire the gesture listeners: pointerdown / contextmenu on the shadow root, a
-   * release anywhere on the document (so a pointerup off the key still ends the
-   * gesture). Call from the host's connected callback with its teardown signal.
-   */
+  /** Wire the pointerdown / contextmenu that start a gesture, on the host's connected-session signal. */
   attach(signal: AbortSignal): void {
     const root = this._host.getShadowRoot()!;
     root.addEventListener("pointerdown", this._onPointerDown, { signal });
     root.addEventListener("contextmenu", this._onContextMenu, { signal });
-    document.addEventListener("pointerup", this._onPointerUp, { signal });
-    document.addEventListener("pointercancel", this._onPointerCancel, { signal });
   }
 
   /** Cancel any in-flight hold and unbind the per-key leave listener. */
@@ -178,16 +156,48 @@ export class VariantPopupController {
   }
 
   /**
-   * Consume the trailing release click after the gesture opened a popup.
-   * Returns `true` when `value` is the origin key of the suppressed release and
-   * the caller should ignore the click.
+   * Ends the hold on a pointer's release and returns what that release's click
+   * owes. Releasing over an option of a popup this hold opened commits it (touch
+   * drag-release); releasing elsewhere leaves the popup open (sticky), and the
+   * origin key's release click must not also type the base glyph.
    */
-  consumeClick(value: string): boolean {
-    if (this._suppressNextClick && value === this._originValue) {
-      this._suppressNextClick = false;
-      return true;
+  release(e: PointerEvent): ReleaseSwallow {
+    if (this._pointerId !== null && e.pointerId !== this._pointerId) return "none";
+    let swallow: ReleaseSwallow = "none";
+    if (this._opened) {
+      // A touch commit is trailed by the click the host synthesizes from touchend,
+      // on whatever key the hidden option uncovered; a mouse/pen release is not.
+      if (this._commitAt(e.clientX, e.clientY)) swallow = e.pointerType === "touch" ? "any" : "none";
+      else swallow = "origin";
     }
-    return false;
+    this.stop();
+    return swallow;
+  }
+
+  /**
+   * The browser took the gesture away (palm rejection, a system edge-swipe, a
+   * scroll takeover). It ends the hold without committing: the user never chose
+   * the option that happens to sit under the cancel coordinates.
+   */
+  cancel(e: PointerEvent): void {
+    if (this._pointerId !== null && e.pointerId !== this._pointerId) return;
+    this.stop();
+  }
+
+  /**
+   * Ends the whole session for a surface change: the hold stops and an open
+   * popup is dismissed (announced), since its glyphs and anchor belong to the
+   * layout that was replaced.
+   */
+  abandon(): void {
+    this.stop();
+    this.close();
+  }
+
+  /** Ends the session with the host's disconnect: nothing announced, no focus moved. */
+  exit(): void {
+    this.stop();
+    this._teardown(false);
   }
 
   // ── Opening ──
@@ -223,12 +233,9 @@ export class VariantPopupController {
     if (!state) return this.openFor(keyEl);
     if (this._isAnchoredTo(state, keyEl)) return false;
     if (!this._host.resolveOpenState(keyEl)) return false;
+    // The popover fires `close` synchronously, so the teardown has run by now.
     this.close();
-    // Parked after `close()`, which abandons any earlier re-anchor. A close that
-    // tore down synchronously leaves no state, so the key can take it now.
-    if (this._host.getPopupState()) this._pendingKeyEl = keyEl;
-    else this.openFor(keyEl);
-    return true;
+    return this.openFor(keyEl);
   }
 
   /**
@@ -274,19 +281,12 @@ export class VariantPopupController {
       ?.focus();
   }
 
-  /**
-   * Closes the popover; its `close` event runs the shared teardown. An explicit
-   * close abandons a parked re-anchor, so dismissing (Escape, a key press) never
-   * surfaces the popup the user just dismissed.
-   */
+  /** Closes the popover, whose synchronous `close` event runs the shared teardown. */
   close(): void {
-    this._pendingKeyEl = null;
     const popover = this._popoverEl();
-    if (popover?.open) {
-      popover.open = false;
-    } else {
-      this._teardown();
-    }
+    if (popover?.open) popover.open = false;
+    // A no-op once that close event ran; covers a popover that never showed.
+    this._teardown(true);
   }
 
   /** Option click: commits the clicked glyph. */
@@ -301,8 +301,18 @@ export class VariantPopupController {
   }
 
   /**
-   * Roving-tabindex keyboard navigation for the open popup (mirrors the key
-   * grid): arrows move the active option, Enter/Space commit, Escape dismisses.
+   * Focus leaving the popup for a keycap (Shift+Tab onto the roving key) hands the
+   * keys back to the grid, so the session ends there rather than staying open
+   * behind a grid that is now navigating.
+   */
+  onOptionFocusOut(e: FocusEvent): void {
+    const to = e.relatedTarget;
+    if (to instanceof Element && to.closest(KIOSK_KEYBOARD_DOM.selectors.keyHook)) this.close();
+  }
+
+  /**
+   * Roving-tabindex keyboard navigation for the open popup: arrows move the
+   * active option, Enter/Space commit, Escape dismisses.
    */
   onOptionKeydown(e: KeyboardEvent): void {
     const state = this._host.getPopupState();
@@ -398,12 +408,12 @@ export class VariantPopupController {
   }
 
   /**
-   * Teardown shared by every dismissal path (commit, Escape, outside press):
-   * clears the reactive state, clears the click suppression, announces a
-   * cancel, and returns focus to the origin key. Bound to the popover's
-   * `close` event, so a framework-driven dismissal runs it too.
+   * The one exit of a popup session (commit, Escape, outside press, key press,
+   * surface change, disconnect): clears the reactive state and, when `settle`,
+   * announces a cancel and returns focus. Bound to the popover's `close` event,
+   * so a framework-driven dismissal runs it too.
    */
-  private _teardown(): void {
+  private _teardown(settle: boolean): void {
     const state = this._host.getPopupState();
     if (!state) return;
     const committed = this._committing;
@@ -414,11 +424,7 @@ export class VariantPopupController {
     this._returnFocusEl = null;
     this._host.setPopupState(null);
     this._focusPending = false;
-    // Only drop the click suppression once the press that armed it has ended.
-    // A commit or dismissal while that press is still down (a second finger
-    // picking an option) leaves it armed, so the opening gesture's own trailing
-    // click still does not type the base glyph; `consumeClick` spends it.
-    if (this._pointerId === null) this._clearSuppression();
+    if (!settle) return;
     // A commit already spoke through the inserted glyph; only a cancel is a
     // dismissal worth announcing.
     if (!committed) this._host.announceDismiss();
@@ -429,13 +435,6 @@ export class VariantPopupController {
       if (returnTo?.isConnected) returnTo.focus();
       else this._host.focusKey(state.anchorKey);
     }
-
-    // Hand the popup to a key that asked for it while this one was closing. The
-    // state write above un-rendered the popover, so the next render takes the
-    // new anchor as opener.
-    const pending = this._pendingKeyEl;
-    this._pendingKeyEl = null;
-    if (pending?.isConnected) this.openFor(pending);
   }
 
   // ── Gesture detection ──
@@ -454,16 +453,12 @@ export class VariantPopupController {
     // A press on a different key arms a re-anchor. Two cases must not: the key
     // that already owns the popup keeps it rather than restarting the session
     // under the user's focus, and a second finger landing while the opening
-    // press is still down is multi-touch, which would disarm finger one's
-    // pending release-swallow. Both still reach `_onKeyClick`, which dismisses
-    // and types; only the suppression needs settling.
+    // press is still down is multi-touch, which would end finger one's hold
+    // before its release. Both still reach `_onKeyClick`, which dismisses and
+    // types.
     const openState = this._host.getPopupState();
-    if (openState !== null && (this._isAnchoredTo(openState, keyEl) || this._pointerId !== null)) {
-      if (this._pointerId === null) this._clearSuppression();
-      return;
-    }
+    if (openState !== null && (this._isAnchoredTo(openState, keyEl) || this._pointerId !== null)) return;
     this._cancelHold();
-    this._clearSuppression();
     this._keyEl = keyEl;
     this._pointerId = e.pointerId;
     keyEl.addEventListener("pointerleave", this._onPointerLeave);
@@ -474,11 +469,7 @@ export class VariantPopupController {
     const keyEl = this._keyEl;
     if (!keyEl) return;
     keyEl.removeEventListener("pointerleave", this._onPointerLeave);
-    if (this._requestOpen(keyEl)) {
-      this._opened = true;
-      this._suppressNextClick = true;
-      this._originValue = keyEl.dataset.key ?? null;
-    }
+    if (this._requestOpen(keyEl)) this._opened = true;
   }
 
   private _openFromContextMenu(e: Event): void {
@@ -492,38 +483,6 @@ export class VariantPopupController {
     // the user's focus. On another key it re-anchors.
     this._cancelHold();
     this._requestOpen(keyEl);
-  }
-
-  /**
-   * The browser took the gesture away (palm rejection, a system edge-swipe, a
-   * scroll takeover). It ends the hold without committing: the user never chose
-   * the option that happens to sit under the cancel coordinates.
-   */
-  private _abort(e: PointerEvent): void {
-    if (this._pointerId !== null && e.pointerId !== this._pointerId) return;
-    this.stop();
-  }
-
-  private _end(e: PointerEvent): void {
-    if (this._pointerId !== null && e.pointerId !== this._pointerId) return;
-    if (this._opened) {
-      // Touch drag-release: releasing over an option commits it. Releasing
-      // elsewhere leaves the popup open (sticky) and keeps the suppression so
-      // the trailing origin-key click does not insert the base glyph.
-      if (this._commitAt(e.clientX, e.clientY)) {
-        this._clearSuppression();
-        // A touch commit is trailed by a synthesized touchend on the host; a
-        // mouse/pen release is not, so only touch needs the swallow signal.
-        if (e.pointerType === "touch") this._host.notifyTouchCommit();
-      }
-    }
-    this.stop();
-  }
-
-  /** Drop the pending release-swallow together with the key it is bound to. */
-  private _clearSuppression(): void {
-    this._suppressNextClick = false;
-    this._originValue = null;
   }
 
   private _cancelHold(): void {

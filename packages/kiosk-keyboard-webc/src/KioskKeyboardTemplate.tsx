@@ -190,6 +190,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             style={`--kiosk-keyboard-variant-option-width: ${variantPopup.anchorKeyWidth}px`}
             onClick={this._boundOnVariantClick}
             onKeyDown={this._boundOnVariantKeyDown}
+            onFocusOut={this._boundOnVariantFocusOut}
           >
             {variantPopup.glyphs.map((glyph, index) => (
               <ui5-button
