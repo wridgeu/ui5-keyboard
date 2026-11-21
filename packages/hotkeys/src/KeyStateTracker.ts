@@ -79,6 +79,7 @@ export default class KeyStateTracker {
    * @internal
    */
   processKeyDown(event: KeyboardEvent): void {
+    if (this._releaseStaleModifiers(event)) this._notifyChange();
     const key = event.key;
     const code = event.code;
     let changed = false;
@@ -109,6 +110,7 @@ export default class KeyStateTracker {
    * @internal
    */
   processKeyUp(event: KeyboardEvent): void {
+    if (this._releaseStaleModifiers(event)) this._notifyChange();
     const key = event.key;
 
     // macOS stuck-key fix: When a modifier is released,
@@ -161,6 +163,29 @@ export default class KeyStateTracker {
     this._heldKeyCounts.clear();
     this._heldByCode.clear();
     this._changeCallback = null;
+  }
+
+  /**
+   * Drops held modifier codes a trusted event reports as up, recovering from a keyup
+   * lost to an OS shortcut or focus change. The event's own code is left to the
+   * regular press/release path.
+   */
+  private _releaseStaleModifiers(event: KeyboardEvent): boolean {
+    if (!event.isTrusted) return false;
+    const down: Record<string, boolean> = {
+      Alt: event.altKey || event.getModifierState("AltGraph"),
+      Control: event.ctrlKey,
+      Shift: event.shiftKey,
+      Meta: event.metaKey,
+    };
+    let changed = false;
+    for (const [code, key] of this._heldByCode) {
+      const modifier = /^(Alt|Control|Shift|Meta)(?:Left|Right)$/.exec(code)?.[1];
+      if (!modifier || code === event.code || down[modifier]) continue;
+      this._heldByCode.delete(code);
+      changed = this._decrementHeldKey(key) || changed;
+    }
+    return changed;
   }
 
   private _releaseKeyEventIdentity(event: KeyboardEvent): boolean {

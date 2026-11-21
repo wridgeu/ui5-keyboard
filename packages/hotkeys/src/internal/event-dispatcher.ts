@@ -131,6 +131,13 @@ export default class EventDispatcher {
     window.addEventListener("keydown", this._onKeyDown.bind(this), { capture: true, signal });
     window.addEventListener("keyup", this._onKeyUp.bind(this), { capture: true, signal });
     window.addEventListener("blur", this._onBlur.bind(this), { signal });
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.visibilityState === "hidden") this._keyStateTracker.processBlur();
+      },
+      { signal },
+    );
   }
 
   get keyStateTracker(): KeyStateTracker {

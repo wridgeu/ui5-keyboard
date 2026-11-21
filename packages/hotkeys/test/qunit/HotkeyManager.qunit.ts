@@ -1,7 +1,15 @@
 import { ConflictBehavior, GLOBAL_SCOPE, Platform } from "ui5/hotkeys/library";
 import type { UnhandledContext } from "ui5/hotkeys/types";
 import type Log from "sap/base/Log";
-import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn, fireKeyUp } from "./test-helpers";
+import type KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
+import {
+  createHotkeyManager,
+  destroyHotkeyManager,
+  fireKey,
+  fireKeyOn,
+  fireKeyUp,
+  trustedKeyEvent,
+} from "./test-helpers";
 import { stubPopupOpen } from "./popup-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
@@ -1512,6 +1520,22 @@ QUnit.test("AltGr: releasing right Alt ends the AltGr state", (assert) => {
   fireKey("e", { ctrlKey: true, altKey: true });
 
   assert.ok(called, "Ctrl+Alt hotkey fires once right Alt is released");
+});
+
+QUnit.test("AltGr: a lost right-Alt keyup does not swallow a later Ctrl+Alt hotkey", (assert) => {
+  const manager = createHotkeyManager(Platform.Windows);
+  let called = false;
+
+  manager.register("Ctrl+Alt+E", () => {
+    called = true;
+  });
+
+  // Right Alt goes down, its keyup is lost, then a real keydown reports Alt as up.
+  fireKey("Alt", { altKey: true, code: "AltRight", location: 2 });
+  (manager.getKeyStateTracker() as KeyStateTracker).processKeyDown(trustedKeyEvent("a", { code: "KeyA" }));
+  fireKey("e", { ctrlKey: true, altKey: true });
+
+  assert.ok(called, "Ctrl+Alt+E fires once the stale right Alt is reconciled away");
 });
 
 QUnit.test("AltGr: a Ctrl+LeftAlt combo recorded after AltGr typing fires", (assert) => {
