@@ -44,14 +44,8 @@ interface AutoCompactHost {
  * is off, which is the default.
  *
  * The tier is applied from a `requestAnimationFrame`, never from the observation
- * callback, which coalesces several observations in one frame into a single
- * application. It is not a guard against the "ResizeObserver loop completed with
- * undelivered notifications" failure #180 recorded against the height tiers:
- * applying the tier synchronously was measured to produce none, because #180 wrote
- * `classList` inside the callback and resized the observed box within the same
- * delivery, whereas a layout swap re-renders asynchronously in both frameworks and
- * so never re-enters observation. That measurement proves the absence of a symptom,
- * not of the hazard, so the frame stays.
+ * callback: a frame's observations coalesce into one application, and no layout
+ * change lands inside a ResizeObserver delivery.
  */
 export default class AutoCompactBehavior extends BaseObject {
   private _host: AutoCompactHost;

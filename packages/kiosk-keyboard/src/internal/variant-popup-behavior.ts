@@ -90,11 +90,8 @@ interface VariantPopupHost {
    */
   getLayoutLang(): string | undefined;
   /**
-   * The control-owned accent-variant Popover, held in the control's hidden
-   * `_variantPopover` aggregation (lazily created on first call, reused across
-   * opens, auto-destroyed with the control). Returns it with the control's
-   * ambient content density synced on. The behavior rebuilds its content each
-   * open.
+   * The control-owned Popover, with the ambient content density synced on. This
+   * behavior rebuilds its content on every open.
    */
   getVariantPopover(): Popover;
 }
@@ -362,9 +359,7 @@ export default class VariantPopupBehavior {
     const keyWidth = anchorKeyEl.offsetWidth;
     const keyHeight = anchorKeyEl.offsetHeight;
 
-    // The control owns the Popover in its hidden `_variantPopover` aggregation;
-    // reuse that single instance and rebuild its content each open. Wire the
-    // afterClose teardown once, on the persistent instance.
+    // Wire afterClose once, on the persistent instance.
     const popover = this._host.getVariantPopover();
     if (this._wiredPopover !== popover) {
       popover.attachAfterClose(this._onAfterClose);

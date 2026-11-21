@@ -141,10 +141,6 @@ export default class ResponsiveSizingController extends BaseObject {
    *
    * Toggles `cqShort` / `cqTiny` classes when the keyboard is externally
    * constrained (host height < natural content height). Skipped for docked and numpad.
-   * The +1px tolerance on the constrained check avoids oscillation from sub-pixel rounding.
-   *
-   * Width breakpoints are handled purely by CSS `@container` queries (see
-   * KioskKeyboard.less), so no JS width measurement is needed.
    */
   private _applyClasses(dom: HTMLElement): void {
     const cs = getComputedStyle(dom);
@@ -162,8 +158,6 @@ export default class ResponsiveSizingController extends BaseObject {
     }
 
     // scrollHeight reports the full content height even under overflow: hidden.
-    // If the element ever uses overflow: clip, scrollHeight may equal
-    // clientHeight in some browsers, breaking constrained detection.
     const naturalHeight = dom.scrollHeight;
     // clientHeight is the same untransformed layout-pixel space scrollHeight
     // reports, so the root border cancels out of the constrained comparison.

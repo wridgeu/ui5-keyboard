@@ -3,11 +3,7 @@ import { FKeyMode, NativeDispatchableKeyNames } from "../library";
 import { resolveWithCustomResolver } from "./dom";
 import type { TargetResolver } from "../types";
 
-/**
- * Bridge to the host keyboard's target state and navigation handling. Kept as
- * callbacks (matching the sibling `FocusClaimService` / `TargetInputSession`
- * pattern) so the F-key dispatch logic stays free of UI5 control internals.
- */
+/** Bridge to the host keyboard's target state and navigation handling. */
 export interface FKeyHost {
   getFKeyMode(): FKeyMode;
   /** Focus DOM ref of the active target, or null when there is none. */

@@ -103,10 +103,7 @@ declare module "./KioskKeyboard" {
          * When `true`, a layout that declares a compact counterpart yields to it on a
         keyboard too narrow to seat its rows, and takes it back when the room returns.
         
-        Layout data is the one responsive dimension CSS cannot reach: a `@container`
-        rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
-        on the resolved layout rather than on rendered geometry. Of the built-ins only
-        `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+        Of the built-ins only `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
         with the `compact` property of a `customLayouts` entry.
         
         The swap fires `layoutChange` with `reason: "width"`, changes
@@ -538,10 +535,7 @@ declare module "./KioskKeyboard" {
          * When `true`, a layout that declares a compact counterpart yields to it on a
         keyboard too narrow to seat its rows, and takes it back when the room returns.
         
-        Layout data is the one responsive dimension CSS cannot reach: a `@container`
-        rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
-        on the resolved layout rather than on rendered geometry. Of the built-ins only
-        `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+        Of the built-ins only `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
         with the `compact` property of a `customLayouts` entry.
         
         The swap fires `layoutChange` with `reason: "width"`, changes
@@ -565,10 +559,7 @@ declare module "./KioskKeyboard" {
          * When `true`, a layout that declares a compact counterpart yields to it on a
         keyboard too narrow to seat its rows, and takes it back when the room returns.
         
-        Layout data is the one responsive dimension CSS cannot reach: a `@container`
-        rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
-        on the resolved layout rather than on rendered geometry. Of the built-ins only
-        `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+        Of the built-ins only `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
         with the `compact` property of a `customLayouts` entry.
         
         The swap fires `layoutChange` with `reason: "width"`, changes

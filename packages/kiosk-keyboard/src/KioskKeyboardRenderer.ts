@@ -25,10 +25,6 @@ interface RootAccessibilityState {
  * its own properties and state, so the framework can skip re-rendering when only
  * the parent changes. Renders a flat DOM structure: rows of key divs with
  * role="button". No child UI5 controls - all keys are plain DOM via event delegation.
- *
- * Split into small per-concern methods (following the InputBaseRenderer style)
- * so each aspect - root classes and attributes, row markup, key markup, key
- * content - reads as a named unit instead of one long render().
  */
 const KioskKeyboardRenderer = {
   apiVersion: 4,
@@ -294,7 +290,6 @@ const KioskKeyboardRenderer = {
       const clIcon = key.capsLockIcon;
       if (clIcon !== undefined) {
         if (!clIcon) return ""; // capsLockIcon: "" suppresses icon
-        // Validate SAP icon URIs; skip invalid ones (warns once)
         return validateKeyIcon(clIcon, "capsLockIcon");
       }
       return SPECIAL_KEY_ICONS["{shift:capsLock}"] ?? "";
@@ -303,7 +298,6 @@ const KioskKeyboardRenderer = {
     if (key.icon === "") return ""; // suppress default-state icon
 
     const icon = key.icon || getKeyIcon(key.value) || "";
-    // Validate SAP icon URIs exist in the registry; skip invalid ones (warns once)
     return validateKeyIcon(icon, "icon");
   },
 

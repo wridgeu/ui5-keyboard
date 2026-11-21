@@ -365,10 +365,7 @@ export default class KioskKeyboard extends Control {
        * When `true`, a layout that declares a compact counterpart yields to it on a
        * keyboard too narrow to seat its rows, and takes it back when the room returns.
        *
-       * Layout data is the one responsive dimension CSS cannot reach: a `@container`
-       * rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
-       * on the resolved layout rather than on rendered geometry. Of the built-ins only
-       * `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+       * Of the built-ins only `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
        * with the `compact` property of a `customLayouts` entry.
        *
        * The swap fires `layoutChange` with `reason: "width"`, changes
@@ -1063,11 +1060,8 @@ export default class KioskKeyboard extends Control {
 
     for (const ext of this._extensions) ext.onAfterRendering?.();
 
-    // Point the ResizeObserver at the current DOM element, then defer responsive
-    // class reapplication to the next animation frame. Re-renders wipe root
-    // classes, but deferring avoids forced reflow (getComputedStyle +
-    // scrollHeight) in the render frame. The 1-frame delay for responsive
-    // sizing is imperceptible.
+    // A re-render wipes the root's height-tier classes: re-observe the new root and
+    // re-measure (see ResponsiveSizingController).
     const dom = this._rootDomRef();
     if (dom) {
       this._responsiveSizing.syncObserver(dom);
@@ -1175,9 +1169,6 @@ export default class KioskKeyboard extends Control {
    * If focus is currently inside this keyboard's DOM, move it to the
    * target input. Called before operations that would remove the keyboard
    * from tab order (disable, hide) to avoid unpredictable focus fallback.
-   *
-   * Uses `document.activeElement` which does not pierce shadow DOM
-   * boundaries. This is fine because UI5 controls do not use shadow DOM.
    */
   private _redirectFocusToTargetIfOwned(): void {
     const myDom = this.getDomRef();
@@ -1362,12 +1353,9 @@ export default class KioskKeyboard extends Control {
   _setActiveTarget(target?: string | Control): this {
     const previousTarget = this._getActiveTargetId();
 
-    // Capture pending change on the old target. The event is deferred to
-    // after all state transitions so that re-entrant calls (from a change
-    // handler that synchronously focuses another input) see settled state.
+    // Captured now, fired last (see below).
     const fireDeferredChange = this._targetSession.captureAndClearDirty();
 
-    // Remove highlight delegation from previous target
     this._physicalKeyHighlight.detach();
 
     // If the keyboard is open, restore the old target's inputmode
@@ -1383,29 +1371,17 @@ export default class KioskKeyboard extends Control {
     const newId = this._getActiveTargetId();
     const isRealSwitch = newId !== previousTarget;
 
-    // A real target switch starts a fresh input context: reset shift/caps.
-    // A same-input refocus (caret reposition) preserves the armed shift,
-    // mirroring the composition and layout-override handling below.
+    // A real switch starts a fresh input context: shift resets, a composition
+    // commits (the cached middleware holds the old target's preedit offsets), a
+    // {layout:X} pick drops back to the base. A same-input refocus (caret
+    // reposition) keeps all three.
     if (isRealSwitch) {
       this._shiftState.reset();
-    }
-
-    // A real target switch ends any in-progress composition so the new target
-    // starts fresh. Without this, the cached middleware (which holds the old
-    // target and its preedit offsets) leaks the old syllable into the new input.
-    // Mirrors the `{layout:}` key path and the web component's focusin handling.
-    // A same-input refocus (caret reposition) keeps the composition going.
-    if (isRealSwitch) {
       this._dropComposition("commit");
-    }
-
-    // A real target switch is a new editing context: it drops a user-driven
-    // `{layout:X}` pick and returns to the base layout, so the new target starts
-    // on the base under its keyboardType. A same-input refocus (caret
-    // reposition) keeps the pick.
-    if (isRealSwitch && this._layoutState.getSource() === "user") {
-      this._layoutState.clearUserOverride(LayoutChangeReason.User);
-      this.invalidate();
+      if (this._layoutState.getSource() === "user") {
+        this._layoutState.clearUserOverride(LayoutChangeReason.User);
+        this.invalidate();
+      }
     }
 
     if (newId && this._isTargetOfOther(newId)) {
@@ -1416,7 +1392,6 @@ export default class KioskKeyboard extends Control {
       );
     }
 
-    // Add highlight delegation to new target
     if (newId) {
       const next = Element.getElementById(newId);
       if (next) {
@@ -1452,7 +1427,6 @@ export default class KioskKeyboard extends Control {
       }
     }
 
-    // If the keyboard is open, suppress the new target's native keyboard.
     if (this.isOpen()) {
       this._nativeKbSuppression.suppress();
     }
@@ -1853,21 +1827,12 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Re-seats the roving tab stop onto the key that carries `value` in the layout
-   * now resolved, or onto the first key when the new arrangement has no such key.
-   *
-   * Key elements are identified by their grid position, so a layout change hands
-   * the same element to whatever key the new arrangement seats there. Following
-   * the key by value keeps a keyboard user on the key they were on, and this runs
-   * for every layout change - a `{layout:*}` press, `setLayout()` and an
-   * `autoCompact` width swap alike - so the arrangement a width picks is no
-   * different to navigate than one that was asked for.
-   *
-   * DOM focus follows on its own: the recorded position is what the renderer gives
-   * `tabindex="0"` and what `applyFocusInfo` restores focus to, and the framework
-   * only calls `applyFocusInfo` when focus was inside the control before the
-   * patch. Focus on the target input, the ordinary case for a pointer user, is
-   * therefore never moved.
+   * Re-seats the roving tab stop onto the key carrying `value` in the newly
+   * resolved layout, or the first key when there is none. Key elements are
+   * identified by grid position, so following the value keeps a keyboard user on
+   * their key across any layout change. Only the remembered position moves: the
+   * framework calls `applyFocusInfo` only when focus was inside the control, so
+   * focus on the target input is never taken.
    */
   private _reseatFocusAnchor(value: string | null): void {
     const layout = value === null ? [] : this._getResolvedLayout();
@@ -1907,14 +1872,8 @@ export default class KioskKeyboard extends Control {
   // ── Internal renderer helpers ──
 
   /**
-   * Returns the internal renderer API object.
-   *
-   * Exposes the private helpers the renderer needs, without an unsafe
-   * `as unknown as` cast. TypeScript structurally checks the returned object
-   * literal against {@link RendererInternalApi} - if any method is renamed or
-   * its signature changes, this line produces a compile error.
-   *
-   * The object is lazily created and cached per instance.
+   * Typed capability object for KioskKeyboardRenderer, checked structurally
+   * against {@link RendererInternalApi}; created once per instance.
    *
    * @internal Used by KioskKeyboardRenderer only.
    */
@@ -1945,7 +1904,6 @@ export default class KioskKeyboard extends Control {
     return this._shiftState.isShifted;
   }
 
-  /** Returns true when Caps Lock mode is active. */
   private _isCapsLock(): boolean {
     return this._shiftState.isCapsLock;
   }
@@ -2069,13 +2027,9 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Returns the control-owned accent-variant Popover from the hidden
-   * `_variantPopover` aggregation, creating the reusable shell on first use.
-   * The shell holds only structural options; `VariantPopupBehavior` rebuilds its
-   * content, initial focus and aria-labelledby on every open. The framework
-   * auto-destroys it with the control (no manual teardown in `exit`). Each call
-   * mirrors the ambient content density, since a static-area popover cannot
-   * inherit density by DOM ancestry.
+   * Returns the hidden `_variantPopover`, creating its shell on first use. Mirrors
+   * content density on every call, since a static-area popover cannot inherit it by
+   * DOM ancestry.
    */
   private _getVariantPopover(): Popover {
     const held = this.getAggregation("_variantPopover");
@@ -2111,9 +2065,7 @@ export default class KioskKeyboard extends Control {
    */
   getActiveControl<T extends Control = Control>(): T | null {
     const target = this._getTargetElement();
-    // SAFETY: the check establishes that the active target is a Control; which Control
-    // class it is, is the caller's own claim, made by naming `T` at the call site - the
-    // convenience this generic exists for, and all a target id can promise.
+    // SAFETY: the check establishes Control; the subclass T is the caller's claim.
     return target instanceof Control ? (target as T) : null;
   }
 
@@ -2431,12 +2383,10 @@ export default class KioskKeyboard extends Control {
     return false;
   }
 
-  /** Returns true if this keyboard would auto-claim the given DOM element. */
   _wouldClaimInput(target: EventTarget | null): boolean {
     return this._focusClaimService.wouldClaimInput(target);
   }
 
-  /** Returns the UI5 control this keyboard would auto-claim, or null. */
   _resolveClaimableControl(target: EventTarget | null): Control | null {
     return this._focusClaimService.resolveClaimableControl(target);
   }
@@ -2533,9 +2483,7 @@ export default class KioskKeyboard extends Control {
 
     this._performKeyAction(action, keyValue, el, shift);
 
-    // One key, one decision: which keys spend a latched one-shot Shift is a
-    // pure function of the key, so it is asked once here rather than left to
-    // whichever branch of `_performKeyAction` remembers to call `autoRelease()`.
+    // Which keys spend a latched one-shot Shift depends on the key kind alone.
     if (spendsOneShotShift(action.kind)) this._shiftState.autoRelease();
   }
 
@@ -2551,8 +2499,6 @@ export default class KioskKeyboard extends Control {
     el: HTMLElement,
     shift: boolean,
   ): void {
-    // Composition middleware must see {backspace}/{enter}/chars/unknown tokens
-    // (but not layout/fkey) before default handling.
     if (this._tryCompositionMiddleware(keyValue)) return;
 
     switch (action.kind) {
@@ -2585,11 +2531,8 @@ export default class KioskKeyboard extends Control {
       }
 
       case "unknown":
-        // Unrecognized `{...}`-shaped value: not one of the built-in special
-        // keys above. Fire keyPress so a consumer can still observe/handle it,
-        // but do NOT insert the literal braces - that was a silent footgun (a
-        // mistyped `{bcksp}`, or a custom `{paste}` key with no handler, typed
-        // the text "{bcksp}" into the field).
+        // An unrecognised {...} token fires keyPress for a consumer to handle and
+        // inserts nothing, so a typo such as {bcksp} never types its own braces.
         if (this.fireKeyPress({ key: action.raw, shiftKey: shift })) {
           Log.warning(
             `Unrecognized key token "${action.raw}": not a built-in special key. Ignoring (no text inserted).`,
@@ -2600,7 +2543,7 @@ export default class KioskKeyboard extends Control {
         return;
 
       case "char": {
-        // Regular character - resolve its Shift/Caps form (incl. CapsLock ß -> ẞ, #169).
+        // Regular character - resolve its Shift/Caps form (incl. CapsLock ß -> ẞ).
         const effective = shift ? shiftedGlyph(action.text, el.dataset.shiftValue, this._isCapsLock()) : action.text;
 
         if (this.fireKeyPress({ key: effective, shiftKey: shift })) {
@@ -2610,8 +2553,6 @@ export default class KioskKeyboard extends Control {
       }
 
       default:
-        // Exhaustiveness: every KeyAction kind is handled above ({shift} returns
-        // earlier). A new variant fails to compile at this assertNever.
         return assertNever(action);
     }
   }
@@ -2685,7 +2626,6 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Resolve the target input association to a UI5 Element.
-   * Uses Element registry (the standard UI5 association resolution pattern).
    */
   private _getTargetElement(): Element | null {
     const id = this._getActiveTargetId();
