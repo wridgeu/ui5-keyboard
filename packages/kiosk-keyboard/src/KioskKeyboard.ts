@@ -98,6 +98,12 @@ function isSecondaryPress(event: PressEvent): boolean {
   return event.button !== undefined && event.button > 0;
 }
 
+/** A docked keyboard's open period: exists only while open and owns what the period armed. */
+interface DockSession {
+  /** Detaches the document Escape listener. */
+  readonly escape: AbortController;
+}
+
 /**
  * The focus state the framework stores before a re-render and hands back to
  * `applyFocusInfo`: the control id, and the grid position the roving tab stop sat on.
@@ -145,7 +151,8 @@ export default class KioskKeyboard extends Control {
   // ── Private fields (initialized in init(), not at class level) ──
   private _shiftState!: ShiftState;
   private _keyGridNav!: KeyGridNavigation;
-  private _open!: boolean;
+  /** The docked open period, or `null` while closed; `isOpen()` reads it. */
+  private _dockSession!: DockSession | null;
   /** Owns `controls` focus delegation and active-target reconciliation. */
   private _controlsDelegation!: ControlsDelegationController;
   private _physicalKeyHighlight!: PhysicalKeyHighlight;
@@ -166,8 +173,6 @@ export default class KioskKeyboard extends Control {
   private _nativeKbSuppression!: NativeKeyboardSuppression;
   private _autoShowBehavior!: AutoShowBehavior;
   private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
-  /** Detaches the document Escape listener of the current open period, or `null` while closed. */
-  private _escapeAbort!: AbortController | null;
   /** Detaches the window blur safety net for the current press, or `null` between presses. */
   private _pressedBlurAbort!: AbortController | null;
   private _focusClaimService!: FocusClaimService;
@@ -915,7 +920,7 @@ export default class KioskKeyboard extends Control {
     this._keyGridNav = new KeyGridNavigation(KIOSK_KEYBOARD_DOM);
     // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
     this.addDelegate(this._keyGridNav, true);
-    this._open = false;
+    this._dockSession = null;
     this._controlsDelegation = new ControlsDelegationController({
       getControls: () => this.getControls(),
       getParent: () => this.getParent(),
@@ -923,7 +928,7 @@ export default class KioskKeyboard extends Control {
       getEnabled: () => this.getEnabled(),
       getDocked: () => this.getDocked(),
       getAutoShow: () => this.getAutoShow(),
-      isOpen: () => this._open,
+      isOpen: () => this.isOpen(),
       show: () => {
         this.show();
       },
@@ -955,7 +960,6 @@ export default class KioskKeyboard extends Control {
     this._nativeKbSuppression = new NativeKeyboardSuppression(this);
     this._autoShowBehavior = new AutoShowBehavior(this);
     this._extensions = [this._nativeKbSuppression, this._autoShowBehavior];
-    this._escapeAbort = null;
     this._pressedBlurAbort = null;
     this._focusClaimService = new FocusClaimService(
       () => this.getControls(),
@@ -1078,7 +1082,7 @@ export default class KioskKeyboard extends Control {
 
     const docked = this.getDocked();
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootDocked, docked);
-    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootClosed, docked && !this._open);
+    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootClosed, docked && !this.isOpen());
   }
 
   override exit(): void {
@@ -1101,8 +1105,8 @@ export default class KioskKeyboard extends Control {
     this._variantPopup.destroy();
     this._clearPressedKeyState();
     for (const ext of this._extensions) ext.destroy();
-    this._escapeAbort?.abort();
-    this._escapeAbort = null;
+    this._dockSession?.escape.abort();
+    this._dockSession = null;
     // @ts-expect-error removeDelegate is an internal UI5 API not exposed in @openui5/types
     this.removeDelegate(this._keyGridNav);
     this._keyGridNav.destroy();
@@ -1153,11 +1157,8 @@ export default class KioskKeyboard extends Control {
   override setVisible(isVisible: boolean): this {
     if (!isVisible) {
       this._redirectFocusToTargetIfOwned();
-      // Close the docked keyboard - a hidden keyboard should not retain
-      // open state (escape listener, native keyboard suppression).
-      if (this.getDocked() && this._open) {
-        this.close();
-      }
+      // A hidden keyboard holds no open state (escape listener, native keyboard suppression).
+      this.close();
     }
     return super.setVisible(isVisible);
   }
@@ -1353,7 +1354,7 @@ export default class KioskKeyboard extends Control {
 
     // If the keyboard is open, restore the old target's inputmode
     // before switching so it's not left suppressed.
-    if (this._open) {
+    if (this.isOpen()) {
       this._nativeKbSuppression.restore();
     }
 
@@ -1434,7 +1435,7 @@ export default class KioskKeyboard extends Control {
     }
 
     // If the keyboard is open, suppress the new target's native keyboard.
-    if (this._open) {
+    if (this.isOpen()) {
       this._nativeKbSuppression.suppress();
     }
 
@@ -1646,13 +1647,7 @@ export default class KioskKeyboard extends Control {
     const wasDocked = this.getDocked();
     if (wasDocked === isDocked) return this;
 
-    if (wasDocked && !isDocked && this._open) {
-      this.close();
-    }
-
-    if (!wasDocked && isDocked) {
-      this._open = false;
-    }
+    if (wasDocked) this.close();
 
     this.setProperty("docked", isDocked, true);
     this._autoShowBehavior.sync();
@@ -1675,15 +1670,13 @@ export default class KioskKeyboard extends Control {
     // Before the open guard: a deferred auto-show close must not land on an
     // already-open keyboard that show() was just called on.
     this._autoShowBehavior.cancelPendingClose();
-    if (this._open) return this;
-    if (this._nativeKbSuppression.shouldDeferToNative()) return this;
+    if (this._dockSession || !this._canOpen()) return this;
 
-    this._open = true;
+    this._dockSession = { escape: new AbortController() };
     this._nativeKbSuppression.suppress();
-    this._escapeAbort = new AbortController();
     document.addEventListener("keydown", (e) => this._onDocumentEscapeKeydown(e), {
       capture: true,
-      signal: this._escapeAbort.signal,
+      signal: this._dockSession.escape.signal,
     });
     const dom = this.getDomRef();
     if (dom) {
@@ -1701,8 +1694,8 @@ export default class KioskKeyboard extends Control {
    * @since 0.1.0
    */
   close(): this {
-    if (!this.getDocked()) return this;
-    if (!this._open) return this;
+    const session = this._dockSession;
+    if (!session) return this;
     // Drop both in-flight presses and any open accent popup before the session
     // closes: a keyboard sliding out of view cannot leave a keycap painted, a
     // blur listener armed, a popup floating over the page, or a pending touchend
@@ -1711,10 +1704,9 @@ export default class KioskKeyboard extends Control {
     this._clearKeyboardPressedState();
     this._variantPopup.dismissOpen();
     this._targetSession.fireChangeIfDirty();
-    this._open = false;
+    this._dockSession = null;
     this._nativeKbSuppression.restore();
-    this._escapeAbort?.abort();
-    this._escapeAbort = null;
+    session.escape.abort();
     const dom = this.getDomRef();
     if (dom) {
       dom.classList.add(KIOSK_KEYBOARD_DOM.classes.rootClosed);
@@ -1731,7 +1723,16 @@ export default class KioskKeyboard extends Control {
    * @since 0.1.0
    */
   isOpen(): boolean {
-    return this._open;
+    return this._dockSession !== null;
+  }
+
+  /**
+   * The one gate every open path passes, public `show()` and both focus paths alike.
+   * A docked keyboard opens only while visible, and not where the native keyboard
+   * takes over. Placement is not required, so `show()` works ahead of the first render.
+   */
+  private _canOpen(): boolean {
+    return this.getVisible() && !this._nativeKbSuppression.shouldDeferToNative();
   }
 
   /**
@@ -1744,7 +1745,7 @@ export default class KioskKeyboard extends Control {
     // An open accent-variant popup, or a re-anchor parked between two keys, owns
     // Escape: it resolves the popup and leaves the docked keyboard open.
     if (this._variantPopup.consumeEscape()) return;
-    if (!this.getDocked() || !this._open) return;
+    if (!this.isOpen()) return;
 
     const eventTarget = event.composedPath?.()[0] ?? event.target;
 
