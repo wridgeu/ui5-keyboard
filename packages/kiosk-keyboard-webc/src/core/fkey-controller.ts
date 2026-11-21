@@ -58,6 +58,14 @@ const NATIVE_FKEY_ACTIONS = new Map<string, () => void>([
  */
 const warnedUnsupportedFKeys = new Set<string>();
 
+/** The keydowns {@link FKeyController} synthesizes, which carry no real modifier state. */
+const ownDispatches = new WeakSet<Event>();
+
+/** Whether `e` is a keydown an on-screen F-key synthesized rather than a real key press. */
+export function isFKeyDispatch(e: Event): boolean {
+  return ownDispatches.has(e);
+}
+
 /**
  * Bridge to the host keyboard's mode and target resolution. Kept as callbacks
  * (matching the sibling controllers' host pattern) so the F-key dispatch logic
@@ -123,6 +131,7 @@ export class FKeyController {
       cancelable: true,
       shiftKey,
     });
+    ownDispatches.add(nativeEvent);
     return target.dispatchEvent(nativeEvent);
   }
 }

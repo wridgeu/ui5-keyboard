@@ -1,4 +1,5 @@
 import { KIOSK_KEYBOARD_DOM } from "./dom-contract.js";
+import { isFKeyDispatch } from "./fkey-controller.js";
 
 /** The slice of the host the highlight controller reads and writes back into. */
 export interface PhysicalKeyHighlightHost {
@@ -48,6 +49,7 @@ export class PhysicalKeyHighlightController {
   ) {}
 
   private _onPhysicalKey(ev: KeyboardEvent, down: boolean): void {
+    if (isFKeyDispatch(ev)) return;
     this._highlightKey(ev.key, down);
 
     this._host.syncShiftFromPhysical(ev.shiftKey, ev.getModifierState("CapsLock"));

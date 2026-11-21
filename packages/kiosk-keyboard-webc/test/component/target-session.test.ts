@@ -1,7 +1,8 @@
 import { fixture, html, expect } from "@open-wc/testing";
 import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
-import { requireKey } from "../helpers/fixtures.js";
+import type { LayoutDefinition } from "../../src/types.js";
+import { requireKey, setupWithLayout } from "../helpers/fixtures.js";
 
 const DOM = KioskKeyboard.DOM;
 
@@ -129,5 +130,42 @@ describe("kiosk-keyboard - target switch", () => {
 
     expect(fallback.value, "the fallback is typed at its own caret").to.equal("xyzㅏ");
     expect(changes).to.deep.equal([null]);
+  });
+});
+
+describe("kiosk-keyboard - Native F-key dispatch and the physical-key mirror", () => {
+  const FKEY_LAYOUT: LayoutDefinition = [[{ value: "{shift}" }, { value: "{fkey:ArrowLeft}" }]];
+
+  async function nativeFKeys(): Promise<{ kb: KioskKeyboard; input: HTMLInputElement }> {
+    const setup = await setupWithLayout(FKEY_LAYOUT);
+    setup.kb.fKeyMode = "Native";
+    await settle();
+    return setup;
+  }
+
+  function hasClass(kb: KioskKeyboard, value: string, cls: string): boolean {
+    return requireKey(kb, value).classList.contains(cls);
+  }
+
+  it("an on-screen F-key tap keeps Caps Lock and lights no key", async () => {
+    const { kb } = await nativeFKeys();
+    requireKey(kb, "{shift}").click();
+    requireKey(kb, "{shift}").click();
+    await settle();
+    expect(hasClass(kb, "{shift}", DOM.classes.keyCapsLock), "precondition: caps lock on").to.equal(true);
+
+    requireKey(kb, "{fkey:ArrowLeft}").click();
+    await settle();
+    expect(hasClass(kb, "{shift}", DOM.classes.keyCapsLock), "caps lock survives the tap").to.equal(true);
+    expect(hasClass(kb, "{fkey:ArrowLeft}", DOM.classes.keyHighlight), "our own dispatch lights nothing").to.equal(
+      false,
+    );
+  });
+
+  it("a keydown the page dispatches on the target still mirrors Shift", async () => {
+    const { kb, input } = await nativeFKeys();
+    physicalKey(input, "Shift", true);
+    await settle();
+    expect(hasClass(kb, "{shift}", DOM.classes.keyShiftActive)).to.equal(true);
   });
 });
