@@ -190,6 +190,31 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
     resetInternal();
   }
 
+  /**
+   * Ends the composition without writing once another writer changed the target's value:
+   * the stored range no longer marks the preedit, so splicing it would overwrite their text.
+   */
+  function dropOverwrittenPreedit(): void {
+    if (!compState.composing || !target || target.value === compState.writtenValue) return;
+    endComposition(compState, target);
+    resetInternal();
+  }
+
+  /** A caret moved off the preedit's end commits the preedit in place and leaves the caret where it was put. */
+  function commitIfCaretMoved(el: HTMLInputElement | HTMLTextAreaElement): void {
+    // Only a focused target's selection is the user's: an unfocused one's is not kept by the browser.
+    if (!compState.composing || (el.getRootNode() as Document | ShadowRoot).activeElement !== el) return;
+    const end = compState.preeditStart + compState.preeditLength;
+    const { selectionStart, selectionEnd } = el;
+    if (selectionStart === end && selectionEnd === end) return;
+    flush(el);
+    try {
+      el.setSelectionRange(selectionStart, selectionEnd);
+    } catch {
+      // May throw on certain input types
+    }
+  }
+
   /** Rewrites the live preedit to `text` and records the phase it now stands in. */
   function setPreedit(el: HTMLInputElement | HTMLTextAreaElement, text: string, next: Phase): void {
     phase = next;
@@ -299,8 +324,10 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
 
   return {
     handleKey(key: string, el: HTMLInputElement | HTMLTextAreaElement): boolean {
+      dropOverwrittenPreedit();
       // A refused target takes no edits, and declining hands the key to the host's guarded default branch.
       if (el.readOnly || el.disabled) return false;
+      if (el === target) commitIfCaretMoved(el);
       if (key === "{backspace}") return handleBackspace(el);
 
       const code = key.length === 1 ? key.charCodeAt(0) : -1;
@@ -325,6 +352,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
     },
 
     commit(): string | null {
+      dropOverwrittenPreedit();
       if (!compState.composing || !target) {
         resetInternal();
         return null;
@@ -335,6 +363,7 @@ export function createHangulComposeMiddleware(): CompositionMiddleware {
     },
 
     reset(): void {
+      dropOverwrittenPreedit();
       if (compState.composing && target) {
         updateComposition(compState, target, "");
         endComposition(compState, target);

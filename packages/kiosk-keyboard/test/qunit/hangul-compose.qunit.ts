@@ -237,3 +237,67 @@ QUnit.test("Backspace declined on a target that turned read-only mid-composition
   assert.strictEqual(m.handleKey("{backspace}", input), false, "Backspace declined");
   assert.strictEqual(input.value, "ab\uD558", "Preedit left intact");
 });
+
+QUnit.test("A value written mid-composition ends it: the next jamo does not overwrite that text", (assert) => {
+  const m = mw();
+  m.handleKey("\u3145", input); // \u3145
+  m.handleKey("\u3153", input); // \u3153 -> \uC11C
+  input.value = "\uC11C\uC6B8\uC5ED"; // \uC11C\uC6B8\uC5ED, e.g. a suggestion pick; the caret moves to the end
+  m.handleKey("\u3131", input); // \u3131
+
+  assert.strictEqual(
+    input.value,
+    "\uC11C\uC6B8\uC5ED\u1100",
+    "\uC11C\uC6B8\uC5ED kept; \u3131 opens a new preedit at the caret",
+  );
+});
+
+QUnit.test("A value written mid-composition is not spliced by reset()", (assert) => {
+  const m = mw();
+  m.handleKey("\u3145", input); // \u3145
+  m.handleKey("\u3153", input); // \u3153 -> \uC11C
+  input.value = "\uC11C\uC6B8\uC5ED"; // \uC11C\uC6B8\uC5ED
+  m.reset();
+
+  assert.strictEqual(input.value, "\uC11C\uC6B8\uC5ED", "reset() leaves text it did not write alone");
+});
+
+QUnit.test("A value written mid-composition leaves commit() nothing to commit", (assert) => {
+  const m = mw();
+  m.handleKey("\u3145", input); // \u3145
+  m.handleKey("\u3153", input); // \u3153 -> \uC11C
+  input.value = "\uC11C\uC6B8\uC5ED"; // \uC11C\uC6B8\uC5ED
+
+  assert.strictEqual(m.commit(), null, "The overwritten preedit is not reported as committed text");
+});
+
+QUnit.module("hangul-compose middleware: focused target", {
+  beforeEach() {
+    input = document.createElement("input");
+    document.body.appendChild(input);
+    input.focus();
+  },
+  afterEach() {
+    input.remove();
+    commonAfterEach();
+  },
+});
+
+QUnit.test("Composition continues while the caret stays at the preedit's end", (assert) => {
+  const m = mw();
+  m.handleKey("\u3145", input); // \u3145
+  m.handleKey("\u3153", input); // \u3153 -> \uC11C
+  m.handleKey("\u3131", input); // \u3131 -> \uC11D
+
+  assert.strictEqual(input.value, "\uC11D", "\u3131 closes the syllable");
+});
+
+QUnit.test("A caret moved off the preedit commits it; the next jamo composes at the new caret", (assert) => {
+  const m = mw();
+  m.handleKey("\u3145", input); // \u3145
+  m.handleKey("\u3153", input); // \u3153 -> \uC11C
+  input.setSelectionRange(0, 0);
+  m.handleKey("\u3131", input); // \u3131
+
+  assert.strictEqual(input.value, "\u1100\uC11C", "\uC11C committed in place, \u3131 opens a preedit before it");
+});
