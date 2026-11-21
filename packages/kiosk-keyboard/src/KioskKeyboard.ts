@@ -66,9 +66,39 @@ import { constrainedLayoutName, reconcileBaseSwitch } from "./internal/layout-co
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
-/** A press event reaching the touch handlers, carrying a mouse `button` when one made it. */
+/** One touch a touch event reports changed: a finger, or EventSimulation's single mouse touch. */
+interface PressPointer {
+  readonly identifier: number;
+  readonly target: EventTarget | null;
+}
+
+/**
+ * A press event reaching the touch handlers, carrying a mouse `button` when one
+ * made it, and the touches it changed.
+ */
 interface PressEvent extends Event {
   readonly button?: number;
+  readonly changedTouches?: ArrayLike<PressPointer>;
+}
+
+/** The pointer id of a press event that names no touch. */
+const UNNAMED_POINTER = -1;
+
+/** The pointers a press event changed; an event naming no touch is one unnamed pointer. */
+function changedPointers(event: PressEvent): PressPointer[] {
+  const touches = event.changedTouches;
+  return touches && touches.length > 0 ? Array.from(touches) : [{ identifier: UNNAMED_POINTER, target: event.target }];
+}
+
+/** One pointer held on a key, owning everything its press armed. */
+interface Press {
+  readonly keyEl: HTMLElement;
+  /** Detaches this press's window-blur safety net. */
+  readonly blur: AbortController;
+  /** The Backspace auto-repeat, armed only for an enabled `{backspace}` press. */
+  readonly repeat: BackspaceRepeatBehavior | null;
+  /** Whether this press armed the variant popup's hold. */
+  hold: boolean;
 }
 
 /**
@@ -156,11 +186,10 @@ export default class KioskKeyboard extends Control {
   /** Owns `controls` focus delegation and active-target reconciliation. */
   private _controlsDelegation!: ControlsDelegationController;
   private _physicalKeyHighlight!: PhysicalKeyHighlight;
-  private _pressedKeyEl!: HTMLElement | null;
+  /** The live pointer presses, by pointer id. */
+  private _presses!: Map<number, Press>;
   /** The keycap held down by a keyboard activation, or `null` between activations. */
   private _keyboardPressedKeyEl!: HTMLElement | null;
-  /** Owns press-and-hold continuous delete on the Backspace key. */
-  private _backspaceRepeat!: BackspaceRepeatBehavior;
   /** Owns the long-press / right-click accent-variant popup. */
   private _variantPopup!: VariantPopupBehavior;
   /** Owns which layout is active, who asked for it, and the width tier's announcement. */
@@ -173,8 +202,6 @@ export default class KioskKeyboard extends Control {
   private _nativeKbSuppression!: NativeKeyboardSuppression;
   private _autoShowBehavior!: AutoShowBehavior;
   private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
-  /** Detaches the window blur safety net for the current press, or `null` between presses. */
-  private _pressedBlurAbort!: AbortController | null;
   private _focusClaimService!: FocusClaimService;
   private _targetSession!: TargetInputSession;
   private _rendererApi!: RendererInternalApi | null;
@@ -939,9 +966,8 @@ export default class KioskKeyboard extends Control {
       resolveControlsAncestor: (candidate) => this._focusClaimService.resolveControlsAncestor(candidate),
     });
     this._physicalKeyHighlight = new PhysicalKeyHighlight(this, this._shiftState);
-    this._pressedKeyEl = null;
+    this._presses = new Map();
     this._keyboardPressedKeyEl = null;
-    this._backspaceRepeat = new BackspaceRepeatBehavior(() => this._performBackspaceRepeatTick());
     this._variantPopup = new VariantPopupBehavior({
       resolveVariants: (keyEl) => this._resolveKeyVariants(keyEl),
       commitVariant: (glyph) => {
@@ -960,7 +986,6 @@ export default class KioskKeyboard extends Control {
     this._nativeKbSuppression = new NativeKeyboardSuppression(this);
     this._autoShowBehavior = new AutoShowBehavior(this);
     this._extensions = [this._nativeKbSuppression, this._autoShowBehavior];
-    this._pressedBlurAbort = null;
     this._focusClaimService = new FocusClaimService(
       () => this.getControls(),
       () => this._controlsDelegation.getResolvedControlIds(),
@@ -989,11 +1014,7 @@ export default class KioskKeyboard extends Control {
         this.fireLayoutChange(parameters);
       },
       resetShiftState: () => this._shiftState.reset(),
-      // The pointer press goes the way a touchcancel takes it; the keyboard press is visual only.
-      cancelPress: () => {
-        this.ontouchcancel();
-        this._clearKeyboardPressedState();
-      },
+      cancelPress: () => this._cancelAllPresses(),
       endComposition: () => this._dropComposition("commit"),
       focusAnchorValue: () => this._focusAnchorValue(),
       reseatFocusAnchor: (value) => this._reseatFocusAnchor(value),
@@ -1103,7 +1124,7 @@ export default class KioskKeyboard extends Control {
     this._responsiveSizing.destroy();
     this._autoCompact.destroy();
     this._variantPopup.destroy();
-    this._clearPressedKeyState();
+    this._cancelAllPresses();
     for (const ext of this._extensions) ext.destroy();
     this._dockSession?.escape.abort();
     this._dockSession = null;
@@ -1134,10 +1155,10 @@ export default class KioskKeyboard extends Control {
   setEnabled(isEnabled: boolean): this {
     if (!isEnabled) {
       this._redirectFocusToTargetIfOwned();
-      // The accent popup is part of the keyboard's surface, and it renders into
-      // the static area where the disabled styling does not reach it. Left open
-      // its options still commit, so the disable closes it. A hold armed but not
-      // yet fired is left alone: `_resolveKeyVariants` refuses it at fire time.
+      // A disabled keyboard takes no input: every press ends, and the accent popup,
+      // which renders into the static area where the disabled styling does not
+      // reach it, closes rather than keep committing.
+      this._cancelAllPresses();
       this._variantPopup.dismissOpen();
     }
     // The renderer handles the disabled CSS class (ui5KioskKeyboard--disabled)
@@ -1157,7 +1178,10 @@ export default class KioskKeyboard extends Control {
   override setVisible(isVisible: boolean): this {
     if (!isVisible) {
       this._redirectFocusToTargetIfOwned();
-      // A hidden keyboard holds no open state (escape listener, native keyboard suppression).
+      // A hidden keyboard holds no press, popup or open state (escape listener,
+      // native keyboard suppression), docked or not.
+      this._cancelAllPresses();
+      this._variantPopup.dismissOpen();
       this.close();
     }
     return super.setVisible(isVisible);
@@ -1324,11 +1348,9 @@ export default class KioskKeyboard extends Control {
     // Abort (not commit) any in-progress composition: reset discards the
     // interaction rather than flushing a half-formed syllable to the target.
     this._dropComposition("reset");
-    // Drop both in-flight presses, pointer and keyboard: a fresh input context
-    // cannot leave a keycap painted, a blur listener armed, or a pending
-    // touchend still able to type.
-    this._clearPressedKeyState();
-    this._clearKeyboardPressedState();
+    // A fresh input context cannot leave a keycap painted, a blur listener armed,
+    // or a pending touchend still able to type.
+    this._cancelAllPresses();
     this._variantPopup.dismissOpen();
     this._shiftState.reset();
     // Returns to the base layout and re-renders; fires layoutChange only on a
@@ -1700,8 +1722,7 @@ export default class KioskKeyboard extends Control {
     // closes: a keyboard sliding out of view cannot leave a keycap painted, a
     // blur listener armed, a popup floating over the page, or a pending touchend
     // still able to type into the target it just left.
-    this._clearPressedKeyState();
-    this._clearKeyboardPressedState();
+    this._cancelAllPresses();
     this._variantPopup.dismissOpen();
     this._targetSession.fireChangeIfDirty();
     this._dockSession = null;
@@ -1911,9 +1932,12 @@ export default class KioskKeyboard extends Control {
       this._rendererApi = {
         _isShiftActive: () => this._isShiftActive(),
         _isCapsLock: () => this._isCapsLock(),
-        _getPressedKey: () => {
-          const el = this._keyboardPressedKeyEl ?? this._pressedKeyEl;
-          return el ? keyPositionOf(el) : null;
+        _isKeyPressed: (row, col) => {
+          const held = [this._keyboardPressedKeyEl, ...Array.from(this._presses.values(), (press) => press.keyEl)];
+          return held.some((el) => {
+            const pos = el ? keyPositionOf(el) : null;
+            return pos?.row === row && pos.col === col;
+          });
         },
         _getHighlightedKey: () => this._physicalKeyHighlight.getHighlightedKey(),
         _getResolvedLayout: () => this._getResolvedLayout(),
@@ -2019,9 +2043,6 @@ export default class KioskKeyboard extends Control {
    * behavior to build the option listbox.
    */
   private _resolveKeyVariants(keyEl: HTMLElement): { base: string; glyphs: string[] } | null {
-    // Gated at fire time as well as at arm time, so a hold that outlives the
-    // enabled flag opens nothing. The webc twin refuses in the same place.
-    if (!this.getEnabled()) return null;
     const pos = keyPositionOf(keyEl);
     if (!pos) return null;
     const key = this._getResolvedLayout()[pos.row]?.[pos.col];
@@ -2133,26 +2154,9 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Clears the pressed-key visual state and detaches the window-blur safety
-   * net attached by `ontouchstart`. Safe to call when no key is pressed and
-   * is therefore also invoked from `exit()` to guarantee listener cleanup.
-   */
-  private _clearPressedKeyState(): HTMLElement | null {
-    this._backspaceRepeat.stop();
-    this._variantPopup.stop();
-    const pressed = this._pressedKeyEl;
-    this._pressedKeyEl = null;
-    this._pressedBlurAbort?.abort();
-    this._pressedBlurAbort = null;
-    if (pressed) {
-      pressed.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyPressed);
-    }
-    return pressed;
-  }
-
-  /**
    * Prevents focus from leaving the target input when clicking anywhere
-   * on the keyboard surface - keys, rows, or gaps between keys.
+   * on the keyboard surface - keys, rows, or gaps between keys - and begins a
+   * press for every pointer that lands on a key.
    *
    * Uses UI5's EventSimulation touchstart (fires for both mouse and touch)
    * instead of raw pointerdown. preventDefault() on the underlying
@@ -2161,8 +2165,6 @@ export default class KioskKeyboard extends Control {
    * suppresses all compatibility mouse events per the Pointer Events spec.
    */
   ontouchstart(event: Event): void {
-    // Always prevent focus steal when clicking anywhere on the keyboard
-    // (including gaps between keys), so the target input keeps focus.
     event.preventDefault();
 
     // EventSimulation maps EVERY mouse button's mousedown onto this simulated
@@ -2171,35 +2173,82 @@ export default class KioskKeyboard extends Control {
     // carries no `button`, and so passes.
     if (isSecondaryPress(event)) return;
 
-    const el = this._resolveKeyElementFromEventTarget(event.target);
-    if (el) {
-      // A press on any key while the accent popup is open dismisses it (the
-      // popup's options live in the static area, so a key press is always
-      // "outside"), then proceeds so the same tap also types the key. The
-      // framework autoClose does not fire for the keyboard's own keys because of
-      // the preventDefault above, so close it explicitly here. A key that has
-      // variants may become a re-anchor, so its options stay up until the hold
-      // claims them or `ontouchend` dismisses them for a plain tap.
-      if (!el.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) {
-        this._variantPopup.dismissOpen();
-      }
-      this._pressedKeyEl = el;
-      el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
-      // Safety net: if the window loses focus before touchend/touchcancel
-      // fires (e.g. Alt-Tab during a mousedown, or a modal popup steals
-      // focus), clear the pressed visual state so it does not stick. A press
-      // that ends outside the page abandons the gesture, like a cancel.
-      // Aborting first keeps a second press from stacking a second listener.
-      this._pressedBlurAbort?.abort();
-      this._pressedBlurAbort = new AbortController();
-      window.addEventListener("blur", () => this.ontouchcancel(), { signal: this._pressedBlurAbort.signal });
-      // Press-and-hold Backspace deletes continuously; the behavior arms the
-      // repeat and later tells ontouchend to suppress its trailing delete.
-      this._backspaceRepeat.onPress(el, this.getEnabled());
-      // Press-and-hold a key with variants opens the accent popup; the behavior
-      // arms the hold and later tells ontouchend to suppress its trailing tap.
-      this._variantPopup.onPress(el, this.getEnabled());
+    for (const { identifier, target } of changedPointers(event)) {
+      const el = this._resolveKeyElementFromEventTarget(target);
+      if (el) this._beginPress(identifier, el);
     }
+  }
+
+  /**
+   * Begins pointer `id`'s press on `el`. A new press stops the repeat and the
+   * accent hold every other live press armed, the way a physical keyboard stops
+   * repeating a held key once another goes down; those presses still activate on
+   * their own release.
+   */
+  private _beginPress(id: number, el: HTMLElement): void {
+    // A press on any key while the accent popup is open dismisses it (the
+    // popup's options live in the static area, so a key press is always
+    // "outside"), then proceeds so the same tap also types the key. The
+    // framework autoClose does not fire for the keyboard's own keys because of
+    // the preventDefault in ontouchstart, so close it explicitly here. A key that
+    // has variants may become a re-anchor, so its options stay up until the hold
+    // claims them or the release dismisses them for a plain tap.
+    if (!el.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) {
+      this._variantPopup.dismissOpen();
+    }
+    // A pointer still on record lost its release; it ends unactivated.
+    this._endPress(id);
+    for (const other of this._presses.values()) this._stopPressTimers(other);
+
+    const enabled = this.getEnabled();
+    // Safety net: if the window loses focus before touchend/touchcancel fires
+    // (e.g. Alt-Tab during a mousedown, or a modal popup steals focus), the
+    // gesture is abandoned, like a cancel, so no keycap stays pressed.
+    const blur = new AbortController();
+    window.addEventListener("blur", () => this.ontouchcancel(), { signal: blur.signal });
+    const repeat =
+      enabled && el.dataset.key === "{backspace}"
+        ? new BackspaceRepeatBehavior(() => this._performBackspaceRepeatTick())
+        : null;
+    const hold = this._variantPopup.onPress(el, enabled);
+    this._presses.set(id, { keyEl: el, blur, repeat, hold });
+    el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
+  }
+
+  /** Stops the repeat and the accent hold `press` armed, leaving the press itself live. */
+  private _stopPressTimers(press: Press): void {
+    press.repeat?.stop();
+    if (press.hold) {
+      this._variantPopup.stop();
+      press.hold = false;
+    }
+  }
+
+  /**
+   * The single exit of a pointer press: releases what it armed and unpaints its
+   * key unless another live press holds the same key. Returns the ended press, or
+   * `null` when the pointer had none.
+   */
+  private _endPress(id: number): Press | null {
+    const press = this._presses.get(id);
+    if (!press) return null;
+    this._presses.delete(id);
+    this._stopPressTimers(press);
+    press.blur.abort();
+    const stillHeld = Array.from(this._presses.values()).some((other) => other.keyEl === press.keyEl);
+    if (!stillHeld) press.keyEl.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyPressed);
+    return press;
+  }
+
+  /**
+   * Ends every press, pointer and keyboard, without activating any, and abandons
+   * a re-anchor a hold parked. What the keyboard does when the presses lose their
+   * surface: hide, disable, close, reset, layout change, exit.
+   */
+  private _cancelAllPresses(): void {
+    this._variantPopup.cancelPending();
+    for (const id of Array.from(this._presses.keys())) this._endPress(id);
+    this._clearKeyboardPressedState();
   }
 
   /**
@@ -2211,28 +2260,28 @@ export default class KioskKeyboard extends Control {
     const el = this._resolveKeyElementFromEventTarget(event.target);
     if (!el || !el.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
     event.preventDefault();
-    this._clearPressedKeyState();
+    this._cancelAllPresses();
     this._variantPopup.openFor(el);
   }
 
-  /**
-   * Activates the key on touch/mouse release.
-   *
-   * Only fires if the release target matches the press target (basic
-   * tap detection - drag-away cancels). Replaces ontap which couldn't
-   * fire because pointerdown's preventDefault() suppressed the click
-   * event that jQuery's tap plugin depends on.
-   */
+  /** Activates each released pointer's key, when the release lands on the key it pressed (dragging away cancels). */
   ontouchend(event: Event): void {
     // The mirror of the ontouchstart filter: a non-primary release is not a key
     // activation, and must not tear down a primary press that is still live.
     if (isSecondaryPress(event)) return;
 
-    const pressed = this._clearPressedKeyState();
+    for (const { identifier, target } of changedPointers(event)) {
+      this._releasePress(identifier, target);
+    }
+  }
 
-    if (!this.getEnabled() || !pressed) return;
+  private _releasePress(id: number, target: EventTarget | null): void {
+    const press = this._endPress(id);
 
-    const el = this._resolveKeyElementFromEventTarget(event.target);
+    if (!this.getEnabled() || !press) return;
+
+    const pressed = press.keyEl;
+    const el = this._resolveKeyElementFromEventTarget(target);
     const keyValue = pressed.dataset.key;
 
     // A hold that opened (or re-anchored) the popup owns this release: it
@@ -2251,18 +2300,16 @@ export default class KioskKeyboard extends Control {
 
     // A held Backspace already deleted via auto-repeat; skip the release delete
     // so lifting off does not remove one extra character.
-    if (this._backspaceRepeat.shouldSuppressRelease(keyValue)) return;
+    if (press.repeat?.didRepeat) return;
 
     if (variantOwnsRelease) return;
 
     this._handleKeyAction(keyValue, pressed);
   }
 
+  /** The browser took the gesture away: every press ends unactivated. */
   ontouchcancel(): void {
-    // The browser took the gesture away, so a re-anchor its hold parked must not
-    // surface when the previous popup finishes closing.
-    this._variantPopup.cancelPending();
-    this._clearPressedKeyState();
+    this._cancelAllPresses();
   }
 
   /**
@@ -2347,8 +2394,8 @@ export default class KioskKeyboard extends Control {
   /**
    * Marks `el` as pressed for the duration of a keyboard activation, so the
    * keycap gives the same feedback a pointer press does. Held separately from
-   * the pointer gesture's `_pressedKeyEl`, which also drives backspace repeat
-   * and the variant popup; a keyboard activation is only the visual half.
+   * the pointer presses, which also drive backspace repeat and the variant
+   * popup; a keyboard activation is only the visual half.
    */
   private _setKeyboardPressedState(el: HTMLElement): void {
     this._clearKeyboardPressedState();
@@ -2467,9 +2514,6 @@ export default class KioskKeyboard extends Control {
    * deleted, which the repeater uses to stop.
    */
   private _performBackspaceRepeatTick(): boolean {
-    // Read where the tick consumes it, not only where the hold was armed, so
-    // disabling mid-hold ends the gesture on the next tick rather than at the release.
-    if (!this.getEnabled()) return false;
     const handled = this._tryCompositionMiddleware("{backspace}") || this._performBackspaceDelete();
     this._shiftState.autoRelease();
     return handled;

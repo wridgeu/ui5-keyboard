@@ -43,6 +43,9 @@ sap.ui.define([], () => {
       "KioskKeyboard-backspace-repeat": {
         title: "QUnit tests for ui5.kiosk - KioskKeyboard Backspace Auto-Repeat",
       },
+      "KioskKeyboard-presses": {
+        title: "QUnit tests for ui5.kiosk - KioskKeyboard pointer presses",
+      },
       "auto-repeat": {
         title: "QUnit tests for ui5.kiosk - AutoRepeater",
       },
