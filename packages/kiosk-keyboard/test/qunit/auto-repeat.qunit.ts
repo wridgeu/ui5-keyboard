@@ -105,3 +105,41 @@ QUnit.test("stop() cancels a pending repeat", (assert) => {
   // stop() cancels it, so even past the delay nothing fires.
   assert.strictEqual(calls, 0, "no repeats fire after stop()");
 });
+
+QUnit.test("stop() from inside the callback ends the repeat", (assert) => {
+  let calls = 0;
+  const repeater: AutoRepeater = new AutoRepeater(() => {
+    calls += 1;
+    repeater.stop();
+    return true;
+  }, T);
+
+  repeater.start();
+  clock.tick(T.initialDelayMs + 5000);
+
+  assert.strictEqual(calls, 1, "no tick fires after the callback stopped the repeater");
+});
+
+QUnit.test("start() from inside the callback restarts with the initial delay", (assert) => {
+  const fireTimes: number[] = [];
+  let restarted = false;
+  const repeater: AutoRepeater = new AutoRepeater(() => {
+    fireTimes.push(Date.now());
+    if (!restarted) {
+      restarted = true;
+      repeater.start();
+    }
+    return true;
+  }, T);
+
+  const t0 = Date.now();
+  repeater.start();
+  clock.tick(T.initialDelayMs * 2 + 1);
+  repeater.stop();
+
+  assert.deepEqual(
+    fireTimes.map((t) => t - t0),
+    [T.initialDelayMs, T.initialDelayMs * 2],
+    "one timer only: the tick after the restart waits the full initial delay",
+  );
+});

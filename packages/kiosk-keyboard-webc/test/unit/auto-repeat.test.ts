@@ -104,4 +104,39 @@ describe("AutoRepeater", () => {
     repeater.stop();
     expect(countAfterFirstHold).toBeGreaterThan(0);
   });
+
+  it("stop() from inside the callback ends the repeat", () => {
+    let calls = 0;
+    const repeater: AutoRepeater = new AutoRepeater(() => {
+      calls += 1;
+      repeater.stop();
+      return true;
+    }, T);
+
+    repeater.start();
+    vi.advanceTimersByTime(T.initialDelayMs + 5000);
+
+    expect(calls).toBe(1);
+  });
+
+  it("start() from inside the callback restarts with the initial delay", () => {
+    const fireTimes: number[] = [];
+    let restarted = false;
+    const repeater: AutoRepeater = new AutoRepeater(() => {
+      fireTimes.push(Date.now());
+      if (!restarted) {
+        restarted = true;
+        repeater.start();
+      }
+      return true;
+    }, T);
+
+    const t0 = Date.now();
+    repeater.start();
+    vi.advanceTimersByTime(T.initialDelayMs * 2 + 1);
+    repeater.stop();
+
+    // One timer only: the tick after the restart waits the full initial delay.
+    expect(fireTimes.map((t) => t - t0)).toEqual([T.initialDelayMs, T.initialDelayMs * 2]);
+  });
 });
