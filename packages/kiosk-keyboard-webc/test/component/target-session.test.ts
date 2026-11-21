@@ -122,7 +122,9 @@ describe("kiosk-keyboard - target switch", () => {
     kb.setTargetElement(gone);
     requireKey(kb, "ㄱ").click();
     const changes: (HTMLElement | null)[] = [];
-    kb.addEventListener("active-control-change", (e) => changes.push(e.detail.activeElement));
+    kb.addEventListener("active-control-change", (e) =>
+      changes.push((e as CustomEvent<{ activeElement: HTMLElement | null }>).detail.activeElement),
+    );
 
     gone.remove();
     fallback.setSelectionRange(3, 3);
