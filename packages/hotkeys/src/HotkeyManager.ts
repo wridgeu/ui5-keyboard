@@ -207,6 +207,7 @@ export default class HotkeyManager extends BaseObject {
     const handler: HotkeyDispatchHandler = {
       processHotkeys: (e) => this._processHotkeys(e),
       processSequences: (e, ctx) => this._processSequences(e, ctx),
+      resetSequences: () => this._sequenceManager?.reset(),
       emitUnhandled: (e, r, ctx) => this._emitUnhandled(e, r, ctx),
     };
     this._dispatcher = new EventDispatcher(handler, this._platform);
@@ -352,8 +353,11 @@ export default class HotkeyManager extends BaseObject {
   /**
    * Suspend hotkey/sequence dispatch. Returns an RAII guard handle.
    *
-   * While any guard is active, all hotkey and sequence callbacks are blocked.
-   * Key state tracking continues normally. Browser defaults are NOT suppressed.
+   * While any guard is active, all hotkey and sequence callbacks are blocked,
+   * including the sequence step of a keydown whose hotkey callback took the
+   * guard. A key swallowed while suspended resets any pending sequence, as
+   * does a key consumed by a recording `HotkeyRecorder`. Key state tracking
+   * continues normally. Browser defaults are NOT suppressed.
    *
    * @param reason - Optional debug metadata.
    * @since 0.1.0

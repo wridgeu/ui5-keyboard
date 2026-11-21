@@ -148,6 +148,62 @@ QUnit.test("Suspend mid-sequence, release before timeout - sequence completes", 
   clock.restore();
 });
 
+QUnit.test("A key swallowed by suspension resets a pending sequence", (assert) => {
+  let seqFired = false;
+  manager.register("G I", () => {
+    seqFired = true;
+  });
+
+  fireKey("G");
+  const guard = manager.suspendDispatch("test");
+  fireKey("X");
+  guard.release();
+  fireKey("I");
+
+  assert.notOk(seqFired, "G, suspended X, I does not complete G I");
+});
+
+QUnit.test("A key swallowed by a recorder resets a pending sequence", (assert) => {
+  let seqFired = false;
+  let recorded = "";
+  manager.register("G I", () => {
+    seqFired = true;
+  });
+  const recorder = manager.createRecorder({
+    onRecord: (hotkey) => {
+      recorded = hotkey;
+    },
+  });
+
+  fireKey("G");
+  recorder.start();
+  fireKey("X");
+  assert.strictEqual(recorded, "X", "The recorder consumed X");
+  fireKey("I");
+
+  assert.notOk(seqFired, "G, recorded X, I does not complete G I");
+});
+
+QUnit.test("A guard taken by a hotkey callback blocks the sequence step of the same keydown", (assert) => {
+  let seqFired = false;
+  let hotkeyFired = false;
+  let guard: KeyboardDispatchGuard | null = null;
+  manager.register("I", () => {
+    hotkeyFired = true;
+    guard = manager.suspendDispatch("overlay");
+  });
+  manager.register("G I", () => {
+    seqFired = true;
+  });
+
+  fireKey("G");
+  fireKey("I");
+
+  assert.ok(hotkeyFired, "The hotkey on I ran");
+  assert.notOk(seqFired, "The sequence did not complete while the guard is held");
+  guard!.release();
+});
+
 // ──────────────────────────────────────────────
 // Reentrancy
 // ──────────────────────────────────────────────
@@ -458,6 +514,7 @@ QUnit.test("clearInterceptor is owner-safe - wrong owner cannot clear", (assert)
       eventContext: { activeScope: GLOBAL_SCOPE, isInput: false, popupOpen: false, skipInfo: null },
     }),
     processSequences: () => false,
+    resetSequences: () => {},
     emitUnhandled: () => {},
   };
   const dispatcher = new EventDispatcher(handler, Platform.Windows);

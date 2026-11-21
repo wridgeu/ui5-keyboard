@@ -27,7 +27,8 @@ export interface HotkeyRecorderOptions {
  * 2. Call `start()` to begin listening
  * 3. The recorder auto-stops after capturing one hotkey
  *
- * While recording, all keyboard input is blocked (preventDefault + stopImmediatePropagation).
+ * While recording, all keyboard input is blocked (preventDefault + stopImmediatePropagation)
+ * and each consumed key resets any pending sequence.
  *
  * Special keys:
  * - Escape → cancels recording

@@ -719,6 +719,9 @@ const guard = manager.suspendDispatch("onboarding-overlay");
 // Key state tracking continues normally.
 // Browser defaults are NOT suppressed (no preventDefault).
 // Unhandled callback fires with reason "suspended".
+// A key swallowed while suspended resets any pending sequence.
+// A guard taken inside a hotkey callback already blocks the sequence
+// step of the keydown that ran that callback.
 
 // Inspect or release the guard
 guard.isActive; // true while held, false once released

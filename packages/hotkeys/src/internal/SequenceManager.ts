@@ -242,11 +242,16 @@ export default class SequenceManager {
     };
   }
 
-  destroy(): void {
+  /** Drop every pending match and its timer. */
+  reset(): void {
     for (const match of this._activeMatches) {
       clearTimeout(match.timerId);
     }
     this._activeMatches = [];
+  }
+
+  destroy(): void {
+    this.reset();
     for (const reg of this._registrations.values()) {
       reg.active = false;
     }

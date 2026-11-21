@@ -57,6 +57,8 @@ export interface HotkeyDispatchHandler {
   processHotkeys(event: KeyboardEvent): HotkeyDispatchResult;
   /** Sequence dispatch - same contract. Returns true if consumed (full match OR partial advance). */
   processSequences(event: KeyboardEvent, eventContext: EventContext): boolean;
+  /** Drop pending sequence matches: a key the sequence step never sees breaks the sequence. */
+  resetSequences(): void;
   /**
    * Unhandled emission - called when the event was not consumed.
    * `forcedReason` is set by the dispatcher when the event was blocked before reaching
@@ -285,11 +287,15 @@ export default class EventDispatcher {
     // kill the pipeline.
     if (this._interceptor) {
       try {
-        if (this._interceptor.onKeyDown(event)) return;
+        if (this._interceptor.onKeyDown(event)) {
+          this._handler.resetSequences();
+          return;
+        }
       } catch (error) {
         Log.error("Interceptor onKeyDown threw", error instanceof Error ? error : String(error), LOG_COMPONENT);
         event.preventDefault();
         // Do NOT stopImmediatePropagation - let analytics/a11y listeners still observe the event
+        this._handler.resetSequences();
         return;
       }
     }
@@ -299,12 +305,19 @@ export default class EventDispatcher {
 
     // Step 4: Suspend guard check
     if (this._guards.size > 0) {
+      this._handler.resetSequences();
       this._handler.emitUnhandled(event, UnhandledReason.Suspended, null);
       return;
     }
 
     // Step 5: Hotkey dispatch
     const hotkeyResult = this._handler.processHotkeys(event);
+
+    // A guard taken by a step-5 callback already blocks this keydown's sequence step.
+    if (this._guards.size > 0) {
+      this._handler.resetSequences();
+      return;
+    }
 
     // Step 6: Sequence dispatch - reuses the popup state from step 5
     const sequenceConsumed = this._handler.processSequences(event, hotkeyResult.eventContext);
