@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.1](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-kiosk-keyboard-v0.2.0...ui5-lib-kiosk-keyboard-v0.2.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **auto-repeat:** honour a stop or restart issued from inside the repeat callback ([4e469e6](https://github.com/wridgeu/ui5-keyboard/commit/4e469e622d5e373e93f0641c1f3dd1b0849f8598))
+* **hangul-compose:** end the composition when another writer changed the target ([9f484ed](https://github.com/wridgeu/ui5-keyboard/commit/9f484edc56345812a2cc115a0c0ea275edccc411))
+* **kiosk:** abandon the accent popup when its surface changes ([c146af6](https://github.com/wridgeu/ui5-keyboard/commit/c146af6af56e8e446987ebcb8e331d810b6618f7))
+* **kiosk:** end a press when a render seats another key under it ([c354baf](https://github.com/wridgeu/ui5-keyboard/commit/c354bafa3629e56b2468dc64aa143617c2807e94))
+* **kiosk:** fire afterclose when an open docked keyboard is destroyed ([f3338e5](https://github.com/wridgeu/ui5-keyboard/commit/f3338e51bd369bc51ff40320e2f3982e50f15727))
+* **kiosk:** gate every docked open path on one predicate ([6048b8a](https://github.com/wridgeu/ui5-keyboard/commit/6048b8a431ff7fc025d76c89e95199a568b83dd9))
+* **kiosk:** ignore the F-key keydown the keyboard dispatched itself ([105bc37](https://github.com/wridgeu/ui5-keyboard/commit/105bc37d255617df8c6a889f647435091cde4382))
+* **kiosk:** keep a re-rendered target's native keyboard suppressed ([df63c34](https://github.com/wridgeu/ui5-keyboard/commit/df63c34a393a3e318241e12428795f1be233c248))
+* **kiosk:** keep the autoCompact verdict in LayoutState alone ([e7b8e2a](https://github.com/wridgeu/ui5-keyboard/commit/e7b8e2a9ab9479db536449e6c2c9d9998760a84c))
+* **kiosk:** one press record per pointer, ended in one place ([a555b77](https://github.com/wridgeu/ui5-keyboard/commit/a555b775d822eb3ffbe636c5a6311e7871a7625c))
+* **kiosk:** render the docked closed class from the open state ([f71ef29](https://github.com/wridgeu/ui5-keyboard/commit/f71ef295bba3c36b129e5298c7f1b0432ad80ed6))
+* **kiosk:** state-machine and comment fixes from the audit ([6850596](https://github.com/wridgeu/ui5-keyboard/commit/6850596c690f2561f1aa597658f5b9f3e1220577))
+* **twins:** auto-repeat and hangul-compose state fixes from the audit ([f753dc7](https://github.com/wridgeu/ui5-keyboard/commit/f753dc7b09ba01b9605c9ee129a307bffa5600b6))
+
+
+### Code Refactoring
+
+* **kiosk:** drop the suppression map's last-instance clear ([8f3204d](https://github.com/wridgeu/ui5-keyboard/commit/8f3204d36dc816e05695dc6a1b73da51a3ab9db5))
+* **kiosk:** seed the locale layout in init without setting it twice ([09722af](https://github.com/wridgeu/ui5-keyboard/commit/09722afe653eed3ea0709f0e2b787ec6274fc66f))
+* **kiosk:** walk the whole parent chain in keyboard-type detection ([20a19de](https://github.com/wridgeu/ui5-keyboard/commit/20a19de72b99ff8cc4b5cbac061c7bd06943fa81))
+
 ## [0.2.0](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-kiosk-keyboard-v0.1.0...ui5-lib-kiosk-keyboard-v0.2.0) (2026-11-16)
 
 

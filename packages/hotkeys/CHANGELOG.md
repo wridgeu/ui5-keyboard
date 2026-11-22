@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.0](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-hotkeys-v0.1.1...ui5-lib-hotkeys-v0.2.0) (2026-11-22)
+
+
+### Features
+
+* **hotkeys:** give each scope stack entry an owner ([e446905](https://github.com/wridgeu/ui5-keyboard/commit/e4469050d86a4523b1ad1cda2b344da3c4fd90c1))
+
+
+### Bug Fixes
+
+* **hotkeys:** block and reset sequences on keys dispatch never saw ([b246d5c](https://github.com/wridgeu/ui5-keyboard/commit/b246d5c6fa3d831864342dbfec4df11f03187b80))
+* **hotkeys:** keep a hotkey retargeted onto a same-id rerender live ([40367c7](https://github.com/wridgeu/ui5-keyboard/commit/40367c75d40d209c2f3b6a985e90396c61c98a6d))
+* **hotkeys:** read the altgr state from the held keys ([65efb49](https://github.com/wridgeu/ui5-keyboard/commit/65efb4915c9035b6d27a5db586cb35f40df139d0))
+* **hotkeys:** reconcile held modifiers against event flags and clear on hide ([0ca8b78](https://github.com/wridgeu/ui5-keyboard/commit/0ca8b78736e1a1582ca0cb67272faed83caf6567))
+* **hotkeys:** report a stale-modifier release and the key in one change ([b4ed484](https://github.com/wridgeu/ui5-keyboard/commit/b4ed48493bbd459925fcc0573730ababfe16fbff))
+* **hotkeys:** scope handles, sequence and modifier-state fixes from the audit ([0444899](https://github.com/wridgeu/ui5-keyboard/commit/044489958bb464f5a36fd31babc403408bc434eb))
+* **hotkeys:** settle sequence state before running onpending callbacks ([e0ad278](https://github.com/wridgeu/ui5-keyboard/commit/e0ad27859d78b78f775bfe40664ecffd98abb60f))
+
+
+### Code Refactoring
+
+* **hotkeys:** derive recorder state from the dispatcher ([5dccb25](https://github.com/wridgeu/ui5-keyboard/commit/5dccb25db260225f929371663b27fc1aabeb5700))
+* **hotkeys:** prune comments that restate or duplicate the code ([9d12740](https://github.com/wridgeu/ui5-keyboard/commit/9d127409ff1484cd31f11c769f8b0a469b6377d8))
+* **hotkeys:** remove dead defensive fallbacks ([9e63574](https://github.com/wridgeu/ui5-keyboard/commit/9e63574c6c7e24942001e99f83c262419e8f82d8))
+* **hotkeys:** type unhandled emission and callback targets by origin ([d6d9ac5](https://github.com/wridgeu/ui5-keyboard/commit/d6d9ac5a26909f9c66a09d36ab13ab23abfe0af9))
+
 ## [0.1.1](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-hotkeys-v0.1.0...ui5-lib-hotkeys-v0.1.1) (2026-11-16)
 
 
