@@ -257,13 +257,13 @@ UI5 flags emulated mouse events with a `"delayedMouseEvent"` marker (via jQuery'
 
 ### Deprecated API Avoidance (OpenUI5 2.x readiness)
 
-| Deprecated                           | Replacement                   | Our Status                                |
-| ------------------------------------ | ----------------------------- | ----------------------------------------- |
-| `jQuery.sap.PseudoEvents`            | `sap/ui/events/PseudoEvents`  | N/A (we don't use pseudo events directly) |
-| `jQuery.sap.ControlEvents`           | `sap/ui/events/ControlEvents` | N/A                                       |
-| `jQuery.sap.keycodes`                | `sap/ui/events/KeyCodes`      | N/A (we use `event.key` strings)          |
-| `jQuery.sap.handleF6GroupNavigation` | `sap/ui/events/F6Navigation`  | N/A                                       |
-| `UIEvent.which` / `UIEvent.keyCode`  | `KeyboardEvent.key`           | **Correct**. We use `event.key`           |
+| Deprecated                           | Replacement                   | Our Status                                                                                                                      |
+| ------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `jQuery.sap.PseudoEvents`            | `sap/ui/events/PseudoEvents`  | N/A (we don't use pseudo events directly)                                                                                       |
+| `jQuery.sap.ControlEvents`           | `sap/ui/events/ControlEvents` | N/A                                                                                                                             |
+| `jQuery.sap.keycodes`                | `sap/ui/events/KeyCodes`      | N/A (we use `event.key` strings)                                                                                                |
+| `jQuery.sap.handleF6GroupNavigation` | `sap/ui/events/F6Navigation`  | N/A                                                                                                                             |
+| `UIEvent.which` / `UIEvent.keyCode`  | `KeyboardEvent.key`           | **Correct**. Matching uses `event.key`/`event.code`; `keyCode` is read only for the legacy IME signal (`229`) in the pre-filter |
 
 ## Sources
 

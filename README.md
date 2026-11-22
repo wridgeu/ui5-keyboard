@@ -237,7 +237,8 @@ ui5-keyboard/
 │   ├── kiosk-keyboard-webc/   # kiosk-keyboard-webc (native web component)
 │   └── demo-app/              # Demo application
 │       ├── ui5.yaml           # OpenUI5 dev server config (default)
-│       └── ui5-flp.yaml       # SAPUI5 + FLP sandbox config (preview-middleware)
+│       ├── ui5-flp.yaml       # SAPUI5 + FLP sandbox config (preview-middleware)
+│       └── ui5-pages.yaml     # SAPUI5 self-hosted GitHub Pages build (ui5 build --all)
 ├── tools/                     # Custom oxlint JS plugins, twin-drift / i18n / packaging checks, and build helper scripts
 ├── patches/                   # Local dependency patches (patch-package), applied on npm install
 └── docs/                      # Architecture & design documents

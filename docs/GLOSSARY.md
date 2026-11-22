@@ -64,13 +64,13 @@ While suspended, the EventDispatcher pipeline skips hotkey matching, sequence ma
 
 ## Scope (Hotkey Scope Stack)
 
-A **scope** is a named activation context that determines which hotkey registrations are eligible to fire. Scopes form a LIFO (last-in, first-out) **stack**.
+A **scope** is a named activation context that determines which hotkey registrations are eligible to fire. Scopes form a **stack**: the top entry is the active scope, but an entry can be removed from any position.
 
 ### How it works
 
 - The stack always has `GLOBAL_SCOPE` (`"__global__"`) at the bottom.
-- `pushScope("editor")` pushes a new scope onto the stack.
-- `popScope("editor")` removes it (the ID must match the current top).
+- `pushScope("editor")` pushes a new entry and returns a `ScopeHandle`. `handle.release()` removes exactly that entry, wherever it sits by then (idempotent; `handle.isActive` reports whether it is still on the stack). Pushing the scope that is already on top throws.
+- `popScope("editor")` removes the topmost `"editor"` entry wherever it sits; entries above it stay. If no entry has that ID, it logs a warning and changes nothing. Only popping the global scope throws.
 - `getActiveScope()` returns the current top of the stack.
 - `getScopeStack()` returns a snapshot of the full stack.
 
@@ -87,7 +87,7 @@ This means a scoped registration always shadows a global registration for the sa
 
 ### Router integration
 
-When `enableRouterIntegration(router)` is active, route changes automatically reset to global scope and push the new route name as the active scope; a hash that matches no route (the router's `bypassed` event) resets to global scope without pushing anything. Dialog scopes still require manual `pushScope`/`popScope`.
+When `enableRouterIntegration(router)` is active, the group owns one scope stack entry named after the matched route. A route change replaces that entry in place, so scopes pushed above it (an open dialog's) stay on top; if the entry is no longer on the stack, the new route's entry is pushed. A hash that matches no route (the router's `bypassed` event) removes only the route entry. Dialog scopes are still pushed manually and released through their `ScopeHandle` or `popScope`.
 
 ## Suppression (hotkeys)
 
@@ -121,7 +121,7 @@ On Windows, pressing AltGr sends **both** `ctrlKey: true` and `altKey: true` sim
 On Windows (the only platform where the ambiguity exists), the EventDispatcher detects AltGr via two mechanisms:
 
 1. `event.getModifierState("AltGraph")`, the modern, reliable check.
-2. Tracking `event.location` on Alt keydowns. If the last Alt press was on the right side (`location === 2`) and both `ctrlKey` and `altKey` are active, treat it as AltGr.
+2. Held-key state: if `ctrlKey` and `altKey` are both set while the KeyStateTracker reports the `AltRight` code as held, treat it as AltGr.
 
 Events identified as AltGr are silently dropped in the pre-filter step, preventing false hotkey matches.
 
@@ -188,15 +188,16 @@ When multiple nested elements have registrations for the same key, matching star
 ### Limitations
 
 - **Closed shadow roots**: `composedPath()` does not cross closed shadow DOM boundaries. Registrations on elements inside a closed shadow root will not match.
-- **Detached elements**: Elements not in the DOM are not part of any event's composed path. Registrations on detached targets are inactive until the element is reattached.
-- **Fallback**: If `composedPath()` returns an empty array (rare), we fall back to `[event.target, document, window]`.
+- **Detached elements**: Elements not in the DOM are not part of any event's composed path. Registrations on detached targets are inactive until the element is reattached. A static `Element` target also matches a later node with the same `id`, so a re-rendered replacement keeps the binding; the callback form (`() => control.getDomRef()`) always resolves to the current node.
+- **Focus fallback**: when the path lacks focus ancestry (a synthetic keydown on document/window, or focus dropped to body/UIArea by a UI5 re-render), the dispatcher inserts the ancestry of `document.activeElement` or, once and within 1.2 s, of the last-focused element, before the generic root nodes.
 
 ## Twin / Twin Drift
 
 A **twin** is a module kept as a hand-maintained duplicate in both keyboard packages. `packages/kiosk-keyboard/src` and `packages/kiosk-keyboard-webc/src` carry parallel copies of the framework-agnostic logic (the `layouts/*` tables, `grapheme`, `auto-repeat`, `shift-state`, `composition-utils`, `key-token`, the `middleware/*` modules and more), plus the two `dom-contract.ts` modules and the two stylesheets. There is no shared core package holding them: that was declined deliberately, because kiosk ships UI5 AMD resolved by namespace and so cannot carry a runtime npm dependency. See the "No shared-core package" section of `CLAUDE.md` for the full reasoning.
 
-**Twin drift** is the two copies diverging. Three checks guard it, each part of `check:base` and of CI:
+**Twin drift** is the two copies diverging. Four checks guard it, each part of `check:base` and of CI:
 
 - `npm run test:twin-drift` (`tools/check-twin-drift.mjs`): compares an explicit manifest of duplicated source modules after normalization, and fails on a same-named pair that is registered in neither the checked nor the unchecked list.
 - `npm run test:style-twin-drift` (`tools/check-style-twin-drift.mjs`): compares the public custom-property surface of the two stylesheets, whose names differ by convention and so are compared as canonical tokens.
 - `npm run test:dom-contract` (`tools/check-dom-contract-drift.mjs`): compares the two `dom-contract.ts` modules structurally: the `classes` and `selectors` groups by key set, since their string values differ per platform, and the shared `data-*` attributes by key and value.
+- `npm run test:i18n-bundles` (`tools/check-i18n-bundles.mjs`): among its invariants, every locale bundle exists in both packages and a key the two share carries the same text in the same locale.

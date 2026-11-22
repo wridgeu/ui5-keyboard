@@ -31,7 +31,7 @@ Use [GitHub Issues](https://github.com/wridgeu/ui5-keyboard/issues) to report bu
    npm run check
    ```
 
-   This runs formatting, linting, UI5 linting, typechecking, all tests, smoke checks, the e2e device matrix, and the FLP lifecycle suite.
+   This runs formatting, linting (`lint:ci`), UI5 linting, typechecking, the Node-only checks (patch regression, lint-plugin rules, the three twin-drift checks, the message-bundle check; described in [patches/README.md](./patches/README.md) and [tools/README.md](./tools/README.md)), the QUnit, Vitest and Web Test Runner suites, the package smoke check, the sequential e2e device matrix, and the FLP sandbox suite.
 
    The device-matrix half (`test:e2e:all-devices:sequential`) compares the committed visual baselines, so it fails on any OS other than the one they were generated on - see [End-to-end & visual tests](#end-to-end--visual-tests) below. CI compares none of them.
 
@@ -126,7 +126,7 @@ See [Project Structure](./README.md#project-structure) in the root README for th
 
 The rule is that a workspace declares everything its own scripts invoke. Anything a package runs is therefore re-declared in that workspace at the same pinned version as the root (`rimraf`, `@playwright/test`, `ui5-test-runner`, `start-server-and-test`, `@ui5/linter`, `@ui5/webcomponents-tools`); npm hoisting still resolves a single installed copy. Keep the two pins in step when bumping either: a `~` range hides the drift because both sides still resolve to the same hoisted version, right up until they do not.
 
-What lives only at the root is what only root scripts and hooks invoke: the formatter and linter (`oxfmt`, `oxlint`), the commit-hook chain (`@commitlint/*`, `lint-staged`), the install-time patchers (`patch-package`, the patched `less-openui5`), the shared compiler and type packages (`typescript`, `@types/*`), and `puppeteer`, whose browser only the QUnit runner launches. Tooling unique to one package (`vite` / `vitest` and `@web/test-runner` for the web component) is declared only there.
+What lives only at the root is what only root scripts and hooks invoke, plus one deliberate exception: the formatter and linter (`oxfmt`, `oxlint`), the commit-hook chain (`@commitlint/*`, `lint-staged`), the install-time patchers (`patch-package`, the patched `less-openui5`), the shared compiler and type packages (`@typescript/native`, which provides the `tsc` every workspace's `typecheck` and build runs, the `typescript` TS 6 API alias, and `@types/*`; workspaces declare no TypeScript of their own, see CLAUDE.md), and `puppeteer`, whose browser only the QUnit runner launches. Tooling unique to one package (`vite` / `vitest` and `@web/test-runner` for the web component) is declared only there.
 
 `@openui5/types` is the one deliberate version split: the root and both libraries pin the 1.136 LTS they are built against, while `demo-app` pins the 1.149 its own `ui5.yaml` and `manifest.json` declare, so it installs a second copy under its own `node_modules`.
 
@@ -136,7 +136,7 @@ The e2e/visual suites use `@playwright/test` directly; the UI5 QUnit suites are 
 
 The library packages build differently because they target different runtimes:
 
-- **UI5 libraries** (`hotkeys`, `kiosk-keyboard`) are built by the UI5 CLI: `ui5-tooling-transpile` turns `src/*.ts` into `dist/resources/ui5/{namespace}/`. Theming is LESS, i18n is `.properties`, both handled natively, so there is no code-generation step.
+- **UI5 libraries** (`hotkeys`, `kiosk-keyboard`) are built by the UI5 CLI: `ui5-tooling-transpile` turns `src/*.ts` into `dist/resources/ui5/{namespace}/`. Theming is LESS, i18n is `.properties`, both handled natively. The one generation step is `kiosk-keyboard`'s `@ui5/ts-interface-generator` run, which emits the committed `*.gen.d.ts` interfaces (see [Generated files in version control](#generated-files-in-version-control)).
 - **The web component** (`kiosk-keyboard-webc`) uses a multi-step UI5 Web Components build (`npm run build`): `ui5nps generate` converts source assets into TypeScript modules, `tsc` compiles, `vite build` produces the standalone bundle, and `generateAPI` emits the Custom Elements Manifest.
 
 The full reference, including the asset code-generation data flow, the `ui5nps` script runner, the two distribution formats, tree-shaking/`sideEffects`, and the CEM, is in [docs/kiosk-webc/BUILD-PIPELINE.md](./docs/kiosk-webc/BUILD-PIPELINE.md).
