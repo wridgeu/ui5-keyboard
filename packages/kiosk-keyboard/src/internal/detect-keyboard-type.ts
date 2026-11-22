@@ -28,12 +28,7 @@ export function detectKeyboardType(control: Control, customResolver?: TargetReso
   // 2. Control name - walk up the parent chain because composite controls
   //    (e.g. sap.m.StepInput) wrap an inner sap.m.Input. Element.closestTo()
   //    returns the inner Input, but we need to match the outer StepInput.
-  //    The bound is a defensive cap: ManagedObject parent chains are acyclic
-  //    by framework contract, but a buggy custom control could violate that.
-  //    Real UI5 trees are at most ~15 levels deep.
-  const MAX_PARENT_DEPTH = 25;
-  let parent: ManagedObject | null = control;
-  for (let depth = 0; parent && depth < MAX_PARENT_DEPTH; depth++, parent = parent.getParent()) {
+  for (let parent: ManagedObject | null = control; parent; parent = parent.getParent()) {
     if (parent instanceof Control) {
       const name = parent.getMetadata().getName();
       if (NUMPAD_CONTROL_NAMES.has(name)) return KeyboardType.Numpad;

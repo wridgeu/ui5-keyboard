@@ -407,6 +407,32 @@ QUnit.test("autoType switch to a different same-type input drops a user {layout:
   kb.destroy();
 });
 
+QUnit.test("a target switch keeps a primary {layout:*} pick", async (assert) => {
+  // Companion to the drop case above: a primary pick is the user's layout, not
+  // the input's page, so it outlives the switch.
+  const inputA = new Input();
+  const inputB = new Input();
+  inputA.placeAt("qunit-fixture");
+  inputB.placeAt("qunit-fixture");
+  const kb = new KioskKeyboard({ docked: true, autoShow: true, layout: "ja-romaji" });
+  await placeAndWait(kb);
+
+  (inputA.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+  simulateTap(kb, createFakeKeyElement("{layout:ja-kana}", "fake-kana"));
+  await waitForRender();
+  assert.strictEqual(kb.getEffectiveLayout(), "ja-kana", "precondition: the primary pick landed");
+
+  (inputB.getFocusDomRef() as HTMLElement).focus();
+  await waitForRender();
+
+  assert.strictEqual(kb.getEffectiveLayout(), "ja-kana", "the pick survives the switch");
+
+  inputA.destroy();
+  inputB.destroy();
+  kb.destroy();
+});
+
 QUnit.test("autoType reports the detected constraint through layoutChange, leaving layout alone", async (assert) => {
   const num = new Input({ type: "Number" });
   num.placeAt("qunit-fixture");

@@ -3,11 +3,7 @@ import { FKeyMode, NativeDispatchableKeyNames } from "../library";
 import { resolveWithCustomResolver } from "./dom";
 import type { TargetResolver } from "../types";
 
-/**
- * Bridge to the host keyboard's target state and navigation handling. Kept as
- * callbacks (matching the sibling `FocusClaimService` / `TargetInputSession`
- * pattern) so the F-key dispatch logic stays free of UI5 control internals.
- */
+/** Bridge to the host keyboard's target state and navigation handling. */
 export interface FKeyHost {
   getFKeyMode(): FKeyMode;
   /** Focus DOM ref of the active target, or null when there is none. */
@@ -18,6 +14,14 @@ export interface FKeyHost {
    * extends the selection from its anchor when `extend` is set.
    */
   handleNavigationKey(fkeyName: string, extend: boolean): void;
+}
+
+/** The keydowns {@link FKeyController} dispatched itself, so no physical-key reader mistakes one for hardware. */
+const dispatchedKeydowns = new WeakSet<Event>();
+
+/** Whether `event` is a keydown the keyboard synthesized for an on-screen F-key rather than a physical key. */
+export function isDispatchedFKey(event: Event): boolean {
+  return dispatchedKeydowns.has(event);
 }
 
 /**
@@ -124,6 +128,7 @@ export default class FKeyController {
       cancelable: true,
       shiftKey,
     });
+    dispatchedKeydowns.add(nativeEvent);
 
     return this._resolveNativeFKeyTarget().dispatchEvent(nativeEvent);
   }

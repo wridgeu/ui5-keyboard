@@ -17,10 +17,10 @@ interface AutoCompactHost {
   getDomRef(): Element | null;
   getAutoCompact(): boolean;
   /**
-   * Reports the tier verdict. The host owns which layout that resolves to. `crossed` is
-   * whether this verdict replaces a known previous one, which is what separates a
-   * width the user just crossed from the first resolution of a keyboard that was
-   * always this wide.
+   * Reports a width reading as a tier verdict; the host owns the verdict and which
+   * layout it resolves to. `crossed` is whether an earlier reading of the same
+   * element came before it, which is what separates a width the user just crossed
+   * from the first resolution of a keyboard that was always this wide.
    */
   _applyCompactTier(narrow: boolean, crossed: boolean): void;
 }
@@ -44,14 +44,8 @@ interface AutoCompactHost {
  * is off, which is the default.
  *
  * The tier is applied from a `requestAnimationFrame`, never from the observation
- * callback, which coalesces several observations in one frame into a single
- * application. It is not a guard against the "ResizeObserver loop completed with
- * undelivered notifications" failure #180 recorded against the height tiers:
- * applying the tier synchronously was measured to produce none, because #180 wrote
- * `classList` inside the callback and resized the observed box within the same
- * delivery, whereas a layout swap re-renders asynchronously in both frameworks and
- * so never re-enters observation. That measurement proves the absence of a symptom,
- * not of the hazard, so the frame stays.
+ * callback: a frame's observations coalesce into one application, and no layout
+ * change lands inside a ResizeObserver delivery.
  */
 export default class AutoCompactBehavior extends BaseObject {
   private _host: AutoCompactHost;
@@ -65,8 +59,8 @@ export default class AutoCompactBehavior extends BaseObject {
    * measured, which costs no layout. `null` until the first observation lands.
    */
   private _observedInline: number | null = null;
-  /** Last tier applied, so an observation that does not cross the threshold is dropped. */
-  private _appliedNarrow: boolean | null = null;
+  /** Whether a reading of the observed element has been reported yet. */
+  private _reported = false;
 
   constructor(host: AutoCompactHost) {
     super();
@@ -80,12 +74,7 @@ export default class AutoCompactBehavior extends BaseObject {
    */
   syncObserver(dom: HTMLElement | null): void {
     if (!dom || !this._host.getAutoCompact()) {
-      // Switching the feature off gives the requested layout back rather than
-      // stranding the keyboard on the arrangement a width picked, which with the
-      // observer gone nothing else could undo.
-      const restore = this._appliedNarrow === true && !this._host.getAutoCompact();
       this._teardown();
-      if (restore) this._host._applyCompactTier(false, false);
       return;
     }
     if (this._observedDom === dom) return;
@@ -124,11 +113,9 @@ export default class AutoCompactBehavior extends BaseObject {
     const rem = Number.parseFloat(raw);
     const threshold = (Number.isNaN(rem) ? DEFAULT_THRESHOLD_REM : rem) * Rem.toPx(1);
 
-    const narrow = this._observedInline <= threshold;
-    if (narrow === this._appliedNarrow) return;
-    const crossed = this._appliedNarrow !== null;
-    this._appliedNarrow = narrow;
-    this._host._applyCompactTier(narrow, crossed);
+    const crossed = this._reported;
+    this._reported = true;
+    this._host._applyCompactTier(this._observedInline <= threshold, crossed);
   }
 
   private _teardown(): void {
@@ -142,9 +129,8 @@ export default class AutoCompactBehavior extends BaseObject {
     }
     this._observedDom = null;
     this._observedInline = null;
-    // A later element carries its own width; a stale verdict would suppress its
-    // first real observation.
-    this._appliedNarrow = null;
+    // A later element carries its own width, so its first reading is not a crossing.
+    this._reported = false;
   }
 
   override destroy(): void {

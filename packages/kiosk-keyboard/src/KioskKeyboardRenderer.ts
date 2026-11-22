@@ -25,10 +25,6 @@ interface RootAccessibilityState {
  * its own properties and state, so the framework can skip re-rendering when only
  * the parent changes. Renders a flat DOM structure: rows of key divs with
  * role="button". No child UI5 controls - all keys are plain DOM via event delegation.
- *
- * Split into small per-concern methods (following the InputBaseRenderer style)
- * so each aspect - root classes and attributes, row markup, key markup, key
- * content - reads as a named unit instead of one long render().
  */
 const KioskKeyboardRenderer = {
   apiVersion: 4,
@@ -57,8 +53,7 @@ const KioskKeyboardRenderer = {
 
     if (oControl.getDocked()) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.rootDocked);
-      // Start closed; onAfterRendering syncs with _open state
-      rm.class(KIOSK_KEYBOARD_DOM.classes.rootClosed);
+      if (!oControl.isOpen()) rm.class(KIOSK_KEYBOARD_DOM.classes.rootClosed);
     }
 
     if (!oControl.getEnabled()) {
@@ -151,17 +146,16 @@ const KioskKeyboardRenderer = {
     focusTarget: KeyPosition | null,
   ): void {
     // Resolve icon and label once per key, pass to all sub-hooks
-    const { _getKeyLabel, _getPressedKey, _getHighlightedKey } = oControl._getRendererApi();
+    const { _getKeyLabel, _isKeyPressed, _getHighlightedKey } = oControl._getRendererApi();
     const icon = this.resolveKeyIcon(oControl, key);
     const label = _getKeyLabel(key);
 
     rm.openStart("div", keyElementId(oControl.getId(), ri, ci));
     this.addKeyClasses(rm, oControl, key, icon, label);
-    // Re-emit the pressed class for the keycap currently held down, by pointer or
-    // by keyboard activation: a press whose own key invalidates the control keeps
+    // Re-emit the pressed class for every keycap held down, by pointer or by
+    // keyboard activation: a press whose own key invalidates the control keeps
     // its feedback across the patch that repaints the keycap.
-    const pressed = _getPressedKey();
-    if (pressed?.row === ri && pressed.col === ci) {
+    if (_isKeyPressed(ri, ci)) {
       rm.class(KIOSK_KEYBOARD_DOM.classes.keyPressed);
     }
     // Re-emit the physical-keyboard mirror for the keycap whose hardware key is
@@ -296,7 +290,6 @@ const KioskKeyboardRenderer = {
       const clIcon = key.capsLockIcon;
       if (clIcon !== undefined) {
         if (!clIcon) return ""; // capsLockIcon: "" suppresses icon
-        // Validate SAP icon URIs; skip invalid ones (warns once)
         return validateKeyIcon(clIcon, "capsLockIcon");
       }
       return SPECIAL_KEY_ICONS["{shift:capsLock}"] ?? "";
@@ -305,7 +298,6 @@ const KioskKeyboardRenderer = {
     if (key.icon === "") return ""; // suppress default-state icon
 
     const icon = key.icon || getKeyIcon(key.value) || "";
-    // Validate SAP icon URIs exist in the registry; skip invalid ones (warns once)
     return validateKeyIcon(icon, "icon");
   },
 

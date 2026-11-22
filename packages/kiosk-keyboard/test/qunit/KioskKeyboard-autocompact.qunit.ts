@@ -438,6 +438,24 @@ QUnit.test("A keyboard that was always narrow announces nothing on first paint",
   );
 });
 
+QUnit.test("Disabling right after a re-parent gives the requested layout back", async (assert) => {
+  const { kb } = await mount(NARROW_PX, { layout: "home", autoCompact: true, customLayouts: pair() });
+  assert.strictEqual(kb.getEffectiveLayout(), "home-c", "precondition: the narrow box picked the counterpart");
+
+  // A new root element is observed afresh; switching the feature off before that
+  // observation lands must still undo the verdict the old root produced.
+  const other = document.createElement("div");
+  other.style.width = `${NARROW_PX}px`;
+  document.getElementById("qunit-fixture")!.appendChild(other);
+  kb.placeAt(other);
+  await waitForRender();
+  kb.setAutoCompact(false);
+  await settle();
+
+  assert.strictEqual(kb.getEffectiveLayout(), "home", "the requested layout is back");
+  assert.deepEqual(getRenderedLayoutKeys(kb), [["{layout:away}", "h"]], "and it is the one rendered");
+});
+
 QUnit.test("A request drops a tier announcement that has not reached the live region yet", async (assert) => {
   resetAnnouncements();
   const { kb } = await mount(WIDE_PX, { layout: "ja-kana", autoCompact: true });

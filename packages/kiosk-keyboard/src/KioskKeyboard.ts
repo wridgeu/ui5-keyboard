@@ -14,7 +14,6 @@ import CustomLayout from "./CustomLayout";
 import { isValidVariantTable } from "./internal/custom-layout-fold";
 import LayoutFoldCache from "./internal/layout-fold-cache";
 import type { RendererInternalApi } from "./internal/renderer-internal-api";
-import DEFAULT_LAYOUT from "./layouts/default-layout";
 import Log from "sap/base/Log";
 import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
@@ -66,9 +65,41 @@ import { constrainedLayoutName, reconcileBaseSwitch } from "./internal/layout-co
 
 export type { KioskKeyboardDomContract } from "./internal/dom-contract";
 
-/** A press event reaching the touch handlers, carrying a mouse `button` when one made it. */
+/** One touch a touch event reports changed: a finger, or EventSimulation's single mouse touch. */
+interface PressPointer {
+  readonly identifier: number;
+  readonly target: EventTarget | null;
+}
+
+/**
+ * A press event reaching the touch handlers, carrying a mouse `button` when one
+ * made it, and the touches it changed.
+ */
 interface PressEvent extends Event {
   readonly button?: number;
+  readonly changedTouches?: ArrayLike<PressPointer>;
+}
+
+/** The pointer id of a press event that names no touch. */
+const UNNAMED_POINTER = -1;
+
+/** The pointers a press event changed; an event naming no touch is one unnamed pointer. */
+function changedPointers(event: PressEvent): PressPointer[] {
+  const touches = event.changedTouches;
+  return touches && touches.length > 0 ? Array.from(touches) : [{ identifier: UNNAMED_POINTER, target: event.target }];
+}
+
+/** One pointer held on a key, owning everything its press armed. */
+interface Press {
+  readonly keyEl: HTMLElement;
+  /** The key `keyEl` carried when pressed; a re-render can patch another key into it. */
+  readonly key: string | undefined;
+  /** Detaches this press's window-blur safety net. */
+  readonly blur: AbortController;
+  /** The Backspace auto-repeat, armed only for an enabled `{backspace}` press. */
+  readonly repeat: BackspaceRepeatBehavior | null;
+  /** Whether this press armed the variant popup's hold. */
+  hold: boolean;
 }
 
 /**
@@ -96,6 +127,12 @@ function nativeKeyEvent(event: Event): KeyboardEvent {
  */
 function isSecondaryPress(event: PressEvent): boolean {
   return event.button !== undefined && event.button > 0;
+}
+
+/** A docked keyboard's open period: exists only while open and owns what the period armed. */
+interface DockSession {
+  /** Detaches the document Escape listener. */
+  readonly escape: AbortController;
 }
 
 /**
@@ -145,15 +182,15 @@ export default class KioskKeyboard extends Control {
   // ── Private fields (initialized in init(), not at class level) ──
   private _shiftState!: ShiftState;
   private _keyGridNav!: KeyGridNavigation;
-  private _open!: boolean;
+  /** The docked open period, or `null` while closed; `isOpen()` reads it. */
+  private _dockSession!: DockSession | null;
   /** Owns `controls` focus delegation and active-target reconciliation. */
   private _controlsDelegation!: ControlsDelegationController;
   private _physicalKeyHighlight!: PhysicalKeyHighlight;
-  private _pressedKeyEl!: HTMLElement | null;
+  /** The live pointer presses, by pointer id. */
+  private _presses!: Map<number, Press>;
   /** The keycap held down by a keyboard activation, or `null` between activations. */
   private _keyboardPressedKeyEl!: HTMLElement | null;
-  /** Owns press-and-hold continuous delete on the Backspace key. */
-  private _backspaceRepeat!: BackspaceRepeatBehavior;
   /** Owns the long-press / right-click accent-variant popup. */
   private _variantPopup!: VariantPopupBehavior;
   /** Owns which layout is active, who asked for it, and the width tier's announcement. */
@@ -166,10 +203,6 @@ export default class KioskKeyboard extends Control {
   private _nativeKbSuppression!: NativeKeyboardSuppression;
   private _autoShowBehavior!: AutoShowBehavior;
   private _extensions!: { onAfterRendering?(): void; destroy(): void }[];
-  /** Detaches the document Escape listener of the current open period, or `null` while closed. */
-  private _escapeAbort!: AbortController | null;
-  /** Detaches the window blur safety net for the current press, or `null` between presses. */
-  private _pressedBlurAbort!: AbortController | null;
   private _focusClaimService!: FocusClaimService;
   private _targetSession!: TargetInputSession;
   private _rendererApi!: RendererInternalApi | null;
@@ -334,10 +367,7 @@ export default class KioskKeyboard extends Control {
        * When `true`, a layout that declares a compact counterpart yields to it on a
        * keyboard too narrow to seat its rows, and takes it back when the room returns.
        *
-       * Layout data is the one responsive dimension CSS cannot reach: a `@container`
-       * rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
-       * on the resolved layout rather than on rendered geometry. Of the built-ins only
-       * `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+       * Of the built-ins only `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
        * with the `compact` property of a `customLayouts` entry.
        *
        * The swap fires `layoutChange` with `reason: "width"`, changes
@@ -630,7 +660,8 @@ export default class KioskKeyboard extends Control {
        */
       afterOpen: {},
       /**
-       * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+       * Fired when the docked keyboard closes: by `close()`, or by destroying it while open
+       * (not tied to CSS transition end).
        *
        * @since 0.1.0
        */
@@ -915,7 +946,7 @@ export default class KioskKeyboard extends Control {
     this._keyGridNav = new KeyGridNavigation(KIOSK_KEYBOARD_DOM);
     // @ts-expect-error addDelegate is an internal UI5 API not exposed in @openui5/types
     this.addDelegate(this._keyGridNav, true);
-    this._open = false;
+    this._dockSession = null;
     this._controlsDelegation = new ControlsDelegationController({
       getControls: () => this.getControls(),
       getParent: () => this.getParent(),
@@ -923,7 +954,7 @@ export default class KioskKeyboard extends Control {
       getEnabled: () => this.getEnabled(),
       getDocked: () => this.getDocked(),
       getAutoShow: () => this.getAutoShow(),
-      isOpen: () => this._open,
+      isOpen: () => this.isOpen(),
       show: () => {
         this.show();
       },
@@ -934,9 +965,8 @@ export default class KioskKeyboard extends Control {
       resolveControlsAncestor: (candidate) => this._focusClaimService.resolveControlsAncestor(candidate),
     });
     this._physicalKeyHighlight = new PhysicalKeyHighlight(this, this._shiftState);
-    this._pressedKeyEl = null;
+    this._presses = new Map();
     this._keyboardPressedKeyEl = null;
-    this._backspaceRepeat = new BackspaceRepeatBehavior(() => this._performBackspaceRepeatTick());
     this._variantPopup = new VariantPopupBehavior({
       resolveVariants: (keyEl) => this._resolveKeyVariants(keyEl),
       commitVariant: (glyph) => {
@@ -955,8 +985,6 @@ export default class KioskKeyboard extends Control {
     this._nativeKbSuppression = new NativeKeyboardSuppression(this);
     this._autoShowBehavior = new AutoShowBehavior(this);
     this._extensions = [this._nativeKbSuppression, this._autoShowBehavior];
-    this._escapeAbort = null;
-    this._pressedBlurAbort = null;
     this._focusClaimService = new FocusClaimService(
       () => this.getControls(),
       () => this._controlsDelegation.getResolvedControlIds(),
@@ -985,11 +1013,7 @@ export default class KioskKeyboard extends Control {
         this.fireLayoutChange(parameters);
       },
       resetShiftState: () => this._shiftState.reset(),
-      // The pointer press goes the way a touchcancel takes it; the keyboard press is visual only.
-      cancelPress: () => {
-        this.ontouchcancel();
-        this._clearKeyboardPressedState();
-      },
+      leaveSurface: () => this._leaveSurface(),
       endComposition: () => this._dropComposition("commit"),
       focusAnchorValue: () => this._focusAnchorValue(),
       reseatFocusAnchor: (value) => this._reseatFocusAnchor(value),
@@ -1009,14 +1033,9 @@ export default class KioskKeyboard extends Control {
       handleNavigationKey: (fkeyName, extend) => this._targetSession.handleNavigationKey(fkeyName, extend),
     });
 
-    // Detect locale-appropriate default layout. This runs before
-    // applySettings, so it resolves against the built-in locale map alone;
-    // applySettings re-resolves once the instance maps are known.
-    const localeLayout = registryGetLocaleLayout();
-    this._layoutState.seed(localeLayout);
-    if (localeLayout !== DEFAULT_LAYOUT) {
-      this.setLayout(localeLayout);
-    }
+    // Seeded from the built-in locale map; applySettings, which always follows
+    // init, sets the layout the instance's own maps resolve to.
+    this._layoutState.seed(registryGetLocaleLayout());
   }
 
   onLocalizationChanged(): void {
@@ -1037,6 +1056,15 @@ export default class KioskKeyboard extends Control {
     this._keyGridNav.setRootRef(this._rootDomRef());
     this._syncDockedDomState();
 
+    // A render that keeps the layout name can still seat another key where a
+    // finger is held (an edit to the active custom layout).
+    for (const press of this._presses.values()) {
+      if (press.keyEl.dataset.key !== press.key) {
+        this._leaveSurface();
+        break;
+      }
+    }
+
     const pendingAnnouncement = this._layoutState.takePendingAnnouncement();
     if (pendingAnnouncement !== null) {
       this._announceLiveRegion(pendingAnnouncement);
@@ -1044,11 +1072,8 @@ export default class KioskKeyboard extends Control {
 
     for (const ext of this._extensions) ext.onAfterRendering?.();
 
-    // Point the ResizeObserver at the current DOM element, then defer responsive
-    // class reapplication to the next animation frame. Re-renders wipe root
-    // classes, but deferring avoids forced reflow (getComputedStyle +
-    // scrollHeight) in the render frame. The 1-frame delay for responsive
-    // sizing is imperceptible.
+    // A re-render wipes the root's height-tier classes: re-observe the new root and
+    // re-measure (see ResponsiveSizingController).
     const dom = this._rootDomRef();
     if (dom) {
       this._responsiveSizing.syncObserver(dom);
@@ -1078,7 +1103,7 @@ export default class KioskKeyboard extends Control {
 
     const docked = this.getDocked();
     dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootDocked, docked);
-    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootClosed, docked && !this._open);
+    dom.classList.toggle(KIOSK_KEYBOARD_DOM.classes.rootClosed, docked && !this.isOpen());
   }
 
   override exit(): void {
@@ -1099,21 +1124,16 @@ export default class KioskKeyboard extends Control {
     this._responsiveSizing.destroy();
     this._autoCompact.destroy();
     this._variantPopup.destroy();
-    this._clearPressedKeyState();
+    this._cancelAllPresses();
     for (const ext of this._extensions) ext.destroy();
-    this._escapeAbort?.abort();
-    this._escapeAbort = null;
+    const wasOpen = this._dockSession !== null;
+    this._dockSession?.escape.abort();
+    this._dockSession = null;
+    // Not close(): it would announce "keyboard closed" from a control that is leaving the page.
+    if (wasOpen) this.fireAfterClose();
     // @ts-expect-error removeDelegate is an internal UI5 API not exposed in @openui5/types
     this.removeDelegate(this._keyGridNav);
     this._keyGridNav.destroy();
-
-    // After this instance restored its own inputmode suppression (via the
-    // extension teardown above, where NativeKeyboardSuppression.destroy runs),
-    // clear any page-level bookkeeping that outlived all instances - defensive
-    // against an orphaned entry from an input destroyed mid-suppression.
-    if (wasLastInstance) {
-      NativeKeyboardSuppression._clearAll();
-    }
   }
 
   // ── Public API: property overrides ──
@@ -1130,11 +1150,10 @@ export default class KioskKeyboard extends Control {
   setEnabled(isEnabled: boolean): this {
     if (!isEnabled) {
       this._redirectFocusToTargetIfOwned();
-      // The accent popup is part of the keyboard's surface, and it renders into
-      // the static area where the disabled styling does not reach it. Left open
-      // its options still commit, so the disable closes it. A hold armed but not
-      // yet fired is left alone: `_resolveKeyVariants` refuses it at fire time.
-      this._variantPopup.dismissOpen();
+      // A disabled keyboard takes no input: every press ends, and the accent popup,
+      // which renders into the static area where the disabled styling does not
+      // reach it, closes rather than keep committing.
+      this._leaveSurface();
     }
     // The renderer handles the disabled CSS class (ui5KioskKeyboard--disabled)
     // and per-key aria-disabled attributes at render time. Uses setProperty
@@ -1153,11 +1172,10 @@ export default class KioskKeyboard extends Control {
   override setVisible(isVisible: boolean): this {
     if (!isVisible) {
       this._redirectFocusToTargetIfOwned();
-      // Close the docked keyboard - a hidden keyboard should not retain
-      // open state (escape listener, native keyboard suppression).
-      if (this.getDocked() && this._open) {
-        this.close();
-      }
+      // A hidden keyboard holds no press, popup or open state (escape listener,
+      // native keyboard suppression), docked or not.
+      this._leaveSurface();
+      this.close();
     }
     return super.setVisible(isVisible);
   }
@@ -1166,9 +1184,6 @@ export default class KioskKeyboard extends Control {
    * If focus is currently inside this keyboard's DOM, move it to the
    * target input. Called before operations that would remove the keyboard
    * from tab order (disable, hide) to avoid unpredictable focus fallback.
-   *
-   * Uses `document.activeElement` which does not pierce shadow DOM
-   * boundaries. This is fine because UI5 controls do not use shadow DOM.
    */
   private _redirectFocusToTargetIfOwned(): void {
     const myDom = this.getDomRef();
@@ -1210,6 +1225,19 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
+   * Custom setter for autoCompact - switching it off gives the requested layout back
+   * rather than leaving the arrangement a width picked with nothing left to undo it.
+   *
+   * @public
+   * @since 0.1.0
+   */
+  setAutoCompact(autoCompact: boolean): this {
+    this.setProperty("autoCompact", autoCompact);
+    if (!autoCompact) this._layoutState.applyTier(false, false);
+    return this;
+  }
+
+  /**
    * Applies the `autoCompact` width tier. Called from {@link AutoCompactBehavior}
    * on a frame of its own, never from the observation callback.
    */
@@ -1238,7 +1266,7 @@ export default class KioskKeyboard extends Control {
    * by an edit to a custom layout the active layout does not read.
    *
    * The cache is dropped **before** `super`, because `Control.prototype.invalidate`
-   * returns early while a rendering pass is in flight.
+   * returns early during the `onBeforeRendering` phase.
    */
   override invalidate(oOrigin?: ManagedObject): void {
     if (oOrigin instanceof CustomLayout) this._foldCache.drop();
@@ -1323,12 +1351,9 @@ export default class KioskKeyboard extends Control {
     // Abort (not commit) any in-progress composition: reset discards the
     // interaction rather than flushing a half-formed syllable to the target.
     this._dropComposition("reset");
-    // Drop both in-flight presses, pointer and keyboard: a fresh input context
-    // cannot leave a keycap painted, a blur listener armed, or a pending
-    // touchend still able to type.
-    this._clearPressedKeyState();
-    this._clearKeyboardPressedState();
-    this._variantPopup.dismissOpen();
+    // A fresh input context cannot leave a keycap painted, a blur listener armed,
+    // or a pending touchend still able to type.
+    this._leaveSurface();
     this._shiftState.reset();
     // Returns to the base layout and re-renders; fires layoutChange only on a
     // real change.
@@ -1343,17 +1368,14 @@ export default class KioskKeyboard extends Control {
   _setActiveTarget(target?: string | Control): this {
     const previousTarget = this._getActiveTargetId();
 
-    // Capture pending change on the old target. The event is deferred to
-    // after all state transitions so that re-entrant calls (from a change
-    // handler that synchronously focuses another input) see settled state.
+    // Captured now, fired last (see below).
     const fireDeferredChange = this._targetSession.captureAndClearDirty();
 
-    // Remove highlight delegation from previous target
     this._physicalKeyHighlight.detach();
 
     // If the keyboard is open, restore the old target's inputmode
     // before switching so it's not left suppressed.
-    if (this._open) {
+    if (this.isOpen()) {
       this._nativeKbSuppression.restore();
     }
 
@@ -1364,29 +1386,17 @@ export default class KioskKeyboard extends Control {
     const newId = this._getActiveTargetId();
     const isRealSwitch = newId !== previousTarget;
 
-    // A real target switch starts a fresh input context: reset shift/caps.
-    // A same-input refocus (caret reposition) preserves the armed shift,
-    // mirroring the composition and layout-override handling below.
+    // A real switch starts a fresh input context: shift resets, a composition
+    // commits (the cached middleware holds the old target's preedit offsets), a
+    // {layout:X} pick drops back to the base. A same-input refocus (caret
+    // reposition) keeps all three.
     if (isRealSwitch) {
       this._shiftState.reset();
-    }
-
-    // A real target switch ends any in-progress composition so the new target
-    // starts fresh. Without this, the cached middleware (which holds the old
-    // target and its preedit offsets) leaks the old syllable into the new input.
-    // Mirrors the `{layout:}` key path and the web component's focusin handling.
-    // A same-input refocus (caret reposition) keeps the composition going.
-    if (isRealSwitch) {
       this._dropComposition("commit");
-    }
-
-    // A real target switch is a new editing context: it drops a user-driven
-    // `{layout:X}` pick and returns to the base layout, so the new target starts
-    // on the base under its keyboardType. A same-input refocus (caret
-    // reposition) keeps the pick.
-    if (isRealSwitch && this._layoutState.getSource() === "user") {
-      this._layoutState.clearUserOverride(LayoutChangeReason.User);
-      this.invalidate();
+      if (this._layoutState.getSource() === "user") {
+        this._layoutState.clearUserOverride(LayoutChangeReason.User);
+        this.invalidate();
+      }
     }
 
     if (newId && this._isTargetOfOther(newId)) {
@@ -1397,7 +1407,6 @@ export default class KioskKeyboard extends Control {
       );
     }
 
-    // Add highlight delegation to new target
     if (newId) {
       const next = Element.getElementById(newId);
       if (next) {
@@ -1433,8 +1442,7 @@ export default class KioskKeyboard extends Control {
       }
     }
 
-    // If the keyboard is open, suppress the new target's native keyboard.
-    if (this._open) {
+    if (this.isOpen()) {
       this._nativeKbSuppression.suppress();
     }
 
@@ -1534,9 +1542,6 @@ export default class KioskKeyboard extends Control {
   setKeyboardType(type: KeyboardType): this {
     const previous = this.getKeyboardType();
     this.setProperty("keyboardType", type);
-    // Route through _setKeyboardTypeSource so the layout-source reset
-    // (webc parity, see _getResolvedLayout) fires for explicit changes too,
-    // not just for auto-detect.
     this._setKeyboardTypeSource("explicit");
     if (type !== previous) {
       this.fireKeyboardTypeChange({
@@ -1563,7 +1568,6 @@ export default class KioskKeyboard extends Control {
   resetKeyboardType(): this {
     const sPrevious = this.getKeyboardType();
     this.setProperty("keyboardType", KeyboardType.Full);
-    // Route through _setKeyboardTypeSource so the layout-source reset fires.
     this._setKeyboardTypeSource("unset");
     if (KeyboardType.Full !== sPrevious) {
       this.fireKeyboardTypeChange({
@@ -1646,13 +1650,7 @@ export default class KioskKeyboard extends Control {
     const wasDocked = this.getDocked();
     if (wasDocked === isDocked) return this;
 
-    if (wasDocked && !isDocked && this._open) {
-      this.close();
-    }
-
-    if (!wasDocked && isDocked) {
-      this._open = false;
-    }
+    if (wasDocked) this.close();
 
     this.setProperty("docked", isDocked, true);
     this._autoShowBehavior.sync();
@@ -1675,15 +1673,13 @@ export default class KioskKeyboard extends Control {
     // Before the open guard: a deferred auto-show close must not land on an
     // already-open keyboard that show() was just called on.
     this._autoShowBehavior.cancelPendingClose();
-    if (this._open) return this;
-    if (this._nativeKbSuppression.shouldDeferToNative()) return this;
+    if (this._dockSession || !this._canOpen()) return this;
 
-    this._open = true;
+    this._dockSession = { escape: new AbortController() };
     this._nativeKbSuppression.suppress();
-    this._escapeAbort = new AbortController();
     document.addEventListener("keydown", (e) => this._onDocumentEscapeKeydown(e), {
       capture: true,
-      signal: this._escapeAbort.signal,
+      signal: this._dockSession.escape.signal,
     });
     const dom = this.getDomRef();
     if (dom) {
@@ -1701,20 +1697,17 @@ export default class KioskKeyboard extends Control {
    * @since 0.1.0
    */
   close(): this {
-    if (!this.getDocked()) return this;
-    if (!this._open) return this;
+    const session = this._dockSession;
+    if (!session) return this;
     // Drop both in-flight presses and any open accent popup before the session
     // closes: a keyboard sliding out of view cannot leave a keycap painted, a
     // blur listener armed, a popup floating over the page, or a pending touchend
     // still able to type into the target it just left.
-    this._clearPressedKeyState();
-    this._clearKeyboardPressedState();
-    this._variantPopup.dismissOpen();
+    this._leaveSurface();
     this._targetSession.fireChangeIfDirty();
-    this._open = false;
+    this._dockSession = null;
     this._nativeKbSuppression.restore();
-    this._escapeAbort?.abort();
-    this._escapeAbort = null;
+    session.escape.abort();
     const dom = this.getDomRef();
     if (dom) {
       dom.classList.add(KIOSK_KEYBOARD_DOM.classes.rootClosed);
@@ -1731,7 +1724,16 @@ export default class KioskKeyboard extends Control {
    * @since 0.1.0
    */
   isOpen(): boolean {
-    return this._open;
+    return this._dockSession !== null;
+  }
+
+  /**
+   * The one gate every open path passes, public `show()` and both focus paths alike.
+   * A docked keyboard opens only while visible, and not where the native keyboard
+   * takes over. Placement is not required, so `show()` works ahead of the first render.
+   */
+  private _canOpen(): boolean {
+    return this.getVisible() && !this._nativeKbSuppression.shouldDeferToNative();
   }
 
   /**
@@ -1744,7 +1746,7 @@ export default class KioskKeyboard extends Control {
     // An open accent-variant popup, or a re-anchor parked between two keys, owns
     // Escape: it resolves the popup and leaves the docked keyboard open.
     if (this._variantPopup.consumeEscape()) return;
-    if (!this.getDocked() || !this._open) return;
+    if (!this.isOpen()) return;
 
     const eventTarget = event.composedPath?.()[0] ?? event.target;
 
@@ -1840,21 +1842,12 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Re-seats the roving tab stop onto the key that carries `value` in the layout
-   * now resolved, or onto the first key when the new arrangement has no such key.
-   *
-   * Key elements are identified by their grid position, so a layout change hands
-   * the same element to whatever key the new arrangement seats there. Following
-   * the key by value keeps a keyboard user on the key they were on, and this runs
-   * for every layout change - a `{layout:*}` press, `setLayout()` and an
-   * `autoCompact` width swap alike - so the arrangement a width picks is no
-   * different to navigate than one that was asked for.
-   *
-   * DOM focus follows on its own: the recorded position is what the renderer gives
-   * `tabindex="0"` and what `applyFocusInfo` restores focus to, and the framework
-   * only calls `applyFocusInfo` when focus was inside the control before the
-   * patch. Focus on the target input, the ordinary case for a pointer user, is
-   * therefore never moved.
+   * Re-seats the roving tab stop onto the key carrying `value` in the newly
+   * resolved layout, or the first key when there is none. Key elements are
+   * identified by grid position, so following the value keeps a keyboard user on
+   * their key across any layout change. Only the remembered position moves: the
+   * framework calls `applyFocusInfo` only when focus was inside the control, so
+   * focus on the target input is never taken.
    */
   private _reseatFocusAnchor(value: string | null): void {
     const layout = value === null ? [] : this._getResolvedLayout();
@@ -1894,14 +1887,8 @@ export default class KioskKeyboard extends Control {
   // ── Internal renderer helpers ──
 
   /**
-   * Returns the internal renderer API object.
-   *
-   * Exposes the private helpers the renderer needs, without an unsafe
-   * `as unknown as` cast. TypeScript structurally checks the returned object
-   * literal against {@link RendererInternalApi} - if any method is renamed or
-   * its signature changes, this line produces a compile error.
-   *
-   * The object is lazily created and cached per instance.
+   * Typed capability object for KioskKeyboardRenderer, checked structurally
+   * against {@link RendererInternalApi}; created once per instance.
    *
    * @internal Used by KioskKeyboardRenderer only.
    */
@@ -1910,9 +1897,12 @@ export default class KioskKeyboard extends Control {
       this._rendererApi = {
         _isShiftActive: () => this._isShiftActive(),
         _isCapsLock: () => this._isCapsLock(),
-        _getPressedKey: () => {
-          const el = this._keyboardPressedKeyEl ?? this._pressedKeyEl;
-          return el ? keyPositionOf(el) : null;
+        _isKeyPressed: (row, col) => {
+          const held = [this._keyboardPressedKeyEl, ...Array.from(this._presses.values(), (press) => press.keyEl)];
+          return held.some((el) => {
+            const pos = el ? keyPositionOf(el) : null;
+            return pos?.row === row && pos.col === col;
+          });
         },
         _getHighlightedKey: () => this._physicalKeyHighlight.getHighlightedKey(),
         _getResolvedLayout: () => this._getResolvedLayout(),
@@ -1929,7 +1919,6 @@ export default class KioskKeyboard extends Control {
     return this._shiftState.isShifted;
   }
 
-  /** Returns true when Caps Lock mode is active. */
   private _isCapsLock(): boolean {
     return this._shiftState.isCapsLock;
   }
@@ -2018,9 +2007,6 @@ export default class KioskKeyboard extends Control {
    * behavior to build the option listbox.
    */
   private _resolveKeyVariants(keyEl: HTMLElement): { base: string; glyphs: string[] } | null {
-    // Gated at fire time as well as at arm time, so a hold that outlives the
-    // enabled flag opens nothing. The webc twin refuses in the same place.
-    if (!this.getEnabled()) return null;
     const pos = keyPositionOf(keyEl);
     if (!pos) return null;
     const key = this._getResolvedLayout()[pos.row]?.[pos.col];
@@ -2056,13 +2042,9 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Returns the control-owned accent-variant Popover from the hidden
-   * `_variantPopover` aggregation, creating the reusable shell on first use.
-   * The shell holds only structural options; `VariantPopupBehavior` rebuilds its
-   * content, initial focus and aria-labelledby on every open. The framework
-   * auto-destroys it with the control (no manual teardown in `exit`). Each call
-   * mirrors the ambient content density, since a static-area popover cannot
-   * inherit density by DOM ancestry.
+   * Returns the hidden `_variantPopover`, creating its shell on first use. Mirrors
+   * content density on every call, since a static-area popover cannot inherit it by
+   * DOM ancestry.
    */
   private _getVariantPopover(): Popover {
     const held = this.getAggregation("_variantPopover");
@@ -2070,9 +2052,6 @@ export default class KioskKeyboard extends Control {
     if (held instanceof Popover) {
       popover = held;
     } else {
-      // Derive a stable id from the control (as UI5 core controls id their own
-      // internal sub-controls, e.g. sap.m.Select's `<id>-list`), rather than an
-      // auto-generated `__popoverN`.
       popover = new Popover(`${this.getId()}-variantPopover`, {
         showHeader: false,
         showArrow: true,
@@ -2101,9 +2080,7 @@ export default class KioskKeyboard extends Control {
    */
   getActiveControl<T extends Control = Control>(): T | null {
     const target = this._getTargetElement();
-    // SAFETY: the check establishes that the active target is a Control; which Control
-    // class it is, is the caller's own claim, made by naming `T` at the call site - the
-    // convenience this generic exists for, and all a target id can promise.
+    // SAFETY: the check establishes Control; the subclass T is the caller's claim.
     return target instanceof Control ? (target as T) : null;
   }
 
@@ -2132,26 +2109,9 @@ export default class KioskKeyboard extends Control {
   }
 
   /**
-   * Clears the pressed-key visual state and detaches the window-blur safety
-   * net attached by `ontouchstart`. Safe to call when no key is pressed and
-   * is therefore also invoked from `exit()` to guarantee listener cleanup.
-   */
-  private _clearPressedKeyState(): HTMLElement | null {
-    this._backspaceRepeat.stop();
-    this._variantPopup.stop();
-    const pressed = this._pressedKeyEl;
-    this._pressedKeyEl = null;
-    this._pressedBlurAbort?.abort();
-    this._pressedBlurAbort = null;
-    if (pressed) {
-      pressed.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyPressed);
-    }
-    return pressed;
-  }
-
-  /**
    * Prevents focus from leaving the target input when clicking anywhere
-   * on the keyboard surface - keys, rows, or gaps between keys.
+   * on the keyboard surface - keys, rows, or gaps between keys - and begins a
+   * press for every pointer that lands on a key.
    *
    * Uses UI5's EventSimulation touchstart (fires for both mouse and touch)
    * instead of raw pointerdown. preventDefault() on the underlying
@@ -2160,8 +2120,6 @@ export default class KioskKeyboard extends Control {
    * suppresses all compatibility mouse events per the Pointer Events spec.
    */
   ontouchstart(event: Event): void {
-    // Always prevent focus steal when clicking anywhere on the keyboard
-    // (including gaps between keys), so the target input keeps focus.
     event.preventDefault();
 
     // EventSimulation maps EVERY mouse button's mousedown onto this simulated
@@ -2170,35 +2128,91 @@ export default class KioskKeyboard extends Control {
     // carries no `button`, and so passes.
     if (isSecondaryPress(event)) return;
 
-    const el = this._resolveKeyElementFromEventTarget(event.target);
-    if (el) {
-      // A press on any key while the accent popup is open dismisses it (the
-      // popup's options live in the static area, so a key press is always
-      // "outside"), then proceeds so the same tap also types the key. The
-      // framework autoClose does not fire for the keyboard's own keys because of
-      // the preventDefault above, so close it explicitly here. A key that has
-      // variants may become a re-anchor, so its options stay up until the hold
-      // claims them or `ontouchend` dismisses them for a plain tap.
-      if (!el.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) {
-        this._variantPopup.dismissOpen();
-      }
-      this._pressedKeyEl = el;
-      el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
-      // Safety net: if the window loses focus before touchend/touchcancel
-      // fires (e.g. Alt-Tab during a mousedown, or a modal popup steals
-      // focus), clear the pressed visual state so it does not stick. A press
-      // that ends outside the page abandons the gesture, like a cancel.
-      // Aborting first keeps a second press from stacking a second listener.
-      this._pressedBlurAbort?.abort();
-      this._pressedBlurAbort = new AbortController();
-      window.addEventListener("blur", () => this.ontouchcancel(), { signal: this._pressedBlurAbort.signal });
-      // Press-and-hold Backspace deletes continuously; the behavior arms the
-      // repeat and later tells ontouchend to suppress its trailing delete.
-      this._backspaceRepeat.onPress(el, this.getEnabled());
-      // Press-and-hold a key with variants opens the accent popup; the behavior
-      // arms the hold and later tells ontouchend to suppress its trailing tap.
-      this._variantPopup.onPress(el, this.getEnabled());
+    for (const { identifier, target } of changedPointers(event)) {
+      const el = this._resolveKeyElementFromEventTarget(target);
+      if (el) this._beginPress(identifier, el);
     }
+  }
+
+  /**
+   * Begins pointer `id`'s press on `el`. A new press stops the repeat and the
+   * accent hold every other live press armed, the way a physical keyboard stops
+   * repeating a held key once another goes down; those presses still activate on
+   * their own release.
+   */
+  private _beginPress(id: number, el: HTMLElement): void {
+    // A press on any key while the accent popup is open dismisses it (the
+    // popup's options live in the static area, so a key press is always
+    // "outside"), then proceeds so the same tap also types the key. The
+    // framework autoClose does not fire for the keyboard's own keys because of
+    // the preventDefault in ontouchstart, so close it explicitly here. A key that
+    // has variants may become a re-anchor, so its options stay up until the hold
+    // claims them or the release dismisses them for a plain tap.
+    if (!el.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) {
+      this._variantPopup.dismissOpen();
+    }
+    // A pointer still on record lost its release; it ends unactivated.
+    this._endPress(id);
+    for (const other of this._presses.values()) this._stopPressTimers(other);
+
+    const enabled = this.getEnabled();
+    // Safety net: if the window loses focus before touchend/touchcancel fires
+    // (e.g. Alt-Tab during a mousedown, or a modal popup steals focus), the
+    // gesture is abandoned, like a cancel, so no keycap stays pressed.
+    const blur = new AbortController();
+    window.addEventListener("blur", () => this.ontouchcancel(), { signal: blur.signal });
+    const repeat =
+      enabled && el.dataset.key === "{backspace}"
+        ? new BackspaceRepeatBehavior(() => this._performBackspaceRepeatTick())
+        : null;
+    const hold = this._variantPopup.onPress(el, enabled);
+    this._presses.set(id, { keyEl: el, key: el.dataset.key, blur, repeat, hold });
+    el.classList.add(KIOSK_KEYBOARD_DOM.classes.keyPressed);
+  }
+
+  /** Stops the repeat and the accent hold `press` armed, leaving the press itself live. */
+  private _stopPressTimers(press: Press): void {
+    press.repeat?.stop();
+    if (press.hold) {
+      this._variantPopup.stop();
+      press.hold = false;
+    }
+  }
+
+  /**
+   * The single exit of a pointer press: releases what it armed and unpaints its
+   * key unless another live press holds the same key. Returns the ended press, or
+   * `null` when the pointer had none.
+   */
+  private _endPress(id: number): Press | null {
+    const press = this._presses.get(id);
+    if (!press) return null;
+    this._presses.delete(id);
+    this._stopPressTimers(press);
+    press.blur.abort();
+    const stillHeld = Array.from(this._presses.values()).some((other) => other.keyEl === press.keyEl);
+    if (!stillHeld) press.keyEl.classList.remove(KIOSK_KEYBOARD_DOM.classes.keyPressed);
+    return press;
+  }
+
+  /**
+   * Ends every press, pointer and keyboard, without activating any, and abandons
+   * a re-anchor a hold parked.
+   */
+  private _cancelAllPresses(): void {
+    this._variantPopup.cancelPending();
+    for (const id of Array.from(this._presses.keys())) this._endPress(id);
+    this._clearKeyboardPressedState();
+  }
+
+  /**
+   * The keyboard surface went away or changed under the user (hide, disable,
+   * close, reset, layout change): every press ends and the accent popup, whose
+   * options were resolved from that surface, is abandoned.
+   */
+  private _leaveSurface(): void {
+    this._cancelAllPresses();
+    this._variantPopup.abandon();
   }
 
   /**
@@ -2210,28 +2224,28 @@ export default class KioskKeyboard extends Control {
     const el = this._resolveKeyElementFromEventTarget(event.target);
     if (!el || !el.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
     event.preventDefault();
-    this._clearPressedKeyState();
+    this._cancelAllPresses();
     this._variantPopup.openFor(el);
   }
 
-  /**
-   * Activates the key on touch/mouse release.
-   *
-   * Only fires if the release target matches the press target (basic
-   * tap detection - drag-away cancels). Replaces ontap which couldn't
-   * fire because pointerdown's preventDefault() suppressed the click
-   * event that jQuery's tap plugin depends on.
-   */
+  /** Activates each released pointer's key, when the release lands on the key it pressed (dragging away cancels). */
   ontouchend(event: Event): void {
     // The mirror of the ontouchstart filter: a non-primary release is not a key
     // activation, and must not tear down a primary press that is still live.
     if (isSecondaryPress(event)) return;
 
-    const pressed = this._clearPressedKeyState();
+    for (const { identifier, target } of changedPointers(event)) {
+      this._releasePress(identifier, target);
+    }
+  }
 
-    if (!this.getEnabled() || !pressed) return;
+  private _releasePress(id: number, target: EventTarget | null): void {
+    const press = this._endPress(id);
 
-    const el = this._resolveKeyElementFromEventTarget(event.target);
+    if (!this.getEnabled() || !press) return;
+
+    const pressed = press.keyEl;
+    const el = this._resolveKeyElementFromEventTarget(target);
     const keyValue = pressed.dataset.key;
 
     // A hold that opened (or re-anchored) the popup owns this release: it
@@ -2250,18 +2264,16 @@ export default class KioskKeyboard extends Control {
 
     // A held Backspace already deleted via auto-repeat; skip the release delete
     // so lifting off does not remove one extra character.
-    if (this._backspaceRepeat.shouldSuppressRelease(keyValue)) return;
+    if (press.repeat?.didRepeat) return;
 
     if (variantOwnsRelease) return;
 
     this._handleKeyAction(keyValue, pressed);
   }
 
+  /** The browser took the gesture away: every press ends unactivated. */
   ontouchcancel(): void {
-    // The browser took the gesture away, so a re-anchor its hold parked must not
-    // surface when the previous popup finishes closing.
-    this._variantPopup.cancelPending();
-    this._clearPressedKeyState();
+    this._cancelAllPresses();
   }
 
   /**
@@ -2346,8 +2358,8 @@ export default class KioskKeyboard extends Control {
   /**
    * Marks `el` as pressed for the duration of a keyboard activation, so the
    * keycap gives the same feedback a pointer press does. Held separately from
-   * the pointer gesture's `_pressedKeyEl`, which also drives backspace repeat
-   * and the variant popup; a keyboard activation is only the visual half.
+   * the pointer presses, which also drive backspace repeat and the variant
+   * popup; a keyboard activation is only the visual half.
    */
   private _setKeyboardPressedState(el: HTMLElement): void {
     this._clearKeyboardPressedState();
@@ -2386,12 +2398,10 @@ export default class KioskKeyboard extends Control {
     return false;
   }
 
-  /** Returns true if this keyboard would auto-claim the given DOM element. */
   _wouldClaimInput(target: EventTarget | null): boolean {
     return this._focusClaimService.wouldClaimInput(target);
   }
 
-  /** Returns the UI5 control this keyboard would auto-claim, or null. */
   _resolveClaimableControl(target: EventTarget | null): Control | null {
     return this._focusClaimService.resolveClaimableControl(target);
   }
@@ -2466,9 +2476,6 @@ export default class KioskKeyboard extends Control {
    * deleted, which the repeater uses to stop.
    */
   private _performBackspaceRepeatTick(): boolean {
-    // Read where the tick consumes it, not only where the hold was armed, so
-    // disabling mid-hold ends the gesture on the next tick rather than at the release.
-    if (!this.getEnabled()) return false;
     const handled = this._tryCompositionMiddleware("{backspace}") || this._performBackspaceDelete();
     this._shiftState.autoRelease();
     return handled;
@@ -2491,9 +2498,7 @@ export default class KioskKeyboard extends Control {
 
     this._performKeyAction(action, keyValue, el, shift);
 
-    // One key, one decision: which keys spend a latched one-shot Shift is a
-    // pure function of the key, so it is asked once here rather than left to
-    // whichever branch of `_performKeyAction` remembers to call `autoRelease()`.
+    // Which keys spend a latched one-shot Shift depends on the key kind alone.
     if (spendsOneShotShift(action.kind)) this._shiftState.autoRelease();
   }
 
@@ -2509,8 +2514,6 @@ export default class KioskKeyboard extends Control {
     el: HTMLElement,
     shift: boolean,
   ): void {
-    // Composition middleware must see {backspace}/{enter}/chars/unknown tokens
-    // (but not layout/fkey) before default handling.
     if (this._tryCompositionMiddleware(keyValue)) return;
 
     switch (action.kind) {
@@ -2543,11 +2546,8 @@ export default class KioskKeyboard extends Control {
       }
 
       case "unknown":
-        // Unrecognized `{...}`-shaped value: not one of the built-in special
-        // keys above. Fire keyPress so a consumer can still observe/handle it,
-        // but do NOT insert the literal braces - that was a silent footgun (a
-        // mistyped `{bcksp}`, or a custom `{paste}` key with no handler, typed
-        // the text "{bcksp}" into the field).
+        // An unrecognised {...} token fires keyPress for a consumer to handle and
+        // inserts nothing, so a typo such as {bcksp} never types its own braces.
         if (this.fireKeyPress({ key: action.raw, shiftKey: shift })) {
           Log.warning(
             `Unrecognized key token "${action.raw}": not a built-in special key. Ignoring (no text inserted).`,
@@ -2558,7 +2558,7 @@ export default class KioskKeyboard extends Control {
         return;
 
       case "char": {
-        // Regular character - resolve its Shift/Caps form (incl. CapsLock ß -> ẞ, #169).
+        // Regular character - resolve its Shift/Caps form (incl. CapsLock ß -> ẞ).
         const effective = shift ? shiftedGlyph(action.text, el.dataset.shiftValue, this._isCapsLock()) : action.text;
 
         if (this.fireKeyPress({ key: effective, shiftKey: shift })) {
@@ -2568,8 +2568,6 @@ export default class KioskKeyboard extends Control {
       }
 
       default:
-        // Exhaustiveness: every KeyAction kind is handled above ({shift} returns
-        // earlier). A new variant fails to compile at this assertNever.
         return assertNever(action);
     }
   }
@@ -2643,7 +2641,6 @@ export default class KioskKeyboard extends Control {
 
   /**
    * Resolve the target input association to a UI5 Element.
-   * Uses Element registry (the standard UI5 association resolution pattern).
    */
   private _getTargetElement(): Element | null {
     const id = this._getActiveTargetId();

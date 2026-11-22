@@ -165,9 +165,8 @@ export default class AutoShowBehavior extends BaseObject {
     // whose options render into the static area outside the keyboard DOM.
     if (this._host._isNodeInVariantPopover(related)) return;
 
-    // Defer to next frame so activeElement has settled, then re-check.
-    // relatedTarget can be null in some browser/shadow-DOM transitions,
-    // and rAF lets us inspect the true destination in all cases.
+    // relatedTarget is null when focus goes to a non-focusable node or out of the
+    // window; read activeElement once focus has settled.
     this.cancelPendingClose();
     this._deferredCloseId = requestAnimationFrame(() => {
       this._deferredCloseId = null;

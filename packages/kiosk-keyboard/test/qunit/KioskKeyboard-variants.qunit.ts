@@ -627,9 +627,8 @@ QUnit.test("disabling the keyboard dismisses an open popup", async (assert) => {
   cleanup(kb, input);
 });
 
-// The arm-time check is not enough on its own: the hold timer fires later, so
-// the open is gated again at fire time. Mirrors the webc twin, whose
-// `resolveOpenState` refuses on a disabled keyboard.
+// Disabling ends every press, and the armed hold with it, so the timer that
+// would open the popup never fires.
 QUnit.test("disabling mid-hold keeps the popup from opening when the timer fires", async (assert) => {
   const { kb, input } = await makeKeyboard("z");
   const aKey = getRequiredKeyElement(kb, "a");
@@ -642,6 +641,38 @@ QUnit.test("disabling mid-hold keeps the popup from opening when the timer fires
 
   release(kb, aKey);
   assert.strictEqual(input.getValue(), "z", "and the release typed nothing either");
+  cleanup(kb, input);
+});
+
+// The popup's options were resolved from the layout on screen when it opened;
+// once another layout replaces it, they belong to a surface that is gone.
+QUnit.test("a layout change dismisses an open popup", async (assert) => {
+  const { kb, input } = await makeKeyboard("z");
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  release(kb, aKey);
+  const aimedAt = getOptions()[0]!;
+  assert.ok(variantPopup(kb).isOpen(), "precondition: the popup is open");
+
+  kb.setLayout("numeric");
+  await waitForRender();
+
+  assert.notOk(variantPopup(kb).isOpen(), "the popup is dismissed");
+  tapOption(aimedAt);
+  assert.strictEqual(input.getValue(), "z", "the option of the abandoned layout types nothing");
+  cleanup(kb, input);
+});
+
+QUnit.test("re-requesting the layout on screen leaves an open popup alone", async (assert) => {
+  const { kb, input } = await makeKeyboard();
+  const aKey = getRequiredKeyElement(kb, "a");
+  await holdOpen(kb, aKey);
+  release(kb, aKey);
+  assert.ok(variantPopup(kb).isOpen(), "precondition: the popup is open");
+
+  kb.resetLayout();
+
+  assert.ok(variantPopup(kb).isOpen(), "a request that changes nothing on screen keeps the popup");
   cleanup(kb, input);
 });
 

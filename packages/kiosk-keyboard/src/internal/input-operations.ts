@@ -156,9 +156,8 @@ function nativeEditWithSync(
  * the browser's undo stack and honours `maxlength`; otherwise the value is
  * assigned and `maxlength` applied in JS.
  *
- * Returns the new cursor position so the caller can track it in JS
- * without relying on the DOM's `selectionStart`/`selectionEnd` which
- * may be unreliable on unfocused inputs in some environments.
+ * Returns the new cursor position for the caller to track; an unfocused input's
+ * selection is not kept (see TargetInputSession._trackCursor).
  */
 export function insertText(
   dom: HTMLInputElement | HTMLTextAreaElement,
@@ -185,7 +184,7 @@ export function insertText(
   if (element) {
     setTargetValue(element, newValue, dom);
   } else {
-    // Target control destroyed - fall back to raw DOM value
+    // No owning UI5 element: write the DOM directly.
     dom.value = newValue;
   }
   try {

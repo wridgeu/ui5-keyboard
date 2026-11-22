@@ -8,12 +8,7 @@ type InputFocusDelegation = {
   onfocusin: () => void;
 };
 
-/**
- * Bridge to the host keyboard's public/property state and active-target
- * handling. Kept as callbacks (matching the sibling `FocusClaimService` /
- * `TargetInputSession` pattern) so the controls-reconciliation logic stays free
- * of UI5 control internals.
- */
+/** Bridge to the host keyboard's state. */
 interface ControlsDelegationHost {
   getControls(): string[];
   /** Parent of the host control, used to resolve view-local control ids. */
@@ -67,7 +62,6 @@ export default class ControlsDelegationController {
         // registered ancestor so setActiveTarget gets the right control.
         const ancestor = this._host.resolveControlsAncestor(active);
         this._host.setActiveTarget(ancestor ?? active);
-        // When docked with autoShow, show the keyboard for controls targets
         if (this._host.getDocked() && this._host.getAutoShow() && !this._host.isOpen()) {
           this._host.show();
         }
@@ -88,17 +82,12 @@ export default class ControlsDelegationController {
   sync(): void {
     const { nextByInputId, resolvedControlIds } = this._resolveControls(this._host.getControls());
 
-    // Fast path: if the resolved (inputId → controlId) map and all delegate
-    // instances are unchanged, no DOM reconciliation is needed. This skips
-    // the work on the common focusin firehose where the controls list stays
-    // identical between events.
     if (this._isResolutionUnchanged(nextByInputId)) return;
 
     this._rebindDelegates(resolvedControlIds);
     this._registeredControlById = nextByInputId;
     this._resolvedControlIds = resolvedControlIds;
 
-    // Clear active target if it's no longer among the resolved controls
     const currentTargetId = this._host.getActiveTargetId();
     if (currentTargetId && resolvedControlIds.size > 0 && !resolvedControlIds.has(currentTargetId)) {
       this._host.setActiveTarget("");
@@ -202,7 +191,6 @@ export default class ControlsDelegationController {
   }
 
   private _findControlById(targetId: string): Control | null {
-    // Try view-local first (standard UI5 pattern - matches controller.byId())
     for (let parent: ManagedObject | null = this._host.getParent(); parent; parent = parent.getParent()) {
       if (parent instanceof View) {
         const found = parent.byId(targetId);
@@ -210,7 +198,6 @@ export default class ControlsDelegationController {
       }
     }
 
-    // Fall back to global registry
     const global = Element.getElementById(targetId);
     if (global instanceof Control) return global;
 

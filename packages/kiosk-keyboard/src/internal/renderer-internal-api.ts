@@ -1,5 +1,4 @@
 import type { KeyDefinition, LayoutDefinition } from "../types";
-import type { KeyPosition } from "./dom";
 import type { HighlightedKey } from "./physical-key-highlight";
 
 /**
@@ -12,7 +11,8 @@ import type { HighlightedKey } from "./physical-key-highlight";
 export type RendererInternalApi = {
   _isShiftActive(): boolean;
   _isCapsLock(): boolean;
-  _getPressedKey(): KeyPosition | null;
+  /** Whether a pointer or keyboard press holds the key at this grid position. */
+  _isKeyPressed(row: number, col: number): boolean;
   _getHighlightedKey(): HighlightedKey | null;
   _getResolvedLayout(): LayoutDefinition;
   _getLayoutLang(): string | undefined;

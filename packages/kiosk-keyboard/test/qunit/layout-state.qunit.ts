@@ -27,7 +27,7 @@ function createHost() {
       box.changes.push(p);
     },
     resetShiftState: () => {},
-    cancelPress: () => {},
+    leaveSurface: () => {},
     endComposition: () => {},
     focusAnchorValue: () => null,
     reseatFocusAnchor: () => {},
@@ -101,8 +101,8 @@ function createGoldenHost() {
     resetShiftState: () => {
       box.shiftResets++;
     },
-    cancelPress: () => {
-      box.effects.push("cancelPress");
+    leaveSurface: () => {
+      box.effects.push("leaveSurface");
     },
     endComposition: () => {
       box.effects.push("endComposition");
@@ -307,7 +307,7 @@ QUnit.test("a declared-layout change that moves the effective layout applies eve
   declare(withoutSolo);
   step("removed under the constraint");
 
-  const all = ["cancelPress", "endComposition", "reseatFocusAnchor"];
+  const all = ["leaveSurface", "endComposition", "reseatFocusAnchor"];
   assert.deepEqual(effects, [
     ["removed", all, 1],
     ["declared again", all, 1],

@@ -21,9 +21,8 @@ import { getText } from "./i18n-registry";
  * option is the `Emphasized` button and the sole tab stop; the arrow-key handler
  * moves the type, the DOM focus, and the tab chain between the buttons.
  *
- * Mirrors the sibling backspace-hold delegate: `onPress` arms the gesture,
- * `stop` cancels a pending (not-yet-fired) hold, and `shouldSuppressRelease`
- * tells the release path to swallow the lift-off tap so it does not also insert
+ * `onPress` arms the gesture, `stop` cancels a pending (not-yet-fired) hold,
+ * and `shouldSuppressRelease` tells the release path to swallow the lift-off tap so it does not also insert
  * the base glyph once the popup has opened. The actual insertion is the host's
  * `commitVariant`, so the cursor-aware insert / cancelable key-press / Shift
  * auto-release all stay on the control, exactly like a normal character key.
@@ -91,11 +90,8 @@ interface VariantPopupHost {
    */
   getLayoutLang(): string | undefined;
   /**
-   * The control-owned accent-variant Popover, held in the control's hidden
-   * `_variantPopover` aggregation (lazily created on first call, reused across
-   * opens, auto-destroyed with the control). Returns it with the control's
-   * ambient content density synced on. The behavior rebuilds its content each
-   * open.
+   * The control-owned Popover, with the ambient content density synced on. This
+   * behavior rebuilds its content on every open.
    */
   getVariantPopover(): Popover;
 }
@@ -177,19 +173,21 @@ export default class VariantPopupBehavior {
    * Arm the hold when an enabled keyboard presses a key that declares variants.
    * A no-op for any other key, while disabled, and for the key that already owns
    * the popup, so callers can forward every press. A hold on a different variant
-   * key re-anchors when it elapses.
+   * key re-anchors when it elapses. Returns whether this press armed the hold,
+   * which makes it the press whose end calls `stop()`.
    */
-  onPress(keyEl: HTMLElement, enabled: boolean): void {
-    if (!enabled) return;
-    if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return;
+  onPress(keyEl: HTMLElement, enabled: boolean): boolean {
+    if (!enabled) return false;
+    if (!keyEl.hasAttribute(KIOSK_KEYBOARD_DOM.attributes.hasVariants)) return false;
     // A new press means the previous one ended, wherever its release landed; its
     // unspent lift-off swallow must not eat this press's release instead.
     this._consumeRelease = false;
     this._originKeyValue = null;
-    if (this._popover !== null && this._anchorKeyEl === keyEl) return;
+    if (this._popover !== null && this._anchorKeyEl === keyEl) return false;
     this._pressLive = true;
     this._armedKeyEl = keyEl;
     this._arm();
+    return true;
   }
 
   /**
@@ -235,7 +233,7 @@ export default class VariantPopupBehavior {
   /**
    * Whether the release for `keyValue` must skip its default tap action because
    * the hold already opened the popup on that same key. Reads and clears the
-   * one-shot flag, mirroring the backspace behavior's suppress-on-repeat.
+   * one-shot flag.
    */
   shouldSuppressRelease(keyValue: string): boolean {
     if (!this._consumeRelease || keyValue !== this._originKeyValue) return false;
@@ -271,6 +269,16 @@ export default class VariantPopupBehavior {
     if (!this._popover) return false;
     this._dismiss(true);
     return true;
+  }
+
+  /**
+   * The keyboard surface the popup belongs to went away or changed: ends any
+   * hold, drops a parked re-anchor and dismisses an open popup without
+   * committing. Owes no swallowed release, since the press it was for is gone.
+   */
+  abandon(): void {
+    this.stop();
+    this.dismissOpen();
   }
 
   destroy(): void {
@@ -351,9 +359,7 @@ export default class VariantPopupBehavior {
     const keyWidth = anchorKeyEl.offsetWidth;
     const keyHeight = anchorKeyEl.offsetHeight;
 
-    // The control owns the Popover in its hidden `_variantPopover` aggregation;
-    // reuse that single instance and rebuild its content each open. Wire the
-    // afterClose teardown once, on the persistent instance.
+    // Wire afterClose once, on the persistent instance.
     const popover = this._host.getVariantPopover();
     if (this._wiredPopover !== popover) {
       popover.attachAfterClose(this._onAfterClose);

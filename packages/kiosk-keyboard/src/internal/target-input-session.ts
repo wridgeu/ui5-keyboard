@@ -57,10 +57,7 @@ export default class TargetInputSession {
   handleEnter(): void {
     const dom = this._getTargetDomRef();
     if (dom instanceof HTMLTextAreaElement) {
-      // Intentionally bypass this.insertText(): Enter in a textarea should only
-      // insert a newline and must not mark the session dirty for change firing.
-      // Textareas never emit change on Enter, and fireChangeIfDirty() also
-      // skips textarea targets by design.
+      // A newline only: a textarea fires no change on Enter, so the session is not marked dirty.
       const pos = opsInsertText(dom, "\n", this._cursorPos ?? undefined);
       if (!pos) return;
       this._trackCursor(pos, dom);
@@ -87,9 +84,7 @@ export default class TargetInputSession {
   /**
    * Fires the pending `change` on the current target and clears the dirty flag.
    *
-   * The capture and the fire happen in the same tick, so this is the immediate
-   * form of {@link captureAndClearDirty} rather than a second implementation of
-   * its guard chain.
+   * Immediate form of {@link captureAndClearDirty}.
    */
   fireChangeIfDirty(): void {
     this.captureAndClearDirty()?.();

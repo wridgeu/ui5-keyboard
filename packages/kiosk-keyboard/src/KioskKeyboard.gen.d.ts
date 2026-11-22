@@ -103,10 +103,7 @@ declare module "./KioskKeyboard" {
          * When `true`, a layout that declares a compact counterpart yields to it on a
         keyboard too narrow to seat its rows, and takes it back when the room returns.
         
-        Layout data is the one responsive dimension CSS cannot reach: a `@container`
-        rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
-        on the resolved layout rather than on rendered geometry. Of the built-ins only
-        `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+        Of the built-ins only `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
         with the `compact` property of a `customLayouts` entry.
         
         The swap fires `layoutChange` with `reason: "width"`, changes
@@ -268,7 +265,8 @@ declare module "./KioskKeyboard" {
         afterOpen?: (event: KioskKeyboard$AfterOpenEvent) => void;
 
         /**
-         * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+         * Fired when the docked keyboard closes: by `close()`, or by destroying it while open
+        (not tied to CSS transition end).
          *
          * @since 0.1.0
          */
@@ -538,10 +536,7 @@ declare module "./KioskKeyboard" {
          * When `true`, a layout that declares a compact counterpart yields to it on a
         keyboard too narrow to seat its rows, and takes it back when the room returns.
         
-        Layout data is the one responsive dimension CSS cannot reach: a `@container`
-        rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
-        on the resolved layout rather than on rendered geometry. Of the built-ins only
-        `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+        Of the built-ins only `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
         with the `compact` property of a `customLayouts` entry.
         
         The swap fires `layoutChange` with `reason: "width"`, changes
@@ -565,10 +560,7 @@ declare module "./KioskKeyboard" {
          * When `true`, a layout that declares a compact counterpart yields to it on a
         keyboard too narrow to seat its rows, and takes it back when the room returns.
         
-        Layout data is the one responsive dimension CSS cannot reach: a `@container`
-        rule restyles a row but cannot re-seat its keys, and arrow-key navigation moves
-        on the resolved layout rather than on rendered geometry. Of the built-ins only
-        `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
+        Of the built-ins only `ja-kana` declares one (`ja-kana-compact`); a custom layout declares its own
         with the `compact` property of a `customLayouts` entry.
         
         The swap fires `layoutChange` with `reason: "width"`, changes
@@ -1413,7 +1405,8 @@ declare module "./KioskKeyboard" {
         /**
          * Attaches event handler "fn" to the "afterClose" event of this "KioskKeyboard".
          *
-         * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+         * Fired when the docked keyboard closes: by `close()`, or by destroying it while open
+        (not tied to CSS transition end).
          *
          * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
@@ -1429,7 +1422,8 @@ declare module "./KioskKeyboard" {
         /**
          * Attaches event handler "fn" to the "afterClose" event of this "KioskKeyboard".
          *
-         * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+         * Fired when the docked keyboard closes: by `close()`, or by destroying it while open
+        (not tied to CSS transition end).
          *
          * @since 0.1.0
          * When called, the context of the event handler (its "this") will be bound to "oListener" if specified,
@@ -1446,7 +1440,8 @@ declare module "./KioskKeyboard" {
         /**
          * Detaches event handler "fn" from the "afterClose" event of this "KioskKeyboard".
          *
-         * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+         * Fired when the docked keyboard closes: by `close()`, or by destroying it while open
+        (not tied to CSS transition end).
          *
          * @since 0.1.0
          * The passed function and listener object must match the ones used for event registration.
@@ -1461,7 +1456,8 @@ declare module "./KioskKeyboard" {
         /**
          * Fires event "afterClose" to attached listeners.
          *
-         * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+         * Fired when the docked keyboard closes: by `close()`, or by destroying it while open
+        (not tied to CSS transition end).
          *
          * @since 0.1.0
          *
@@ -1538,7 +1534,8 @@ declare module "./KioskKeyboard" {
 
     /**
      * Interface describing the parameters of KioskKeyboard's 'afterClose' event.
-     * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+     * Fired when the docked keyboard closes: by `close()`, or by destroying it while open
+    (not tied to CSS transition end).
      *
      * @since 0.1.0
      */
@@ -1598,7 +1595,8 @@ declare module "./KioskKeyboard" {
 
     /**
      * Type describing the KioskKeyboard's 'afterClose' event.
-     * Fired when `close()` closes the docked keyboard (not tied to CSS transition end).
+     * Fired when the docked keyboard closes: by `close()`, or by destroying it while open
+    (not tied to CSS transition end).
      *
      * @since 0.1.0
      */
