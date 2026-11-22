@@ -172,6 +172,102 @@ QUnit.test("ConflictBehavior.Error: failed registration does not pollute state",
   assert.ok(firstCalled, "Original registration still fires after failed conflict");
 });
 
+/** Two nodes sharing one id: the original and its rerendered replacement. */
+function createRerenderPair(id: string): { original: HTMLElement; replacement: HTMLElement } {
+  const original = document.createElement("div");
+  original.id = id;
+  original.tabIndex = 0;
+  fixture.appendChild(original);
+  const replacement = document.createElement("div");
+  replacement.id = id;
+  replacement.tabIndex = 0;
+  return { original, replacement };
+}
+
+QUnit.test(
+  "ConflictBehavior.Replace: retargeting onto a same-id rerender keeps the registration removable",
+  (assert) => {
+    const manager = createHotkeyManager();
+    const { original, replacement } = createRerenderPair("hk-retarget-replace");
+    let calls = 0;
+    const handle = manager.register(
+      "F8",
+      () => {
+        calls++;
+      },
+      { target: original, conflictBehavior: ConflictBehavior.Replace },
+    );
+    original.replaceWith(replacement);
+
+    handle.setOptions({ target: replacement });
+    assert.ok(handle.isActive, "Retarget does not replace the registration with itself");
+    fireKeyOn(replacement, "F8");
+    assert.strictEqual(calls, 1, "Fires on the replacement");
+
+    handle.unregister();
+    fireKeyOn(replacement, "F8");
+    assert.strictEqual(calls, 1, "Does not fire after unregister");
+    assert.strictEqual(manager.getRegistrationsForScope("__global__").length, 0, "Nothing left in the scope index");
+  },
+);
+
+QUnit.test("ConflictBehavior.Error: retargeting onto a same-id rerender does not conflict with itself", (assert) => {
+  const manager = createHotkeyManager();
+  const { original, replacement } = createRerenderPair("hk-retarget-error");
+  let calls = 0;
+  const handle = manager.register(
+    "F8",
+    () => {
+      calls++;
+    },
+    { target: original, conflictBehavior: ConflictBehavior.Error },
+  );
+  original.replaceWith(replacement);
+
+  handle.setOptions({ target: replacement });
+  fireKeyOn(replacement, "F8");
+  assert.strictEqual(calls, 1, "Fires on the replacement");
+});
+
+QUnit.test("ConflictBehavior.Warn: retargeting onto a same-id rerender logs no conflict", (assert) => {
+  const manager = createHotkeyManager();
+  const { original, replacement } = createRerenderPair("hk-retarget-warn");
+  const handle = manager.register("F8", () => {}, { target: original });
+  original.replaceWith(replacement);
+
+  const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
+  const warnSpy = sinon.spy(LogModule, "warning");
+  try {
+    handle.setOptions({ target: replacement });
+    assert.notOk(
+      warnSpy.getCalls().some((c) => String(c.args[0]).includes("already registered")),
+      "No conflict warning for the registration's own entry",
+    );
+  } finally {
+    warnSpy.restore();
+  }
+});
+
+QUnit.test("ConflictBehavior.Warn: retargeting onto another registration's element still warns", (assert) => {
+  const manager = createHotkeyManager();
+  const { original, replacement } = createRerenderPair("hk-retarget-warn-other");
+  fixture.appendChild(replacement);
+  manager.register("F8", () => {}, { target: replacement });
+  const handle = manager.register("F8", () => {}, { target: original });
+
+  const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
+  const warnSpy = sinon.spy(LogModule, "warning");
+  try {
+    handle.setOptions({ target: replacement });
+    assert.ok(
+      warnSpy.getCalls().some((c) => String(c.args[0]).includes("already registered")),
+      "A real conflict still warns",
+    );
+  } finally {
+    warnSpy.restore();
+  }
+});
+
 // ──────────────────────────────────────────────
 // enabled function returning false mid-sequence
 // ──────────────────────────────────────────────

@@ -27,7 +27,7 @@ const EDITABLE_INPUT_TYPES: ReadonlySet<string> = new Set([
  * `event.composedPath()[0]` returns the original target inside the shadow tree.
  */
 export function getEventTarget(event: Event): EventTarget | null {
-  return event.composedPath?.()[0] ?? event.target;
+  return event.composedPath()[0] ?? event.target;
 }
 
 /**
@@ -38,9 +38,7 @@ export function getEventTarget(event: Event): EventTarget | null {
  * - `<input>` with an editable text type (text, password, email, number, etc.)
  *   that is not `readonly`
  * - `<textarea>`
- * - `<select>` (a form control with native single-key type-ahead; suppressing
- *   shortcuts here keeps the browser's built-in option matching working, matching
- *   how global-hotkey libraries such as Mousetrap and hotkeys-js treat form fields)
+ * - `<select>` (native single-key type-ahead)
  * - Any element with `contentEditable` active (including inherited)
  *
  * Returns `false` for:
@@ -54,13 +52,11 @@ export function isInputElement(target: EventTarget | null): boolean {
     return false;
   }
 
-  // <input> - only editable text types that are not readonly
   if (target instanceof HTMLInputElement) {
     const type = (target.type || "text").toLowerCase();
     return EDITABLE_INPUT_TYPES.has(type) && !target.readOnly;
   }
 
-  // <textarea> accepts freeform text
   if (target instanceof HTMLTextAreaElement) {
     return true;
   }
@@ -88,6 +84,5 @@ export function isInputElement(target: EventTarget | null): boolean {
  */
 export function resolveIgnoreInputs(option: boolean | "auto", hotkey: ParsedHotkey): boolean {
   if (option !== "auto") return option;
-  // Ctrl/Meta combos and Escape should work in inputs; everything else is suppressed
   return !(hotkey.ctrl || hotkey.meta || hotkey.key === "Escape");
 }

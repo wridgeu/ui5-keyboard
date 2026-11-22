@@ -104,17 +104,3 @@ QUnit.test("Returns the node inside a shadow root that dispatched the event", (a
   inner.dispatchEvent(new Event("click", { bubbles: true, composed: true }));
   assert.strictEqual(capturedTarget, inner, "Returns the dispatching node, not the retargeted host");
 });
-
-QUnit.test("Falls back to event.target when composedPath is unavailable", (assert) => {
-  const div = document.createElement("div");
-  document.getElementById("qunit-fixture")!.appendChild(div);
-
-  // The dispatch sets event.target; the own property then shadows the prototype's
-  // composedPath, reproducing a browser that predates it.
-  const event = new Event("click");
-  div.dispatchEvent(event);
-  Object.defineProperty(event, "composedPath", { value: undefined });
-
-  const target = getEventTarget(event);
-  assert.strictEqual(target, div, "Falls back to event.target");
-});

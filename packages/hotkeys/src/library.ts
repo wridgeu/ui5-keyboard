@@ -63,7 +63,6 @@ export enum Platform {
   Linux = "linux",
 }
 
-// Re-export from constants - single source of truth
 export { GLOBAL_SCOPE } from "./internal/constants";
 
 // ──────────────────────────────────────────────

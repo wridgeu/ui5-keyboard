@@ -53,6 +53,23 @@ export function fireKeyUp(key: string, options?: Partial<KeyboardEvent>): void {
 }
 
 /**
+ * A KeyboardEvent that reports `isTrusted: true`, which a real event cannot be made to do.
+ * Feed it to `KeyStateTracker.processKeyDown`/`processKeyUp`; `altGraph` sets `getModifierState("AltGraph")`.
+ */
+export function trustedKeyEvent(
+  key: string,
+  options: Partial<KeyboardEvent> & { altGraph?: boolean } = {},
+): KeyboardEvent {
+  return new Proxy(buildKeyEvent("keydown", key, options), {
+    get(target, prop) {
+      if (prop === "isTrusted") return true;
+      if (prop === "getModifierState") return (keyArg: string) => keyArg === "AltGraph" && options.altGraph === true;
+      return Reflect.get(target, prop, target);
+    },
+  });
+}
+
+/**
  * Dispatch a blur event on window.
  */
 export function fireBlur(): void {

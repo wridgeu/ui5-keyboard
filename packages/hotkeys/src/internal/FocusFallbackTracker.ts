@@ -103,9 +103,9 @@ export default class FocusFallbackTracker {
   // ──────────────────────────────────────────────
 
   /**
-   * Include the active-element ancestry in the path. Some environments
-   * dispatch keyboard events on document/window even while an input
-   * still has focus.
+   * Synthetic keydowns dispatched on document/window carry no focus
+   * ancestry; add document.activeElement's so target-scoped matching
+   * still applies.
    *
    * Nodes are inserted before the first generic root entry so that
    * innermost-wins ordering is preserved during target matching.
@@ -125,9 +125,9 @@ export default class FocusFallbackTracker {
   }
 
   /**
-   * Some browsers/extensions dispatch Escape after focus has already moved to
-   * body/content. Inject the most recently focused element's ancestry as a
-   * short-lived, one-shot fallback to preserve target-scoped matching.
+   * UI5 controls can drop focus to body/UIArea (rerender) shortly before
+   * Escape; inject the last-focused element's ancestry as a short-lived,
+   * one-shot fallback so target-scoped matching still resolves.
    */
   private _augmentPathWithFocusFallback(event: KeyboardEvent, resolvedPath: EventTarget[]): void {
     if (!this._shouldUseFocusPathFallback(event, resolvedPath)) {
@@ -250,11 +250,8 @@ export default class FocusFallbackTracker {
   private _getActiveElementPath(activeElement: Element): EventTarget[] {
     const path: EventTarget[] = [];
     let current: Node | null = activeElement;
-    let depth = 0;
-    const MAX_DEPTH = 1000;
 
-    while (current && depth < MAX_DEPTH) {
-      depth++;
+    while (current) {
       path.push(current);
 
       if (current.parentNode) {
@@ -262,17 +259,13 @@ export default class FocusFallbackTracker {
         continue;
       }
 
-      const root = current.getRootNode?.();
+      const root = current.getRootNode();
       if (root instanceof ShadowRoot && root.host) {
         current = root.host;
         continue;
       }
 
       current = null;
-    }
-
-    if (depth >= MAX_DEPTH) {
-      Log.warning("MAX_DEPTH reached while building active-element path.", undefined, LOG_COMPONENT);
     }
 
     if (!path.includes(document)) {

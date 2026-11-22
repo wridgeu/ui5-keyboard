@@ -21,8 +21,7 @@ export function getCandidateKeys(event: KeyboardEvent): string[] {
   const primary = normalizeKeyName(event.key);
   keys.push(primary);
 
-  // Fallback: letter from event.code (macOS Option+letter), only when the
-  // event did not already type a letter of its own.
+  // Letter from event.code, only if no letter was typed.
   if (event.code?.startsWith("Key") && !/^[A-Za-z]$/.test(primary)) {
     const codeLetter = event.code.slice(3);
     if (/^[A-Za-z]$/.test(codeLetter)) {
@@ -30,10 +29,7 @@ export function getCandidateKeys(event: KeyboardEvent): string[] {
     }
   }
 
-  // Fallback: digit from event.code, only while a modifier that rewrites the
-  // typed character is down. Shift turns "4" into "$" and Option turns "3" into
-  // "£"; with neither held it is the layout that put the character there
-  // (AZERTY types "&" from `Digit1`), so the digit is not what was pressed.
+  // Digit from event.code, only while Shift/Alt rewrites the character (see JSDoc).
   if ((event.shiftKey || event.altKey) && event.code?.startsWith("Digit")) {
     const codeDigit = event.code.slice(5);
     if (/^[0-9]$/.test(codeDigit) && codeDigit !== primary) {
@@ -60,21 +56,17 @@ export function getCandidateKeys(event: KeyboardEvent): string[] {
  * @since 0.1.0
  */
 export function matchesKeyboardEvent(event: KeyboardEvent, parsed: ParsedHotkey): boolean {
-  // Exact modifier match - no extra modifiers allowed
   if (event.ctrlKey !== parsed.ctrl) return false;
   if (event.shiftKey !== parsed.shift) return false;
   if (event.altKey !== parsed.alt) return false;
   if (event.metaKey !== parsed.meta) return false;
 
-  // Key matching
   const hotkeyKey = parsed.key;
   const candidates = getCandidateKeys(event);
 
-  // Single-character key comparison
   if (hotkeyKey.length === 1) {
     return candidates.some((k) => k.length === 1 && k.toUpperCase() === hotkeyKey.toUpperCase());
   }
 
-  // Special keys: exact match after normalization
   return candidates[0] === hotkeyKey;
 }

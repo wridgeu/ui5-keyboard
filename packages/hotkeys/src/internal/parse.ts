@@ -86,7 +86,6 @@ export function parseHotkey(hotkey: string, platform?: Platform): ParsedHotkey {
     throw new Error(`Invalid hotkey "${hotkey}": no non-modifier key found`);
   }
 
-  // Build ordered modifier list
   const orderedModifiers = MODIFIER_ORDER.filter((m) => modifiers.has(m));
 
   return {
@@ -142,12 +141,10 @@ export function formatParsed(parsed: ParsedHotkey): string {
 export function keyboardEventToHotkey(event: KeyboardEvent): string | null {
   const key = event.key;
 
-  // Modifier-only presses don't form a hotkey
   if (MODIFIER_KEYS.has(key)) {
     return null;
   }
 
-  // Follow canonical MODIFIER_ORDER
   const modifierFlags = {
     Control: event.ctrlKey,
     Alt: event.altKey,
@@ -181,12 +178,10 @@ export function convertToModFormat(hotkey: string, platform?: Platform): string 
   const platformMod = resolveModifier("Mod", p);
   const otherMod: CanonicalModifier = p === Platform.Mac ? "Control" : "Meta";
 
-  // Only convert if the platform modifier is present and the other is not
   if (!parsed.modifiers.includes(platformMod) || parsed.modifiers.includes(otherMod)) {
     return hotkey;
   }
 
-  // Replace the platform modifier with "Mod"
   const modParts = parsed.modifiers.filter((m) => m !== platformMod).map((m) => (m === "Control" ? "Ctrl" : m));
 
   return ["Mod", ...modParts, parsed.key].join("+");

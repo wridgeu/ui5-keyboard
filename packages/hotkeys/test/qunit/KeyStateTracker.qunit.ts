@@ -1,6 +1,13 @@
 import KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import { Platform } from "ui5/hotkeys/library";
-import { createHotkeyManager, destroyHotkeyManager, fireBlur, fireKey, fireKeyUp } from "./test-helpers";
+import {
+  createHotkeyManager,
+  destroyHotkeyManager,
+  fireBlur,
+  fireKey,
+  fireKeyUp,
+  trustedKeyEvent,
+} from "./test-helpers";
 
 const sandbox = sinon.createSandbox();
 
@@ -77,6 +84,89 @@ QUnit.test("Blur clears all held keys", (assert) => {
 
   fireBlur();
   assert.strictEqual(tracker.getHeldKeys().length, 0, "All keys cleared after blur");
+});
+
+QUnit.test("A trusted key event releases held modifiers its flags report as up", (assert) => {
+  const tracker = createHotkeyManager().getKeyStateTracker() as KeyStateTracker;
+
+  fireKey("Control", { ctrlKey: true, code: "ControlLeft" });
+  fireKey("Alt", { altKey: true, code: "AltRight" });
+  fireKey("Shift", { shiftKey: true, code: "ShiftLeft" });
+  fireKey("Meta", { metaKey: true, code: "MetaLeft" });
+
+  // AltGraph still reports down: the right Alt stays held.
+  tracker.processKeyDown(trustedKeyEvent("a", { code: "KeyA", ctrlKey: true, shiftKey: true, altGraph: true }));
+  assert.ok(tracker.isCodeHeld("AltRight"), "AltRight kept while AltGraph is down");
+  assert.notOk(tracker.isCodeHeld("MetaLeft"), "MetaLeft released: metaKey is false");
+
+  tracker.processKeyUp(trustedKeyEvent("a", { code: "KeyA", ctrlKey: true }));
+  assert.notOk(tracker.isCodeHeld("AltRight"), "AltRight released: neither altKey nor AltGraph");
+  assert.notOk(tracker.isKeyHeld("Alt"), "Alt no longer reported as held");
+  assert.notOk(tracker.isCodeHeld("ShiftLeft"), "ShiftLeft released: shiftKey is false");
+  assert.ok(tracker.isCodeHeld("ControlLeft"), "ControlLeft kept: ctrlKey is true");
+  assert.deepEqual(tracker.getHeldKeys(), ["Control"], "Only Control remains held");
+});
+
+QUnit.test("A trusted modifier keyup releases it and stuck keys in one change on macOS", (assert) => {
+  const tracker = createHotkeyManager(Platform.Mac).getKeyStateTracker() as KeyStateTracker;
+  const changes: string[][] = [];
+
+  fireKey("Meta", { metaKey: true, code: "MetaLeft" });
+  fireKey("Tab", { metaKey: true, code: "Tab" });
+  tracker.setChangeCallback((keys) => changes.push([...keys]));
+
+  tracker.processKeyUp(trustedKeyEvent("Meta", { code: "MetaLeft" }));
+  assert.deepEqual(changes, [[]], "One change releases Meta and the stuck Tab together");
+});
+
+QUnit.test("A trusted event that releases a stuck modifier reports one change", (assert) => {
+  const tracker = createHotkeyManager().getKeyStateTracker() as KeyStateTracker;
+  const changes: string[][] = [];
+  tracker.setChangeCallback((keys) => changes.push([...keys]));
+
+  fireKey("Alt", { altKey: true, code: "AltRight" });
+  changes.length = 0;
+  tracker.processKeyDown(trustedKeyEvent("a", { code: "KeyA" }));
+  assert.deepEqual(changes, [["a"]], "keydown: the release and the press land together");
+
+  fireKey("Alt", { altKey: true, code: "AltRight" });
+  changes.length = 0;
+  tracker.processKeyDown(trustedKeyEvent("a", { code: "KeyA" }));
+  assert.deepEqual(changes, [["a"]], "keydown repeat of a held key still reports the release");
+
+  fireKey("Alt", { altKey: true, code: "AltRight" });
+  changes.length = 0;
+  tracker.processKeyUp(trustedKeyEvent("a", { code: "KeyA" }));
+  assert.deepEqual(changes, [[]], "keyup: the release and the key's own release land together");
+});
+
+QUnit.test("Synthetic key events do not release held modifiers", (assert) => {
+  const tracker = createHotkeyManager().getKeyStateTracker() as KeyStateTracker;
+
+  fireKey("Alt", { altKey: true, code: "AltRight" });
+  fireKey("a", { code: "KeyA" });
+  assert.ok(tracker.isCodeHeld("AltRight"), "Untrusted keydown without altKey keeps AltRight held");
+});
+
+QUnit.test("Hiding the document clears all held keys", (assert) => {
+  const tracker = createHotkeyManager().getKeyStateTracker() as KeyStateTracker;
+  let visibility = "visible";
+  Object.defineProperty(document, "visibilityState", { configurable: true, get: () => visibility });
+
+  try {
+    fireKey("a");
+    fireKey("Alt", { altKey: true, code: "AltRight" });
+
+    document.dispatchEvent(new Event("visibilitychange"));
+    assert.strictEqual(tracker.getHeldKeys().length, 2, "A visible visibilitychange keeps held keys");
+
+    visibility = "hidden";
+    document.dispatchEvent(new Event("visibilitychange"));
+    assert.strictEqual(tracker.getHeldKeys().length, 0, "All keys cleared once hidden");
+    assert.notOk(tracker.isCodeHeld("AltRight"), "AltRight cleared once hidden");
+  } finally {
+    delete (document as unknown as Record<string, unknown>).visibilityState;
+  }
 });
 
 QUnit.test("macOS modifier-release clears non-modifier keys", (assert) => {

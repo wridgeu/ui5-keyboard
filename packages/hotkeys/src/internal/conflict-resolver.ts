@@ -1,6 +1,6 @@
 import Log from "sap/base/Log";
 import { ConflictBehavior } from "../library";
-import type RegistrationIndex from "./registration-index";
+import type RegistrationStore from "./registration-store";
 import type { HotkeyRegistration, ResolvedTarget } from "./types";
 
 // Internal collaborators log under the public HotkeyManager component.
@@ -9,26 +9,28 @@ const LOG_COMPONENT = "ui5.hotkeys.HotkeyManager";
 /**
  * Resolves registration conflicts (same normalized hotkey, same scope, same
  * target) according to the requested {@link ConflictBehavior}. Operates on the
- * shared registration index.
+ * shared registration store.
  */
 export default class ConflictResolver {
-  constructor(
-    private readonly _index: RegistrationIndex,
-    private readonly _remove: (reg: HotkeyRegistration) => void,
-  ) {}
+  constructor(private readonly _store: RegistrationStore) {}
 
   /**
-   * Handle a conflict for a newly-registering hotkey: remove existing matches
-   * (Replace), throw (Error), warn (Warn), or do nothing (Allow).
+   * Handle a conflict for a hotkey being registered or retargeted: remove
+   * existing matches (Replace), throw (Error), warn (Warn), or do nothing
+   * (Allow). `self` is the registration being retargeted; its own entry is
+   * never a conflict.
    */
-  resolve(normalizedHotkey: string, scope: string, target: ResolvedTarget, conflictBehavior: ConflictBehavior): void {
+  resolve(
+    normalizedHotkey: string,
+    scope: string,
+    target: ResolvedTarget,
+    conflictBehavior: ConflictBehavior,
+    self?: HotkeyRegistration,
+  ): void {
     if (conflictBehavior === ConflictBehavior.Allow) return;
 
-    // Callback (lazy) targets resolve to an element only at dispatch time, so two
-    // callback-target hotkeys cannot be compared by element here. Matching them by
-    // hotkey alone produced false conflicts - a blocking throw (Error) or a silent
-    // removal (Replace) of a registration that may target a different element. Skip
-    // conflict handling for them; genuine overlaps are resolved at dispatch time.
+    // Callback targets resolve to an element only at dispatch time, so they
+    // cannot be compared here; skip conflict handling for them.
     if (target?.kind === "callback") {
       Log.debug(
         `Conflict check skipped for callback-target hotkey "${normalizedHotkey}" in scope "${scope}" ` +
@@ -39,16 +41,15 @@ export default class ConflictResolver {
       return;
     }
 
-    // Use scope-bucket lookup instead of iterating all registrations
-    const bucket = this._index.getBucket(scope);
+    const bucket = this._store.getBucket(scope);
     if (!bucket) return;
-    const regs = target === null ? bucket.untargeted : this._index.getTargetRegistrations(bucket, target.el);
+    const regs = target === null ? bucket.untargeted : this._store.getTargetRegistrations(bucket, target.el);
     if (!regs || regs.size === 0) return;
 
-    const isConflicting = (reg: HotkeyRegistration): boolean => reg.normalizedHotkey === normalizedHotkey;
+    const isConflicting = (reg: HotkeyRegistration): boolean =>
+      reg !== self && reg.normalizedHotkey === normalizedHotkey;
 
     if (conflictBehavior === ConflictBehavior.Replace) {
-      // Collect ALL matches so we remove every conflicting registration
       const conflicts: HotkeyRegistration[] = [];
       for (const reg of regs) {
         if (isConflicting(reg)) {
@@ -56,7 +57,7 @@ export default class ConflictResolver {
         }
       }
       for (const reg of conflicts) {
-        this._remove(reg);
+        this._store.remove(reg);
         Log.debug(
           `Replaced existing hotkey "${normalizedHotkey}" (id: ${reg.id}) in scope "${scope}"`,
           undefined,

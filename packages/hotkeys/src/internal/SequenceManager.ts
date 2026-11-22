@@ -54,9 +54,7 @@ type UpdatableOptionKey = keyof typeof UPDATABLE_OPTION_DEFAULTS;
 /** Every value an updatable option can hold, as declared on the registration. */
 type UpdatableOptionValue = SequenceRegistration[UpdatableOptionKey];
 
-// SAFETY: `UPDATABLE_OPTION_DEFAULTS` is a const object literal that nothing writes to, so
-// the strings `Object.keys` returns are exactly the `UpdatableOptionKey` union that
-// `keyof typeof` derives from that same literal.
+// SAFETY: Object.keys of a const literal that nothing writes to.
 const UPDATABLE_OPTION_KEYS = Object.keys(UPDATABLE_OPTION_DEFAULTS) as UpdatableOptionKey[];
 
 /**
@@ -69,10 +67,7 @@ function applyUpdatableOptions(target: SequenceRegistration, source: SequenceOpt
   for (const key of UPDATABLE_OPTION_KEYS) {
     const value = source[key];
     if (value !== undefined) {
-      // SAFETY: `key` ranges over `UPDATABLE_OPTION_KEYS`, so it names a field `target`
-      // declares. The assertion restates those fields under their common value type, which
-      // is what TypeScript needs to accept a write whose key is a union rather than a single
-      // literal; `source` and `target` declare the same type per key.
+      // SAFETY: TS cannot type a write through a union key; source and target share per-key types.
       (target as Record<UpdatableOptionKey, UpdatableOptionValue>)[key] = value;
     }
   }
@@ -96,9 +91,6 @@ interface ActiveMatch {
  * Receives pre-filtered key events from the EventDispatcher's `window` listener
  * (no own listener) and matches multi-key sequences (e.g., ["G", "E"]
  * for go-to-editor).
- *
- * Receives a scope provider callback from HotkeyManager to access the
- * active scope without a reverse singleton dependency.
  */
 export default class SequenceManager {
   private _registrations: Map<string, SequenceRegistration> = new Map();
@@ -242,11 +234,16 @@ export default class SequenceManager {
     };
   }
 
-  destroy(): void {
+  /** Drop every pending match and its timer. */
+  reset(): void {
     for (const match of this._activeMatches) {
       clearTimeout(match.timerId);
     }
     this._activeMatches = [];
+  }
+
+  destroy(): void {
+    this.reset();
     for (const reg of this._registrations.values()) {
       reg.active = false;
     }
@@ -259,6 +256,10 @@ export default class SequenceManager {
   /**
    * Process a pre-filtered key event from HotkeyManager.
    * The caller is responsible for ignoring IME, modifier-only, and AltGr events.
+   *
+   * The next match state is computed and committed before any sequence or
+   * `onPending` callback runs, so a callback that unregisters a sequence or
+   * destroys the manager acts on settled state.
    */
   processKeyEvent(event: KeyboardEvent, popupOpen: boolean): boolean {
     // Repeated keydown events from a held key must not advance/start sequences.
@@ -269,8 +270,7 @@ export default class SequenceManager {
     const isInput = isInputElement(target);
     let consumed = false;
 
-    // 1. Advance or reset existing active matches
-    const newActiveMatches: ActiveMatch[] = [];
+    const advanced: ActiveMatch[] = [];
     let fullMatch: SequenceRegistration | null = null;
 
     for (const match of this._activeMatches) {
@@ -281,29 +281,17 @@ export default class SequenceManager {
 
       const reg = match.registration;
       if (match.stepIndex + 1 >= reg.parsedSteps.length) {
-        // Full match! Preserve scope priority: active scope always wins over global.
+        // An active-scope registration beats a global one.
         if (!fullMatch || (fullMatch.scope !== activeScope && reg.scope === activeScope)) {
           fullMatch = reg;
         }
       } else {
-        // Mid-sequence - advance
-        const newMatch: ActiveMatch = {
-          registration: reg,
-          stepIndex: match.stepIndex + 1,
-          timerId: undefined,
-        };
-        newMatch.timerId = setTimeout(() => {
-          this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
-        }, reg.timeout);
-        newActiveMatches.push(newMatch);
+        advanced.push(this._createMatch(reg, match.stepIndex + 1));
       }
     }
 
-    this._activeMatches = [...newActiveMatches];
-
-    // If we got a full match, fire it and clear all tracking
     if (fullMatch) {
-      for (const m of this._activeMatches) {
+      for (const m of advanced) {
         clearTimeout(m.timerId);
       }
       this._activeMatches = [];
@@ -311,19 +299,28 @@ export default class SequenceManager {
       return true;
     }
 
-    // 2. Two-pass: check active scope first, then global.
-    // Ensures scoped sequences take priority over global ones.
-    let startedMatch = this._startMatchesForScope(event, activeScope, isInput, popupOpen);
+    // Active scope first, so scoped sequences report progress before global ones.
+    const started = this._startMatchesForScope(event, activeScope, isInput, popupOpen);
     if (activeScope !== GLOBAL_SCOPE) {
-      startedMatch = this._startMatchesForScope(event, GLOBAL_SCOPE, isInput, popupOpen) || startedMatch;
+      started.push(...this._startMatchesForScope(event, GLOBAL_SCOPE, isInput, popupOpen));
     }
 
-    // Fire pending callback for advanced matches (those that progressed from an existing active match)
-    for (const match of newActiveMatches) {
+    this._activeMatches = [...advanced, ...started];
+
+    for (const match of [...started, ...advanced]) {
       this._firePendingCallback(match.registration, match.stepIndex);
     }
 
-    return consumed || startedMatch;
+    return consumed || started.length > 0;
+  }
+
+  /** A match at `stepIndex` that drops itself from the active matches after the registration's timeout. */
+  private _createMatch(registration: SequenceRegistration, stepIndex: number): ActiveMatch {
+    const match: ActiveMatch = { registration, stepIndex, timerId: undefined };
+    match.timerId = setTimeout(() => {
+      this._activeMatches = this._activeMatches.filter((m) => m !== match);
+    }, registration.timeout);
+    return match;
   }
 
   /**
@@ -377,7 +374,7 @@ export default class SequenceManager {
   }
 
   private _indexRegistration(reg: SequenceRegistration): void {
-    // Registrations are guaranteed non-empty: register() rejects empty sequences.
+    // parseSequenceSteps only routes strings with >= 2 steps here.
     const firstKey = reg.parsedSteps[0]!.key;
     let keyMap = this._scopeKeyIndex.get(reg.scope);
     if (!keyMap) {
@@ -393,7 +390,6 @@ export default class SequenceManager {
   }
 
   private _deindexRegistration(reg: SequenceRegistration): void {
-    // Registrations are guaranteed non-empty: register() rejects empty sequences.
     const firstKey = reg.parsedSteps[0]!.key;
     const keyMap = this._scopeKeyIndex.get(reg.scope);
     if (!keyMap) return;
@@ -409,13 +405,18 @@ export default class SequenceManager {
   }
 
   /**
-   * Start new sequence matches for registrations in the given scope.
+   * New matches for the registrations in `scope` whose first step is `event`.
    */
-  private _startMatchesForScope(event: KeyboardEvent, scope: string, isInput: boolean, popupOpen: boolean): boolean {
+  private _startMatchesForScope(
+    event: KeyboardEvent,
+    scope: string,
+    isInput: boolean,
+    popupOpen: boolean,
+  ): ActiveMatch[] {
+    const started: ActiveMatch[] = [];
     const keyMap = this._scopeKeyIndex.get(scope);
-    if (!keyMap) return false;
+    if (!keyMap) return started;
 
-    let started = false;
     const candidateKeys = getCandidateKeys(event);
 
     for (const candidateKey of candidateKeys) {
@@ -431,25 +432,19 @@ export default class SequenceManager {
 
         if (!matchesKeyboardEvent(event, firstStep)) continue;
 
-        const newMatch: ActiveMatch = {
-          registration: reg,
-          stepIndex: 1,
-          timerId: undefined,
-        };
-        newMatch.timerId = setTimeout(() => {
-          this._activeMatches = this._activeMatches.filter((m) => m !== newMatch);
-        }, reg.timeout);
-        this._activeMatches.push(newMatch);
-        started = true;
-
-        this._firePendingCallback(reg, 1);
+        started.push(this._createMatch(reg, 1));
       }
     }
 
     return started;
   }
 
+  /**
+   * Skips a registration that an earlier callback of the same keydown
+   * unregistered, directly or by destroying the manager.
+   */
   private _firePendingCallback(reg: SequenceRegistration, stepIndex: number): void {
+    if (!reg.active) return;
     const callback = reg.onPending;
     if (!callback) return;
 

@@ -1,5 +1,5 @@
 import Log from "sap/base/Log";
-import { Platform, UnhandledReason } from "../library";
+import { Platform } from "../library";
 import { MODIFIER_KEYS } from "./constants";
 import { INTERNAL_TOKEN } from "./internal-token";
 import type { SkipInfo } from "./skip-reason";
@@ -23,8 +23,7 @@ export interface KeyEventInterceptor {
 
 /**
  * Event context produced by processHotkeys and forwarded to processSequences
- * and emitUnhandled through the dispatcher pipeline return value - no mutable
- * shared state.
+ * and emitUnhandled through the dispatcher pipeline return value.
  * @internal
  */
 export interface EventContext {
@@ -36,8 +35,7 @@ export interface EventContext {
 
 /**
  * Result of processHotkeys - carries both the consumed flag and the
- * event context that the later pipeline steps need. Eliminates the need
- * for temporal coupling via a shared mutable field.
+ * event context that the later pipeline steps need.
  * @internal
  */
 export interface HotkeyDispatchResult {
@@ -57,20 +55,14 @@ export interface HotkeyDispatchHandler {
   processHotkeys(event: KeyboardEvent): HotkeyDispatchResult;
   /** Sequence dispatch - same contract. Returns true if consumed (full match OR partial advance). */
   processSequences(event: KeyboardEvent, eventContext: EventContext): boolean;
-  /**
-   * Unhandled emission - called when the event was not consumed.
-   * `forcedReason` is set by the dispatcher when the event was blocked before reaching
-   * the matching pipeline (e.g., `Suspended`); `eventContext` is null in that case.
-   * When null, uses `eventContext` from processHotkeys to determine the most
-   * specific reason.
-   */
-  emitUnhandled(event: KeyboardEvent, forcedReason: UnhandledReason | null, eventContext: EventContext | null): void;
+  /** Drop pending sequence matches: a key the sequence step never sees breaks the sequence. */
+  resetSequences(): void;
+  /** Unhandled emission for a keydown blocked by suspension before matching ran. */
+  emitSuspended(event: KeyboardEvent): void;
+  /** Unhandled emission for a keydown nothing consumed, with the context from processHotkeys. */
+  emitUnhandled(event: KeyboardEvent, eventContext: EventContext): void;
 }
 
-/**
- * Internal guard implementation for suspend guards.
- * @internal
- */
 class DispatchGuard implements KeyboardDispatchGuard {
   private _active = true;
   private _owner: EventDispatcher | null;
@@ -108,7 +100,7 @@ class DispatchGuard implements KeyboardDispatchGuard {
  * Owns all DOM listeners (`window` capture for keydown/keyup, `window` bubble for blur),
  * provides a deterministic 7-step dispatch pipeline, and exposes an RAII-style suspend guard.
  *
- * Instantiated and owned by HotkeyManager - not a singleton.
+ * Instantiated and owned by HotkeyManager.
  *
  * @internal - not part of the public API.
  */
@@ -117,17 +109,13 @@ export default class EventDispatcher {
   private _keyStateTracker: KeyStateTracker;
   private _destroyed = false;
 
-  // Suspend guard state
   private readonly _guards: Set<DispatchGuard> = new Set();
 
   // Interceptor slot (e.g., HotkeyRecorder)
   private _interceptor: KeyEventInterceptor | null = null;
 
-  // Recorder tracking for lifecycle management
   private readonly _trackedRecorders: Set<HotkeyRecorder> = new Set();
 
-  // AltGr detection - tracks location of last Alt keydown
-  private _lastAltLocation = 0;
   private _platform: Platform;
 
   // One controller detaches all window listeners atomically in destroy().
@@ -143,11 +131,15 @@ export default class EventDispatcher {
     window.addEventListener("keydown", this._onKeyDown.bind(this), { capture: true, signal });
     window.addEventListener("keyup", this._onKeyUp.bind(this), { capture: true, signal });
     window.addEventListener("blur", this._onBlur.bind(this), { signal });
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+        if (document.visibilityState === "hidden") this._keyStateTracker.processBlur();
+      },
+      { signal },
+    );
   }
 
-  /**
-   * Access the owned KeyStateTracker instance.
-   */
   get keyStateTracker(): KeyStateTracker {
     return this._keyStateTracker;
   }
@@ -179,9 +171,6 @@ export default class EventDispatcher {
     return guard;
   }
 
-  /**
-   * Whether dispatch is currently suspended (any guard active).
-   */
   isDispatchSuspended(): boolean {
     return this._guards.size > 0;
   }
@@ -220,13 +209,15 @@ export default class EventDispatcher {
     }
   }
 
+  /** Whether `interceptor` currently receives keydowns. */
+  isInterceptor(interceptor: KeyEventInterceptor): boolean {
+    return this._interceptor === interceptor;
+  }
+
   // ──────────────────────────────────────────────
   // Recorder tracking
   // ──────────────────────────────────────────────
 
-  /**
-   * Track a recorder for lifecycle management.
-   */
   trackRecorder(recorder: HotkeyRecorder): void {
     this._trackedRecorders.add(recorder);
   }
@@ -250,7 +241,6 @@ export default class EventDispatcher {
     if (this._destroyed) return;
     this._destroyed = true;
 
-    // Remove all DOM listeners first
     this._listenerAbort.abort();
 
     for (const guard of this._guards) {
@@ -285,11 +275,15 @@ export default class EventDispatcher {
     // kill the pipeline.
     if (this._interceptor) {
       try {
-        if (this._interceptor.onKeyDown(event)) return;
+        if (this._interceptor.onKeyDown(event)) {
+          this._handler.resetSequences();
+          return;
+        }
       } catch (error) {
         Log.error("Interceptor onKeyDown threw", error instanceof Error ? error : String(error), LOG_COMPONENT);
         event.preventDefault();
         // Do NOT stopImmediatePropagation - let analytics/a11y listeners still observe the event
+        this._handler.resetSequences();
         return;
       }
     }
@@ -299,19 +293,26 @@ export default class EventDispatcher {
 
     // Step 4: Suspend guard check
     if (this._guards.size > 0) {
-      this._handler.emitUnhandled(event, UnhandledReason.Suspended, null);
+      this._handler.resetSequences();
+      this._handler.emitSuspended(event);
       return;
     }
 
     // Step 5: Hotkey dispatch
     const hotkeyResult = this._handler.processHotkeys(event);
 
+    // A guard taken by a step-5 callback already blocks this keydown's sequence step.
+    if (this._guards.size > 0) {
+      this._handler.resetSequences();
+      return;
+    }
+
     // Step 6: Sequence dispatch - reuses the popup state from step 5
     const sequenceConsumed = this._handler.processSequences(event, hotkeyResult.eventContext);
 
     // Step 7: Unhandled emission - passes eventContext from step 5 explicitly
     if (!hotkeyResult.consumed && !sequenceConsumed) {
-      this._handler.emitUnhandled(event, null, hotkeyResult.eventContext);
+      this._handler.emitUnhandled(event, hotkeyResult.eventContext);
     }
   }
 
@@ -321,7 +322,6 @@ export default class EventDispatcher {
 
   private _onBlur(): void {
     this._keyStateTracker.processBlur();
-    this._lastAltLocation = 0;
   }
 
   // ──────────────────────────────────────────────
@@ -329,30 +329,24 @@ export default class EventDispatcher {
   // ──────────────────────────────────────────────
 
   /**
-   * Pre-filter and AltGr state tracking.
-   *
    * Filters out IME composition, modifier-only presses, and AltGr character
-   * input. Also tracks `_lastAltLocation` for the AltGr heuristic.
-   *
-   * Returns true if the event should be silently dropped.
+   * input. Returns true if the event should be silently dropped.
    */
   private _preFilterEvent(event: KeyboardEvent): boolean {
-    // Track AltGr state
-    if (event.key === "Alt") {
-      this._lastAltLocation = event.location;
-    } else if (!event.altKey) {
-      this._lastAltLocation = 0;
-    }
-
     // IME composition - not a hotkey attempt
     if (event.isComposing || event.keyCode === 229) return true;
 
     // Pure modifier key press - not a hotkey attempt
     if (MODIFIER_KEYS.has(event.key)) return true;
 
-    // AltGr guard: on Windows, AltGr sends both ctrlKey+altKey.
+    // AltGr guard: on Windows, AltGr sends both ctrlKey+altKey while the right Alt key is held.
     if (this._platform === Platform.Windows && event.getModifierState("AltGraph")) return true;
-    if (this._platform === Platform.Windows && event.ctrlKey && event.altKey && this._lastAltLocation === 2)
+    if (
+      this._platform === Platform.Windows &&
+      event.ctrlKey &&
+      event.altKey &&
+      this._keyStateTracker.isCodeHeld("AltRight")
+    )
       return true;
 
     return false;

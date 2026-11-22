@@ -16,7 +16,7 @@ export interface SkipInfo {
  * are skipped, the most informative reason is reported.
  *
  * Only reasons that flow through {@link recordSkip} are listed here.
- * `Suspended` is emitted directly via `_emitUnhandled` and bypasses this table.
+ * `Suspended` is emitted directly via `_emitSuspended` and bypasses this table.
  */
 const SKIP_PRIORITY: ReadonlyMap<UnhandledReason, number> = new Map([
   [UnhandledReason.NoMatch, 0],

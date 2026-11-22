@@ -2,7 +2,14 @@ import Log from "sap/base/Log";
 import type Router from "sap/ui/core/routing/Router";
 import type { Router$BeforeRouteMatchedEvent } from "sap/ui/core/routing/Router";
 import type HotkeyManager from "./HotkeyManager";
-import type { Hotkey, HotkeyCallback, HotkeyOptions, HotkeyRegistrationInfo, HotkeyRegistrationHandle } from "./types";
+import type {
+  Hotkey,
+  HotkeyCallback,
+  HotkeyOptions,
+  HotkeyRegistrationInfo,
+  HotkeyRegistrationHandle,
+  ScopeHandle,
+} from "./types";
 
 /**
  * Groups hotkey and sequence registrations for collective lifecycle management.
@@ -40,6 +47,7 @@ export default class RegistrationGroup {
   private _destroyed = false;
   private _onDispose: (() => void) | null;
   private _routerCleanup: (() => void) | null = null;
+  private _routeScope: ScopeHandle | null = null;
 
   constructor(manager: HotkeyManager, onDispose?: () => void) {
     this._manager = manager;
@@ -69,11 +77,12 @@ export default class RegistrationGroup {
   /**
    * Enable automatic scope management via a UI5 Router.
    *
-   * Attaches a `beforeRouteMatched` listener that resets the scope stack
-   * and pushes the matched route name as the active scope, plus a `bypassed`
-   * listener that resets to the global scope so an unmatched hash does not
-   * inherit the previous route's scope. Both listeners are automatically
-   * detached when `destroyAll()` is called.
+   * Attaches a `beforeRouteMatched` listener that keeps one scope stack entry
+   * named after the matched route, plus a `bypassed` listener that removes it
+   * so an unmatched hash does not inherit the previous route's scope. A route
+   * change replaces that entry in place: scopes pushed above it, such as an
+   * open dialog's, stay on top until their owner releases them. Both listeners
+   * are automatically detached when `destroyAll()` is called.
    *
    * Calling this again silently replaces the previous router.
    *
@@ -89,15 +98,15 @@ export default class RegistrationGroup {
     }
 
     const handler = (event: Router$BeforeRouteMatchedEvent) => {
-      this._manager.resetToGlobalScope();
       const routeName = event.getParameter("name");
-      if (typeof routeName === "string" && routeName) {
-        this._manager.pushScope(routeName);
-      }
+      this._routeScope = this._manager._replaceScope(
+        this._routeScope,
+        typeof routeName === "string" && routeName ? routeName : null,
+      );
     };
 
     const bypassedHandler = () => {
-      this._manager.resetToGlobalScope();
+      this._routeScope = this._manager._replaceScope(this._routeScope, null);
     };
 
     router.attachBeforeRouteMatched(handler, this);

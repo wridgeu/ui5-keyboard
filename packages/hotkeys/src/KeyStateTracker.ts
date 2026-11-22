@@ -8,13 +8,8 @@ const LOG_COMPONENT = "ui5.hotkeys.KeyStateTracker";
 /**
  * Tracks which keys are currently held down.
  *
- * Receives events from EventDispatcher via `processKeyDown`, `processKeyUp`,
- * and `processBlur` - does NOT own any DOM listeners.
- *
  * Includes a macOS fix for stuck keys when a modifier is released
  * (Cmd+Tab swallows the Tab keyup on macOS).
- *
- * Plain class - no UI5 lifecycle dependency.
  *
  * @public - exported for type usage. Obtain an instance via
  * `HotkeyManager.getKeyStateTracker()`.
@@ -60,6 +55,14 @@ export default class KeyStateTracker {
   }
 
   /**
+   * Whether a key with this `KeyboardEvent.code` is currently held.
+   * @internal Read by EventDispatcher's AltGr guard.
+   */
+  isCodeHeld(code: string): boolean {
+    return this._heldByCode.has(code);
+  }
+
+  /**
    * Set a callback that fires whenever the held keys change.
    *
    * Pass `null` to remove a previously registered callback.
@@ -76,13 +79,18 @@ export default class KeyStateTracker {
    * @internal
    */
   processKeyDown(event: KeyboardEvent): void {
+    const released = this._releaseStaleModifiers(event);
+    if (this._recordKeyDown(event) || released) this._notifyChange();
+  }
+
+  private _recordKeyDown(event: KeyboardEvent): boolean {
     const key = event.key;
     const code = event.code;
     let changed = false;
 
     if (code) {
       const previousKey = this._heldByCode.get(code);
-      if (previousKey === key) return;
+      if (previousKey === key) return false;
 
       if (previousKey !== undefined) {
         changed = this._decrementHeldKey(previousKey) || changed;
@@ -91,33 +99,31 @@ export default class KeyStateTracker {
       this._heldByCode.set(code, key);
       changed = this._incrementHeldKey(key) || changed;
     } else {
-      if (this._heldKeyCounts.has(key)) return;
+      if (this._heldKeyCounts.has(key)) return false;
       changed = this._incrementHeldKey(key);
     }
-
-    if (changed) {
-      this._notifyChange();
-    }
+    return changed;
   }
 
   /**
-   * Process a keyup event - decrements ref-count, includes macOS stuck-key fix.
+   * Process a keyup event - decrements ref-count.
    * Called by EventDispatcher.
    * @internal
    */
   processKeyUp(event: KeyboardEvent): void {
+    const released = this._releaseStaleModifiers(event);
+    if (this._recordKeyUp(event) || released) this._notifyChange();
+  }
+
+  private _recordKeyUp(event: KeyboardEvent): boolean {
     const key = event.key;
 
     // macOS stuck-key fix: When a modifier is released,
     // clear all non-modifier keys. On macOS, Cmd+Tab swallows the Tab keyup,
     // leaving it permanently "stuck".
     if (this._platform === Platform.Mac && MODIFIER_KEYS.has(key)) {
-      let changed = this._clearNonModifierKeys();
-      changed = this._releaseKeyEventIdentity(event) || changed;
-      if (changed) {
-        this._notifyChange();
-      }
-      return;
+      const changed = this._clearNonModifierKeys();
+      return this._releaseKeyEventIdentity(event) || changed;
     }
 
     let changed = this._releaseKeyEventIdentity(event);
@@ -128,10 +134,7 @@ export default class KeyStateTracker {
       const alternateCaseKey = key === key.toLowerCase() ? key.toUpperCase() : key.toLowerCase();
       changed = this._decrementHeldKey(alternateCaseKey);
     }
-
-    if (changed) {
-      this._notifyChange();
-    }
+    return changed;
   }
 
   /**
@@ -158,6 +161,29 @@ export default class KeyStateTracker {
     this._heldKeyCounts.clear();
     this._heldByCode.clear();
     this._changeCallback = null;
+  }
+
+  /**
+   * Drops held modifier codes a trusted event reports as up, recovering from a keyup
+   * lost to an OS shortcut or focus change. The event's own code is left to the
+   * regular press/release path.
+   */
+  private _releaseStaleModifiers(event: KeyboardEvent): boolean {
+    if (!event.isTrusted) return false;
+    const down: Record<string, boolean> = {
+      Alt: event.altKey || event.getModifierState("AltGraph"),
+      Control: event.ctrlKey,
+      Shift: event.shiftKey,
+      Meta: event.metaKey,
+    };
+    let changed = false;
+    for (const [code, key] of this._heldByCode) {
+      const modifier = /^(Alt|Control|Shift|Meta)(?:Left|Right)$/.exec(code)?.[1];
+      if (!modifier || code === event.code || down[modifier]) continue;
+      this._heldByCode.delete(code);
+      changed = this._decrementHeldKey(key) || changed;
+    }
+    return changed;
   }
 
   private _releaseKeyEventIdentity(event: KeyboardEvent): boolean {

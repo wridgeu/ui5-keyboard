@@ -8,7 +8,7 @@
  */
 import type Router from "sap/ui/core/routing/Router";
 import { GLOBAL_SCOPE } from "ui5/hotkeys/library";
-import { createHotkeyManager, destroyHotkeyManager } from "./test-helpers";
+import { createHotkeyManager, destroyHotkeyManager, fireKey } from "./test-helpers";
 
 interface MockRouter {
   attachBeforeRouteMatched: (handler: (...args: any[]) => void, listener: object) => void;
@@ -83,7 +83,7 @@ QUnit.test("Route change pushes scope", (assert) => {
   assert.strictEqual(manager.getActiveScope(), "main", "Active scope is 'main' after route change");
 });
 
-QUnit.test("Route change resets previous scopes", (assert) => {
+QUnit.test("Route change replaces the previous route's scope", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const router = createMockRouter();
@@ -95,13 +95,13 @@ QUnit.test("Route change resets previous scopes", (assert) => {
   router.fireRouteMatched("detail");
   assert.strictEqual(manager.getActiveScope(), "detail", "Active scope is 'detail' after second route change");
 
-  // With reset semantics the stack is [global, detail]; popping "detail" yields
-  // global. If the handler merely stacked scopes, "main" would remain underneath.
+  // The stack is [global, detail]; popping "detail" yields global. If the
+  // handler merely stacked scopes, "main" would remain underneath.
   manager.popScope("detail");
   assert.strictEqual(
     manager.getActiveScope(),
     GLOBAL_SCOPE,
-    "previous 'main' scope was reset, not stacked under 'detail'",
+    "previous 'main' scope was replaced, not stacked under 'detail'",
   );
 });
 
@@ -138,7 +138,7 @@ QUnit.test("Calling enableRouterIntegration twice replaces the previous router",
   assert.strictEqual(manager.getActiveScope(), "newRoute", "First router is detached");
 });
 
-QUnit.test("Route with empty/undefined name only resets scope", (assert) => {
+QUnit.test("Route with empty/undefined name removes the route scope", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const router = createMockRouter();
@@ -164,6 +164,53 @@ QUnit.test("destroyAll detaches router integration", (assert) => {
   group.destroyAll();
   router.fireRouteMatched("detail");
   assert.strictEqual(manager.getActiveScope(), "main", "Scope unchanged after group destroyed");
+});
+
+QUnit.test("A dialog scope pushed before a route change stays active until it is popped", (assert) => {
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
+  const router = createMockRouter();
+  group.enableRouterIntegration(router as unknown as Router);
+
+  router.fireRouteMatched("main");
+  manager.pushScope("confirmDialog");
+  router.fireRouteMatched("detail");
+
+  assert.deepEqual(
+    manager.getScopeStack(),
+    [GLOBAL_SCOPE, "detail", "confirmDialog"],
+    "The route entry is replaced in place, below the dialog",
+  );
+
+  manager.popScope("confirmDialog");
+  assert.strictEqual(manager.getActiveScope(), "detail", "Popping the dialog scope returns to the new route");
+});
+
+QUnit.test("A dialog's scoped hotkey keeps firing across a route change until its handle is released", (assert) => {
+  const manager = createHotkeyManager();
+  const group = manager.createGroup();
+  const router = createMockRouter();
+  group.enableRouterIntegration(router as unknown as Router);
+  let calls = 0;
+  manager.register(
+    "Escape",
+    () => {
+      calls++;
+    },
+    { scope: "confirmDialog" },
+  );
+
+  router.fireRouteMatched("main");
+  const dialogScope = manager.pushScope("confirmDialog");
+  router.fireRouteMatched("detail");
+
+  fireKey("Escape");
+  assert.strictEqual(calls, 1, "Fires after the route change");
+
+  dialogScope.release();
+  fireKey("Escape");
+  assert.strictEqual(calls, 1, "Stops after release");
+  assert.strictEqual(manager.getActiveScope(), "detail", "The route scope is active again");
 });
 
 QUnit.test("Bypassed route resets to global scope", (assert) => {

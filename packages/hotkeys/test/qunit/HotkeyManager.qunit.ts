@@ -1,7 +1,15 @@
 import { ConflictBehavior, GLOBAL_SCOPE, Platform } from "ui5/hotkeys/library";
 import type { UnhandledContext } from "ui5/hotkeys/types";
 import type Log from "sap/base/Log";
-import { createHotkeyManager, destroyHotkeyManager, fireKey, fireKeyOn } from "./test-helpers";
+import type KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
+import {
+  createHotkeyManager,
+  destroyHotkeyManager,
+  fireKey,
+  fireKeyOn,
+  fireKeyUp,
+  trustedKeyEvent,
+} from "./test-helpers";
 import { stubPopupOpen } from "./popup-helpers";
 
 const fixture = document.getElementById("qunit-fixture")!;
@@ -275,14 +283,74 @@ QUnit.test("Scoped handler takes priority over global for same key", (assert) =>
   assert.notOk(globalCalled, "Global Escape suppressed by scoped match");
 });
 
-QUnit.test("popScope throws on mismatch", (assert) => {
+QUnit.test("popScope removes a scope that is not on top", (assert) => {
   const manager = createHotkeyManager();
   manager.pushScope("editor");
+  manager.pushScope("dialog");
 
-  assert.throws(() => manager.popScope("dialog"), /Cannot pop scope/, "Throws on scope mismatch");
-
-  // Cleanup
   manager.popScope("editor");
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "dialog"], "Only the editor entry is removed");
+});
+
+QUnit.test("popScope removes the topmost entry of a scope pushed twice", (assert) => {
+  const manager = createHotkeyManager();
+  const lower = manager.pushScope("editor");
+  manager.pushScope("dialog");
+  const upper = manager.pushScope("editor");
+
+  manager.popScope("editor");
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "editor", "dialog"], "The upper editor entry is removed");
+  assert.ok(lower.isActive, "The lower entry's handle stays active");
+  assert.notOk(upper.isActive, "The upper entry's handle is released");
+});
+
+QUnit.test("popScope of a scope not on the stack is a no-op that warns", (assert) => {
+  const manager = createHotkeyManager();
+  manager.pushScope("editor");
+  const LogModule = sap.ui.require("sap/base/Log") as typeof Log;
+  const warnSpy = sandbox.spy(LogModule, "warning");
+
+  manager.popScope("dialog");
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "editor"], "Stack unchanged");
+  assert.ok(
+    warnSpy.getCalls().some((c) => String(c.args[0]).includes('"dialog"')),
+    "Warns about the missing scope",
+  );
+});
+
+QUnit.test("pushScope handle: release removes its own entry wherever it sits", (assert) => {
+  const manager = createHotkeyManager();
+  const editor = manager.pushScope("editor");
+  manager.pushScope("dialog");
+  assert.strictEqual(editor.id, "editor", "Handle carries the normalized id");
+  assert.ok(editor.isActive, "Active while on the stack");
+
+  editor.release();
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "dialog"], "Only the released entry is removed");
+  assert.notOk(editor.isActive, "Inactive after release");
+
+  editor.release();
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "dialog"], "Second release is a no-op");
+});
+
+QUnit.test("pushScope handle: release after a reset leaves a newer same-id entry alone", (assert) => {
+  const manager = createHotkeyManager();
+  const stale = manager.pushScope("editor");
+  manager.resetToGlobalScope();
+  assert.notOk(stale.isActive, "Reset releases the entry");
+
+  manager.pushScope("editor");
+  stale.release();
+  assert.deepEqual(manager.getScopeStack(), [GLOBAL_SCOPE, "editor"], "The newer entry stays");
+});
+
+QUnit.test("pushScope handle: release after manager destroy does not throw", (assert) => {
+  const manager = createHotkeyManager();
+  const handle = manager.pushScope("editor");
+  manager.destroy();
+
+  handle.release();
+  assert.notOk(handle.isActive, "Inactive after destroy");
 });
 
 QUnit.test("popScope throws when only global scope remains", (assert) => {
@@ -1341,6 +1409,7 @@ QUnit.test("AltGr: right-Alt does NOT fire Ctrl+Alt hotkey on Windows", (assert)
     altKey: true,
   });
   Object.defineProperty(altEvent, "location", { value: 2 }); // Right Alt
+  Object.defineProperty(altEvent, "code", { value: "AltRight" });
   document.dispatchEvent(altEvent);
 
   // Now fire 'e' with both ctrlKey and altKey (AltGr+E)
@@ -1396,6 +1465,7 @@ QUnit.test("AltGr: left-Alt DOES fire Ctrl+Alt hotkey", (assert) => {
     altKey: true,
   });
   Object.defineProperty(altEvent, "location", { value: 1 }); // Left Alt
+  Object.defineProperty(altEvent, "code", { value: "AltLeft" });
   document.dispatchEvent(altEvent);
 
   fireKey("e", { ctrlKey: true, altKey: true });
@@ -1418,6 +1488,7 @@ QUnit.test("AltGr: guard only active on Windows", (assert) => {
     altKey: true,
   });
   Object.defineProperty(altEvent, "location", { value: 2 });
+  Object.defineProperty(altEvent, "code", { value: "AltRight" });
   document.dispatchEvent(altEvent);
 
   fireKey("e", { ctrlKey: true, altKey: true });
@@ -1432,12 +1503,11 @@ QUnit.test("AltGr: normal Ctrl+Alt works without prior Alt", (assert) => {
     called = true;
   });
 
-  // No prior Alt keydown - _lastAltLocation stays 0
   fireKey("e", { ctrlKey: true, altKey: true });
   assert.ok(called, "Ctrl+Alt+E fires without prior Alt (location=0)");
 });
 
-QUnit.test("AltGr: stale right-Alt state is cleared after non-Alt keydown", (assert) => {
+QUnit.test("AltGr: releasing right Alt ends the AltGr state", (assert) => {
   const manager = createHotkeyManager(Platform.Windows);
   let called = false;
 
@@ -1445,20 +1515,54 @@ QUnit.test("AltGr: stale right-Alt state is cleared after non-Alt keydown", (ass
     called = true;
   });
 
-  const altEvent = new KeyboardEvent("keydown", {
-    key: "Alt",
-    bubbles: true,
-    cancelable: true,
-    altKey: true,
-  });
-  Object.defineProperty(altEvent, "location", { value: 2 });
-  document.dispatchEvent(altEvent);
-
-  // Alt is no longer held on this event, so stale AltGr state should be reset.
-  fireKey("x");
+  fireKey("Alt", { altKey: true, code: "AltRight", location: 2 });
+  fireKeyUp("Alt", { code: "AltRight", location: 2 });
   fireKey("e", { ctrlKey: true, altKey: true });
 
-  assert.ok(called, "Ctrl+Alt hotkey fires after stale AltGr state reset");
+  assert.ok(called, "Ctrl+Alt hotkey fires once right Alt is released");
+});
+
+QUnit.test("AltGr: a lost right-Alt keyup does not swallow a later Ctrl+Alt hotkey", (assert) => {
+  const manager = createHotkeyManager(Platform.Windows);
+  let called = false;
+
+  manager.register("Ctrl+Alt+E", () => {
+    called = true;
+  });
+
+  // Right Alt goes down, its keyup is lost, then a real keydown reports Alt as up.
+  fireKey("Alt", { altKey: true, code: "AltRight", location: 2 });
+  (manager.getKeyStateTracker() as KeyStateTracker).processKeyDown(trustedKeyEvent("a", { code: "KeyA" }));
+  fireKey("e", { ctrlKey: true, altKey: true });
+
+  assert.ok(called, "Ctrl+Alt+E fires once the stale right Alt is reconciled away");
+});
+
+QUnit.test("AltGr: a Ctrl+LeftAlt combo recorded after AltGr typing fires", (assert) => {
+  const manager = createHotkeyManager(Platform.Windows);
+  let calls = 0;
+
+  // Type a character with AltGr, then release it.
+  fireKey("Alt", { altKey: true, code: "AltRight", location: 2 });
+  fireKey("q", { ctrlKey: true, altKey: true, code: "KeyQ" });
+  fireKeyUp("q", { ctrlKey: true, altKey: true, code: "KeyQ" });
+  fireKeyUp("Alt", { code: "AltRight", location: 2 });
+
+  const recorder = manager.createRecorder({
+    onRecord: (hotkey) => {
+      manager.register(hotkey, () => {
+        calls++;
+      });
+    },
+  });
+  recorder.start();
+  fireKey("Control", { ctrlKey: true, code: "ControlLeft" });
+  fireKey("Alt", { ctrlKey: true, altKey: true, code: "AltLeft", location: 1 });
+  fireKey("k", { ctrlKey: true, altKey: true, code: "KeyK" });
+  assert.notOk(recorder.isRecording, "The recorder captured the combo");
+
+  fireKey("k", { ctrlKey: true, altKey: true, code: "KeyK" });
+  assert.strictEqual(calls, 1, "The recorded Ctrl+Alt+K fires with left Alt held");
 });
 
 // ──────────────────────────────────────────────
