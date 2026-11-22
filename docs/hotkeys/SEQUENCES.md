@@ -46,7 +46,7 @@ manager.register(
 2. If it matches the first key, start a timer (default 1000ms) and add to active matches. Fire the pending callback to inform the UI.
 3. If the next key arrives within the timeout and matches, advance the pointer. Fire the pending callback again.
 4. If the full sequence completes, clear all active matches, then call `preventDefault()` and `stopPropagation()` as the registration's flags allow and fire the callback.
-5. If the timeout expires or a non-matching key is pressed, the active match is dropped.
+5. If the timeout expires or a non-matching key is pressed, the active match is dropped. Pending matches are also dropped when a key is swallowed by a suspend guard or a recording `HotkeyRecorder`, or when a hotkey callback takes a suspend guard on the same keydown. Modifier-only presses, IME composition and Windows AltGr input are filtered out before this step and leave pending matches intact.
 
 ### Scope Integration
 

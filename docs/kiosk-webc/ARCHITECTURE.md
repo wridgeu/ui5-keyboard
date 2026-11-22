@@ -13,13 +13,13 @@ CustomLayout.ts           <kiosk-keyboard-custom-layout> element carrying one la
                           locales, keycap language, role, compact counterpart, suppressed
                           facets, middleware and variants; renders nothing
 Assets.ts                 Registers theme parameter bundles and i18n loaders
-bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard (all built-in layouts);
+bundle.esm.ts             ESM entry point: imports Assets + KioskKeyboard + CustomLayout (all built-in layouts);
                           re-exports component classes, enums, and public types. Built-in
                           middleware (kana/hangul) is bundled and auto-activates by layout
                           name; `kiosk-keyboard-webc/middleware/*` only exposes the factories
                           as data for a custom layout's `middleware`.
-types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, FKeyMode,
-                          LayoutRole, LayoutFacet, SpecialKeyValue, KeyWidth, KeyType,
+types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, KeyboardType,
+                          MobileKeyboard, FKeyMode, LayoutChangeReason, LayoutRole, LayoutFacet, SpecialKeyValue, KeyWidth, KeyType,
                           I18nResolver, TargetResolver, event detail types
 jsx.d.ts                  TypeScript JSX augmentation for <ui5-icon>, <ui5-button>, <ui5-popover>
 core/
@@ -42,13 +42,13 @@ core/
   middleware-registry.ts  Sealed map of the built-in middleware factories; resolves a layout's factory, a custom layout's `middleware` (or its suppression) taking precedence
   composition-utils.ts    Shared composition utilities (preedit text, CompositionEvent dispatch)
   auto-repeat.ts          AutoRepeater press-and-hold scheduler + BACKSPACE_AUTO_REPEAT timing curve (accelerating cadence)
-  backspace-repeat-controller.ts  BackspaceRepeatController: owns press-and-hold Backspace pointer wiring, repeat timer, trailing-click suppression
+  backspace-repeat-controller.ts  BackspaceRepeatController: owns press-and-hold Backspace pointer wiring, repeat timer, reports on release whether the hold repeated
   announcement-queue.ts   AnnouncementQueue: owns the ARIA live-region text, keeping a fixed gap between writes so a burst is not collapsed
   auto-show-controller.ts AutoShowController: focusin/focusout-driven auto open/close with multi-instance isolation
   native-inputmode-suppression.ts  NativeInputModeSuppression: ref-counted inputmode="none" on the target, shared across instances
   physical-key-highlight-controller.ts  PhysicalKeyHighlightController: lights up the matching virtual key on physical keydown and mirrors Shift/CapsLock
   responsive-sizing-controller.ts  ResponsiveSizingController: ResizeObserver-driven height-responsive host cq-tier attribute (short/tiny)
-  auto-compact-controller.ts  AutoCompactController: ResizeObserver-driven width tier that swaps a layout for its compact counterpart past --kiosk-keyboard-auto-compact-threshold
+  auto-compact-controller.ts  AutoCompactController: ResizeObserver sensor that reports the width verdict against --kiosk-keyboard-auto-compact-threshold (null once autoCompact is off); LayoutState owns the verdict and the swap
   key-action-meta.ts      Canonical special-key metadata (shared icon names)
   layout-constraint.ts    Numpad/Numeric constraint -> layout name + {layout:base} reconciliation
   latin-variants.ts       Built-in Latin-diacritics variant table + ß/ẞ shift mapping; resolveVariantTable layers built-in -> defaultVariants -> custom layout per layout, each merged per base letter, null for the layouts whose layout-meta entry declares `variants: null`
@@ -179,13 +179,15 @@ Each slotted custom layout declares a layout when it carries `rows`, and overlay
 
 ### Event Handling
 
-The component uses three event strategies:
+The component uses four event strategies:
 
-1. **JSX event handlers**: `onClick`, `onMouseDown`, `onKeyDown` on the keyboard root, using event delegation via `closest("[data-key]")` to resolve the pressed key.
+1. **JSX event handlers**: `onClick`, `onMouseDown`, `onKeyDown`, `onKeyUp`, `onFocusOut` on the keyboard root, using event delegation via `closest("[data-key]")` to resolve the pressed key.
 
 2. **Native touch listeners**: `touchstart` and `touchend` attached directly on the `shadowRoot` in `onEnterDOM()`. Touch events are handled natively (not via JSX) because `preventDefault()` on `touchstart` is needed to prevent focus steal, and the `touchend` handler uses `elementFromPoint()` to resolve the key under the finger at lift-off (handling finger drift).
 
-3. **Document-level listeners**: `focusin` and `focusout` in capture phase for auto-show behavior.
+3. **Press tracking**: a shadow-root `pointerdown` records the press; document `pointerup`/`pointercancel` end it and decide whether its trailing click is swallowed.
+
+4. **Document-level listeners**: `focusin` and `focusout` in capture phase for auto-show behavior, `keydown` (capture) for Escape, and `pointerup`/`pointercancel` for the press. The host-scoped listeners are armed on the connected session's `AbortSignal` in `onEnterDOM` and aborted in `onExitDOM`.
 
 ### Key Press Flow
 
@@ -219,7 +221,7 @@ Holding the Backspace key deletes continuously, the way phone keyboards do. The 
 
 The repeater fires the first delete after an initial hold delay, then accelerates the cadence toward a floor. Each tick runs the control's `_performBackspaceRepeatDelete` (passed in as the controller's tick callback), which mirrors the `{backspace}` branch of `_onKeyClick`: it fires the cancelable `key-press`, runs composition middleware (via the shared `_ensureMiddleware`), then deletes one grapheme. It stops on its own once `handleBackspace()` reports nothing was removed (empty input / cursor at start / read-only target).
 
-A held key would otherwise also fire the trailing release `click` (real for mouse, synthesized by `_boundTouchEnd` for touch), deleting one extra character on lift-off. The controller sets a one-shot suppression flag once a repeat occurs and swallows that one click via `consumeClick` (called from `_onKeyClick`). The flag resets on the next Backspace `pointerdown` and clears on pointer-leave, so a fresh tap, or a later keyboard- or programmatically-activated Backspace click, deletes normally.
+A held key would otherwise also fire the trailing release `click` (real for mouse, synthesized by `_boundTouchEnd` for touch), deleting one extra character on lift-off. The host owns the press from `pointerdown` to its `pointerup`/`pointercancel`. On that release only, `_onPressRelease` asks the controller's `release()` whether the hold repeated, and if it did it arms `_releaseSwallow` for that key. The next key click spends it, and it is cleared at the end of the release's task, so keyboard and later programmatic activations never consult it. A press abandoned by a layout switch swallows its click on any key.
 
 The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard` package rather than shared (the two packages deliberately do not share code). `core/auto-repeat.ts` is a checked pair in `tools/check-twin-drift.mjs`, so the two copies cannot drift apart unnoticed.
 
@@ -261,6 +263,8 @@ The resolver is wrapped in try/catch for crash safety. If it returns `null`, the
 
 The attribute sits on the host, not on the shadow root's `.kiosk-keyboard` div, because IDREFs do not resolve across a shadow boundary. For the same reason the id published is not always the target's own: since the resolution chain above reaches inputs nested up to three shadow levels deep, `_ariaControlsId()` walks back up through shadow hosts to the nearest ancestor that shares the host's tree scope - normally the component named in `controls`. A target outside that scope, or one with no `id`, leaves the attribute off rather than writing a dangling IDREF.
 
+Every target change except disconnect teardown goes through `_retarget(el, source)`: a real switch commits the composition, resets shift, drops a user `{layout:*}` pick (`clearUserOverride("user")`) and fires `active-control-change`; a same-input re-set is a caret reposition that keeps all three; every call re-points the inputmode claim and physical-key listeners via `_syncTargetBindings()`.
+
 Resolving a target is not the same as setting one. `_resolveTarget()` looks up a single-entry `controls` list on every keystroke and returns the input without storing it, so a keyboard that types through `controls` alone - never focused, never opened while docked - has no active target and therefore no `aria-controls`. The UI5 twin does auto-target here: `ControlsDelegationController.sync()` runs from `onAfterRendering` and from `setControls()`, and adopts a single resolved control through `setActiveTarget()` - so a kiosk keyboard publishes `aria-controls` from `controls` alone, at render time, without focus or docking.
 
 ### Text Editing
@@ -277,6 +281,7 @@ When the keyboard opens, it sets `inputmode="none"` on the target input to preve
 
 - Each `show()` increments the ref count for the target input
 - Each `close()` / `onExitDOM()` decrements it
+- While open, a target switch (and a `controls` or resolver change) releases the claim on the old input and takes one on the new
 - The original `inputmode` is restored only when the last claimant releases
 
 A keyboard holds at most one claim at a time: a repeat suppression by the same instance on the element it already holds is idempotent, and suppressing a different element releases the previous claim first.
@@ -348,18 +353,18 @@ source        keyboardType    Resolved layout
 "external"    "Full"          current layout, else the base, else the layout attribute, else the locale layout
 ```
 
-`LayoutState.seed()` runs once on connect: the `layout` attribute becomes the requested layout, and the base layout - what `{layout:base}` and `reset()` return to - is that attribute unless it names a secondary layout, in which case the base falls through to the locale layout so both still land on an alphabetic surface. A `keyboardType` change drops a user `{layout:*}` pick (`clearUserOverride()`), so lifting a Numpad/Numeric constraint lands on the base layout rather than on the pick.
+`LayoutState.seed()` runs once on connect: the `layout` attribute becomes the requested layout, and the base layout - what `{layout:base}` and `reset()` return to - is that attribute unless it names a secondary layout, in which case the base falls through to the locale layout so both still land on an alphabetic surface. A real target switch (reason `"user"`) and a `keyboardType` change (reason `"keyboardType"`) both drop a user `{layout:*}` pick via `clearUserOverride(reason)`, so lifting a Numpad/Numeric constraint lands on the base layout rather than on the pick. A primary pick already became the base, so it stays; a secondary page or a pick that overrode a constraint does not.
 
 ### Layout Composition
 
 Composite layouts are composed at consumption time using the shared row modules and supplied to a single element through the `customLayouts` slot:
 
 ```ts
-import { KioskKeyboard } from "kiosk-keyboard-webc/bundle";
+import { KioskKeyboard, type CustomLayout } from "kiosk-keyboard-webc/bundle";
 import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
-const el = document.createElement("kiosk-keyboard");
-const custom = document.createElement("kiosk-keyboard-custom-layout");
+const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+const custom = document.createElement("kiosk-keyboard-custom-layout") as CustomLayout;
 custom.slot = "customLayouts";
 custom.name = "my-qwerty-fk";
 custom.rows = KioskKeyboard.composeLayout([fkeyRow], "qwerty");
@@ -392,9 +397,9 @@ When `autoType` is enabled and the keyboard auto-shows for a focused input, `det
 3. HTML `type`: `"number"`, `"tel"` → `"Numpad"`
 4. Default: `"Full"`
 
-A `_keyboardTypeSource` tag (`"unset" | "explicit" | "reset" | "auto:VALUE"`) tracks who last set `keyboardType`. Explicit values disable auto-detection; auto-detected values encode which type was detected so the `onInvalidation` handler can distinguish consumer-driven changes from auto-detection round-trips; `"reset"` marks a `resetKeyboardType()` call, which `onInvalidation` folds back to `"unset"` and reports as not auto-detected, unless the `keyboard-type-change` handler claimed the property again. The framework suppresses invalidation until the first render, so a value authored as an attribute or set before connection never reaches `onInvalidation`; `onBeforeRendering` normalises those once on the first render (invalid enum values are clamped to the default, a non-`Full` type is marked explicit).
+A `_keyboardTypeSource` tag (`"unset" | "explicit" | "reset" | "auto:VALUE"`) tracks who last set `keyboardType`. Explicit values disable auto-detection; auto-detected values encode which type was detected so the `onInvalidation` handler can distinguish consumer-driven changes from auto-detection round-trips; `"reset"` marks a `resetKeyboardType()` call, which `onInvalidation` folds back to `"unset"` and reports as not auto-detected, unless the `keyboard-type-change` handler claimed the property again. The framework suppresses invalidation until the first render, so a value authored as an attribute or set before connection never reaches `onInvalidation`; the `keyboardType` setter handles them at write time instead: an invalid value logs a warning and falls back to `Full` without claiming the property, and any other value not tagged `auto:`/`reset` is marked explicit.
 
-Detection is also skipped for a refocus of the already-active target while the keyboard is open: that element carries the `inputmode="none"` suppression written on its previous focus, which masks an authored `numeric`/`decimal`/`tel`, so it keeps the type it already has. While the keyboard is closed nothing carries the mask, so a target set before the first focus is still read from its authored markup.
+Detection reads `inputmode` through `NativeInputModeSuppression.authoredInputMode()`, which returns the value the page authored while a keyboard's `inputmode="none"` claim stands on the element. A refocus of the already-active target is therefore detected from its authored markup like any other focus.
 
 ## Docked Mode
 
@@ -419,7 +424,7 @@ Auto-show uses document-level `focusin`/`focusout` listeners in capture phase.
 
 A static `_participants` set on `AutoShowController` (`core/auto-show-controller.ts`) tracks the controllers of all live keyboards; each joins via `register()` and leaves via `unregister()`. Before auto-show opens for a focused input, `_isTargetOfOther()` checks whether any other participant already claims that input, gated by `_isAutoShowParticipationActive()`, which excludes instances that are disabled, disconnected, rendering no client rects, or docked-and-closed, so a hidden or inactive keyboard never blocks a live one. If so, auto-show bails out. A claim is either the peer's live active target or any id on its comma-separated `controls` list - every id on the list, since the active target is only set once one of them takes focus.
 
-`KioskKeyboard._instances` is a separate static set, and serves only as the guard for queued i18n re-renders.
+`KioskKeyboard._instances` is a separate static set: it guards queued i18n re-renders, tells the shared `AnnouncementQueue` whether any keyboard is still connected, and tears that queue down when the last instance leaves.
 
 ### Focus-In Logic
 
@@ -432,7 +437,7 @@ focusin event (capture)
   +-- Guard: controls filter (with UI5 prefixed ID support)
   +-- Guard: _isTargetOfOther() → bail
   +-- Auto-detect keyboard type (if autoType)
-  +-- Set target, show()
+  +-- _retarget(input, "autoShow"), then show() if closed
 ```
 
 ### Focus-Out Logic
@@ -444,7 +449,7 @@ focusout event (capture)
   +-- Deferred via requestAnimationFrame:
   |     Check: did focus move to keyboard itself? → cancel close
   |     Check: did focus move to another valid input? → cancel close
-  |     Otherwise → close()
+  |     Otherwise → close(), and _retarget(null) when the target came from auto-show
 ```
 
 The deferred close via `requestAnimationFrame` handles the case where focus briefly leaves the input during a click on a keyboard key before the key's `mousedown` fires. A programmatic `show()` in that window cancels the pending close as well, so a keyboard opened in the same task as the focusout is not closed a frame later.
@@ -472,18 +477,20 @@ When a target input is set, keydown/keyup listeners on the input highlight the c
 - Physical keys are mapped to data-key values (e.g., `Backspace` → `{backspace}`, `Shift` → `{shift}`)
 - The `kiosk-key--highlight` CSS class is toggled on the matching key element
 - Listeners are cleaned up when the target changes or the component disconnects
+- Physical Shift and Caps Lock are mirrored into the shift state
+- The keydowns `FKeyController` synthesizes in `fKeyMode="Native"` are skipped (`isFKeyDispatch`): they carry no real modifier state, so they would otherwise turn an on-screen Caps Lock off and light the F-key. A keydown the page dispatches itself still mirrors.
 
 ## F-Key Handling
 
 F-keys use the `{fkey:name}` value format. Behavior depends on `fKeyMode`:
 
 - **Virtual** (default): Fires `key-press` event with fkey detail. Built-in actions for cursor movement keys (ArrowLeft/Right moves caret). With Shift active the navigation keys extend the selection instead: the focus end moves and the anchor is kept, the anchor being the browser's `selectionDirection` rather than stored state.
-- **Native**: Dispatches a real `KeyboardEvent("keydown")` on the target input. Built-in browser actions for F5 (reload) and F11 (fullscreen).
+- **Native**: Dispatches a real `KeyboardEvent("keydown")` on the target input. Unless a listener cancels that keydown, navigation keys then move the caret as in Virtual, and F5 (reload) and F11 (fullscreen) run their built-in action.
 - **None**: Fires `key-press` only; no keydown, no built-in action, no caret movement.
 
 In every mode `key-press` fires first, and `FKeyController.handle()` runs only when it was not cancelled.
 
-Unsupported F-key names trigger a warn-once console warning.
+In `Native` mode, an `{fkey:*}` name outside the dispatchable set logs a warn-once and is not dispatched.
 
 ## i18n
 
@@ -548,7 +555,7 @@ Responsiveness is split into two axes: width (CSS styling, plus an opt-in JS lay
 
 The `min()` capping pattern ensures that a consumer who sets a small value keeps it, while large values are reduced at narrow widths.
 
-**Width also has one JS behavior**: the opt-in `autoCompact` tier. `AutoCompactController` (`core/auto-compact-controller.ts`) observes the root's border-box inline size against `--kiosk-keyboard-auto-compact-threshold` (default `22rem`) and swaps the layout for its compact counterpart through `LayoutState.applyTier`. A container query can restyle a row but cannot re-seat its keys, and grid navigation runs on the resolved layout, so the narrow arrangement has to be a real layout swap. No observer is allocated while `auto-compact` is off.
+**Width also has one JS behavior**: the opt-in `autoCompact` tier. `AutoCompactController` (`core/auto-compact-controller.ts`) observes the root's border-box inline size against `--kiosk-keyboard-auto-compact-threshold` (default `22rem`) and reports each verdict to `LayoutState.applyTier`, or `null` once `auto-compact` is turned off. `LayoutState` is the only holder of the verdict: it drops a repeat, announces a crossing, and resolves no counterpart while the property is off. A container query can restyle a row but cannot re-seat its keys, and grid navigation runs on the resolved layout, so the narrow arrangement has to be a real layout swap. No observer is allocated while `auto-compact` is off.
 
 **Height responsiveness** uses JS (`ResizeObserver`) to detect when the host element is externally height-constrained (i.e., `scrollHeight` exceeds the host content-box height; both are untransformed layout pixels, so an ancestor `transform: scale()` does not shift the breakpoints). The host sets `max-height: 100%; min-height: 0; overflow: hidden` so that flex/grid parents with a resolved height automatically constrain the keyboard without consumer CSS. These are inert when the parent is unconstrained (`max-height: 100%` of a `height: auto` parent resolves to no constraint). Consumers can override all three from outside the shadow DOM. When constrained, the component reflects a `cq-tier` attribute on the **host** element (absent when unconstrained):
 

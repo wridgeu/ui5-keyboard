@@ -30,8 +30,8 @@ flagged by the UI5 linter; do not use it for new development.
 - Auto-generated wrappers from the Custom Elements Manifest (CEM-driven) and
   manual `WebComponent.extend()` bridges coexist without conflict.
   The demo app uses auto-wrapping via CEM for `@ui5/webcomponents/dist/Input`; the
-  `kiosk-keyboard-webc` bridge pattern is documented as a reference in the
-  demo-app README.
+  `kiosk-keyboard-webc` `WebComponent.extend()` bridge is documented as a reference in the
+  [kiosk-keyboard-webc README](../../packages/kiosk-keyboard-webc/README.md#3b-webcomponentextend-bridge-reference).
 - The interop e2e harness avoids deprecated/global-core access patterns.
 - Standalone web component pages live under
   `packages/kiosk-keyboard-webc/test/pages/`. The two consumption smoke tests cover
@@ -120,9 +120,9 @@ does not need `useRelativeModulePaths` since it rewrites paths regardless.
 1. Install dependencies at repo root (`npm install`).
 2. For standalone web component pages, run `npm run start:kiosk-webc` and open
    `http://localhost:8084/test/pages/index.html`.
-3. For this repo's current demo-app integration path, build the workspace
-   libraries first on a fresh clone or after library changes (`npm run build`).
-4. Then run `npm start` and open
+3. For the demo-app integration path, run `npm start` (no prebuild needed: it
+   builds `kiosk-keyboard-webc`, whose CEM the tooling reads, and the UI5
+   libraries are transpiled from source) and open
    `http://localhost:8080/index.html#/kiosk/input-ids`.
 
 Source-based or package-specific consumption flows can differ; follow the

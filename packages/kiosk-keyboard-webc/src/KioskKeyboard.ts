@@ -433,8 +433,8 @@ class KioskKeyboard extends UI5Element {
   /**
    * The keyboard type variant to display.
    *
-   * Setting it to a value other than `"Full"` - as an attribute, before
-   * connection, or programmatically - disables auto-type detection until
+   * Setting it - as an attribute, before connection, or programmatically -
+   * claims the property and disables auto-type detection until
    * `resetKeyboardType()` is called.
    *
    * @default "Full"

@@ -393,7 +393,7 @@ export type UnhandledCallback = (context: UnhandledContext) => void;
  * Read-only consumer view of the held-key tracker.
  *
  * The concrete `KeyStateTracker` class exposes additional lifecycle
- * methods (`processKeyDown`, `processKeyUp`, `processBlur`, `destroy`)
+ * methods (`processKeyDown`, `processKeyUp`, `processBlur`, `isCodeHeld`, `destroy`)
  * that are `@internal` - this interface hides them so that callers of
  * `HotkeyManager.getKeyStateTracker()` cannot break dispatcher-owned state.
  *

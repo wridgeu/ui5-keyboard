@@ -83,12 +83,12 @@ Each package drives Playwright from configs at its **package root** (not inside 
 | Config                      | Package | Purpose                                                                                                                                                                          |
 | --------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `playwright.config.ts`      | both    | e2e + visual; `desktop` project plus the `phone-*`/`tablet` matrix                                                                                                               |
-| `playwright.flp.config.ts`  | kiosk   | FLP sandbox lifecycle suite (separate `ui5 serve --config ui5-flp.yaml`)                                                                                                         |
+| `playwright.flp.config.ts`  | kiosk   | FLP sandbox suites (`flp-*.spec.ts`: the lifecycle suite and the demo-route checks; separate `ui5 serve --config ui5-flp.yaml`)                                                  |
 | `playwright.docs.config.ts` | both    | On-demand README screenshot generation; kiosk runs `readme-screenshots.spec.ts` on port 8085, webc serves `test/pages/key-style-demo.html` from its own Vite server on port 8087 |
 
 Within `playwright.config.ts`, projects share a single `webServer` and differ only by emulated device:
 
-- The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores `flp-lifecycle` and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
+- The **`desktop`** project (1440×900) runs every spec except the ones owned by the dedicated configs (kiosk ignores the `flp-*` specs and `readme-screenshots`). The webc `desktop` project also runs the behavioral `component.spec.ts`.
 - The **device projects** (`phone-sm` 320×568, `phone-md` 390×844, `phone-lg` 430×932, `tablet` 768×1024) set `viewport`, `deviceScaleFactor`, `isMobile`, and `hasTouch`, and run only the visual specs; the behavioral specs (kiosk: `focus.spec.ts`; webc: `component.spec.ts`) are desktop-only. Selection uses a `testIgnore` denylist of those behavioral specs, not an allowlist, so a new visual spec joins the device matrix automatically.
 
 On CI the device projects narrow to `invariants.spec.ts` (`CI_DEVICE_SPECS` in both configs), since the rest of their matrix captures nothing there; the non-pixel assertions those specs carry still run through the desktop project, which keeps the full spec list. Both configs throw when `invariants.spec.ts` no longer exists, since a project whose `testMatch` selects nothing still exits 0. Locally every project runs every spec and compares pixels.
@@ -256,7 +256,7 @@ Both packages are always run one after the other: they are CPU-bound Playwright 
 npm run test:hotkeys              # Hotkeys QUnit
 npm run test:kiosk                # Kiosk QUnit + desktop e2e
 npm run test:kiosk:e2e            # Kiosk desktop e2e only (no QUnit)
-npm run test:kiosk:e2e:flp        # FLP lifecycle e2e (SAPUI5 sandbox)
+npm run test:kiosk:e2e:flp        # FLP sandbox e2e: lifecycle + demo routes (SAPUI5 sandbox)
 npm run test:kiosk:e2e:docs       # Regenerate README kiosk screenshots
 npm run test:kiosk-webc           # Kiosk webc unit tests (Vitest)
 npm run test:kiosk-webc:component # Kiosk webc integration tests (Web Test Runner)
@@ -277,6 +277,6 @@ npm run test:coverage -w packages/kiosk-keyboard-webc # Coverage (webc only)
 | `e2e`        | `test:e2e:ci` per package, as two matrix legs; behavioral only (`--ignore-snapshots`)                                                                                                                     |
 | `smoke`      | `test:packages:smoke`: `build:all` plus an `npm pack` dry run per published package                                                                                                                       |
 
-CI deliberately does not call `npm run check:base`; it re-implements the same chain as jobs so the legs run in parallel and report separately, and it uses the stricter `lint:ci` (`--deny-warnings`) in place of `lint`. What it does not cover is the pixel comparison: visual baselines carry no platform suffix, so `e2e` runs the visual specs as render smoke tests only. Compare baselines locally with `npm run check`.
+CI deliberately does not call `npm run check:base`; it re-implements the same chain as jobs so the legs run in parallel and report separately. Like `check:base`, it lints with `lint:ci` (`--deny-warnings`). What it does not cover is the pixel comparison: visual baselines carry no platform suffix, so `e2e` runs the visual specs as render smoke tests only. Compare baselines locally with `npm run check`.
 
 `release.yml` gates the release on this same workflow through `workflow_call`, so nothing is release-only.

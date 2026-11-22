@@ -231,6 +231,7 @@ Lazy loading via `"lazy": true` and `Lib.load()` is supported but typically unne
 ## Quick Start
 
 ```ts
+import MessageToast from "sap/m/MessageToast";
 import HotkeyManager from "ui5/hotkeys/HotkeyManager";
 import type RegistrationGroup from "ui5/hotkeys/RegistrationGroup";
 
@@ -280,7 +281,7 @@ import type KeyStateTracker from "ui5/hotkeys/KeyStateTracker";
 import type HotkeyRecorder from "ui5/hotkeys/HotkeyRecorder";
 import { formatForDisplay } from "ui5/hotkeys/format";
 import { ConflictBehavior, GLOBAL_SCOPE, UnhandledReason } from "ui5/hotkeys/library";
-import type { Hotkey, KeyboardDispatchGuard } from "ui5/hotkeys/types";
+import type { Hotkey, KeyboardDispatchGuard, KeyStateTrackerApi, ScopeHandle } from "ui5/hotkeys/types";
 ```
 
 `HotkeyRecorder` is exported as a type and returned by `manager.createRecorder()`; its constructor is internal. `manager.getKeyStateTracker()` returns a `KeyStateTrackerApi` (the read-only tracker interface in `ui5/hotkeys/types`); the backing `KeyStateTracker` class is constructed internally.
@@ -303,7 +304,7 @@ The constructor takes an optional `Platform` (`new HotkeyManager(Platform.Mac)`)
 | -------------------------------------- | ---------------------------------------------------------------------------- |
 | `register(hotkey, callback, options?)` | Register a shortcut or sequence (space-separated keys), returns a handle     |
 | `createGroup()`                        | Create a registration group for collective cleanup                           |
-| `pushScope(scopeId)`                   | Push a scope onto the stack, returns a handle that releases this entry       |
+| `pushScope(scopeId)`                   | Push a scope onto the stack, returns a `ScopeHandle` (since 0.2.0)           |
 | `popScope(scopeId)`                    | Remove the topmost entry with this ID, wherever it sits                      |
 | `getActiveScope()`                     | Get the current top-of-stack scope                                           |
 | `getScopeStack()`                      | Get a snapshot of the full scope stack (bottom-to-top)                       |
@@ -497,6 +498,8 @@ If multiple controllers repeat the same `createGroup` / `destroyAll` pattern, wr
 
 The scope stack controls which hotkeys are active. The global scope is always at the bottom and cannot be pushed or removed. Each `pushScope()` adds a layer on top and returns a `ScopeHandle`; `handle.release()` removes exactly that layer, wherever it sits by then.
 
+`ScopeHandle` (since 0.2.0) has `id` (the normalized scope ID), `release()` (idempotent) and `isActive` (false once the entry is released, popped, cleared by `resetToGlobalScope()`, or the manager is destroyed). In 0.1.x `pushScope()` returned `void` and `popScope()` threw unless the ID was on top.
+
 ```
                   ┌─────────────────┐
   top of stack -> │ confirmDialog   │  <- active scope
@@ -523,27 +526,27 @@ Dialogs and popovers typically push a dedicated scope so their hotkeys shadow th
 
 Release the handle from the dialog's close event (`afterClose`): Escape and `closeOnNavigation` close the dialog too, and the router never clears a manually pushed scope.
 
+Registrations meant to run while the popup is open need `suppressInPopups: false`; the default suppresses every hotkey while a UI5 dialog or popover is open.
+
 ```ts
 // In a controller that opens a confirmation dialog:
 onOpenConfirmDialog(): void {
-  this._confirmGroup = this.getHotkeyManager().createGroup();
+  const manager = this.getHotkeyManager();
+  const group = manager.createGroup();
+  const scope = manager.pushScope("confirmDialog");
 
-  this._confirmScope = this.getHotkeyManager().pushScope("confirmDialog");
-
-  this._confirmGroup.register("Escape", () => this.onCloseConfirmDialog(), {
+  group.register("Enter", () => this.onConfirm(), {
     scope: "confirmDialog",
-    description: "Close confirmation dialog",
-  });
-  this._confirmGroup.register("Enter", () => this.onConfirm(), {
-    scope: "confirmDialog",
+    suppressInPopups: false,
     description: "Confirm action",
   });
-}
 
-onCloseConfirmDialog(): void {
-  this._confirmGroup.destroyAll();
-  this._confirmScope.release();
-  // Parent view's hotkeys are now active again
+  // Escape is left to sap.m.Dialog, which closes on it; see ARCHITECTURE "Dialog Escape Interop".
+  this._confirmDialog.attachEventOnce("afterClose", () => {
+    group.destroyAll();
+    scope.release(); // parent view's hotkeys are active again
+  });
+  this._confirmDialog.open();
 }
 ```
 
@@ -819,6 +822,8 @@ The tracker is owned by the manager's internal `EventDispatcher` and shares the 
 > [!NOTE]
 > Includes a **macOS stuck-key fix**: when a modifier is released, all non-modifier keys are cleared. This prevents ghost keys when macOS swallows keyup events (e.g., Cmd+Tab).
 
+Held keys are cleared when the window loses focus and when the page becomes hidden. Modifiers are also reconciled against each trusted key event's flags, so a modifier whose keyup was lost (OS shortcut, focus change) is dropped on the next key event. The change callback fires at most once per key event.
+
 ## HotkeyRecorder
 
 Capture a keyboard shortcut from user input, for "press a key to set shortcut" settings UIs:
@@ -859,7 +864,7 @@ recorder.destroy();
 ```
 
 > [!IMPORTANT]
-> While recording, **all keyboard input is blocked** (`preventDefault` + `stopImmediatePropagation`). Keep the recording window short.
+> While recording, **all keyboard input is blocked** (`preventDefault` + `stopImmediatePropagation`). Keep the recording window short. Each key the recorder consumes also resets any pending sequence.
 
 > [!TIP]
 > Not a singleton: create one per settings row via `manager.createRecorder()`. The `HotkeyRecorder` class is exported for type declarations but its constructor is internal.
@@ -960,6 +965,7 @@ formatForDisplay("Meta+K", Platform.Windows); // "Win+K" (Meta renders as "Win" 
 
 ```ts
 import { matchesKeyboardEvent } from "ui5/hotkeys/match";
+import { parseHotkey } from "ui5/hotkeys/parse";
 
 const parsed = parseHotkey("Ctrl+S");
 document.addEventListener("keydown", (event) => {

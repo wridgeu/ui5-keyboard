@@ -49,6 +49,7 @@ private _openValue = false;
 set open(value: boolean) {
   if (this._openValue === value) return;
   this._openValue = value;
+  if (this._storingOpen) return; // _storeOpen(): store without side effects
   if (!this._fullyConnected) return; // applied by onEnterDOM
   if (value) {
     this._performOpen();
@@ -69,7 +70,7 @@ Key points:
 - The setter guards against no-ops (`=== value`) and defers its side effects until `UI5Element` has run `onEnterDOM`, which it marks with `_fullyConnected`. `isConnected` is the wrong guard: upgrading markup that is already parsed runs the attribute setters while the element is connected, long before the asynchronous `connectedCallback` reaches `onEnterDOM`.
 - Side effects (event dispatch, inputmode suppression) live in dedicated methods called from the setter.
 - `onEnterDOM` checks the backing field and runs side effects for values set before DOM connection.
-- `onExitDOM` releases the open state by hand (restoring `inputmode`, firing `after-close`, clearing the backing field) instead of assigning `open = false`, which would run `_performClose()` and queue a "keyboard closed" announcement for a live region that is leaving the page.
+- `onExitDOM` closes an open keyboard through `_storeOpen(false)`, which assigns `open` via the framework accessor (so the reflected attribute is removed) while the `_storingOpen` flag makes the setter skip `_performClose()`, then fires `after-close` itself. `_performClose()` would queue a "keyboard closed" announcement for a live region leaving the page. The two `_performOpen()` rejections (docked off, native deferral) write `false` back the same way.
 
 ### `@event()` declarations
 

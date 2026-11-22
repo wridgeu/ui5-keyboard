@@ -4,7 +4,7 @@
  * Copies the patched less-openui5 files to every nested copy in the monorepo.
  *
  * patch-package only patches the hoisted node_modules/less-openui5, but
- * @ui5/cli bundles its own nested copy (used by `ui5 build` for theme LESS).
+ * @ui5/builder bundles its own nested copy (used by `ui5 build` for theme LESS).
  * Depending on hoisting that copy can live under the root node_modules or under
  * any workspace's node_modules, so we sync the patched files into all of them.
  */

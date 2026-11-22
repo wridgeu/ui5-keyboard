@@ -97,7 +97,8 @@ class DispatchGuard implements KeyboardDispatchGuard {
 /**
  * Centralized keyboard event dispatcher.
  *
- * Owns all DOM listeners (`window` capture for keydown/keyup, `window` bubble for blur),
+ * Owns all DOM listeners (`window` capture for keydown/keyup, `window` bubble for blur,
+ * `document` visibilitychange),
  * provides a deterministic 7-step dispatch pipeline, and exposes an RAII-style suspend guard.
  *
  * Instantiated and owned by HotkeyManager.
