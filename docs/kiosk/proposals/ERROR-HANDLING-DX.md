@@ -23,22 +23,21 @@ Two, neither of them a consumer-facing contract violation:
 
 ### 2) Logs (mostly `Log.warning`)
 
-Eighteen `Log.warning` call sites, all under the `ui5.kiosk.KioskKeyboard` component:
+Sixteen `Log.warning` call sites, all under the `ui5.kiosk.KioskKeyboard` component:
 
-- `packages/kiosk-keyboard/src/KioskKeyboard.ts` (7)
+- `packages/kiosk-keyboard/src/KioskKeyboard.ts` (6)
   - a `composeLayout` source that is neither a built-in nor a contributor of rows
   - an active target already targeted by another instance
   - an active target with no textual input DOM ref
   - an active target id that resolves to nothing
   - a variant table declared while `accentVariants` is off
-  - a two-way bound `layout` that `autoCompact` writes back into the model
   - an unrecognized `{...}` key token
 - `packages/kiosk-keyboard/src/internal/layout-state.ts` (1)
   - a layout name that is neither a built-in nor declared by a `<kiosk:CustomLayout>`; the request no-ops
 - `packages/kiosk-keyboard/src/internal/layout-registry.ts` (2)
   - a layout **name** argument that is not a string, and one that is empty after trim. The layout and locale maps are sealed at module load with no mutation API, and locale resolution is silent: an unmatched locale falls through to `DEFAULT_LAYOUT`.
 - `packages/kiosk-keyboard/src/internal/layout-fold-cache.ts` (1)
-  - emits the custom-layout diagnostics, once per control per distinct complaint. The codes, their payloads and `describeDiagnostic()` belong to `internal/custom-layout-fold.ts`, which produces them; the cache only reports.
+  - emits the custom-layout diagnostics (including `unnamed-key`, an icon-only key with no accessible name), once per control per distinct complaint. The codes, their payloads and `describeDiagnostic()` belong to `internal/custom-layout-fold.ts`, which produces them; the cache only reports.
 - `packages/kiosk-keyboard/src/internal/i18n-registry.ts` (2)
   - a resolver that throws, and a `setI18nResolver` argument that is neither a function nor `null`
 - `packages/kiosk-keyboard/src/internal/controls-delegation-controller.ts` (1)
@@ -47,8 +46,6 @@ Eighteen `Log.warning` call sites, all under the `ui5.kiosk.KioskKeyboard` compo
   - unsupported native F-key dispatch, once per key name
 - `packages/kiosk-keyboard/src/internal/key-icons.ts` (1)
   - an icon URI the pool does not carry, once per URI
-- `packages/kiosk-keyboard/src/internal/key-labels.ts` (1)
-  - an icon-only key with no accessible name, once per key value
 - `packages/kiosk-keyboard/src/internal/dom.ts` (1)
   - a custom target resolver that throws
 

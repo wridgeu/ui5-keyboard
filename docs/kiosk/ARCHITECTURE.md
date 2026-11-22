@@ -49,7 +49,9 @@ UI5's built-in event delegation dispatches browser events to the nearest UI5 con
 
 `sapselectmodifiers` is the framework's counterpart for the same keys with a modifier held. Only Shift alone is handled, and it activates the key shifted; Ctrl, Alt and Meta stay browser and OS shortcuts. The Shift is transient - one shifted glyph, no latch on the `{shift}` state and so no relabelled keycaps - because `PhysicalKeyHighlight` binds its modifier sync to the target input, which never has focus while a keycap does. Without it a roving-tabindex user cannot reach a capital except by activating `{shift}` first.
 
-A key activated from the keyboard carries the `keyPressed` class for as long as the activating key is held, released on `onkeyup` or on `onfocusout` when Alt-Tab takes focus away before the keyup lands. The pointer gesture's own `_pressedKeyEl` is tracked separately: it also drives backspace repeat and the variant popup, where a keyboard activation is only the visual half.
+A key activated from the keyboard carries the `keyPressed` class for as long as the activating key is held, released on `onkeyup` or on `onfocusout` when Alt-Tab takes focus away before the keyup lands. Pointer presses are tracked separately in `_presses`, one `Press` record per pointer id, each owning its window-blur listener, its Backspace repeat and its accent hold; `_endPress` is the single exit that releases them. A keyboard activation (`_keyboardPressedKeyEl`) is only the visual half.
+
+When the surface goes away or changes under the user - hide, disable, `close()`, `reset()`, a layout change, or a re-render that seats a different key under a held press - `_leaveSurface()` ends every press unactivated and abandons an open accent popup, whose options were resolved from the old surface.
 
 The handler flow uses a press/release pattern (`ontouchstart` + `ontouchend`) instead of `ontap`, because `preventDefault()` on the underlying touch/mouse event is needed to prevent focus steal (see below).
 
@@ -58,7 +60,7 @@ ontouchstart
   |
   +-- Resolve: find closest .ui5KioskKey element
   +-- preventDefault() - prevents focus transfer away from target input
-  +-- Track pressed key, add --pressed CSS class
+  +-- Record a Press for the pointer id (_beginPress), add --pressed CSS class
 
 ontouchend
   |
@@ -170,11 +172,13 @@ After a platform edit the same write runs from the resulting DOM value, which co
 
 ### Backspace Press-and-Hold Auto-Repeat
 
-Holding the Backspace key deletes continuously, the way phone keyboards do. The gesture lives in a `BackspaceRepeatBehavior` delegate (`internal/backspace-repeat-behavior.ts`, owning an `AutoRepeater`), alongside the other behavior delegates. `ontouchstart` (which fires for both mouse and touch via UI5's `EventSimulation`) arms it via `onPress`; `ontouchend`/`ontouchcancel`/window-blur (all routed through `_clearPressedKeyState`) call `stop`.
+Holding the Backspace key deletes continuously, the way phone keyboards do. Each `{backspace}` press owns a `BackspaceRepeatBehavior` (`internal/backspace-repeat-behavior.ts`, wrapping an `AutoRepeater`), created and started in `_beginPress` (reached from `ontouchstart`, which fires for both mouse and touch via UI5's `EventSimulation`) for an enabled keyboard. Ending the press (`_endPress`, reached from release, cancel, window blur and `_leaveSurface`) stops it.
 
 The repeater fires the first delete after an initial hold delay, then accelerates the cadence toward a floor. Each tick runs the **same** path as a single tap (`_tryCompositionMiddleware` + `_performBackspaceDelete`, passed in as the behavior's tick callback), so composition middleware, the cancelable `keyPress` event, and grapheme-aware deletion all apply per repeat. It stops on its own once `TargetInputSession.handleBackspace()` reports nothing was removed (empty input / cursor at start / read-only target).
 
-Because the existing single delete fires on release (`ontouchend`), a held key would otherwise delete one extra character on lift-off. The behavior records that a repeat occurred, and `ontouchend` consults `shouldSuppressRelease` to skip its trailing delete. A quick tap (released before the initial delay) never repeats, so it deletes exactly once on release as before.
+Because the existing single delete fires on release (`ontouchend`), a held key would otherwise delete one extra character on lift-off. The behavior records that a repeat occurred, and the release path reads the press's `didRepeat` to skip its trailing delete. A quick tap (released before the initial delay) never repeats, so it deletes exactly once on release.
+
+`AutoRepeater.stop()` bumps a generation token that each tick re-checks after its callback, so a handler that closes, resets or destroys the keyboard mid-hold stops the repeat, and a restart from inside a tick cannot leave two timers running.
 
 The timing curve (`BACKSPACE_AUTO_REPEAT`) is intentionally **duplicated** in the `kiosk-keyboard-webc` package rather than shared (the two packages deliberately do not share code). `internal/auto-repeat.ts` is a checked pair in `tools/check-twin-drift.mjs`, so the two copies cannot drift apart unnoticed.
 
@@ -210,7 +214,7 @@ Caps Lock    Mode.CapsLock true      true
 
 **Announcements**: `_syncShiftState()` writes one live-region text per transition: `ARIA_CAPS_LOCK_ON`, `ARIA_CAPS_LOCK_OFF`, `ARIA_SHIFT_ON`, `ARIA_SHIFT_OFF`. Caps Lock is settled before Shift because `isShifted` is true in both modes, so a Caps Lock exit would otherwise read as a shift release.
 
-**Physical keyboard sync**: When a physical keyboard is attached, the virtual keyboard automatically syncs its shift and caps-lock state from physical key events. This works through the existing highlight delegation on the target input: `keydown`/`keyup` events for Shift and CapsLock update the `ShiftState`, and the keyboard re-renders to reflect the current modifier state. No additional listeners are required because the delegation already observes all key events on the target element.
+**Physical keyboard sync**: When a physical keyboard is attached, the virtual keyboard automatically syncs its shift and caps-lock state from physical key events. This works through the existing highlight delegation on the target input: `keydown`/`keyup` events for Shift and CapsLock update the `ShiftState`, and the keyboard re-renders to reflect the current modifier state. No additional listeners are required because the delegation already observes all key events on the target element. Keydowns the keyboard itself dispatched for an on-screen F-key in `fKeyMode="Native"` are skipped (`isDispatchedFKey`), so a virtual F-key neither paints its keycap as held nor drops a latched Caps Lock.
 
 ## Layout System
 
@@ -249,8 +253,8 @@ While the `Numpad`/`Numeric` constraint is active (regardless of source), the re
 Layout switch keys use a special value format: `{layout:name}`. When tapped:
 
 1. The `name` is extracted (lowercased) from the value string and validated against the registry.
-2. `LayoutState.perform(name, source, origin)` (`internal/layout-state.ts`) records the base layout, the switch source (`{layout:base}` → `"external"`, any other pick → `"user"`), resets the typing context (shift/caps-lock), and writes the `layout` property.
-3. A `layoutChange` event fires when the layout actually changes.
+2. `LayoutState.perform(name, source, origin, reason)` (`internal/layout-state.ts`) records the base layout, the switch source (`{layout:base}` → `"external"`, any other pick → `"user"`), resets the typing context (shift/caps-lock), and writes the `layout` property.
+3. A `layoutChange` event fires when the layout actually changes, reporting `reason` (`"user"` for a key).
 4. The control re-renders with the resolved layout.
 
 Layout switching works in every `keyboardType`: a user pick overrides the Numpad/Numeric constraint until `{layout:base}`, `setLayout`, a `keyboardType` change, or an input-target switch re-engages it.
@@ -267,7 +271,7 @@ To edit the target from a handler, the control exposes public methods that route
 
 All three are no-ops / return `null` when there is no active target, and none of them fire `keyPress` (they are called _by_ a handler). Layout switching uses the existing `setLayout`.
 
-Visible label and icon come from the key's `KeyDefinition` (`label` / `icon`). The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> a dev warning for an icon-only key (`label: ""`) with no source, so a custom key never announces the raw `{...}` token. The one thing ahead of `ariaLabel` is the shift key's Caps Lock state, written by the renderer, which names the key for what it is doing. Built-in keys (`{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`) stay on the hardcoded switch.
+Visible label and icon come from the key's `KeyDefinition` (`label` / `icon`). The accessible name resolves `KeyDefinition.ariaLabel` -> visible label -> i18n (built-in tokens) -> the raw `value` as a last resort. An icon-only key (`label: ""`) that reaches it is reported once per value as the `unnamed-key` diagnostic, so the raw `{...}` token is announced only where the author has been told. The one thing ahead of `ariaLabel` is the shift key's Caps Lock state, written by the renderer, which names the key for what it is doing. Built-in keys (`{shift}`, `{backspace}`, `{enter}`, `{layout:*}`, `{fkey:*}`) stay on the hardcoded switch.
 
 ## Locale-Based Default Layout
 
@@ -294,9 +298,13 @@ override applySettings(mSettings: $KioskKeyboardSettings, oScope?: object): this
     layout: registryGetLocaleLayout(fold.localeLayouts, fold.layouts),
     ...rest,
   };
-  return super.applySettings(second, oScope);
+  super.applySettings(second, oScope);
+  this._layoutState.settle();
+  return this;
 }
 ```
+
+`init()` seeds `LayoutState` from the built-in locale map; `settle()` ends that seeding window, so the layout the settings produce fires no `layoutChange`.
 
 The first phase goes through `super.applySettings` rather than reading `mSettings` directly: that is what makes an object literal and a `CustomLayout` instance the same input, since a literal is constructed through the aggregation's `defaultClass` and each value passes `validateProperty` exactly once. By the time `layout` is applied in the second phase, `setLayout`'s registry validation and the locale default both resolve through the complete set of custom layouts - which also matters for `clone()`, where `ManagedObject` emits properties before aggregations. A `customLayouts` bound to a model populates asynchronously and therefore does not contribute to the layout chosen here.
 
@@ -334,7 +342,7 @@ Detection uses static `ReadonlySet` constants for each check, avoiding repeated 
 
 ### Explicit vs Auto-Detected Type
 
-A private `_keyboardTypeSource` tag (typed `"unset" | "explicit" | "auto:VALUE"`) tracks who last set `keyboardType`. The custom `setKeyboardType()` setter sets this to `"explicit"`. Auto-detection sets it to `"auto:Numpad"` (or the detected value) before calling `setProperty("keyboardType", ...)` directly.
+A private `_keyboardTypeSource` tag (typed `"unset" | "explicit" | "auto:VALUE"`) tracks who last set `keyboardType`. The custom `setKeyboardType()` setter sets this to `"explicit"`. Auto-detection writes the property with `setProperty("keyboardType", ...)` directly (bypassing the custom setter) and then tags it `"auto:Numpad"` (or the detected value), since `_setKeyboardTypeSource()` re-derives the layout from the property.
 
 Because UI5's `applySettings()` calls custom setters, `{ keyboardType: "Numpad" }` in the constructor will call `setKeyboardType("Numpad")` which sets the tag to `"explicit"`, so auto-detection is disabled.
 
@@ -356,8 +364,8 @@ if (
 ) {
   const previous = this._host.getKeyboardType();
   if (detected !== previous) {
-    this._host._setKeyboardTypeSource(`auto:${detected}`);
     this._host.setProperty("keyboardType", detected); // bypasses custom setter
+    this._host._setKeyboardTypeSource(`auto:${detected}`);
     this._host.fireKeyboardTypeChange({ ... });
   }
 }
@@ -392,22 +400,23 @@ shouldDeferToNative(): boolean {
 When the KioskKeyboard shows and `_nativeKbSuppression.shouldDeferToNative()` returns `false`, it sets `inputmode="none"` on the target input's DOM element. This is the standard web API for preventing the native virtual keyboard.
 
 - `_nativeKbSuppression.suppress()`: saves original `inputmode`, sets `"none"`. Called by `show()`.
-- `_nativeKbSuppression.restore()`: restores saved `inputmode` (or removes the attribute if it was absent). Called by `close()` and `exit()`.
+- `_nativeKbSuppression.restore()`: restores saved `inputmode` (or removes the attribute if it was absent). Called by `close()`, on a target switch while open, and from `exit()` through the extension `destroy()` loop.
 
 State is tracked via:
 
 - Per instance: `_suppressedInputId` (which target this keyboard currently claims)
+- Per instance: `_suppressedTarget` carries an event delegate (`canSkipRendering: true`) whose `onAfterRendering` re-writes `inputmode="none"`, because the target's own renderer does not write it back
 - Shared across instances: static `_suppressions` map keyed by target input ID with `{ originalInputMode, refCount }`
 
 This makes suppression safe for multi-keyboard setups targeting the same input: each show/claim increments a ref-count, each close/destroy decrements it, and the original `inputmode` is restored only when the last claimant releases the input. When the target changes, the previous target is released before suppressing the new one.
 
 ### Integration Points
 
-1. **`AutoShowBehavior._onDocumentFocusIn`**: Checks `_nativeKbSuppression.shouldDeferToNative()` first. If `true`, returns early. The native keyboard handles input.
+1. **`AutoShowBehavior._onDocumentFocusIn`**: `_resolveClaimableControl()` returns null when `shouldDeferToNative()` holds, so the handler returns early and the native keyboard handles input; `show()`'s `_canOpen()` re-checks it.
 2. **`show()`**: Calls `_nativeKbSuppression.suppress()`.
 3. **`close()`**: Calls `_nativeKbSuppression.restore()`.
-4. **`exit()`**: Calls `_nativeKbSuppression.restore()` for cleanup.
-5. **Focus-out cleanup**: If the keyboard is already open, close/restore still runs when focus leaves even if the control became non-participating (`visible=false` / `enabled=false`) after opening.
+4. **`exit()`**: Destroys the `_extensions`, whose `NativeKeyboardSuppression.destroy()` calls `restore()`.
+5. **Focus-out cleanup**: A disabled (`enabled=false`) open keyboard still closes/restores when focus leaves; hiding (`visible=false`) closes it immediately.
 
 ## Docked Mode
 
@@ -424,11 +433,13 @@ The open/close state is managed via CSS classes rather than re-rendering:
 
 ### Event Timing
 
-`afterOpen` and `afterClose` events fire synchronously when `show()` and `close()` are called. They signal the state change, not the animation completion. The CSS transition plays independently. This avoids fragile `transitionend` listener logic and ensures deterministic event timing regardless of animation state, `prefers-reduced-motion`, or test environments.
+`afterOpen` and `afterClose` events fire synchronously when `show()` and `close()` are called. They signal the state change, not the animation completion. The CSS transition plays independently. This avoids fragile `transitionend` listener logic and ensures deterministic event timing regardless of animation state, `prefers-reduced-motion`, or test environments. Destroying an open keyboard ends the session in `exit()` and fires `afterClose` without the close announcement.
 
-### onAfterRendering Sync
+### Open State
 
-The renderer always renders with `--closed` for docked keyboards. `onAfterRendering()` then syncs the CSS class with the actual `_open` state. This handles the case where `show()` was called before or between renders.
+The open period is a `DockSession` (`_dockSession`), present only while open and owning the document Escape listener's `AbortController`; `isOpen()` reads it. The renderer writes `--closed` from `isOpen()`, and `onAfterRendering()` re-syncs both root classes (`_syncDockedDomState`) for writes that bypassed a render.
+
+`show()`, and through it the auto-show and `controls` focus paths, opens only when docked and `_canOpen()` holds (`visible`, and `mobileKeyboard` not deferring to native); placement is not required.
 
 ## Auto-Show
 
@@ -483,7 +494,7 @@ The "would this keyboard claim" check uses `_wouldClaimInput()`, which consults 
 
 ### Cleanup
 
-`_autoShowBehavior.disable()` removes both listeners. The `exit()` lifecycle hook removes the instance from the static registry, calls `_autoShowBehavior.disable()`, and restores the native keyboard inputmode, preventing leaks after the control is destroyed.
+`_autoShowBehavior.disable()` removes both listeners. The `exit()` lifecycle hook removes the instance from the static registry and destroys the `_extensions`: the auto-show behavior, which drops a pending close and disarms its listeners, and the native suppression, which restores `inputmode`. This prevents leaks after the control is destroyed.
 
 ## Keyboard Navigation
 
@@ -584,8 +595,8 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | `$KioskKeyboardSettings` availability     | Generated into the committed `src/KioskKeyboard.gen.d.ts`; run `npm run generate`, never hand-edit             |
 | `_setActiveTarget` re-render              | `setAssociation(name, value, true)` suppresses invalidation                                                    |
 | `_setActiveTarget` re-entrancy            | Change event deferred to after state transitions via `captureAndClearDirty()`                                  |
-| Docked show/close during render           | `onAfterRendering` syncs CSS with `_open` state                                                                |
-| Destroy with auto-show active             | `exit()` removes from instance registry, disables auto-show, restores inputmode                                |
+| Docked show/close during render           | `onAfterRendering` syncs CSS with `isOpen()` (`_dockSession`)                                                  |
+| Destroy with auto-show active             | `exit()` removes from instance registry; the `_extensions` destroy loop disables auto-show, restores inputmode |
 | Target control without a `value` property | `setTargetValue()` falls back `setValue()` -> `setProperty("value")` -> raw DOM value                          |
 | `controls` with `autoShow`                | `_resolveClaimableControl()` filters by `controls`; delegation triggers `show()`                               |
 | `controls` property churn                 | `_syncControls()` rebinds delegates by control ID on each auto-show `focusin`                                  |
@@ -593,7 +604,8 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 | Explicit `keyboardType` vs auto-type      | `_keyboardTypeSource` tag (`"explicit"`) disables auto-detection                                               |
 | Constructor sets `keyboardType`           | `applySettings` calls custom setter, which sets the source tag                                                 |
 | `inputmode` restore on target switch      | `_nativeKbSuppression.suppress()` restores previous before suppressing new                                     |
-| `inputmode` restore on destroy            | `exit()` calls `_nativeKbSuppression.restore()`                                                                |
+| `inputmode` restore on destroy            | `exit()` destroys `_nativeKbSuppression`, which calls `restore()`                                              |
+| `inputmode` lost on target re-render      | Suppression delegate re-applies it in the target's `onAfterRendering`                                          |
 | Combi device (tablet + desktop)           | `Device.system.tablet && !Device.system.desktop` → treats as desktop                                           |
 | `show()` without target input             | `_nativeKbSuppression.suppress()` is a no-op when no target element exists                                     |
 | Resolver throws                           | `getText` catches, logs warning, returns base bundle text                                                      |
@@ -605,7 +617,7 @@ Compact mode (`.sapUiSizeCompact`) reduces padding, gap, key height, and font si
 packages/kiosk-keyboard/
   playwright.shared.ts        Chromium args, desktop viewport and ui5 serve web server, shared by the three configs
   playwright.config.ts        Playwright config: e2e + visual, desktop + device projects
-  playwright.flp.config.ts    Playwright config for the FLP lifecycle suite
+  playwright.flp.config.ts    Playwright config for the FLP suites (flp-*.spec.ts)
   playwright.docs.config.ts   Playwright config for README screenshot generation
   src/
     KioskKeyboard.ts          UI5 Control with state, event handling,
@@ -614,8 +626,9 @@ packages/kiosk-keyboard/
     CustomLayout.ts           Element carrying one layout's rows, locales, keycap language,
                                role, middleware and variants; the customLayouts aggregation type
     library.ts                Lib.init(), KeyboardLayout/KeyboardType/MobileKeyboard/FKeyMode/
-                               LayoutRole/LayoutFacet enums, the ControlID / LayoutRows /
-                               VariantOverrideTable property types, plus KeyName constants and
+                               LayoutChangeReason/LayoutRole/LayoutFacet enums, the ControlID /
+                               LayoutRows / VariantOverrideTable property types, plus KeyName /
+                               NativeDispatchableKeyNames constants and
                                the LATIN_DIACRITIC_VARIANTS / VariantTable re-exports
     types.ts                  KeyDefinition, KeyRow, LayoutDefinition, CustomLayoutSpec, I18nResolver, TargetResolver
     internal/layout-registry.ts  Layout registration and locale resolution
@@ -716,6 +729,7 @@ packages/kiosk-keyboard/
     visual/                    Fixture pages the visual and README-screenshot suites load
     focus.spec.ts              Focus/auto-show behavior
     flp-lifecycle.spec.ts      FLP lifecycle i18n auto-reset tests
+    flp-demo-routes.spec.ts    Demo-app route checks inside the FLP sandbox
     invariants.spec.ts         Structural assertions the device matrix runs on CI
     visual.spec.ts             Core visual regression (toHaveScreenshot)
     visual-container.spec.ts   Container-query layout snapshots
