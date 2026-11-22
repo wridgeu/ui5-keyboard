@@ -3,11 +3,13 @@ export interface CompositionState {
   composing: boolean;
   preeditStart: number;
   preeditLength: number;
+  /** The target's value as the last preedit write left it. Any other value means another writer moved the text under the preedit range. */
+  writtenValue: string;
 }
 
 /** Creates a fresh composition state for a middleware instance. */
 export function createCompositionState(): CompositionState {
-  return { composing: false, preeditStart: 0, preeditLength: 0 };
+  return { composing: false, preeditStart: 0, preeditLength: 0, writtenValue: "" };
 }
 
 /**
@@ -41,6 +43,7 @@ export function updateComposition(
   const before = value.slice(0, state.preeditStart);
   const after = value.slice(state.preeditStart + state.preeditLength);
   target.value = before + text + after;
+  state.writtenValue = target.value;
   state.preeditLength = text.length;
 
   const newPos = state.preeditStart + state.preeditLength;

@@ -6,10 +6,7 @@
  * common first. The base letter is the tap default and is intentionally not
  * repeated in its own list. German ä/ö/ü/ß fall out as a subset (a/o/u/s).
  *
- * This module is framework-agnostic and duplicated into the sibling
- * `kiosk-keyboard-webc` package (`src/core/latin-variants.ts`); the two copies
- * are kept in sync, byte-identical apart from the ESM `.js` import suffix
- * (enforced by tools/check-twin-drift.mjs).
+ * Twin: kiosk-keyboard-webc src/core/latin-variants.ts (drift-checked by tools/check-twin-drift.mjs).
  */
 import type { LayoutDefinition } from "../types";
 import { BUILTIN_LAYOUT_META } from "./layout-meta";
@@ -129,8 +126,8 @@ export function resolveVariantTable(
 
 /**
  * Maps a variant glyph to its Shift/Caps form. Uppercasing is Unicode-default,
- * with the one exception German casing needs: `ß` (ß) uppercases to `SS`,
- * but the on-screen popup must surface the capital sharp S `ẞ` (ẞ, standard
+ * with the one exception German casing needs: `ß` uppercases to `SS`,
+ * but the on-screen popup must surface the capital sharp S `ẞ` (standard
  * German orthography since 2017).
  */
 export function toShiftVariant(glyph: string): string {

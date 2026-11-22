@@ -9,10 +9,7 @@
  * Names are matched verbatim; nothing is normalized here. Normalization (trim,
  * lowercase) belongs to the caller, and an unnormalized name matches no entry.
  *
- * This module is framework-agnostic and duplicated into the sibling
- * `kiosk-keyboard-webc` package (`src/core/layout-meta.ts`); the two copies
- * are kept in sync, byte-identical apart from the ESM `.js` import suffix
- * (enforced by tools/check-twin-drift.mjs).
+ * Twin: kiosk-keyboard-webc src/core/layout-meta.ts (drift-checked by tools/check-twin-drift.mjs).
  */
 import type { VariantTable } from "./latin-variants";
 

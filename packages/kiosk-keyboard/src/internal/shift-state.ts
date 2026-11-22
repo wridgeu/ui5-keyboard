@@ -42,9 +42,7 @@ export class ShiftState {
    *
    * - If caps lock is on -> turn everything off.
    * - Two rapid clicks within the double-click window -> caps lock,
-   *   regardless of whether the current mode is Shift or Off (the Off
-   *   case covers: Shift held > 400ms -> click turns Off -> quick click
-   *   should still reach CapsLock, not bounce back to Shift).
+   *   from Shift or Off.
    * - If shift is on but outside the double-click window -> off.
    * - Otherwise -> activate one-shot shift.
    */

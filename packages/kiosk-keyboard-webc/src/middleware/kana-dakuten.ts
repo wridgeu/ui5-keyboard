@@ -48,8 +48,6 @@ export function createKanaDakutenMiddleware(): CompositionMiddleware {
       const pos = target.selectionStart ?? value.length;
       if (pos === 0) return false;
 
-      // Use the shared grapheme helper so this stays consistent with
-      // the rest of the codebase even though current targets are BMP.
       const glyphLen = graphemeLengthBefore(value, pos);
       if (glyphLen === 0) return false;
 

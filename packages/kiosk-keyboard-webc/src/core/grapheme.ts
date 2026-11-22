@@ -21,8 +21,7 @@ export function graphemeLengthBefore(value: string, offset: number): number {
   if (offset <= 0) return 0;
 
   // Only examine a trailing window - slicing avoids iterating the entire
-  // string for long values. 40 code units covers all real-world grapheme
-  // clusters including long emoji tag sequences and combining-mark runs.
+  // string for long values.
   const clampedOffset = Math.min(offset, value.length);
   const tail = value.slice(Math.max(0, clampedOffset - GRAPHEME_TAIL_WINDOW), clampedOffset);
 
@@ -106,11 +105,9 @@ export type GlyphScript = "hangul" | "cjk" | "indic" | "arabic";
 
 /**
  * Classifies a single-glyph label by script family; `undefined` for every
- * other script. Hangul is tested first: its regex uses strict
- * `\p{Script=Hangul}` (not Script_Extensions) so shared CJK punctuation
- * (、。・) falls through to `isCJKGlyph`, and the chain keeps a real Hangul
- * character from also classifying as CJK. Indic and Arabic are disjoint from
- * every other family by Unicode definition, so they need no guard.
+ * other script. Hangul is tested first so a Hangul glyph is not also
+ * classified CJK (see `HANGUL_RE`). Indic and Arabic are disjoint from every
+ * other family.
  */
 export function glyphScriptOf(label: string): GlyphScript | undefined {
   if (isHangulGlyph(label)) return "hangul";

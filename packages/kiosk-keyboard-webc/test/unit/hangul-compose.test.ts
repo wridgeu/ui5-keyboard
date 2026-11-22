@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getMiddlewareFactory } from "../../src/core/middleware-registry.js";
 
 describe("hangul-compose middleware", () => {
@@ -182,5 +182,66 @@ describe("hangul-compose middleware", () => {
     const consumed = m.handleKey("{enter}", input);
     expect(consumed).toBe(false);
     expect(input.value).toBe("\uAC00");
+  });
+
+  it("a value written mid-composition ends it: the next jamo does not overwrite that text", () => {
+    const m = mw();
+    m.handleKey("\u3145", input); // \u3145
+    m.handleKey("\u3153", input); // \u3153 -> \uC11C
+    input.value = "\uC11C\uC6B8\uC5ED"; // \uC11C\uC6B8\uC5ED, e.g. a suggestion pick; the caret moves to the end
+    m.handleKey("\u3131", input); // \u3131
+
+    // \uC11C\uC6B8\uC5ED kept; \u3131 opens a new preedit at the caret
+    expect(input.value).toBe("\uC11C\uC6B8\uC5ED\u1100");
+  });
+
+  it("a value written mid-composition is not spliced by reset()", () => {
+    const m = mw();
+    m.handleKey("\u3145", input); // \u3145
+    m.handleKey("\u3153", input); // \u3153 -> \uC11C
+    input.value = "\uC11C\uC6B8\uC5ED"; // \uC11C\uC6B8\uC5ED
+    m.reset();
+
+    expect(input.value).toBe("\uC11C\uC6B8\uC5ED");
+  });
+
+  it("a value written mid-composition leaves commit() nothing to commit", () => {
+    const m = mw();
+    m.handleKey("\u3145", input); // \u3145
+    m.handleKey("\u3153", input); // \u3153 -> \uC11C
+    input.value = "\uC11C\uC6B8\uC5ED"; // \uC11C\uC6B8\uC5ED
+
+    expect(m.commit()).toBeNull();
+  });
+
+  describe("focused target", () => {
+    beforeEach(() => {
+      document.body.appendChild(input);
+      input.focus();
+    });
+
+    afterEach(() => {
+      input.remove();
+    });
+
+    it("composition continues while the caret stays at the preedit's end", () => {
+      const m = mw();
+      m.handleKey("\u3145", input); // \u3145
+      m.handleKey("\u3153", input); // \u3153 -> \uC11C
+      m.handleKey("\u3131", input); // \u3131 -> \uC11D
+
+      expect(input.value).toBe("\uC11D");
+    });
+
+    it("a caret moved off the preedit commits it; the next jamo composes at the new caret", () => {
+      const m = mw();
+      m.handleKey("\u3145", input); // \u3145
+      m.handleKey("\u3153", input); // \u3153 -> \uC11C
+      input.setSelectionRange(0, 0);
+      m.handleKey("\u3131", input); // \u3131
+
+      // \uC11C committed in place, \u3131 opens a preedit before it
+      expect(input.value).toBe("\u1100\uC11C");
+    });
   });
 });

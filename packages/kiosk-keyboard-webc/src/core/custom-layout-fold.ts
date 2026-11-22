@@ -5,7 +5,7 @@
  * that select it, its keycap language, its role, its composition middleware and its
  * long-press variants - and this module turns an ordered list of them into the per-facet
  * maps `layout-registry`, `layout-meta`, `middleware-registry` and `latin-variants`
- * resolve through. Each facet keeps the merge rule it already had: rows and middleware
+ * resolve through. Each facet has its own merge rule: rows and middleware
  * shadow, metadata merges per attribute, locales union, variants merge per base letter.
  *
  * Pure and total: it logs nothing and throws nothing, returning every complaint as a
@@ -13,10 +13,7 @@
  * turns one into a sentence, taking the surface names its twin spells differently
  * through a vocabulary so the two hosts cannot disagree on the facts.
  *
- * This module is framework-agnostic and duplicated into the sibling
- * `kiosk-keyboard` package (`src/internal/custom-layout-fold.ts`); the two copies
- * are kept in sync, byte-identical apart from the ESM `.js` import suffix
- * (enforced by tools/check-twin-drift.mjs).
+ * Twin: kiosk-keyboard src/internal/custom-layout-fold.ts (drift-checked by tools/check-twin-drift.mjs).
  */
 import type { InstanceVariants, VariantOverlay, VariantTable } from "./latin-variants.js";
 import type { InstanceLayoutMeta, LayoutMeta } from "./layout-meta.js";
