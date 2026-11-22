@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.1](https://github.com/wridgeu/ui5-keyboard/compare/kiosk-keyboard-webc-v0.2.0...kiosk-keyboard-webc-v0.2.1) (2026-11-22)
+
+
+### Bug Fixes
+
+* **auto-repeat:** honour a stop or restart issued from inside the repeat callback ([4e469e6](https://github.com/wridgeu/ui5-keyboard/commit/4e469e622d5e373e93f0641c1f3dd1b0849f8598))
+* **hangul-compose:** end the composition when another writer changed the target ([9f484ed](https://github.com/wridgeu/ui5-keyboard/commit/9f484edc56345812a2cc115a0c0ea275edccc411))
+* **twins:** auto-repeat and hangul-compose state fixes from the audit ([f753dc7](https://github.com/wridgeu/ui5-keyboard/commit/f753dc7b09ba01b9605c9ee129a307bffa5600b6))
+* **webc:** detect the keyboard type from the authored inputmode on refocus ([2ad2945](https://github.com/wridgeu/ui5-keyboard/commit/2ad2945508328945afdeeddee2501828e4330d5a))
+* **webc:** drop a secondary layout pick on a target switch ([f37d716](https://github.com/wridgeu/ui5-keyboard/commit/f37d7164d2f6256b032e4b336b385238c7298cbe))
+* **webc:** end the composition when setTargetElement switches inputs ([67c7008](https://github.com/wridgeu/ui5-keyboard/commit/67c700869b7a2a7d1e5af10cd3e17fda4342e865))
+* **webc:** keep a detached keyboard inert and reflect every open write ([2e55eee](https://github.com/wridgeu/ui5-keyboard/commit/2e55eeeb46cdc57f7026b50acb8fd12da8660bed))
+* **webc:** keep the physical-key mirror off native F-key dispatches ([7bab9bc](https://github.com/wridgeu/ui5-keyboard/commit/7bab9bc8ce128d4c96e9ef2d0d5e08c186d7cc71))
+* **webc:** let only a press's own release swallow its trailing click ([89ede9a](https://github.com/wridgeu/ui5-keyboard/commit/89ede9a5cf19c28278cb9d62df1ed3427b30ff95))
+* **webc:** make LayoutState the only owner of the auto-compact verdict ([1ff9180](https://github.com/wridgeu/ui5-keyboard/commit/1ff9180ff2806a8a09a3e8b2a71da35f384ad72f))
+* **webc:** state-machine fixes and target-switch layout reset from the audit ([c4544a2](https://github.com/wridgeu/ui5-keyboard/commit/c4544a29d21f0e4db7d2355231c27a83d30c6b43))
+
+
+### Code Refactoring
+
+* **webc:** route every target change through one retarget transition ([571e1fe](https://github.com/wridgeu/ui5-keyboard/commit/571e1fea75544a18eb34914b1a8e96a3180255ba))
+
 ## [0.2.0](https://github.com/wridgeu/ui5-keyboard/compare/kiosk-keyboard-webc-v0.1.0...kiosk-keyboard-webc-v0.2.0) (2026-11-16)
 
 
