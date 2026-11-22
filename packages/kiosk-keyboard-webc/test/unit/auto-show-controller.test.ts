@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { AutoShowController } from "../../src/core/auto-show-controller.js";
+import { NativeInputModeSuppression } from "../../src/core/native-inputmode-suppression.js";
 import type { AutoShowBridge, AutoShowHost } from "../../src/core/auto-show-controller.js";
 
 /** Resolve after two animation frames so a queued rAF callback has run. */
@@ -40,14 +41,9 @@ function makeBridge(): AutoShowBridge {
     getKeyboardTypeSource: () => "unset",
     resolveInputFrom: () => null,
     setKeyboardTypeInternal: vi.fn(),
-    setTarget: vi.fn(),
-    resetTargetContext: vi.fn(),
+    retarget: vi.fn(),
     show: vi.fn(),
     close: vi.fn(),
-    restoreInputMode: vi.fn(),
-    suppressInputMode: vi.fn(),
-    syncPhysicalKeyHighlight: vi.fn(),
-    fireActiveControlChange: vi.fn(),
   };
 }
 
@@ -98,6 +94,7 @@ describe("AutoShowController auto-type detection vs. inputmode suppression", () 
   let bridge: AutoShowBridge;
   let controller: AutoShowController;
   let input: HTMLInputElement;
+  let suppression: NativeInputModeSuppression;
 
   beforeEach(() => {
     input = document.createElement("input");
@@ -109,19 +106,20 @@ describe("AutoShowController auto-type detection vs. inputmode suppression", () 
     host.autoType = true;
 
     let target: HTMLInputElement | HTMLTextAreaElement | null = null;
+    suppression = new NativeInputModeSuppression(() => target);
     bridge = {
       ...makeBridge(),
       getTargetElement: () => target,
       resolveInputFrom: (el) => (el === input ? input : null),
-      setTarget: vi.fn((el) => {
+      // The real retarget moves an open keyboard's NativeInputModeSuppression
+      // claim, which stamps the live element.
+      retarget: vi.fn((el) => {
         target = el;
+        if (host.open) suppression.suppress();
       }),
       setKeyboardTypeInternal: vi.fn((value) => {
         host.keyboardType = value;
       }),
-      // The real bridge delegates to NativeInputModeSuppression, which stamps
-      // the live element - the mask an authored inputmode disappears behind.
-      suppressInputMode: vi.fn(() => input.setAttribute("inputmode", "none")),
     };
 
     controller = new AutoShowController(host, bridge);
@@ -135,6 +133,7 @@ describe("AutoShowController auto-type detection vs. inputmode suppression", () 
     // focusin for the rest of the file.
     controller.teardown();
     controller.unregister();
+    suppression.restore();
     host.remove();
     input.remove();
   });

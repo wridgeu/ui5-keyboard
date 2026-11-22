@@ -314,7 +314,10 @@ export enum FKeyMode {
  * @since 0.2.0
  */
 export enum LayoutChangeReason {
-  /** A `{layout:*}` key. */
+  /**
+   * A `{layout:*}` key, or the target moving to another input, which drops a
+   * secondary `{layout:*}` pick the user made on the previous one.
+   */
   User = "user",
   /** The `layout` property or attribute, or `reset()`. */
   Api = "api",

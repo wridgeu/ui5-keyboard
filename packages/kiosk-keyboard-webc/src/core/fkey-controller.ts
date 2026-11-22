@@ -48,20 +48,22 @@ const NATIVE_FKEY_ACTIONS = new Map<string, () => void>([
 ]);
 
 /**
- * Tracks unsupported fkey names that have already been warned about. The set
- * is module-level by design: a custom element has no FLP-style "last instance
- * destroyed" hook (`onExitDOM` fires on every detach, including transient
- * reattach), so per-page deduplication is the correct lifetime. This is
- * intentionally NOT parity with `kiosk-keyboard`'s static-class equivalent,
- * which is cleared on last-instance exit because UI5 controls have a
- * meaningful destroy boundary.
+ * Unsupported fkey names already warned about, per page: a custom element has no
+ * last-instance destroy boundary (`onExitDOM` fires on every transient detach).
  */
 const warnedUnsupportedFKeys = new Set<string>();
 
+/** The keydowns {@link FKeyController} synthesizes, which carry no real modifier state. */
+const ownDispatches = new WeakSet<Event>();
+
+/** Whether `e` is a keydown an on-screen F-key synthesized rather than a real key press. */
+export function isFKeyDispatch(e: Event): boolean {
+  return ownDispatches.has(e);
+}
+
 /**
  * Bridge to the host keyboard's mode and target resolution. Kept as callbacks
- * (matching the sibling controllers' host pattern) so the F-key dispatch logic
- * stays free of element internals.
+ * so the F-key dispatch logic stays free of element internals.
  */
 export interface FKeyHost {
   getFKeyMode(): `${FKeyMode}`;
@@ -70,8 +72,7 @@ export interface FKeyHost {
 }
 
 /**
- * Dispatches an F-key according to `fKeyMode` (mirrors the UI5 control's
- * `FKeyController`). The cancelable key-press is expected to have already fired
+ * Dispatches an F-key according to `fKeyMode`. The cancelable key-press is expected to have already fired
  * and not been prevented before {@link handle} is called.
  *
  * `fKeyMode="Native"` synthesizes a real `keydown` on the target and, when not
@@ -123,6 +124,7 @@ export class FKeyController {
       cancelable: true,
       shiftKey,
     });
+    ownDispatches.add(nativeEvent);
     return target.dispatchEvent(nativeEvent);
   }
 }

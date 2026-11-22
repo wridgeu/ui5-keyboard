@@ -370,10 +370,22 @@ describe("kiosk-keyboard - accent-variant popup", () => {
 
   // No re-anchor deferral test here, unlike the kiosk twin: a ui5-popover closes
   // synchronously (`Popup.open` setter -> `closePopup()` -> `close` event), so
-  // `_requestOpen`'s close tears the session down before it parks and the popup
-  // opens on the new key directly. The parked branch is only reachable in the
-  // frame `Popover.openPopup` leaves behind when it bails on an opener that is
-  // already outside the viewport, which no key press can produce.
+  // `_requestOpen`'s close tears the session down and the popup opens on the new
+  // key directly.
+
+  it("arrow keys still navigate the grid from a keycap while the popup is open", async () => {
+    const { kb } = await setupWithLayout(VARIANT_LAYOUT);
+    const aKey = requireKey(kb, "a");
+    rightClick(aKey);
+    await renderFinished();
+    expect(popupEl(kb), "precondition: popup open").to.exist;
+
+    aKey.focus();
+    keyDown(aKey, "ArrowRight");
+    await renderFinished();
+    expect(kb.shadowRoot!.activeElement).to.equal(requireKey(kb, "s"));
+    expect(popupEl(kb), "leaving the popup for the grid ended its session").to.not.exist;
+  });
 
   it("does not leak click-suppression to a different key", async () => {
     const { kb, input } = await setupWithLayout(VARIANT_LAYOUT);

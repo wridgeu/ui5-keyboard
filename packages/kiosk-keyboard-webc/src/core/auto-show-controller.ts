@@ -1,17 +1,25 @@
 import { detectKeyboardType } from "./keyboard-type-detector.js";
+import { NativeInputModeSuppression } from "./native-inputmode-suppression.js";
 import type { KeyboardType } from "../types.js";
 
 /** Why the active target was set; drives focusout cleanup policy. */
-type TargetSource = "autoShow" | "explicit";
+export type TargetSource = "autoShow" | "explicit";
 
-/** Who last set keyboardType; `auto:VALUE` = auto-detected for VALUE, `reset` = handed back. */
-type KeyboardTypeSource = "unset" | "explicit" | "reset" | `auto:${string}`;
+/**
+ * Who last set keyboardType. An explicit value ("explicit") claims the property and
+ * holds auto-type detection off until `resetKeyboardType()`. "auto:VALUE" is a
+ * detection result `_setKeyboardTypeInternal` tagged for VALUE, and "reset" is
+ * `resetKeyboardType()` handing the property back; neither claims it, and both fold
+ * to "unset" in `onInvalidation` before `keyboard-type-change` fires, so a listener
+ * that sets the type synchronously can claim it. An invalid value falls back to the
+ * default without claiming.
+ */
+export type KeyboardTypeSource = "unset" | "explicit" | "reset" | `auto:${string}`;
 
 /**
  * The host keyboard element. Live element/property state (visibility, the
  * docked/autoShow/autoType flags, keyboard type, shadow root, containment) is
- * read directly off it, with no accessor wrappers - matching the sibling
- * `ResponsiveSizingController` host pattern.
+ * read directly off it, with no accessor wrappers.
  */
 export type AutoShowHost = HTMLElement & {
   readonly disabled: boolean;
@@ -26,9 +34,8 @@ export type AutoShowHost = HTMLElement & {
 /**
  * Bridge to the host's private state and behaviors that have no 1:1 element
  * equivalent: reading the active target / controls / keyboard-type provenance,
- * and the actions that delegate back to the control so the cancelable events,
- * composition reset, inputmode suppression, and physical-key highlight all stay
- * on it.
+ * and the actions that delegate back to the control so the events and every
+ * resource bound to the target stay on it.
  */
 export interface AutoShowBridge {
   getTargetElement(): HTMLInputElement | HTMLTextAreaElement | null;
@@ -37,15 +44,10 @@ export interface AutoShowBridge {
   getKeyboardTypeSource(): KeyboardTypeSource;
   resolveInputFrom(el: HTMLElement): HTMLInputElement | HTMLTextAreaElement | null;
   setKeyboardTypeInternal(value: `${KeyboardType}`): void;
-  setTarget(el: HTMLInputElement | HTMLTextAreaElement | null, source: TargetSource): void;
-  /** Resets shift and commits/drops the middleware for a fresh target context. */
-  resetTargetContext(): void;
+  /** The host's one target transition: composition, shift, inputmode claim, physical keys, event. */
+  retarget(el: HTMLInputElement | HTMLTextAreaElement | null, source: TargetSource): void;
   show(): void;
   close(): void;
-  restoreInputMode(): void;
-  suppressInputMode(): void;
-  syncPhysicalKeyHighlight(): void;
-  fireActiveControlChange(el: HTMLInputElement | HTMLTextAreaElement | null): void;
 }
 
 /**
@@ -56,9 +58,7 @@ export interface AutoShowBridge {
  * Multi-keyboard isolation lives here too: a live registry of controllers lets
  * one instance avoid claiming an input another keyboard already targets. The
  * host registers/unregisters its controller in step with its own connected
- * lifecycle. Uses the kiosk `auto-show-behavior.ts` as the responsibility
- * reference; the webc DOM specifics (resolving live elements, the `controls`
- * id matching) differ.
+ * lifecycle.
  */
 export class AutoShowController {
   /** All live keyboards' controllers, for cross-instance claim checks. */
@@ -118,27 +118,10 @@ export class AutoShowController {
     const inputEl = this._resolveAutoShowTarget(e);
     if (!inputEl) return;
 
-    const targetChanged = this._bridge.getTargetElement() !== inputEl;
-    if (targetChanged) {
-      // Real switch: fresh context, so reset shift and end any composition.
-      this._bridge.resetTargetContext();
-    }
-    this._bridge.setTarget(inputEl, "autoShow");
-    this._detectKeyboardType(inputEl, targetChanged);
+    this._detectKeyboardType(inputEl);
+    this._bridge.retarget(inputEl, "autoShow");
     this.cancelPendingClose();
-
-    if (!this._host.open) {
-      this._bridge.show();
-      this._bridge.syncPhysicalKeyHighlight();
-    } else if (targetChanged) {
-      this._bridge.restoreInputMode();
-      this._bridge.suppressInputMode();
-      this._bridge.syncPhysicalKeyHighlight();
-    }
-
-    if (targetChanged) {
-      this._bridge.fireActiveControlChange(inputEl);
-    }
+    if (!this._host.open) this._bridge.show();
   }
 
   /**
@@ -162,19 +145,12 @@ export class AutoShowController {
   }
 
   /**
-   * Detects the keyboard type before the open. This may trigger onInvalidation
-   * for keyboardType, but the target is already set so subsequent logic is safe.
-   * A refocus of the already-active target is not detectable while the keyboard
-   * is open: that element carries the inputmode="none" suppression written on
-   * its previous focus, which masks an authored numeric/decimal/tel value, so it
-   * keeps the type it already has. Closed, no target carries the mask, so a
-   * target set ahead of the first focus by setTargetElement() is still read
-   * from its authored markup.
+   * Detects the keyboard type from the authored markup, read beneath the
+   * inputmode="none" this or another keyboard wrote to suppress the native one.
    */
-  private _detectKeyboardType(inputEl: HTMLInputElement | HTMLTextAreaElement, targetChanged: boolean): void {
-    if (!targetChanged && this._host.open) return;
+  private _detectKeyboardType(inputEl: HTMLInputElement | HTMLTextAreaElement): void {
     if (!this._host.autoType || this._bridge.getKeyboardTypeSource() === "explicit") return;
-    const detected = detectKeyboardType(inputEl);
+    const detected = detectKeyboardType(inputEl, NativeInputModeSuppression.authoredInputMode(inputEl));
     if (detected !== this._host.keyboardType) {
       this._bridge.setKeyboardTypeInternal(detected);
     }
@@ -198,7 +174,7 @@ export class AutoShowController {
 
       if (this._host.open) this._bridge.close();
       if (this._bridge.getTargetSource() === "autoShow") {
-        this._bridge.setTarget(null, "explicit");
+        this._bridge.retarget(null, "explicit");
       }
     });
   }

@@ -73,9 +73,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
   const focusPos = this._getFocusPosition(layout);
   const kbType = this.keyboardType;
   const variantPopup = this._variantPopup;
-  // Language of the keycaps, when the layout writes its keys in a script other
-  // than the UI language (WCAG 2.2 SC 3.1.2 Language of Parts). Resolved once per
-  // render and applied per label span below, never to the root.
+  // Applied per label span below, never to the root.
   const layoutLang = this._getLayoutLang();
 
   return (
@@ -153,9 +151,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
                   // every render rather than omitted: key ids are stable across
                   // layouts, so a key is patched rather than remounted, and the
                   // renderer assigns through the `title` IDL property, where a
-                  // nullish value writes "" instead of removing the attribute. The
-                  // kiosk twin omits the attribute entirely, which its patcher can
-                  // express and this renderer cannot; both state the same thing.
+                  // nullish value writes "" instead of removing the attribute.
                   title={hasLabel && !isSingleGlyphLabel ? label : ""}
                   aria-label={hasLabel ? undefined : this._getKeyAriaLabel(key)}
                 >
@@ -167,9 +163,10 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
         ))}
       </div>
       {/* Accent-variant popup. Hosted in a `ui5-popover` (top-layer, unclipped)
-          for placement, collision handling, outside-click / Escape dismissal,
-          and focus restore; onAfterRendering sets the opener and open state
-          imperatively. The option toolbar below is our slotted content. */}
+          for placement, collision handling and outside-click / Escape dismissal;
+          focus return is the controller's (`preventFocusRestore`).
+          onAfterRendering sets the opener and open state imperatively. The
+          option toolbar below is our slotted content. */}
       {variantPopup ? (
         <ui5-popover
           class={KIOSK_KEYBOARD_DOM.classes.variantPopupHost}
@@ -190,6 +187,7 @@ export default function KioskKeyboardTemplate(this: KioskKeyboard) {
             style={`--kiosk-keyboard-variant-option-width: ${variantPopup.anchorKeyWidth}px`}
             onClick={this._boundOnVariantClick}
             onKeyDown={this._boundOnVariantKeyDown}
+            onFocusOut={this._boundOnVariantFocusOut}
           >
             {variantPopup.glyphs.map((glyph, index) => (
               <ui5-button

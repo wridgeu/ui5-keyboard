@@ -28,7 +28,6 @@ function closestDataKeyboardType(el: Element): string | null {
   while (current) {
     const match = current.closest<HTMLElement>("[data-keyboard-type]");
     if (match) return match.getAttribute("data-keyboard-type");
-    // Cross the shadow boundary to the host element
     const root = current.getRootNode();
     current = root instanceof ShadowRoot ? root.host : null;
   }
@@ -43,25 +42,22 @@ function closestDataKeyboardType(el: Element): string | null {
  * 1. Explicit `data-keyboard-type` attribute on the element or any
  *    ancestor - crosses shadow DOM boundaries so the attribute can
  *    be placed on an outer host element.
- * 2. DOM `inputmode` attribute (`numeric`, `decimal`, `tel`).
+ * 2. The `inputmode` the page authored (`numeric`, `decimal`, `tel`), passed
+ *    in by a caller that may have overwritten the attribute itself.
  * 3. HTML `type` attribute (`number`, `tel`).
- *
- * Expects an already-resolved native input/textarea - callers should
- * resolve the target via `resolveInputOrTextarea` before calling.
  */
-export function detectKeyboardType(dom: HTMLInputElement | HTMLTextAreaElement): KeyboardTypeValue {
-  // 1. Explicit override via data attribute (crosses shadow DOM boundaries)
+export function detectKeyboardType(
+  dom: HTMLInputElement | HTMLTextAreaElement,
+  inputmode = dom.getAttribute("inputmode"),
+): KeyboardTypeValue {
   const explicit = closestDataKeyboardType(dom);
   if (explicit !== null && isDataOverride(explicit)) {
     return explicit;
   }
 
-  // 2. Check inputmode attribute. `inputmode` is an enumerated HTML
-  //    attribute matched case-insensitively, so normalize before lookup.
-  const inputmode = dom.getAttribute("inputmode");
+  // `inputmode` is an enumerated HTML attribute matched case-insensitively.
   if (inputmode && NUMPAD_INPUT_MODES.has(inputmode.toLowerCase())) return "Numpad";
 
-  // 3. Check HTML type attribute
   if (dom instanceof HTMLInputElement && NUMPAD_HTML_TYPES.has(dom.type)) {
     return "Numpad";
   }

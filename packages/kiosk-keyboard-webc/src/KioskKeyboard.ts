@@ -1,11 +1,5 @@
-// Main entry point: defines the component class.
-//
-// The built-in layouts and composition middleware are pulled into the module
-// graph as genuine value imports by their registries (core/layout-registry.js
-// and core/middleware-registry.js, which build their maps from direct imports).
-// They are therefore bundled wherever this entry is (including the
-// ui5-tooling-modules wrapper that resolves the main entry from the CEM) and
-// cannot be dropped by tree-shaking. Side-effect-only imports would be.
+// The layout and middleware registries build their maps from direct imports, so
+// every built-in ships wherever this entry does (see core/layout-registry.ts).
 
 import UI5Element from "@ui5/webcomponents-base/dist/UI5Element.js";
 import customElement from "@ui5/webcomponents-base/dist/decorators/customElement.js";
@@ -56,6 +50,7 @@ import { constrainedLayoutName, reconcileBaseSwitch } from "./core/layout-constr
 import { AnnouncementQueue } from "./core/announcement-queue.js";
 import { PhysicalKeyHighlightController } from "./core/physical-key-highlight-controller.js";
 import { AutoShowController } from "./core/auto-show-controller.js";
+import type { KeyboardTypeSource, TargetSource } from "./core/auto-show-controller.js";
 import { FKeyController, NATIVE_DISPATCHABLE_KEYS } from "./core/fkey-controller.js";
 import { KeyGridNavigation } from "./core/key-grid-navigation.js";
 import {
@@ -104,7 +99,6 @@ const SAP_ICON_PREFIX = "sap-icon://";
 /** Icon for a `{layout:base}` key kept under the Numpad/Numeric constraint. */
 const LAYOUT_RETURN_ICON = SAP_ICON_PREFIX + SPECIAL_KEY_ICON_NAMES.layoutReturn;
 
-// ── Valid enum values for string properties (derived from enums) ──
 const VALID_KEYBOARD_TYPES: ReadonlySet<string> = new Set(Object.values(KeyboardType));
 const VALID_FKEY_MODES: ReadonlySet<string> = new Set(Object.values(FKeyMode));
 const VALID_MOBILE_KEYBOARDS: ReadonlySet<string> = new Set(Object.values(MobileKeyboard));
@@ -129,17 +123,6 @@ function previousKeyboardTypeOf(oldValue: PropertyValue): `${KeyboardType}` {
   const match = Object.values(KeyboardType).find((name) => name === oldValue);
   return match ?? "Full";
 }
-
-// ── Internal provenance types ──
-
-/**
- * Who last set keyboardType. "auto:VALUE" = set by _setKeyboardTypeInternal for VALUE;
- * "reset" = resetKeyboardType() handing the property back without claiming it.
- */
-type KeyboardTypeSource = "unset" | "explicit" | "reset" | `auto:${string}`;
-
-/** Why _targetElement was set: drives focusout cleanup policy. */
-type TargetSource = "autoShow" | "explicit";
 
 /** Display and ARIA labels for built-in special keys. */
 // The open `string` key is the contract: `_getKeyLabel` and `_getKeyAriaLabel` look this up by
@@ -292,7 +275,7 @@ class KioskKeyboard extends UI5Element {
    * @param sources Layout names and row arrays, in the order they should appear.
    * @returns The composed rows, ready to use as a custom layout's `rows`.
    *
-   * @example A navigation row above the built-in German layout
+   * Example, a navigation row above the built-in German layout:
    * ```ts
    * import navRow from "kiosk-keyboard-webc/layouts/nav-row";
    *
@@ -377,8 +360,7 @@ class KioskKeyboard extends UI5Element {
    * If the resolver throws, the error is logged and the default text is used.
    * Pass `null` to clear a previously set resolver.
    *
-   * Example (the `@example` tag is intentionally avoided: it is rejected by
-   * the CEM dev-mode validation; see docs/kiosk-webc/CUSTOM-ELEMENTS-MANIFEST.md):
+   * Example:
    * ```ts
    * // Add French translations
    * KioskKeyboard.setI18nResolver((key, locale, defaultText) => {
@@ -437,6 +419,10 @@ class KioskKeyboard extends UI5Element {
    * Every change to it fires one `layout-change`; this getter is for reading the
    * state at any other moment.
    *
+   * The default is the locale's layout; `"qwerty"` is the fallback for a locale
+   * with none.
+   *
+   * @default "qwerty"
    * @public
    * @since 0.1.0
    */
@@ -457,11 +443,7 @@ class KioskKeyboard extends UI5Element {
    */
   @property()
   set keyboardType(value: `${KeyboardType}`) {
-    // An explicit value claims the property and holds auto-type detection off until
-    // `resetKeyboardType()`. A value `_setKeyboardTypeInternal` pre-tagged `auto:<value>`
-    // is a detection result and does not claim it, nor does a `resetKeyboardType()` call,
-    // which hands the property back; an invalid one falls back to the default without
-    // claiming it.
+    // See KeyboardTypeSource.
     if (isInvalidEnumValue("keyboardType", value, VALID_KEYBOARD_TYPES)) {
       this._keyboardTypeSource = "unset";
       this._keyboardTypeValue = "Full";
@@ -698,10 +680,10 @@ class KioskKeyboard extends UI5Element {
   @property({ type: Object, noAttribute: true })
   _variantPopup: VariantPopupState | null = null;
 
-  // ── Backing field for the `open` getter/setter below.
-  //    Direct writes intentionally bypass the setter when the host is being
-  //    torn down or when invalidation flow already ran in the same tick. ──
+  /** Backing field for `open`. */
   private _openValue = false;
+  /** Set while `_storeOpen` writes `open`, so the setter stores without opening or closing. */
+  private _storingOpen = false;
 
   // ── Non-reactive internal state ──
 
@@ -719,18 +701,14 @@ class KioskKeyboard extends UI5Element {
     },
     getLocaleLayout: () => this._localeLayout(),
     getKeyboardType: () => this.keyboardType,
+    isAutoCompactEnabled: () => this.autoCompact,
     getFold: () => this._foldCache.get(),
     fireLayoutChange: (parameters) => {
       this.fireDecoratorEvent("layout-change", parameters);
     },
     resetShiftState: () => this._shiftState.reset(),
     cancelPress: () => this._cancelPress(),
-    endComposition: () => {
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
-    },
+    endComposition: () => this._endComposition("commit"),
     focusAnchor: () => this._focusAnchor(),
     reseatFocusAnchor: (anchor) => this._reseatFocusAnchor(anchor),
     announce: (text) => KioskKeyboard._announcements.announce(text),
@@ -778,11 +756,10 @@ class KioskKeyboard extends UI5Element {
     },
   });
 
-  // ── Inputmode suppression (ref-counted, shared across instances) ──
   /** Owns the `inputmode="none"` swap and its cross-instance refcount. */
-  private readonly _inputModeSuppression = new NativeInputModeSuppression(() => this._resolveTarget());
+  private readonly _inputModeSuppression = new NativeInputModeSuppression(() => this._resolvedTarget());
 
-  // ── Multi-keyboard instance isolation ──
+  // ── Page-wide state shared by all instances ──
   private static readonly _instances = new Set<KioskKeyboard>();
   private static _pendingI18nRefresh = false;
   private static _nextAutoId = 0;
@@ -798,11 +775,13 @@ class KioskKeyboard extends UI5Element {
     });
   }
 
-  // ── Listener controllers (one per feature; presence == attached) ──
-  private _hostAbort: AbortController | null = null;
-  private _escapeAbort: AbortController | null = null;
+  /**
+   * The connected session: non-null from `onEnterDOM` to `onExitDOM`, and the
+   * signal every host-scoped listener is armed on. While it is null the host is
+   * detached, and property changes are recorded without arming anything.
+   */
+  private _session: AbortController | null = null;
 
-  // ── Auto-show (document focusin/focusout) ──
   /** Owns the focus listeners, deferred close, and cross-instance claim checks. */
   private readonly _autoShow = new AutoShowController(this, {
     getTargetElement: () => this._targetElement,
@@ -811,33 +790,15 @@ class KioskKeyboard extends UI5Element {
     getKeyboardTypeSource: () => this._keyboardTypeSource,
     resolveInputFrom: (el) => this._resolveInputFrom(el),
     setKeyboardTypeInternal: (value) => this._setKeyboardTypeInternal(value),
-    setTarget: (el, source) => {
-      this._targetElement = el;
-      this._targetSource = source;
-    },
-    resetTargetContext: () => {
-      this._shiftState.reset();
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
-    },
+    retarget: (el, source) => this._retarget(el, source),
     show: () => this.show(),
     close: () => this.close(),
-    restoreInputMode: () => this._inputModeSuppression.restore(),
-    suppressInputMode: () => this._inputModeSuppression.suppress(),
-    syncPhysicalKeyHighlight: () => this._physicalKeyHighlight.sync(),
-    fireActiveControlChange: (el) => {
-      this.fireDecoratorEvent("active-control-change", { activeElement: el });
-    },
   });
 
-  // ── Physical keyboard highlight ──
   /** Owns the physical-key highlight listeners and physical-modifier shift sync. */
   private readonly _physicalKeyHighlight = new PhysicalKeyHighlightController(
     {
       getShadowRoot: () => this.shadowRoot,
-      resolveTarget: () => this._resolveTarget(),
       setHighlightedKey: (value) => {
         this._highlightedKey = value;
       },
@@ -848,7 +809,7 @@ class KioskKeyboard extends UI5Element {
     NATIVE_DISPATCHABLE_KEYS,
   );
 
-  // ── Bound listeners (document-level) ──
+  // ── Bound listeners ──
   private readonly _boundEscape = (e: Event) => {
     if (e instanceof KeyboardEvent) this._onDocumentEscape(e);
   };
@@ -867,35 +828,29 @@ class KioskKeyboard extends UI5Element {
     const te = e as TouchEvent;
     const touch = te.changedTouches[0];
     if (!touch) return;
-    // A variant drag-release just committed on the preceding pointerup and hid
-    // the option; swallow this one synthesized touchend so `elementFromPoint`
-    // does not resolve to the now-uncovered key beneath and insert a second char.
-    if (this._variantCommittedTouch) {
-      this._variantCommittedTouch = false;
-      return;
-    }
     // Resolve the key under the finger at lift-off, not e.target (which is
     // the touchstart target per spec and may differ if the finger drifted).
     const el = this.shadowRoot!.elementFromPoint(touch.clientX, touch.clientY);
     const keyEl = el?.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook);
     if (keyEl) keyEl.click();
   };
-  /** Set for one touchend after a touch variant drag-release commits, to swallow the trailing synthesized tap. */
-  private _variantCommittedTouch = false;
-  /** Whether a primary pointer is down on a keycap, from its pointerdown to its pointerup or pointercancel. */
-  private _pointerOnKey = false;
   /**
-   * Set when a layout switch abandoned the held pointer press; swallows that gesture's
-   * trailing click. Cleared by the next pointerdown or grid keydown, so a release that
-   * lands off the key cannot swallow a later activation.
+   * The primary pointer press on a keycap, from its pointerdown to its pointerup or
+   * pointercancel. `abandoned` when a layout switch put another key under it.
    */
-  private _dropPressClick = false;
+  private _press: { pointerId: number; value: string; abandoned: boolean } | null = null;
+  /**
+   * What a press's release owes its trailing click: a swallow of the click on `value`,
+   * or on any key for `null`. Armed by that release and spent by the next key click.
+   * It lives only to the end of the release's task, which is where the browser
+   * dispatches the release's click (a mouse click, or the one `_boundTouchEnd`
+   * synthesizes), so keyboard and later activations never consult it.
+   */
+  private _releaseSwallow: { value: string | null } | null = null;
 
-  // ── Backspace press-and-hold auto-repeat ──
-  /** Owns the pointer gesture, repeat timer, and trailing-click suppression. */
+  /** Owns the pointer gesture and repeat timer. */
   private readonly _backspaceRepeat = new BackspaceRepeatController(this, () => this._performBackspaceRepeatDelete());
 
-  // ── Accent-variant long-press popup ──
   /** Owns the hold/right-click gesture that opens the accent-variant popup. */
   private readonly _variantGesture = new VariantPopupController({
     getShadowRoot: () => this.shadowRoot,
@@ -918,30 +873,23 @@ class KioskKeyboard extends UI5Element {
         ?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyByPosition(pos.row, pos.col))
         ?.focus();
     },
-    notifyTouchCommit: () => {
-      this._variantCommittedTouch = true;
-    },
   });
 
-  // ── Responsive sizing (ResizeObserver-driven height classes) ──
-  /** Owns the ResizeObserver and height-responsive class application. */
+  /** Owns the ResizeObserver and the height tier. */
   private readonly _responsiveSizing = new ResponsiveSizingController(this);
 
-  // ── Auto-compact (ResizeObserver-driven layout width tier) ──
   /** Owns the width measurement behind the `autoCompact` property. */
   private readonly _autoCompact = new AutoCompactController({
     isEnabled: () => this.autoCompact,
-    applyTier: (narrow, crossed) => this._layoutState.applyTier(narrow, crossed),
+    applyTier: (narrow) => this._layoutState.applyTier(narrow),
   });
 
-  // ── F-key dispatch ──
   /** Owns `fKeyMode`-driven F-key dispatch (native keydown + caret navigation). */
   private readonly _fKeyController = new FKeyController({
     getFKeyMode: () => this.fKeyMode,
     resolveTarget: () => this._resolveTarget(),
   });
 
-  // ── Arrow-key grid navigation ──
   /** Owns roving-tabindex grid navigation and the last-focused-key tracking. */
   private readonly _keyGridNav = new KeyGridNavigation({
     getResolvedLayout: () => this._getResolvedLayout(),
@@ -956,30 +904,18 @@ class KioskKeyboard extends UI5Element {
   // ── Pre-bound template handlers (avoids per-render allocation) ──
   readonly _boundOnKeyClick = this._onKeyClick.bind(this);
   readonly _boundOnKeyMouseDown = this._onKeyMouseDown.bind(this);
-  // While the popup is open its own roving navigation owns the arrow keys, so
-  // grid navigation yields (focus is inside the popup, but guard defensively).
-  readonly _boundOnKeyDown = (e: KeyboardEvent): void => {
-    this._dropPressClick = false;
-    if (this._variantPopup) return;
-    this._keyGridNav.onKeyDown(e);
-  };
-  readonly _boundOnKeyUp = (e: KeyboardEvent): void => {
-    if (this._variantPopup) return;
-    this._keyGridNav.onKeyUp(e);
-  };
+  readonly _boundOnKeyDown = (e: KeyboardEvent): void => this._keyGridNav.onKeyDown(e);
+  readonly _boundOnKeyUp = (e: KeyboardEvent): void => this._keyGridNav.onKeyUp(e);
   readonly _boundOnFocusOut = (): void => this._keyGridNav.onFocusOut();
   readonly _boundOnVariantClick = (e: Event): void => this._variantGesture.onOptionClick(e);
   readonly _boundOnVariantKeyDown = (e: KeyboardEvent): void => this._variantGesture.onOptionKeydown(e);
+  readonly _boundOnVariantFocusOut = (e: FocusEvent): void => this._variantGesture.onOptionFocusOut(e);
 
   /**
    * Whether the docked keyboard panel is currently visible.
    *
    * Setting `open = true` opens the keyboard (equivalent to `show()`),
    * setting it to `false` closes it (equivalent to `close()`).
-   *
-   * Follows the same reactive-property-on-setter pattern used by
-   * `@ui5/webcomponents` Popup/Dialog (the `@property` decorator makes
-   * the attribute observable so UI5 bridge controls can bind to it).
    *
    * @default false
    * @public
@@ -989,6 +925,7 @@ class KioskKeyboard extends UI5Element {
   set open(value: boolean) {
     if (this._openValue === value) return;
     this._openValue = value;
+    if (this._storingOpen) return;
     // Not `isConnected`: a custom-element upgrade of already-parsed markup runs
     // the attribute setters while connected but long before UI5Element's async
     // connectedCallback reaches onEnterDOM, which applies the pending value.
@@ -1002,6 +939,17 @@ class KioskKeyboard extends UI5Element {
 
   get open(): boolean {
     return this._openValue;
+  }
+
+  /**
+   * Writes `open` through the framework accessor, so the reflected attribute
+   * follows, without the open/close side effects: for teardown and for an open
+   * `_performOpen` rejects, neither of which is a close to announce.
+   */
+  private _storeOpen(value: boolean): void {
+    this._storingOpen = true;
+    this.open = value;
+    this._storingOpen = false;
   }
 
   private get _controlsList(): string[] {
@@ -1030,7 +978,11 @@ class KioskKeyboard extends UI5Element {
     // hook twice with no onExitDOM between. An armed host session is what says a
     // previous entry already ran: everything below is either idempotent or
     // re-armed against a fresh signal, except the one-shot open side effects.
-    const reEntered = this._hostAbort !== null;
+    const reEntered = this._session !== null;
+    // Abort first: an overwritten controller can never release what it armed.
+    this._session?.abort();
+    this._session = new AbortController();
+    const { signal } = this._session;
 
     KioskKeyboard._instances.add(this);
     this._autoShow.register();
@@ -1038,66 +990,53 @@ class KioskKeyboard extends UI5Element {
     this._layoutState.seed();
 
     this._autoShow.sync();
-    this._physicalKeyHighlight.sync();
+    this._physicalKeyHighlight.bind(this._resolvedTarget());
 
-    if (this.docked) {
-      this._attachEscapeListener();
-    }
+    document.addEventListener("keydown", this._boundEscape, { capture: true, signal });
 
-    // Handle open=true set before DOM connection (same pattern as ui5-dialog).
-    // Delegate unconditionally - _performOpen() already resets _openValue when
-    // !docked or native-deferred, preventing stale open state. Not on a re-entry:
-    // the keyboard is already open, and opening it again would fire a second
-    // after-open and announce the opening to a screen reader twice.
+    // Apply an open=true set before connection. Not on a re-entry: a second
+    // after-open would announce the opening twice.
     if (this._openValue && !reEntered) {
       this._performOpen();
     }
 
-    // Touch events need { passive: false } for preventDefault() which JSX can't express.
-    // touchstart prevents input blur; touchend processes the key press (because
-    // preventDefault on touchstart suppresses the browser's synthesized click).
-    //
-    // Abort first: an overwritten controller can never release what it armed.
-    this._hostAbort?.abort();
-    this._hostAbort = new AbortController();
-    const { signal } = this._hostAbort;
+    // { passive: false } for touchstart's preventDefault, which JSX cannot express.
     this.shadowRoot!.addEventListener("touchstart", this._boundTouchStart, { passive: false, signal });
     this.shadowRoot!.addEventListener("touchend", this._boundTouchEnd, { signal });
 
-    // Tracks the held pointer press a layout switch must abandon (`_cancelPress`).
+    // The press, registered ahead of the gestures' own pointerdown so they arm
+    // against it. A second pointer while one is held is multi-touch: the held
+    // press keeps its release.
     this.shadowRoot!.addEventListener(
       "pointerdown",
       (e) => {
-        if (!(e instanceof PointerEvent) || e.button > 0) return;
-        this._dropPressClick = false;
-        this._pointerOnKey = e.target instanceof Element && e.target.closest(KIOSK_KEYBOARD_DOM.selectors.key) !== null;
+        if (!(e instanceof PointerEvent) || e.button > 0 || this._press) return;
+        const keyEl =
+          e.target instanceof Element ? e.target.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook) : null;
+        if (keyEl) this._press = { pointerId: e.pointerId, value: keyEl.dataset.key!, abandoned: false };
       },
       { signal },
     );
-    document.addEventListener("pointerup", () => (this._pointerOnKey = false), { signal });
+    // On the document, so a release off the key still ends the press.
+    document.addEventListener("pointerup", (e) => this._onPressRelease(e), { signal });
     document.addEventListener(
       "pointercancel",
-      () => {
-        this._pointerOnKey = false;
-        this._dropPressClick = false;
+      (e) => {
+        if (!(e instanceof PointerEvent)) return;
+        this._backspaceRepeat.stop();
+        this._variantGesture.cancel(e);
+        if (this._press?.pointerId === e.pointerId) this._press = null;
       },
       { signal },
     );
-
-    // Backspace press-and-hold auto-repeat (pointer gesture + trailing-click suppression).
     this._backspaceRepeat.attach(signal);
-
-    // Accent-variant long-press / right-click gesture.
     this._variantGesture.attach(signal);
 
     this._responsiveSizing.setup();
   }
 
   override onExitDOM(): void {
-    if (this._middleware) {
-      this._middleware.reset();
-      this._middleware = null;
-    }
+    this._endComposition("reset");
     KioskKeyboard._instances.delete(this);
     if (KioskKeyboard._instances.size === 0) KioskKeyboard._announcements.teardown();
     this._autoShow.teardown();
@@ -1105,19 +1044,19 @@ class KioskKeyboard extends UI5Element {
     this._responsiveSizing.teardown();
     this._autoCompact.teardown();
     this._inputModeSuppression.restore();
-    this._detachEscapeListener();
     this._backspaceRepeat.stop();
-    this._variantGesture.stop();
-    this._variantPopup = null;
-    this._hostAbort?.abort();
-    this._hostAbort = null;
+    this._variantGesture.exit();
+    this._press = null;
+    this._releaseSwallow = null;
+    this._session?.abort();
+    this._session = null;
     // Fire after-close before disconnecting so direct listeners still see it.
-    // Not `this.open = false`: _performClose() would queue a "keyboard closed"
-    // announcement onto a queue the last instance out has just torn down, for a
-    // live region that leaves the page with this element.
+    // Not _performClose(): it would queue a "keyboard closed" announcement onto a
+    // queue the last instance out has just torn down, for a live region that
+    // leaves the page with this element.
     if (this._openValue) {
       const activeElement = this._targetElement;
-      this._openValue = false;
+      this._storeOpen(false);
       this.fireDecoratorEvent("after-close", { activeElement });
     }
 
@@ -1152,12 +1091,7 @@ class KioskKeyboard extends UI5Element {
       if (tabStop && this.shadowRoot?.activeElement !== tabStop) tabStop.focus();
     }
 
-    // Sync observer targets so newly rendered root elements are observed.
-    // Responsive height classes live on the host element (not in shadow DOM),
-    // so they survive template re-renders and don't need reapplication here.
-    // Actual height class updates are handled by the ResizeObserver callback
-    // (coalesced via rAF in the controller), avoiding forced reflow in the
-    // render frame.
+    // Re-point the height observer at the freshly rendered root.
     const root = this.shadowRoot?.querySelector<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.root) ?? null;
     if (root) this._responsiveSizing.syncObserverTargets(root);
 
@@ -1182,19 +1116,14 @@ class KioskKeyboard extends UI5Element {
       // back onto the current type is not a change.
       if (this.keyboardType === changeInfo.oldValue) return;
       const autoDetected = this._keyboardTypeSource === `auto:${this.keyboardType}`;
-      // Both an auto tag and the reset marker fold back before the event fires, so a
-      // listener that sets the type synchronously can claim the property.
       if (this._keyboardTypeSource !== "explicit") this._keyboardTypeSource = "unset";
-      // Reset user layout switch and shift state - a keyboardType change implies a new layout context
-      this._layoutState.clearUserOverride();
+      // A new keyboard type is a new layout context.
+      this._layoutState.clearUserOverride("keyboardType");
       this._shiftState.reset();
       // The surface swap ends any in-progress composition: commit the preedit
       // and drop the middleware so the next key resolves against the new
-      // effective layout (mirrors _applyLayout).
-      if (this._middleware) {
-        this._middleware.commit();
-        this._middleware = null;
-      }
+      // effective layout.
+      this._endComposition("commit");
       this.fireDecoratorEvent("keyboard-type-change", {
         keyboardType: this.keyboardType,
         previousKeyboardType: previousKeyboardTypeOf(changeInfo.oldValue),
@@ -1204,18 +1133,17 @@ class KioskKeyboard extends UI5Element {
       // that surfaces from under it.
       this._layoutState.refresh("keyboardType");
     }
+    // Detached: the value is recorded, and onEnterDOM arms what it asks for.
+    if (!this._session) return;
+    if (name === "controls") {
+      this._syncTargetBindings();
+    }
     if (name === "docked" || name === "autoShow") {
       this._autoShow.sync();
     }
-    if (name === "docked") {
-      if (this.docked) {
-        this._attachEscapeListener();
-      } else {
-        // Close the keyboard before detaching - avoids stuck open state
-        // and leaked inputmode suppression when docked is toggled off while open.
-        this.open = false;
-        this._detachEscapeListener();
-      }
+    // Undocking closes, so the inputmode suppression is not left behind.
+    if (name === "docked" && !this.docked) {
+      this.open = false;
     }
   }
 
@@ -1246,14 +1174,12 @@ class KioskKeyboard extends UI5Element {
   private _performOpen(): void {
     if (!this.docked) {
       console.warn("[kiosk-keyboard] open has no effect when docked=false.");
-      // Write backing field directly - going through the setter would trigger
-      // _performClose() and fire a spurious after-close for a keyboard that
-      // never actually opened (same pattern as ui5-dialog's openPopup rejection).
-      this._openValue = false;
+      // Not a close: the keyboard never opened, so no after-close.
+      this._storeOpen(false);
       return;
     }
     if (this._shouldDeferToNative()) {
-      this._openValue = false;
+      this._storeOpen(false);
       return;
     }
     this._autoShow.cancelPendingClose();
@@ -1263,8 +1189,7 @@ class KioskKeyboard extends UI5Element {
       const input = this._resolveTarget();
       if (input) {
         input.focus();
-        this._targetElement = input;
-        this._targetSource = "explicit";
+        this._retarget(input, "explicit");
       }
     }
     this._inputModeSuppression.suppress();
@@ -1287,32 +1212,7 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   setTargetElement(el: HTMLInputElement | HTMLTextAreaElement | null): void {
-    const previous = this._targetElement;
-
-    // Restore the old target's inputmode before switching so it's not left suppressed.
-    if (this._openValue) {
-      this._inputModeSuppression.restore();
-    }
-
-    // Reset shift/caps only on a real switch; a same-input re-set is a caret
-    // reposition that keeps the armed shift (parity with the UI5 twin).
-    if (el !== previous) {
-      this._shiftState.reset();
-    }
-
-    this._targetElement = el;
-    this._targetSource = "explicit";
-
-    if (this._openValue) {
-      this._inputModeSuppression.suppress();
-    }
-    // Always sync highlight: cleans up listeners on the old target even
-    // when the keyboard is closed, preventing a listener leak.
-    this._physicalKeyHighlight.sync();
-
-    if (el !== previous) {
-      this.fireDecoratorEvent("active-control-change", { activeElement: el });
-    }
+    this._retarget(el, "explicit");
   }
 
   /**
@@ -1329,6 +1229,7 @@ class KioskKeyboard extends UI5Element {
    */
   setTargetResolver(resolver: TargetResolver | null): void {
     this._targetResolver = resolver;
+    this._syncTargetBindings();
   }
 
   /**
@@ -1337,8 +1238,7 @@ class KioskKeyboard extends UI5Element {
    * @since 0.1.0
    */
   resetKeyboardType(): void {
-    // The marker keeps the setter from claiming the property; `onInvalidation` folds it
-    // to "unset" and reports the change as not auto-detected. The trailing clear covers
+    // See KeyboardTypeSource. The trailing clear covers
     // the paths that never reach `onInvalidation`: an unchanged value, for which the
     // framework skips the setter, and a pre-render call, for which invalidation is
     // suppressed. It runs only while the marker survived, so a type claimed from inside
@@ -1364,29 +1264,24 @@ class KioskKeyboard extends UI5Element {
   reset(): void {
     // Abort (not commit) any in-progress composition: reset discards the
     // interaction rather than flushing a half-formed syllable to the target.
-    if (this._middleware) {
-      this._middleware.reset();
-      this._middleware = null;
-    }
+    this._endComposition("reset");
     this._backspaceRepeat.stop();
-    if (this._variantPopup) this._variantGesture.close();
-    this._variantGesture.stop();
-    this._variantPopup = null;
+    this._variantGesture.abandon();
     this._shiftState.reset();
     this._layoutState.resetToBase();
   }
 
   /**
-   * Recomputes responsive height classes from the current live DOM.
+   * Recomputes the responsive height tier (the host's `cq-tier` attribute) from the current live DOM.
    *
    * Call this after runtime styling changes that alter intrinsic keyboard height
    * without producing a reliable resize signal, for example when compact mode
    * or custom CSS vars change the underlying natural content height within a
    * fixed-height host.
    *
-   * The class update is deferred to the next animation frame to avoid
-   * forced reflow. Query the DOM for responsive classes after a
-   * `requestAnimationFrame` callback, not synchronously.
+   * The update is deferred to the next animation frame to avoid forced
+   * reflow. Read `cq-tier` after a `requestAnimationFrame` callback, not
+   * synchronously.
    *
    * @public
    * @since 0.1.0
@@ -1396,10 +1291,6 @@ class KioskKeyboard extends UI5Element {
     if (!root) return;
 
     this._responsiveSizing.syncObserverTargets(root);
-
-    // Schedule responsive class update via rAF to avoid forced reflow.
-    // Host element classes survive shadow DOM re-renders, so synchronous
-    // reapplication is unnecessary.
     this._responsiveSizing.scheduleClassUpdate();
   }
 
@@ -1654,13 +1545,11 @@ class KioskKeyboard extends UI5Element {
       clicked instanceof Element ? clicked.closest<HTMLElement>(KIOSK_KEYBOARD_DOM.selectors.keyHook) : null;
     if (!keyEl) return;
 
-    // The release of a press a layout switch abandoned.
-    if (this._dropPressClick) {
-      this._dropPressClick = false;
-      return;
-    }
-
     const value = keyEl.dataset.key!;
+    const swallow = this._releaseSwallow;
+    this._releaseSwallow = null;
+    if (swallow && (swallow.value === null || swallow.value === value)) return;
+
     // Shift held on the activating event types the shifted glyph without
     // latching the on-screen `{shift}` state, mirroring a physical keyboard.
     // It is the only way a roving-tabindex user can reach a capital without
@@ -1669,28 +1558,16 @@ class KioskKeyboard extends UI5Element {
     // runs while focus sits on a keycap.
     const shifted = this._shifted || (e instanceof MouseEvent && e.shiftKey);
 
-    // A held Backspace already deleted via auto-repeat; swallow the trailing
-    // release click so lifting off does not delete one extra character.
-    if (this._backspaceRepeat.consumeClick(value)) return;
-
-    // A hold/right-click just opened the accent-variant popup on this key;
-    // swallow the trailing release click so lifting off does not also insert
-    // the base glyph.
-    if (this._variantGesture.consumeClick(value)) return;
-
     // Any other key press while the popup is open dismisses it (its options live
     // in the ui5-popover, so a key press is always "outside"), then proceeds so
-    // the same tap also types the key. Runs after the trailing-click suppression
-    // above so the click that opened the popup does not immediately close it.
+    // the same tap also types the key. Runs after the release swallow above so
+    // the click that opened the popup does not immediately close it.
     if (this._variantPopup) this._variantGesture.close();
 
     const action = parseKeyAction(value);
     this._performKeyAction(action, keyEl, value, shifted);
 
-    // One key, one decision: which keys spend a latched one-shot Shift is a
-    // pure function of the key, so it is asked once here rather than left to
-    // whichever branch of `_performKeyAction` remembers to call
-    // `_autoReleaseShift()`.
+    // Whether the key spends a one-shot Shift depends on the key alone (spendsOneShotShift).
     if (spendsOneShotShift(action.kind)) this._autoReleaseShift();
   }
 
@@ -1726,15 +1603,8 @@ class KioskKeyboard extends UI5Element {
       if (!allowed) return;
       this._shiftState.toggle();
 
-      // Optimistic DOM update: apply shift-active / caps-lock classes
-      // immediately for instant visual feedback, before the rAF-deferred
-      // Preact re-render cycle.  The template class binding maintains the
-      // state across subsequent re-renders (same pattern as the physical-key
-      // highlight controller's _highlightKey).
-      // Preact will redundantly setAttribute("class", ...) on the next
-      // render because its VDOM-to-VDOM diff always detects a change
-      // (class objects are freshly created each render, never === equal).
-      // The redundant DOM write is idempotent and harmless.
+      // Apply the classes now; the template re-derives them on the rAF render
+      // (pinned by the "shift feedback latency" tests).
       const isShifted = this._shiftState.isShifted;
       const isCaps = this._shiftState.isCapsLock;
       keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyShiftActive, isShifted);
@@ -1746,7 +1616,7 @@ class KioskKeyboard extends UI5Element {
     // key-press + composition pass. `char` is the text that would be inserted;
     // `undefined` for keys that insert nothing (actions and unknown tokens). A
     // lone "{"/"}" matches only one end, so it stays a literal character.
-    // Its Shift/Caps form when shifted (incl. CapsLock ß -> ẞ, #169), else the base value.
+    // Its Shift/Caps form when shifted (incl. CapsLock ß -> ẞ), else the base value.
     const char =
       action.kind === "char" ? (shifted ? shiftedGlyph(value, shiftValue, this._capsLock) : value) : undefined;
 
@@ -1755,7 +1625,6 @@ class KioskKeyboard extends UI5Element {
 
     const target = this._resolveTarget();
 
-    // ── Composition middleware ──
     const middleware = this._ensureMiddleware();
     if (middleware && target && middleware.handleKey(value, target)) return;
 
@@ -1776,9 +1645,7 @@ class KioskKeyboard extends UI5Element {
     }
 
     if (action.kind === "unknown") {
-      // key-press already fired (with char: undefined); do NOT insert the
-      // literal braces - that was a silent footgun (a mistyped `{bcksp}`, or a
-      // custom `{paste}` key with no handler, typed the text "{bcksp}").
+      // key-press fired with char: undefined; inserting would type "{bcksp}" for a typo'd token.
       console.warn(
         `[kiosk-keyboard] Unrecognized key token "${value}": not a built-in special key. Ignoring (no text inserted).`,
       );
@@ -1794,8 +1661,6 @@ class KioskKeyboard extends UI5Element {
       return;
     }
 
-    // Exhaustiveness: every KeyAction kind is handled above. A new variant fails
-    // to compile at this assertNever.
     return assertNever(action);
   }
 
@@ -1807,12 +1672,9 @@ class KioskKeyboard extends UI5Element {
   private _ensureMiddleware(): CompositionMiddleware | null {
     const factory = getMiddlewareFactory(this._layoutState.resolvedName(), this._foldCache.get().middleware);
     if (factory !== this._middlewareFactory) {
-      if (this._middleware) {
-        // Commit the buffer to the target: `reset()` would drop a half-typed syllable,
-        // and the preedit `commit()` finalises is already written into the input.
-        this._middleware.commit();
-        this._middleware = null;
-      }
+      // Commit the buffer to the target: `reset()` would drop a half-typed syllable,
+      // and the preedit `commit()` finalises is already written into the input.
+      this._endComposition("commit");
       this._middlewareFactory = factory;
     }
     if (!this._middleware && factory) this._middleware = factory();
@@ -1822,7 +1684,7 @@ class KioskKeyboard extends UI5Element {
   /**
    * One Backspace deletion for an auto-repeat tick: fires the cancelable
    * `key-press`, runs composition middleware, then deletes one grapheme.
-   * Mirrors the `{backspace}` branch of `_onKeyClick`. Returns `false` only
+   * Mirrors the `{backspace}` branch of `_performKeyAction`. Returns `false` only
    * when the key fired but nothing was deleted (empty input / read-only /
    * cursor at start), which stops the repeat.
    */
@@ -1853,16 +1715,38 @@ class KioskKeyboard extends UI5Element {
 
   /**
    * Abandons a key press held across a layout switch, the way a pointercancel or a
-   * focus loss does: the backspace repeat and variant hold stop, the keyboard press
-   * (and a pending Space release) is dropped, and the held pointer's trailing click is
-   * swallowed. The keycap under the press now shows another key, so its release types
-   * nothing.
+   * focus loss does: the backspace repeat and variant hold stop, an open accent popup
+   * is dismissed, the keyboard press (and a pending Space release) is dropped, and the
+   * held pointer's release types nothing, since the keycap under it now shows another
+   * key.
    */
   private _cancelPress(): void {
     this._backspaceRepeat.stop();
-    this._variantGesture.stop();
+    this._variantGesture.abandon();
     this._keyGridNav.onFocusOut();
-    if (this._pointerOnKey) this._dropPressClick = true;
+    if (this._press) this._press.abandoned = true;
+  }
+
+  /**
+   * Ends the gestures on a pointer's release, and ends the press when it is that
+   * pointer's: a press that repeated Backspace, opened the accent popup, or was
+   * abandoned arms the swallow its own trailing click spends.
+   */
+  private _onPressRelease(e: Event): void {
+    if (!(e instanceof PointerEvent)) return;
+    const repeated = this._backspaceRepeat.release();
+    const variant = this._variantGesture.release(e);
+    const press = this._press;
+    if (press?.pointerId !== e.pointerId) return;
+    this._press = null;
+    let swallow: { value: string | null } | null = null;
+    if (press.abandoned || variant === "any") swallow = { value: null };
+    else if (repeated || variant === "origin") swallow = { value: press.value };
+    if (!swallow) return;
+    this._releaseSwallow = swallow;
+    setTimeout(() => {
+      if (this._releaseSwallow === swallow) this._releaseSwallow = null;
+    });
   }
 
   // ── Accent-variant popup ──
@@ -1902,14 +1786,8 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
-   * Inserts a chosen variant through the same cursor-aware path a normal char
-   * key uses: fires the cancelable `key-press` first (a consumer's
-   * preventDefault vetoes the insert), routes the glyph through the composition
-   * middleware so a committed variant can seed or continue composition exactly
-   * like a pressed key, falls back to a literal insert when the middleware does
-   * not consume it. A committed variant is a character key, and
-   * `spendsOneShotShift("char")` is true on every branch, the vetoed one
-   * included. Called by the popup controller on commit.
+   * Commits a variant glyph like a char key: cancelable key-press, then
+   * middleware, then literal insert; always spends a one-shot Shift.
    */
   private _insertVariant(glyph: string): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: glyph, shiftKey: this._shifted, char: glyph });
@@ -1925,7 +1803,7 @@ class KioskKeyboard extends UI5Element {
     this._autoReleaseShift();
   }
 
-  // ── Layout switch / F-key handling ──
+  // ── F-key handling ──
 
   private _handleFKeyPress(fkeyName: string, shifted: boolean): void {
     const allowed = this.fireDecoratorEvent("key-press", { key: fkeyName, shiftKey: shifted });
@@ -2016,11 +1894,54 @@ class KioskKeyboard extends UI5Element {
   }
 
   /**
+   * Ends the live composition: `commit` finalises the preedit in the input it was
+   * typed into, `reset` discards it. Either way the middleware goes, since it holds
+   * that input's preedit offsets.
+   */
+  private _endComposition(how: "commit" | "reset"): void {
+    if (!this._middleware) return;
+    if (how === "commit") this._middleware.commit();
+    else this._middleware.reset();
+    this._middleware = null;
+  }
+
+  /**
+   * The one target transition. A real switch commits the composition, resets
+   * shift and drops a `{layout:*}` pick back to the base (a same-input re-set is
+   * a caret reposition that keeps all three, as in the UI5 twin) and fires
+   * `active-control-change`; every call re-points the target-bound resources at
+   * what the keyboard now resolves. Disconnect teardown is the only other writer
+   * of the target, and fires nothing.
+   */
+  private _retarget(el: HTMLInputElement | HTMLTextAreaElement | null, source: TargetSource): void {
+    const switched = el !== this._targetElement;
+    if (switched) {
+      this._endComposition("commit");
+      this._shiftState.reset();
+      this._layoutState.clearUserOverride("user");
+    }
+    this._targetElement = el;
+    this._targetSource = source;
+    this._syncTargetBindings();
+    if (switched) this.fireDecoratorEvent("active-control-change", { activeElement: el });
+  }
+
+  /**
+   * Moves an open keyboard's inputmode claim and the physical-key listeners onto
+   * the resolved target. Also run when `controls` or the resolver changes what
+   * that is without a new explicit target.
+   */
+  private _syncTargetBindings(): void {
+    if (this._openValue) {
+      this._inputModeSuppression.restore();
+      this._inputModeSuppression.suppress();
+    }
+    this._physicalKeyHighlight.bind(this._resolvedTarget());
+  }
+
+  /**
    * The element that receives typed characters. Assigning it keeps the host's
-   * `aria-controls` pointed at the current target, so every write site - the
-   * auto-show callback, `setTargetElement`, the auto-target in `_performOpen`,
-   * the stale-target purge and disconnect teardown - stays in sync through the
-   * one accessor rather than a sync call each could forget.
+   * `aria-controls` pointed at the current target.
    */
   private get _targetElement(): HTMLInputElement | HTMLTextAreaElement | null {
     return this._targetElementValue;
@@ -2055,15 +1976,18 @@ class KioskKeyboard extends UI5Element {
     return node instanceof Element ? node.id : "";
   }
 
+  /** The resolved target, after retiring a target that has left the document. */
   private _resolveTarget(): HTMLInputElement | HTMLTextAreaElement | null {
-    if (this._targetElement) {
-      if (!this._targetElement.isConnected) {
-        this._targetElement = null;
-        this._targetSource = "explicit";
-      } else {
-        return this._targetElement;
-      }
-    }
+    if (this._targetElement && !this._targetElement.isConnected) this._retarget(null, "explicit");
+    return this._resolvedTarget();
+  }
+
+  /**
+   * The connected target, else the single `controls` entry's input. Side-effect
+   * free, so the target transition itself can read it.
+   */
+  private _resolvedTarget(): HTMLInputElement | HTMLTextAreaElement | null {
+    if (this._targetElement?.isConnected) return this._targetElement;
     const ids = this._controlsList;
     if (ids.length === 1) {
       const el = document.getElementById(ids[0]!);
@@ -2097,22 +2021,8 @@ class KioskKeyboard extends UI5Element {
     return KioskKeyboard._getCoarsePointerQuery().matches;
   }
 
-  private _attachEscapeListener(): void {
-    if (this._escapeAbort) return;
-    this._escapeAbort = new AbortController();
-    document.addEventListener("keydown", this._boundEscape, {
-      capture: true,
-      signal: this._escapeAbort.signal,
-    });
-  }
-
-  private _detachEscapeListener(): void {
-    this._escapeAbort?.abort();
-    this._escapeAbort = null;
-  }
-
   private _onDocumentEscape(e: KeyboardEvent): void {
-    if (e.key !== "Escape") return;
+    if (e.key !== "Escape" || !this.docked) return;
     // An open variant popup takes the Escape first: dismiss it (and stop the
     // event) instead of closing the docked keyboard underneath it.
     if (this._variantPopup) {

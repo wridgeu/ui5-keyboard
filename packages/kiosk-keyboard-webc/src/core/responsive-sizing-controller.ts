@@ -29,10 +29,9 @@ export type ResponsiveSizingHost = HTMLElement & {
  * Observes the host element (and the rendered shadow root) with a
  * ResizeObserver and, on resize (coalesced via rAF), reflects a `cq-tier`
  * attribute (`short` / `tiny`, absent when unconstrained) on the host when it
- * is externally height-constrained. The tier lives on the host (not in shadow
- * DOM) so consumer overrides win; an attribute rather than a class so framework
- * `className` reconciliation cannot clobber it. Width breakpoints are handled
- * by CSS `@container` queries, so no JS width measurement is needed.
+ * is externally height-constrained (why a host attribute: see
+ * `KIOSK_KEYBOARD_DOM.attributes.cqTier`). Width styling is CSS
+ * `@container`; the layout-swapping width tier is AutoCompactController.
  *
  * The block axis cannot follow suit. A block-axis `@container` query needs
  * `container-type: size`, which makes the container's own block size independent
@@ -43,16 +42,16 @@ export type ResponsiveSizingHost = HTMLElement & {
  * host attribute rather than a query.
  */
 export class ResponsiveSizingController {
-  /** ResizeObserver for height-responsive class updates. */
+  /** ResizeObserver for the height tier. */
   private _resizeObserver: ResizeObserver | null = null;
   /** The current root element observed for intrinsic content size changes. */
   private _observedRoot: HTMLElement | null = null;
-  /** rAF handle that coalesces responsive class updates from multiple observers. */
+  /** rAF handle that coalesces tier updates from multiple observers. */
   private _syncFrame: number | null = null;
 
   constructor(private readonly _host: ResponsiveSizingHost) {}
 
-  /** Attaches a ResizeObserver to the host element for responsive class updates. */
+  /** Attaches a ResizeObserver to the host element for tier updates. */
   setup(): void {
     // Same re-entry as the host's listener arming: drop the previous observer
     // rather than orphan it.
@@ -100,7 +99,7 @@ export class ResponsiveSizingController {
     this._observedRoot = root;
   }
 
-  /** Coalesces responsive class updates triggered by host/content observation. */
+  /** Coalesces tier updates triggered by host/content observation. */
   scheduleClassUpdate(): void {
     if (this._syncFrame !== null) return;
 
@@ -119,12 +118,8 @@ export class ResponsiveSizingController {
   }
 
   /**
-   * Reflects the height-responsive `cq-tier` attribute on the host.
-   *
-   * Width responsiveness is handled purely by CSS @container queries.
-   *
-   * Height: applied in all browsers. Detects external height constraints
-   * (host height < natural content height) and applies compact layout.
+   * Reflects the height-responsive `cq-tier` attribute on the host when it is
+   * externally height-constrained (host height < natural content height).
    *
    * Runs from scheduleClassUpdate(), which coalesces the ResizeObserver
    * callback and the host's refreshResponsiveState() into one animation frame.
@@ -135,8 +130,6 @@ export class ResponsiveSizingController {
 
     const cs = getComputedStyle(root);
 
-    // ── Height ── (the tier lives on the host so consumer overrides always win)
-    //
     // Both heights below must be read with the tier cleared: it changes key
     // sizing, so measuring while it is applied makes the outcome depend on the
     // previous outcome, which oscillates.
@@ -160,7 +153,7 @@ export class ResponsiveSizingController {
 
     // Compare against the host content box, not the host border box. This
     // keeps height breakpoints accurate when consumers add host padding/borders,
-    // and measures untransformed layout pixels, matching the kiosk twin.
+    // and measures untransformed layout pixels.
     const hostHeight = this._getHostContentHeight();
 
     // Only apply when externally constrained (host height < natural content height).
@@ -170,7 +163,6 @@ export class ResponsiveSizingController {
       return;
     }
 
-    // px per rem, read once here from the root font-size.
     const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const shortThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-short-threshold", 16, remPx);
     const tinyThresh = resolveRemThreshold(cs, "--kiosk-keyboard-cq-tiny-threshold", 12, remPx);

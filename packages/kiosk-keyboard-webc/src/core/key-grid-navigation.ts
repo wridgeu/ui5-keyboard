@@ -26,8 +26,7 @@ function lastCol(layout: LayoutDefinition, row: number): number {
 }
 
 /**
- * Keyboard grid navigation for the web component (mirrors the UI5 control's
- * `KeyGridNavigation`, which attaches via `addDelegate`). Follows the WAI-ARIA
+ * Keyboard grid navigation for the web component. Follows the WAI-ARIA
  * APG layout-grid arrow model: Up/Down move within the column and clamp onto a
  * narrower row, stopping at the top/bottom edge; the visually-forward arrow -
  * ArrowRight in LTR, ArrowLeft in RTL - moves within the row and continues onto
@@ -115,7 +114,7 @@ export class KeyGridNavigation {
   private _navigationTarget(e: KeyboardEvent, from: KeyPosition, layout: LayoutDefinition): KeyPosition | null {
     let { row, col } = from;
     // In RTL the row is mirrored (.kiosk-row is display:flex), so the arrow
-    // that moves focus visually forward is ArrowLeft. Mirrors the variant popup.
+    // that moves focus visually forward is ArrowLeft.
     const key = this._host.isRtl() ? (MIRRORED_ARROWS[e.key] ?? e.key) : e.key;
 
     switch (key) {

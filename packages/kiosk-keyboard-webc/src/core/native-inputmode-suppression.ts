@@ -12,14 +12,16 @@
  * An instance holds at most one claim: a repeat `suppress()` on the element it
  * already holds is idempotent, and suppressing a different element releases the
  * previous claim first, so a re-entrant open path cannot strand a refcount.
- *
- * Mirrors the sibling `kiosk-keyboard` package's `native-keyboard-suppression.ts`
- * (the responsibilities and refcount semantics match; only the DOM access differs:
- * the webc resolves a live element, the UI5 twin resolves by control id).
  */
 export class NativeInputModeSuppression {
   private static readonly _suppressions = new WeakMap<HTMLElement, { original: string | null; refCount: number }>();
   private _suppressedElement: HTMLElement | null = null;
+
+  /** The `inputmode` the page authored on `el`, beneath any suppression of it. */
+  static authoredInputMode(el: HTMLElement): string | null {
+    const state = NativeInputModeSuppression._suppressions.get(el);
+    return state ? state.original : el.getAttribute("inputmode");
+  }
 
   /** @param _resolveTarget Live access to the resolved native input/textarea. */
   constructor(private readonly _resolveTarget: () => HTMLInputElement | HTMLTextAreaElement | null) {}

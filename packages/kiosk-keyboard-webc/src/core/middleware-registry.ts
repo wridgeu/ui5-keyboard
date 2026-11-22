@@ -12,11 +12,8 @@ export type InstanceMiddleware = ReadonlyMap<string, (() => CompositionMiddlewar
 /**
  * Built-in composition middleware factories keyed by layout name.
  *
- * Built eagerly from direct factory imports and sealed at module load: each
- * factory is genuinely referenced here, so a bundler cannot drop it. Side-effect
- * imports + `_registerMiddleware` self-registration would not be wired into the
- * production bundle, leaving built-in composition silently unregistered. There
- * is no public mutation API: per-app middleware is supplied by the `middleware` of a
+ * Direct imports, sealed at module load, so bundlers keep every factory (see
+ * layout-registry.ts). There is no public mutation API: per-app middleware is supplied by the `middleware` of a
  * slotted custom layout.
  */
 const factories: ReadonlyMap<string, () => CompositionMiddleware> = new Map([

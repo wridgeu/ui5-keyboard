@@ -322,6 +322,68 @@ describe("kiosk-keyboard", () => {
   // ── Target integration ──
 
   describe("target integration", () => {
+    // Twin of the UI5 "switch to a different same-type input drops a user
+    // {layout:*} override" case: a secondary page belongs to the input it was
+    // opened on, a primary pick to the user.
+    describe("a target switch", () => {
+      async function twoTargets(layout: string) {
+        const container = await fixture(html`
+          <div>
+            <input id="switch-a" type="text" />
+            <input id="switch-b" type="text" />
+            <kiosk-keyboard layout=${layout}></kiosk-keyboard>
+          </div>
+        `);
+        const a = container.querySelector<HTMLInputElement>("#switch-a")!;
+        const b = container.querySelector<HTMLInputElement>("#switch-b")!;
+        const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+        kb.setTargetElement(a);
+        await nextRender();
+        return { a, b, kb };
+      }
+
+      it("returns a secondary page to the base, reporting reason user", async () => {
+        const { b, kb } = await twoTargets("qwerty");
+        queryKey(kb, "{layout:numeric}")!.click();
+        await nextRender();
+        expect(kb.effectiveLayout, "precondition: the secondary page landed").to.equal("numeric");
+        const reasons: string[] = [];
+        kb.addEventListener("layout-change", (e) => {
+          reasons.push((e as CustomEvent<{ reason: string }>).detail.reason);
+        });
+
+        kb.setTargetElement(b);
+        await nextRender();
+
+        expect(kb.effectiveLayout).to.equal("qwerty");
+        expect(queryKey(kb, "q"), "the base surface renders").to.not.be.null;
+        expect(reasons).to.deep.equal(["user"]);
+      });
+
+      it("keeps a secondary page when the same target is set again", async () => {
+        const { a, kb } = await twoTargets("qwerty");
+        queryKey(kb, "{layout:numeric}")!.click();
+        await nextRender();
+
+        kb.setTargetElement(a);
+        await nextRender();
+
+        expect(kb.effectiveLayout).to.equal("numeric");
+      });
+
+      it("keeps a primary layout the user picked", async () => {
+        const { b, kb } = await twoTargets("ja-romaji");
+        queryKey(kb, "{layout:ja-kana}")!.click();
+        await nextRender();
+        expect(kb.effectiveLayout, "precondition: the primary pick landed").to.equal("ja-kana");
+
+        kb.setTargetElement(b);
+        await nextRender();
+
+        expect(kb.effectiveLayout).to.equal("ja-kana");
+      });
+    });
+
     it("types into target input via controls attribute", async () => {
       const container = await fixture(html`
         <div>

@@ -44,6 +44,8 @@ interface LayoutStateHost {
   /** Locale-derived default, honoring the per-instance locale and layout overrides. */
   getLocaleLayout(): string;
   getKeyboardType(): `${KeyboardType}`;
+  /** Whether `autoCompact` is on; while it is off no verdict resolves to a counterpart. */
+  isAutoCompactEnabled(): boolean;
   getFold(): CustomLayoutFold;
   fireLayoutChange(parameters: LayoutChangeEventDetail): void;
   /** Selecting a layout always resets the typing context. */
@@ -94,8 +96,8 @@ export class LayoutState {
   /** The layout last asked for, which the width tier resolves its counterpart against. */
   private _requested = "";
   private _source: LayoutSource = "external";
-  /** Whether the `autoCompact` width tier last reported the keyboard too narrow. */
-  private _narrow = false;
+  /** The `autoCompact` width verdict: too narrow, wide enough, or none measured. */
+  private _narrow: boolean | null = null;
   /** The intent and the effective layout `layout-change` last reported, or was seeded with. */
   private _reportedLayout = "";
   private _reportedEffective = "";
@@ -135,15 +137,15 @@ export class LayoutState {
    * Drops a user-driven `{layout:X}` pick: the source returns to `"external"` and the
    * surface to the base layout, so the resolved layout follows the constraint context
    * again and a lifted constraint lands on the base rather than on the pick. A
-   * programmatic or `{layout:base}` layout is left alone. Called on every
-   * `keyboardType` change.
+   * programmatic or `{layout:base}` layout is left alone. Called on a real target
+   * switch and on every `keyboardType` change, which `reason` names.
    */
-  clearUserOverride(): void {
+  clearUserOverride(reason: Reason): void {
     if (this._source !== "user") return;
     // Explicit, not left to `_commit`: a pick of a primary layout is already the base,
     // so the request below is a no-op that would leave the source at "user".
     this._source = "external";
-    this.resetToBase("keyboardType");
+    this.resetToBase(reason);
   }
 
   /**
@@ -171,8 +173,7 @@ export class LayoutState {
   }
 
   /**
-   * Returns the active surface to the base (alphabetic) layout, mirroring the kiosk
-   * twin's `resetLayout()`, and makes it the intent. Fires `layout-change` only on a
+   * Returns the active surface to the base (alphabetic) layout and makes it the intent. Fires `layout-change` only on a
    * real change.
    */
   resetToBase(reason: Reason = "api"): void {
@@ -184,11 +185,14 @@ export class LayoutState {
   /**
    * Records the `autoCompact` width verdict: the requested layout's compact
    * counterpart renders while the keyboard is too narrow for it, the requested layout
-   * itself once the room returns. Called from `AutoCompactController` on a frame of
-   * its own, never from the observation callback. `crossed` is whether the verdict
-   * replaces a known previous one, which is what gets announced.
+   * itself once the room returns, or once the verdict is withdrawn (`null`). Called
+   * from `AutoCompactController` on a frame of its own, never from the observation
+   * callback. An unchanged verdict is dropped; a verdict that replaces a known one is
+   * a width the user crossed, which is what gets announced.
    */
-  applyTier(narrow: boolean, crossed: boolean): void {
+  applyTier(narrow: boolean | null): void {
+    if (narrow === this._narrow) return;
+    const crossed = narrow !== null && this._narrow !== null;
     this._narrow = narrow;
     this._commit("tier", this._source, crossed);
     this._report("width");
@@ -289,7 +293,7 @@ export class LayoutState {
    */
   private _target(constrained: boolean): string {
     const requested = this._requested;
-    if (!this._narrow || constrained) return requested;
+    if (this._narrow !== true || constrained || !this._host.isAutoCompactEnabled()) return requested;
     const fold = this._host.getFold();
     const compact = getLayoutMeta(requested, fold.layoutMeta)?.compact;
     return compact !== undefined && getRegisteredLayout(compact, fold.layouts) ? compact : requested;

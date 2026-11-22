@@ -12,41 +12,22 @@ export interface AutoCompactHost {
   /** Whether `autoCompact` is on. */
   isEnabled(): boolean;
   /**
-   * Reports the tier verdict. The host owns which layout that resolves to. `crossed` is
-   * whether this verdict replaces a known previous one, which is what separates a
-   * width the user just crossed from the first resolution of a keyboard that was
-   * always this wide.
+   * Reports each measured verdict, or `null` once `autoCompact` is off. The host
+   * holds the verdict and owns which layout it resolves to.
    */
-  applyTier(narrow: boolean, crossed: boolean): void;
+  applyTier(narrow: boolean | null): void;
 }
 
 /**
  * Owns the width measurement behind the `autoCompact` property.
  *
- * Layout data is the one responsive dimension CSS cannot reach: a `@container`
- * rule can restyle a row but not re-seat its keys, and arrow-key navigation moves
- * on the resolved layout's coordinates rather than on rendered geometry. So the
- * tier that picks between a layout and its compact counterpart is measured here
- * and applied by the host.
+ * Separate from `ResponsiveSizingController`, which bails for docked, numpad and
+ * unconstrained keyboards exactly when this tier must still resolve, and whose
+ * measurement pass a width read would add forced layout to; allocates nothing
+ * while `autoCompact` is off.
  *
- * Deliberately a second `ResizeObserver` rather than a branch inside
- * `ResponsiveSizingController`. That controller returns early for docked and
- * numpad keyboards and again when the keyboard is not height-constrained, which is
- * the common case and exactly when this tier still has to resolve; and its
- * measurement pass is pinned by a "no forced layout reads during shift toggle"
- * perf test that a width read would break. Keeping the two apart also keeps this
- * one dormant: it observes nothing, and allocates no observer, while `autoCompact`
- * is off, which is the default.
- *
- * The tier is applied from a `requestAnimationFrame`, never from the observation
- * callback, which coalesces several observations in one frame into a single
- * application. It is not a guard against the "ResizeObserver loop completed with
- * undelivered notifications" failure #180 recorded against the height tiers:
- * applying the tier synchronously was measured to produce none, because #180 wrote
- * `classList` inside the callback and resized the observed box within the same
- * delivery, whereas a layout swap re-renders asynchronously in both frameworks and
- * so never re-enters observation. That measurement proves the absence of a symptom,
- * not of the hazard, so the frame stays.
+ * The tier is applied from a `requestAnimationFrame`, coalescing a frame's
+ * observations into one application.
  */
 export class AutoCompactController {
   private _resizeObserver: ResizeObserver | null = null;
@@ -59,8 +40,6 @@ export class AutoCompactController {
    * measured, which costs no layout. `null` until the first observation lands.
    */
   private _observedInline: number | null = null;
-  /** Last tier applied, so an observation that does not cross the threshold is dropped. */
-  private _appliedNarrow: boolean | null = null;
 
   constructor(private readonly _host: AutoCompactHost) {}
 
@@ -71,12 +50,10 @@ export class AutoCompactController {
    */
   syncObserver(root: HTMLElement | null): void {
     if (!root || !this._host.isEnabled()) {
-      // Switching the feature off gives the requested layout back rather than
-      // stranding the keyboard on the arrangement a width picked, which with the
-      // observer gone nothing else could undo.
-      const restore = this._appliedNarrow === true && !this._host.isEnabled();
       this.teardown();
-      if (restore) this._host.applyTier(false, false);
+      // Off withdraws the verdict, so the requested layout comes back rather than
+      // the keyboard being stranded on the arrangement a width picked.
+      if (!this._host.isEnabled()) this._host.applyTier(null);
       return;
     }
     if (this._observedRoot === root) return;
@@ -114,9 +91,6 @@ export class AutoCompactController {
     }
     this._observedRoot = null;
     this._observedInline = null;
-    // A later element carries its own width; a stale verdict would suppress its
-    // first real observation.
-    this._appliedNarrow = null;
   }
 
   private _applyTier(): void {
@@ -133,10 +107,6 @@ export class AutoCompactController {
     const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const threshold = (Number.isNaN(rem) ? DEFAULT_THRESHOLD_REM : rem) * remPx;
 
-    const narrow = this._observedInline <= threshold;
-    if (narrow === this._appliedNarrow) return;
-    const crossed = this._appliedNarrow !== null;
-    this._appliedNarrow = narrow;
-    this._host.applyTier(narrow, crossed);
+    this._host.applyTier(this._observedInline <= threshold);
   }
 }
