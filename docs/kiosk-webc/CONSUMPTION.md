@@ -143,9 +143,9 @@ must therefore load the web component outside the module system (via a
 
 **Coexistence.** Both the scoped and unscoped tags can coexist in the same page.
 They are separate entries in the `customElements` registry, each pointing to
-(potentially different instances of) the component constructor. They share the
-same layout registry because it is a module-level singleton. Layout data is
-not tied to the tag name.
+its own copy of the component. Nothing layout-related needs to be shared between
+them: the built-in registry is a sealed constant in each copy, and custom layouts
+are per-element `customLayouts` children, so either tag renders the same built-ins.
 
 The demo app's web component tooling page shows the actual registered tag name
 at runtime. Because this demo disables scoping, you will see the canonical
@@ -177,14 +177,16 @@ slotted into the per-element `customLayouts` slot:
 
 ```typescript
 import "kiosk-keyboard-webc/Assets";
-import KioskKeyboard from "kiosk-keyboard-webc";
+import "kiosk-keyboard-webc";
+import type KioskKeyboard from "kiosk-keyboard-webc";
 import "kiosk-keyboard-webc/CustomLayout";
+import type CustomLayout from "kiosk-keyboard-webc/CustomLayout";
 import qwerty from "kiosk-keyboard-webc/layouts/qwerty";
 import fkeyRow from "kiosk-keyboard-webc/layouts/fkey-row";
 
-const el = document.createElement("kiosk-keyboard");
+const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
 // Use a built-in as a base: prepend the shared F-key row to QWERTY.
-const custom = document.createElement("kiosk-keyboard-custom-layout");
+const custom = document.createElement("kiosk-keyboard-custom-layout") as CustomLayout;
 custom.slot = "customLayouts";
 custom.name = "qwerty-fk";
 custom.rows = [fkeyRow, ...qwerty];
@@ -207,11 +209,15 @@ own. It fires the cancelable `key-press` event; handle that and use the element'
 input methods to edit the target:
 
 ```typescript
-import KioskKeyboard from "kiosk-keyboard-webc";
+import "kiosk-keyboard-webc";
+import type KioskKeyboard from "kiosk-keyboard-webc";
 import "kiosk-keyboard-webc/CustomLayout";
+import type CustomLayout from "kiosk-keyboard-webc/CustomLayout";
+import type { KeyPressEventDetail } from "kiosk-keyboard-webc/bundle";
+import "@ui5/webcomponents-icons/dist/paste.js";
 
-const el = document.createElement("kiosk-keyboard");
-const pad = document.createElement("kiosk-keyboard-custom-layout");
+const el = document.createElement("kiosk-keyboard") as KioskKeyboard;
+const pad = document.createElement("kiosk-keyboard-custom-layout") as CustomLayout;
 pad.slot = "customLayouts";
 pad.name = "pad";
 pad.rows = [
@@ -219,7 +225,7 @@ pad.rows = [
 ];
 el.appendChild(pad);
 el.addEventListener("key-press", (e) => {
-  if (e.detail.key === "{paste}") {
+  if ((e as CustomEvent<KeyPressEventDetail>).detail.key === "{paste}") {
     e.preventDefault(); // claim this key
     navigator.clipboard.readText().then((t) => el.insertText(t));
   }
