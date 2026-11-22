@@ -32,12 +32,13 @@ The library uses the modern `Lib.init()` API with `apiVersion: 2`, not the depre
 
 ### Listener Setup
 
-Key and blur listeners are owned by a centralized `EventDispatcher` (internal class, created by `HotkeyManager`). Three listeners are attached to `window`:
+Key and blur listeners are owned by a centralized `EventDispatcher` (internal class, created by `HotkeyManager`). Three listeners are attached to `window` and one to `document`:
 
 ```ts
 window.addEventListener("keydown", handler, true); // capture phase
 window.addEventListener("keyup", handler, true); // capture phase
 window.addEventListener("blur", handler); // bubble phase
+document.addEventListener("visibilitychange", handler); // hidden -> clear held keys
 ```
 
 Using `window` capture ensures the library sees events before any `document` or element-level listeners. This is critical for `preventDefault()`, `stopPropagation()`, and the interceptor mechanism (used by `HotkeyRecorder`).
@@ -55,17 +56,19 @@ keydown event (window capture)
   │           Always runs, even for modifiers, IME, suspended state
   │
   ├─ Step 2: Interceptor check (e.g., HotkeyRecorder)
-  │           If interceptor returns true → event consumed, pipeline stops
+  │           If interceptor returns true (or throws) → reset pending sequences, stop
   │
   ├─ Step 3: Pre-filter
   │           Skip if: IME composition, modifier-only, AltGr on Windows
+  │           (getModifierState("AltGraph"), or Ctrl+Alt while AltRight is held)
   │
   ├─ Step 4: Suspend guard check
-  │           If any guard active → emit unhandled(Suspended), stop
+  │           If any guard active → reset pending sequences, emit unhandled(Suspended), stop
   │
   ├─ Step 5: Hotkey dispatch (HotkeyManager._processHotkeys → HotkeyMatcher)
   │           Pass 1: matcher.matchTargeted() via composedPath() (active scope → global)
   │           Pass 2: matcher.matchUntargeted() (active scope → global)
+  │           If a callback took a guard → reset pending sequences, stop (steps 6-7 skipped)
   │
   ├─ Step 6: Sequence dispatch (SequenceManager.processKeyEvent)
   │           Returns true if full match OR partial advance
@@ -76,7 +79,7 @@ keydown event (window capture)
 
 ### Suspend Guard
 
-`manager.suspendDispatch(reason?)` returns an RAII-style `KeyboardDispatchGuard`. While any guard is active, steps 5-7 are skipped and unhandled fires with `Suspended` reason. Guards are reference-counted; all must be released before dispatch resumes. `release()` is idempotent. Guards are invalidated on `destroy()`.
+`manager.suspendDispatch(reason?)` returns an RAII-style `KeyboardDispatchGuard`. While any guard is active, steps 5-7 are skipped and unhandled fires with `Suspended` reason. Guards are reference-counted; all must be released before dispatch resumes. `release()` is idempotent. Guards are invalidated on `destroy()`. A key swallowed while suspended resets pending sequences, and a guard taken inside a hotkey callback already blocks that keydown's sequence step.
 
 ### Per-registration Guards
 
@@ -112,7 +115,7 @@ Registrations within each scope are matched in FIFO order (first registered, fir
 
 ### Element-Id Fallback for Rerendered Targets
 
-Target-scoped registrations are indexed twice (see `internal/registration-index.ts`): by element object identity and, when the element has an `id`, by that id. UI5 rerenders replace DOM nodes instead of mutating them, so a registration bound to the old node would otherwise go dead after the first rerender. During matching, both indexes are consulted for each `composedPath()` node and their hits are merged: when a node in the path carries the same `id` as a registered (possibly stale, detached) target, the registrations indexed under that id still fire.
+Target-scoped registrations are indexed twice (see `internal/registration-store.ts`): by element object identity and, when the element has an `id`, by that id. UI5 rerenders replace DOM nodes instead of mutating them, so a registration bound to the old node would otherwise go dead after the first rerender. During matching, both indexes are consulted for each `composedPath()` node and their hits are merged: when a node in the path carries the same `id` as a registered (possibly stale, detached) target, the registrations indexed under that id still fire.
 
 Limitations:
 
@@ -124,7 +127,7 @@ Limitations:
 A **scope** is an arbitrary string identifier that groups related hotkeys by context. In practice, scopes map to UI5 application concepts:
 
 - **Route names**: view-level scopes like `"main"` or `"detail"` (managed automatically by router integration)
-- **Dialog IDs**: dialog-level scopes like `"confirmDialog"` or `"settingsDialog"` (managed manually via `pushScope`/`popScope`)
+- **Dialog IDs**: dialog-level scopes like `"confirmDialog"` or `"settingsDialog"` (managed manually via `pushScope()` and the returned handle)
 - **Fragment or component IDs**: any string that meaningfully groups a set of shortcuts
 
 Scopes are not a UI5 framework concept; they are a library-level abstraction. The global scope (`"__global__"`) is always present at the bottom of the stack.
@@ -141,7 +144,7 @@ resetToGlobalScope():   [__global__]                    <- active: global
 
 The global scope is always at the bottom and cannot be popped.
 
-`popScope(scopeId)` requires a scope ID that must match the current top of the stack. If the provided ID does not match, an error is thrown. This catches scope management bugs early by failing fast rather than silently producing incorrect behavior.
+`popScope(scopeId)` removes the topmost entry with that ID, even when other entries sit above it. When no entry has the ID (already released, popped or reset), it logs a warning and changes nothing; only `popScope(GLOBAL_SCOPE)` throws. Prefer the `ScopeHandle` returned by `pushScope()`: its `release()` removes exactly the entry it was returned for, never another entry with the same ID, and is idempotent.
 
 `resetToGlobalScope()` removes all non-global scopes in one call, which is useful when navigating between views where the entire scope context changes.
 
@@ -149,16 +152,13 @@ The global scope is always at the bottom and cannot be popped.
 
 Router integration is **purely additive**. The `HotkeyManager` works without any router: the scope stack, `pushScope()`/`popScope()`, two-pass matching, and the entire dispatch pipeline function independently. Router integration is a convenience that automates scope transitions for route changes.
 
-`group.enableRouterIntegration(router)` (on `RegistrationGroup`) attaches handlers to the router's `beforeRouteMatched` and `bypassed` events. On each route change:
+`group.enableRouterIntegration(router)` (on `RegistrationGroup`) attaches handlers to the router's `beforeRouteMatched` and `bypassed` events. The group owns one scope stack entry, named after the matched route. On each route change that entry is replaced in place with the new route's name, so entries pushed above it (an open dialog's) stay on top until their owner releases them. If the entry is no longer on the stack (released, or cleared by `resetToGlobalScope()`), the new route's entry is pushed on top.
 
-1. The scope stack is reset to global via `resetToGlobalScope()`.
-2. The new route's name is pushed as the active scope.
-
-On `bypassed` (no route matches the hash, so the router displays its not-found target) only step 1 runs: the not-found target carries the global scope, never the previous route's.
+On `bypassed` (no route matches the hash, so the router displays its not-found target) only the route entry is removed: the not-found target never inherits the previous route's scope. The router never touches manually pushed scopes.
 
 This removes the need for manual `pushScope`/`popScope` calls in route-based applications. Each route name becomes a scope ID, and controllers register their hotkeys with `scope: "routeName"`.
 
-Applications that do not use routing (reuse components, embedded components, non-routed UIs) use `pushScope()`/`popScope()` directly, or register everything on the global scope.
+Applications that do not use routing (reuse components, embedded components, non-routed UIs) use `pushScope()` and release the returned handle, or register everything on the global scope.
 
 Router integration lives on `RegistrationGroup`, not on `HotkeyManager`. This ties the router listener to the group's lifecycle: `destroyAll()` automatically detaches it. Since `HotkeyManager.destroy()` finalizes all groups, router cleanup is guaranteed on either path. Calling `enableRouterIntegration()` again on the same group silently replaces the previous router listener.
 
@@ -281,6 +281,7 @@ manager.register(
   },
   {
     scope: "dialog",
+    suppressInPopups: false, // the default skips hotkeys while a dialog is open
     preventDefault: false,
     stopPropagation: false,
   },
@@ -323,7 +324,7 @@ Special keys are also replaced with their display forms (arrow symbols, return s
 | Router detach requires listener context        | Group passes `this` as oListener to `detachBeforeRouteMatched`/`detachBypassed` |
 | Nested target-scoped same key                  | Innermost target in composedPath() wins                                         |
 | Target not in composedPath()                   | UnhandledReason.TargetMismatch reported                                         |
-| Dispatch suspended via guard                   | Steps 5-7 skipped, UnhandledReason.Suspended reported                           |
+| Dispatch suspended via guard                   | Steps 5-7 skipped, pending sequences reset, UnhandledReason.Suspended reported  |
 | Closed shadow root targets                     | composedPath() stops at boundary, no match                                      |
 | Detached targets                               | No identity match; a same-id node in the path matches (id index)                |
 | Empty composedPath()                           | Fallback to `[event.target, document, window]`                                  |
@@ -349,6 +350,7 @@ packages/hotkeys/
     internal/
       types.ts             Internal type definitions
       validate.ts          Validation implementation
+      immutable-options.ts Rejects scope/conflictBehavior in setOptions()
       constants.ts         Alias/symbol map implementation
       parse.ts             Hotkey string parsing implementation
       match.ts             KeyboardEvent matching implementation
@@ -361,7 +363,7 @@ packages/hotkeys/
       internal-token.ts    Runtime instantiation guard symbol
       scope.ts             Scope string resolution and validation
       skip-reason.ts       Internal skip-reason models
-      registration-index.ts Scope/target registration index
+      registration-store.ts Live registrations + scope/target/element-id index
       hotkey-matcher.ts    Two-pass targeted/untargeted matching
       conflict-resolver.ts Duplicate-registration conflict detection/resolution
       resolve-enabled.ts   Resolves the enabled option (boolean or predicate)
@@ -383,11 +385,11 @@ Multi-key sequence matching (e.g., `G` then `E`). Receives pre-filtered key even
 
 ### KeyStateTracker
 
-Tracks which keys are currently held down. Owned by the EventDispatcher, created and destroyed as part of its lifecycle. Accessed via `manager.getKeyStateTracker()`. Receives events from the EventDispatcher pipeline (step 1), always runs, even during recording or suspension. Includes a macOS fix for stuck keys when a modifier is released (Cmd+Tab swallows the Tab keyup).
+Tracks which keys are currently held down. Owned by the EventDispatcher, created and destroyed as part of its lifecycle. Accessed via `manager.getKeyStateTracker()`. Receives events from the EventDispatcher pipeline (step 1), always runs, even during recording or suspension. Includes a macOS fix for stuck keys when a modifier is released (Cmd+Tab swallows the Tab keyup). Held modifiers are reconciled against the flags of each trusted key event, so a modifier keyup lost to an OS shortcut or focus change is dropped on the next key event. All held keys clear on window `blur` and when the page becomes hidden. The change callback fires at most once per key event.
 
 ### HotkeyRecorder
 
-Records a single keyboard shortcut from user input for "press a key" settings UIs. Created via `manager.createRecorder()`. Implements the `KeyEventInterceptor` interface. When recording, it is set as the EventDispatcher's interceptor (step 2) and blocks all subsequent pipeline steps. Multiple recorders can coexist but only one can be active at a time (starting a second recorder detaches the first).
+Records a single keyboard shortcut from user input for "press a key" settings UIs. Created via `manager.createRecorder()`. Implements the `KeyEventInterceptor` interface. When recording, it is set as the EventDispatcher's interceptor (step 2) and blocks all subsequent pipeline steps. Each key it consumes resets pending sequences. Multiple recorders can coexist but only one can be active at a time (starting a second recorder detaches the first).
 
 ### validate.ts
 

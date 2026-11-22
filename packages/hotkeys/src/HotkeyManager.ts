@@ -141,8 +141,8 @@ class ScopeEntry implements ScopeHandle {
  *
  * Dispatches matching hotkeys to registered callbacks based on scope, input
  * state, and dialog state. Attaches capture-phase keydown/keyup and a blur
- * listener to `window`, plus capture focusin/focusout on `document`;
- * `destroy()` removes them all.
+ * listener to `window`, plus capture focusin/focusout and visibilitychange on
+ * `document`; `destroy()` removes them all.
  *
  * @example
  * ```ts
