@@ -1,4 +1,4 @@
-import type { LayoutDefinition } from "ui5/kiosk/types";
+import type { LayoutDefinition, VariantTable } from "ui5/kiosk/types";
 import {
   LATIN_DIACRITIC_VARIANTS,
   applyVariantDefaults,
@@ -7,7 +7,6 @@ import {
   toShiftVariant,
   toShiftVariants,
   type InstanceVariants,
-  type VariantTable,
 } from "ui5/kiosk/internal/latin-variants";
 
 // Unit coverage for the framework-agnostic long-press variant helpers: the

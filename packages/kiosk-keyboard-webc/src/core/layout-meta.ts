@@ -11,7 +11,7 @@
  *
  * Twin: kiosk-keyboard src/internal/layout-meta.ts (drift-checked by tools/check-twin-drift.mjs).
  */
-import type { VariantTable } from "./latin-variants.js";
+import type { VariantTable } from "../types.js";
 
 /** The attributes a built-in layout can declare. Every field is optional; an absent field takes the default. */
 export interface LayoutMeta {

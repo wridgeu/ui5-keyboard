@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { LayoutDefinition } from "../../src/types.js";
+import type { LayoutDefinition, VariantTable } from "../../src/types.js";
 import {
   LATIN_DIACRITIC_VARIANTS,
   applyVariantDefaults,
@@ -8,7 +8,6 @@ import {
   toShiftVariant,
   toShiftVariants,
   type InstanceVariants,
-  type VariantTable,
 } from "../../src/core/latin-variants.js";
 
 // Unit coverage for the framework-agnostic long-press variant helpers: the

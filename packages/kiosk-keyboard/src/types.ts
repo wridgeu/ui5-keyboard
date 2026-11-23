@@ -1,4 +1,5 @@
-import type { VariantTable } from "./internal/latin-variants";
+/** A variant table: ordered long-press glyphs keyed by lowercase base letter. */
+export type VariantTable = Readonly<Record<string, readonly string[]>>;
 
 /**
  * Valid width values for keys.

@@ -3,7 +3,7 @@ import { renderFinished } from "@ui5/webcomponents-base/dist/Render.js";
 import KioskKeyboard from "../../src/KioskKeyboard.js";
 import type CustomLayout from "../../src/CustomLayout.js";
 import type { CompositionMiddleware, LayoutDefinition, LayoutRole } from "../../src/types.js";
-import type { VariantTable } from "../../src/core/latin-variants.js";
+import type { VariantTable } from "../../src/types.js";
 
 const DOM = KioskKeyboard.DOM;
 

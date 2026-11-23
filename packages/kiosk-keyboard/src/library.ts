@@ -1,6 +1,6 @@
 import DataType from "sap/ui/base/DataType";
 import type { LayoutDefinition } from "./types";
-import type { VariantTable } from "./internal/latin-variants";
+import type { VariantTable } from "./types";
 import Lib from "sap/ui/core/Lib";
 import "sap/m/library"; // resolve dependency before Lib.init()
 
@@ -361,7 +361,7 @@ export { LATIN_DIACRITIC_VARIANTS } from "./internal/latin-variants";
 // Separate `export type`: the transpile pipeline does not honour an inline
 // `type` modifier on a re-export, and would assign the type name onto the
 // library object at runtime, publishing an undefined ui5.kiosk member.
-export type { VariantTable } from "./internal/latin-variants";
+export type { VariantTable } from "./types";
 
 // The interface generator emits no `| null` union of its own for a custom type, so
 // the null lives in the alias, and a registered `DataType` name with no exported

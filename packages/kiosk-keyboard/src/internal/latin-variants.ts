@@ -8,11 +8,11 @@
  *
  * Twin: kiosk-keyboard-webc src/core/latin-variants.ts (drift-checked by tools/check-twin-drift.mjs).
  */
-import type { LayoutDefinition } from "../types";
+import type { LayoutDefinition, VariantTable } from "../types";
 import { BUILTIN_LAYOUT_META } from "./layout-meta";
 
-/** A variant table: ordered long-press glyphs keyed by lowercase base letter. */
-export type VariantTable = Readonly<Record<string, readonly string[]>>;
+// Re-exported so the table and its type import from one module (webc publishes this module as `/variants`).
+export type { VariantTable } from "../types";
 
 /**
  * Ordered Latin-diacritic variants keyed by lowercase base letter. The base

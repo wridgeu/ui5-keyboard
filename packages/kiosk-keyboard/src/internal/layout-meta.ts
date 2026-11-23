@@ -11,7 +11,7 @@
  *
  * Twin: kiosk-keyboard-webc src/core/layout-meta.ts (drift-checked by tools/check-twin-drift.mjs).
  */
-import type { VariantTable } from "./latin-variants";
+import type { VariantTable } from "../types";
 
 /** The attributes a built-in layout can declare. Every field is optional; an absent field takes the default. */
 export interface LayoutMeta {
