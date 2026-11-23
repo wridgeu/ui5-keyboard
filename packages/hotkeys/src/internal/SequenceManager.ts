@@ -1,12 +1,11 @@
 import Log from "sap/base/Log";
-import { GLOBAL_SCOPE } from "./constants";
 import { assertImmutableSetOptions } from "./immutable-options";
 import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./dom";
 import { getCandidateKeys, matchesKeyboardEvent } from "./match";
 import { parseHotkey } from "./parse";
 import { resolveScopeOrGlobal } from "./scope";
 import { resolveEnabled } from "./resolve-enabled";
-import { ConflictBehavior } from "../library";
+import { ConflictBehavior, GLOBAL_SCOPE } from "../library";
 import type { Platform } from "../library";
 import type {
   HotkeyCallback,

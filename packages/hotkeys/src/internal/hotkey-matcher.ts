@@ -1,6 +1,5 @@
 import Log from "sap/base/Log";
-import { UnhandledReason } from "../library";
-import { GLOBAL_SCOPE } from "./constants";
+import { GLOBAL_SCOPE, UnhandledReason } from "../library";
 import { findMatchInScope, type FindMatchOptions } from "./dispatch-core";
 import { matchesKeyboardEvent } from "./match";
 import { recordSkip, type SkipInfo } from "./skip-reason";
