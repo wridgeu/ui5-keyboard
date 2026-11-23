@@ -8,8 +8,10 @@
  * duplicated by hand and must stay logically identical. Hand-syncing has
  * already missed one-sided fixes, so this check compares each twin pair after
  * normalizing away the differences that are legitimate (comments, blank lines,
- * `.js` ESM import suffixes, and the `../internal/` vs `../core/` helper
- * directory a middleware module imports through) and fails with the first
+ * `.js` ESM import suffixes, the `../internal/` vs `../core/` helper
+ * directory a middleware module imports through, and oxfmt wrapping an
+ * import/export specifier list that the `.js` suffix pushed past the line
+ * width) and fails with the first
  * drifting line when anything else drifts. Intra-line spacing is left to oxfmt
  * (run before this check in the same pipeline), so the normalizer does not
  * collapse it.
@@ -285,7 +287,37 @@ function normalize(filePath) {
     line = line.replace(TWIN_HELPER_DIR, "$1../TWIN_HELPERS/"); // kiosk internal/ <-> webc core/
     lines.push(line);
   }
-  return lines;
+  return foldSpecifierLists(lines);
+}
+
+/**
+ * Joins a wrapped `import { … } from` / `export { … } from` list back onto one
+ * line, so the twin oxfmt wrapped (webc's `.js` suffixes make its lines longer)
+ * compares equal to the one it left whole. Specifiers stay in source order, so
+ * a reordered or missing name is still drift.
+ *
+ * @param {string[]} lines trimmed, non-empty lines
+ * @returns {string[]} lines with each wrapped specifier list on one line
+ */
+function foldSpecifierLists(lines) {
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    const close = /^(?:import|export)(?: type)? {$/.test(line)
+      ? lines.findIndex((l, j) => j > i && l.startsWith("}"))
+      : -1;
+    if (close === -1) {
+      out.push(line);
+      continue;
+    }
+    const names = lines
+      .slice(i + 1, close)
+      .join(" ")
+      .replace(/,$/, "");
+    out.push(`${line} ${names} ${lines[close]}`);
+    i = close;
+  }
+  return out;
 }
 
 if (PAIRS.length !== EXPECTED_PAIR_COUNT) {

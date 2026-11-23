@@ -15,11 +15,11 @@
  *
  * Twin: kiosk-keyboard-webc src/core/custom-layout-fold.ts (drift-checked by tools/check-twin-drift.mjs).
  */
-import type { InstanceVariants, VariantOverlay, VariantTable } from "./latin-variants";
+import type { InstanceVariants, VariantOverlay } from "./latin-variants";
 import type { InstanceLayoutMeta, LayoutMeta } from "./layout-meta";
 import type { InstanceLayouts, InstanceLocaleLayouts } from "./layout-registry";
 import type { InstanceMiddleware } from "./middleware-registry";
-import type { CompositionMiddleware, CustomLayoutSpec, KeyDefinition, LayoutDefinition } from "../types";
+import type { CompositionMiddleware, CustomLayoutSpec, KeyDefinition, LayoutDefinition, VariantTable } from "../types";
 
 /** The facets a custom layout can discard the inherited value of. */
 export const SUPPRESSIBLE_FACETS = ["Variants", "Middleware"] as const;

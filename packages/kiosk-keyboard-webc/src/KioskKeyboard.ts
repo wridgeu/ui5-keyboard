@@ -30,13 +30,7 @@ import { LayoutState, type FocusAnchor } from "./core/layout-state.js";
 import type { ICustomLayout } from "./CustomLayout.js";
 import slot from "@ui5/webcomponents-base/dist/decorators/slot-strict.js";
 import type { Slot } from "@ui5/webcomponents-base/dist/UI5Element.js";
-import {
-  applyVariantDefaults,
-  resolveVariantTable,
-  shiftedGlyph,
-  toShiftVariants,
-  type VariantTable,
-} from "./core/latin-variants.js";
+import { applyVariantDefaults, resolveVariantTable, shiftedGlyph, toShiftVariants } from "./core/latin-variants.js";
 import { VariantPopupController, type VariantPopupState } from "./core/variant-popup-controller.js";
 import { getText, setI18nResolver } from "./core/i18n.js";
 import { BackspaceRepeatController } from "./core/backspace-repeat-controller.js";
@@ -67,6 +61,7 @@ import {
   type OpenStateChangeEventDetail,
   type I18nResolver,
   type TargetResolver,
+  type VariantTable,
 } from "./types.js";
 
 import KioskKeyboardTemplate from "./KioskKeyboardTemplate.js";
@@ -2039,5 +2034,4 @@ KioskKeyboard.define();
 
 export default KioskKeyboard;
 
-export type { CompositionMiddleware, CustomLayoutSpec } from "./types.js";
-export type { VariantTable } from "./core/latin-variants.js";
+export type { CompositionMiddleware, CustomLayoutSpec, VariantTable } from "./types.js";

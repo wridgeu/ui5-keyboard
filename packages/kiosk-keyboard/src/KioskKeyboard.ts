@@ -9,7 +9,7 @@ import { InvisibleMessageMode } from "sap/ui/core/library";
 import Popover from "sap/m/Popover";
 import { PlacementType } from "sap/m/library";
 import { getLayoutMeta } from "./internal/layout-meta";
-import type { LayoutDefinition, CompositionMiddleware } from "./types";
+import type { LayoutDefinition, CompositionMiddleware, VariantTable } from "./types";
 import CustomLayout from "./CustomLayout";
 import { isValidVariantTable } from "./internal/custom-layout-fold";
 import LayoutFoldCache from "./internal/layout-fold-cache";
@@ -19,13 +19,7 @@ import KioskKeyboardRenderer from "./KioskKeyboardRenderer";
 import { KIOSK_KEYBOARD_DOM } from "./internal/dom-contract";
 import { getText } from "./internal/i18n-registry";
 import { resolveWithCustomResolver, isParticipating, keyPositionOf, type KeyPosition } from "./internal/dom";
-import {
-  applyVariantDefaults,
-  resolveVariantTable,
-  shiftedGlyph,
-  toShiftVariants,
-  type VariantTable,
-} from "./internal/latin-variants";
+import { applyVariantDefaults, resolveVariantTable, shiftedGlyph, toShiftVariants } from "./internal/latin-variants";
 import VariantPopupBehavior from "./internal/variant-popup-behavior";
 import { KeyboardType, LayoutChangeReason, type ControlID } from "./library"; // side-effect: ensures Lib.init() runs
 import {
