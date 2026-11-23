@@ -89,7 +89,7 @@ export function isParticipating(host: ParticipationHost): boolean {
  * - nested web components (e.g. ui5-step-input → ui5-input → native input)
  *   up to `maxDepth` levels of shadow DOM nesting
  */
-export function resolveInputOrTextarea(
+function resolveInputOrTextarea(
   el: EventTarget | null | undefined,
   maxDepth = 3,
 ): HTMLInputElement | HTMLTextAreaElement | null {

@@ -1,4 +1,4 @@
-import { resolveInputOrTextarea, resolveWithCustomResolver } from "ui5/kiosk/internal/dom";
+import { resolveWithCustomResolver } from "ui5/kiosk/internal/dom";
 import type { TargetResolver } from "ui5/kiosk/types";
 
 const fixture = document.getElementById("qunit-fixture")!;
@@ -43,24 +43,24 @@ QUnit.module("dom-resolution - direct elements", {
 QUnit.test("Returns a direct <input> element", (assert) => {
   const input = document.createElement("input");
   fixture.appendChild(input);
-  assert.strictEqual(resolveInputOrTextarea(input), input);
+  assert.strictEqual(resolveWithCustomResolver(input, null), input);
 });
 
 QUnit.test("Returns a direct <textarea> element", (assert) => {
   const ta = document.createElement("textarea");
   fixture.appendChild(ta);
-  assert.strictEqual(resolveInputOrTextarea(ta), ta);
+  assert.strictEqual(resolveWithCustomResolver(ta, null), ta);
 });
 
 QUnit.test("Returns null for a plain <div>", (assert) => {
   const div = document.createElement("div");
   fixture.appendChild(div);
-  assert.strictEqual(resolveInputOrTextarea(div), null);
+  assert.strictEqual(resolveWithCustomResolver(div, null), null);
 });
 
 QUnit.test("Returns null for null and undefined", (assert) => {
-  assert.strictEqual(resolveInputOrTextarea(null), null);
-  assert.strictEqual(resolveInputOrTextarea(undefined), null);
+  assert.strictEqual(resolveWithCustomResolver(null, null), null);
+  assert.strictEqual(resolveWithCustomResolver(undefined, null), null);
 });
 
 // ═══════════════════════════════════════════════════
@@ -79,7 +79,7 @@ QUnit.test("Finds <input> as direct child of host", (assert) => {
   host.appendChild(input);
   fixture.appendChild(host);
 
-  assert.strictEqual(resolveInputOrTextarea(host), input);
+  assert.strictEqual(resolveWithCustomResolver(host, null), input);
 });
 
 QUnit.test("Finds <textarea> as direct child of host", (assert) => {
@@ -88,7 +88,7 @@ QUnit.test("Finds <textarea> as direct child of host", (assert) => {
   host.appendChild(ta);
   fixture.appendChild(host);
 
-  assert.strictEqual(resolveInputOrTextarea(host), ta);
+  assert.strictEqual(resolveWithCustomResolver(host, null), ta);
 });
 
 QUnit.test("Returns null when light DOM has no input or textarea", (assert) => {
@@ -96,7 +96,7 @@ QUnit.test("Returns null when light DOM has no input or textarea", (assert) => {
   host.innerHTML = "<span>text</span><button>click</button>";
   fixture.appendChild(host);
 
-  assert.strictEqual(resolveInputOrTextarea(host), null);
+  assert.strictEqual(resolveWithCustomResolver(host, null), null);
 });
 
 // ═══════════════════════════════════════════════════
@@ -113,20 +113,20 @@ QUnit.test("Finds <input> in open shadow root", (assert) => {
   const host = makeShadowHost('<input type="text">');
   const input = host.shadowRoot!.querySelector("input")!;
 
-  assert.strictEqual(resolveInputOrTextarea(host), input);
+  assert.strictEqual(resolveWithCustomResolver(host, null), input);
 });
 
 QUnit.test("Finds <textarea> in open shadow root", (assert) => {
   const host = makeShadowHost("<textarea></textarea>");
   const ta = host.shadowRoot!.querySelector("textarea")!;
 
-  assert.strictEqual(resolveInputOrTextarea(host), ta);
+  assert.strictEqual(resolveWithCustomResolver(host, null), ta);
 });
 
 QUnit.test("Returns null when shadow root has no input or textarea", (assert) => {
   const host = makeShadowHost("<span>shadow content</span>");
 
-  assert.strictEqual(resolveInputOrTextarea(host), null);
+  assert.strictEqual(resolveWithCustomResolver(host, null), null);
 });
 
 QUnit.test("Prefers light DOM input over shadow DOM input", (assert) => {
@@ -139,7 +139,7 @@ QUnit.test("Prefers light DOM input over shadow DOM input", (assert) => {
   shadow.innerHTML = '<input class="shadow">';
   fixture.appendChild(host);
 
-  assert.strictEqual(resolveInputOrTextarea(host), lightInput, "light DOM checked first");
+  assert.strictEqual(resolveWithCustomResolver(host, null), lightInput, "light DOM checked first");
 });
 
 // ═══════════════════════════════════════════════════
@@ -154,31 +154,16 @@ QUnit.module("dom-resolution - nested shadow DOM", {
 
 QUnit.test("Finds <input> at 3 levels of shadow nesting (default maxDepth)", (assert) => {
   const host = makeNestedShadowChain(3);
-  const result = resolveInputOrTextarea(host);
+  const result = resolveWithCustomResolver(host, null);
 
   assert.ok(result instanceof HTMLInputElement, "found 3-level nested input");
 });
 
 QUnit.test("Returns null at 4 levels (exceeds default maxDepth=3)", (assert) => {
   const host = makeNestedShadowChain(4);
-  const result = resolveInputOrTextarea(host);
+  const result = resolveWithCustomResolver(host, null);
 
   assert.strictEqual(result, null, "4 levels exceeds maxDepth=3");
-});
-
-QUnit.test("Respects explicit maxDepth=0 (no recursion into shadow)", (assert) => {
-  const host = makeShadowHost('<input type="text">');
-  const result = resolveInputOrTextarea(host, 0);
-
-  assert.strictEqual(result, null, "maxDepth=0 prevents shadow traversal");
-});
-
-QUnit.test("Respects explicit maxDepth=1 (one level only)", (assert) => {
-  const host1 = makeNestedShadowChain(1);
-  const host2 = makeNestedShadowChain(2);
-
-  assert.ok(resolveInputOrTextarea(host1, 1) instanceof HTMLInputElement, "1-level chain with maxDepth=1 works");
-  assert.strictEqual(resolveInputOrTextarea(host2, 1), null, "2-level chain with maxDepth=1 fails");
 });
 
 // ═══════════════════════════════════════════════════

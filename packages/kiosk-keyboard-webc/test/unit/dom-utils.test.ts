@@ -1,11 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import {
-  classifyRow,
-  keyPart,
-  keyPositionOf,
-  resolveInputOrTextarea,
-  resolveWithCustomResolver,
-} from "../../src/core/dom-utils.js";
+import { classifyRow, keyPart, keyPositionOf, resolveWithCustomResolver } from "../../src/core/dom-utils.js";
 import { KIOSK_KEYBOARD_DOM as DOM } from "../../src/core/dom-contract.js";
 import { parseKeyAction } from "../../src/core/key-token.js";
 import { getRegisteredLayoutNames } from "../../src/core/layout-registry.js";
@@ -19,36 +13,38 @@ function asResolvedInput(el: HTMLDivElement | HTMLInputElement): HTMLInputElemen
   return el as HTMLInputElement;
 }
 
-describe("resolveInputOrTextarea", () => {
+describe("built-in target resolution", () => {
   it("returns native input directly", () => {
     const input = document.createElement("input");
-    expect(resolveInputOrTextarea(input)).toBe(input);
+    expect(resolveWithCustomResolver(input, null)).toBe(input);
   });
 
   it("returns native textarea directly", () => {
     const textarea = document.createElement("textarea");
-    expect(resolveInputOrTextarea(textarea)).toBe(textarea);
+    expect(resolveWithCustomResolver(textarea, null)).toBe(textarea);
   });
 
   it("returns null for non-element", () => {
-    expect(resolveInputOrTextarea(null)).toBeNull();
-    expect(resolveInputOrTextarea(undefined)).toBeNull();
-    // @ts-expect-error a value only plain JS can supply, which is what the guard covers
-    expect(resolveInputOrTextarea("string")).toBeNull();
+    // @ts-expect-error values only plain JS can supply, which is what the guard covers
+    expect(resolveWithCustomResolver(null, null)).toBeNull();
+    // @ts-expect-error
+    expect(resolveWithCustomResolver(undefined, null)).toBeNull();
+    // @ts-expect-error
+    expect(resolveWithCustomResolver("string", null)).toBeNull();
   });
 
   it("finds input in light DOM", () => {
     const wrapper = document.createElement("div");
     const input = document.createElement("input");
     wrapper.appendChild(input);
-    expect(resolveInputOrTextarea(wrapper)).toBe(input);
+    expect(resolveWithCustomResolver(wrapper, null)).toBe(input);
   });
 
   it("finds textarea in light DOM", () => {
     const wrapper = document.createElement("div");
     const textarea = document.createElement("textarea");
     wrapper.appendChild(textarea);
-    expect(resolveInputOrTextarea(wrapper)).toBe(textarea);
+    expect(resolveWithCustomResolver(wrapper, null)).toBe(textarea);
   });
 
   it("finds input in shadow DOM", () => {
@@ -56,7 +52,7 @@ describe("resolveInputOrTextarea", () => {
     const shadow = host.attachShadow({ mode: "open" });
     const input = document.createElement("input");
     shadow.appendChild(input);
-    expect(resolveInputOrTextarea(host)).toBe(input);
+    expect(resolveWithCustomResolver(host, null)).toBe(input);
   });
 
   it("finds input in nested shadow DOM (2 levels)", () => {
@@ -69,7 +65,7 @@ describe("resolveInputOrTextarea", () => {
     const input = document.createElement("input");
     innerShadow.appendChild(input);
 
-    expect(resolveInputOrTextarea(outer)).toBe(input);
+    expect(resolveWithCustomResolver(outer, null)).toBe(input);
   });
 
   it("finds input in deeply nested shadow DOM (3 levels)", () => {
@@ -84,26 +80,30 @@ describe("resolveInputOrTextarea", () => {
     const input = document.createElement("input");
     s3.appendChild(input);
 
-    expect(resolveInputOrTextarea(l1)).toBe(input);
+    expect(resolveWithCustomResolver(l1, null)).toBe(input);
   });
 
-  it("respects maxDepth and returns null when exceeded", () => {
+  it("returns null for an input 4 levels deep, past the depth limit of 3", () => {
     const l1 = document.createElement("div");
     const s1 = l1.attachShadow({ mode: "open" });
     const l2 = document.createElement("div");
     s1.appendChild(l2);
     const s2 = l2.attachShadow({ mode: "open" });
-    const input = document.createElement("input");
-    s2.appendChild(input);
+    const l3 = document.createElement("div");
+    s2.appendChild(l3);
+    const s3 = l3.attachShadow({ mode: "open" });
+    const l4 = document.createElement("div");
+    s3.appendChild(l4);
+    const s4 = l4.attachShadow({ mode: "open" });
+    s4.appendChild(document.createElement("input"));
 
-    // maxDepth=1 means only check l1's shadow, not recurse into l2's shadow
-    expect(resolveInputOrTextarea(l1, 1)).toBeNull();
+    expect(resolveWithCustomResolver(l1, null)).toBeNull();
   });
 
   it("returns null for element without input", () => {
     const div = document.createElement("div");
     div.appendChild(document.createElement("span"));
-    expect(resolveInputOrTextarea(div)).toBeNull();
+    expect(resolveWithCustomResolver(div, null)).toBeNull();
   });
 
   it("prefers light DOM over shadow DOM", () => {
@@ -116,7 +116,7 @@ describe("resolveInputOrTextarea", () => {
     shadowInput.id = "shadow";
     shadow.appendChild(shadowInput);
 
-    expect(resolveInputOrTextarea(host)).toBe(lightInput);
+    expect(resolveWithCustomResolver(host, null)).toBe(lightInput);
   });
 });
 

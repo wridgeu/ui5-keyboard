@@ -44,7 +44,7 @@ function isInputOrTextarea(el: EventTarget | null | undefined): el is HTMLInputE
  * - nested web components (e.g. ui5-step-input → ui5-input → native input)
  *   up to `maxDepth` levels of shadow DOM nesting
  */
-export function resolveInputOrTextarea(
+function resolveInputOrTextarea(
   el: EventTarget | null | undefined,
   maxDepth = 3,
 ): HTMLInputElement | HTMLTextAreaElement | null {
