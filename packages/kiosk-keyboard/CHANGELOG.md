@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.2](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-kiosk-keyboard-v0.2.1...ui5-lib-kiosk-keyboard-v0.2.2) (2026-11-23)
+
+
+### Code Refactoring
+
+* **kiosk,webc:** define VariantTable in types.ts ([e41891b](https://github.com/wridgeu/ui5-keyboard/commit/e41891b0e72ea75f6de4728a4151d3a5fec16759))
+* **kiosk,webc:** define VariantTable in types.ts ([cc89dc4](https://github.com/wridgeu/ui5-keyboard/commit/cc89dc42ce0b3c2ff61ad9a2d34e410232cc9e03))
+* **kiosk,webc:** stop exporting resolveInputOrTextarea for tests ([6c45b70](https://github.com/wridgeu/ui5-keyboard/commit/6c45b7074709bf18278eeef263315c836888bc45))
+* **kiosk,webc:** stop exporting resolveInputOrTextarea for tests ([c22e75c](https://github.com/wridgeu/ui5-keyboard/commit/c22e75cafd39db18fc0136466b7643abd97b9ef0))
+
 ## [0.2.1](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-kiosk-keyboard-v0.2.0...ui5-lib-kiosk-keyboard-v0.2.1) (2026-11-22)
 
 
