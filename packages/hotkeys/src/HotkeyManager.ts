@@ -577,23 +577,7 @@ export default class HotkeyManager extends BaseObject {
    */
   getRegistrationsForScope(scopeId: string): ReadonlyArray<HotkeyRegistrationInfo> {
     const normalizedScope = resolveScopeOrGlobal(scopeId);
-    const bucket = this._registrations.getBucket(normalizedScope);
-    if (!bucket) return [];
-
-    // The three bucket sections are disjoint: the index files each registration
-    // under exactly one of them, and target swaps deindex before reindexing.
-    const result: HotkeyRegistrationInfo[] = [];
-    const add = (regs: Iterable<HotkeyRegistration>) => {
-      for (const reg of regs) {
-        result.push(this._toRegistrationInfo(reg));
-      }
-    };
-
-    add(bucket.untargeted);
-    for (const regs of bucket.targets.values()) {
-      add(regs);
-    }
-    add(bucket.callbackTargets.keys());
+    const result = this._registrations.inScope(normalizedScope).map((reg) => this._toRegistrationInfo(reg));
 
     if (this._sequenceManager) {
       result.push(...this._sequenceManager.getRegistrations().filter((r) => r.scope === normalizedScope));

@@ -726,6 +726,18 @@ QUnit.test("getRegistrations and getRegistrationsForScope report every field of 
   assert.deepEqual(scoped[1], expected, "getRegistrationsForScope reports the sequence");
 });
 
+QUnit.test("getRegistrationsForScope lists the sequences of a scope that holds no single-key hotkey", (assert) => {
+  const manager = createHotkeyManager();
+  manager.register("Escape", () => {}, { scope: "other" });
+  const handle = manager.register("g i", () => {}, { scope: "inbox" });
+
+  assert.deepEqual(
+    manager.getRegistrationsForScope("inbox").map((r) => r.id),
+    [handle.id],
+    "the sequence is listed",
+  );
+});
+
 QUnit.test("setOptions updates every updatable sequence option", (assert) => {
   const manager = createHotkeyManager();
   const pending: number[] = [];

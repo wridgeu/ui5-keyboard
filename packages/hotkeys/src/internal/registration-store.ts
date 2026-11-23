@@ -67,6 +67,21 @@ export default class RegistrationStore {
   }
 
   /**
+   * Live registrations filed under `scope`: untargeted, then element targets,
+   * then callback targets. Each is listed once, since it sits in exactly one section.
+   */
+  inScope(scope: string): HotkeyRegistration[] {
+    const bucket = this._byScope.get(scope);
+    if (!bucket) return [];
+    const result = [...bucket.untargeted];
+    for (const regs of bucket.targets.values()) {
+      result.push(...regs);
+    }
+    result.push(...bucket.callbackTargets.keys());
+    return result;
+  }
+
+  /**
    * Get the bucket for a scope, or undefined if no registration is indexed there.
    */
   getBucket(scope: string): ScopeRegistrationBucket | undefined {
