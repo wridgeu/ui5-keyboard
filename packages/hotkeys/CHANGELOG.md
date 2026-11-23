@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.1](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-hotkeys-v0.2.0...ui5-lib-hotkeys-v0.2.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* **hotkeys:** list the sequences of a scope that holds no single-key hotkey ([64cce13](https://github.com/wridgeu/ui5-keyboard/commit/64cce138690717d18af1af227cc1883766409091))
+* **hotkeys:** list the sequences of a scope that holds no single-key hotkey ([e9daf9a](https://github.com/wridgeu/ui5-keyboard/commit/e9daf9af10ec55b222cda0dcdf0459a58248402c))
+
+
+### Code Refactoring
+
+* **hotkeys:** break the three type-only module cycles ([0cfb5ea](https://github.com/wridgeu/ui5-keyboard/commit/0cfb5ea13244cbb3235fea36ae5b97eefc19dcac))
+* **hotkeys:** break the three type-only module cycles ([7ecdbd2](https://github.com/wridgeu/ui5-keyboard/commit/7ecdbd252e54277038f352d86c8db7c18c958012))
+
 ## [0.2.0](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-hotkeys-v0.1.1...ui5-lib-hotkeys-v0.2.0) (2026-11-22)
 
 
