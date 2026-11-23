@@ -63,7 +63,13 @@ export enum Platform {
   Linux = "linux",
 }
 
-export { GLOBAL_SCOPE } from "./internal/constants";
+/**
+ * The global scope identifier used as the bottom of the scope stack.
+ * Use this constant instead of hardcoding `"__global__"`.
+ *
+ * @since 0.1.0
+ */
+export const GLOBAL_SCOPE = "__global__";
 
 // ──────────────────────────────────────────────
 // UI5 Enum Registration

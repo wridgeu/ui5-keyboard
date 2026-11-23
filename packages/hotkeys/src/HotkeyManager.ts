@@ -1,6 +1,6 @@
 import BaseObject from "sap/ui/base/Object";
 import Log from "sap/base/Log";
-import { ConflictBehavior, Platform, UnhandledReason } from "./library";
+import { ConflictBehavior, GLOBAL_SCOPE, Platform, UnhandledReason } from "./library";
 import RegistrationGroup from "./RegistrationGroup";
 import SequenceManager from "./internal/SequenceManager";
 import HotkeyRecorder from "./HotkeyRecorder";
@@ -8,7 +8,6 @@ import type { HotkeyRecorderOptions } from "./HotkeyRecorder";
 import EventDispatcher from "./internal/event-dispatcher";
 import type { EventContext, HotkeyDispatchHandler, HotkeyDispatchResult } from "./internal/event-dispatcher";
 import { INTERNAL_TOKEN } from "./internal/internal-token";
-import { GLOBAL_SCOPE } from "./internal/constants";
 import { assertImmutableSetOptions } from "./internal/immutable-options";
 import FocusFallbackTracker from "./internal/FocusFallbackTracker";
 import { getEventTarget, isInputElement } from "./internal/dom";
@@ -375,9 +374,7 @@ export default class HotkeyManager extends BaseObject {
    */
   createRecorder(options: HotkeyRecorderOptions): HotkeyRecorder {
     this._assertAlive("createRecorder");
-    const recorder = new HotkeyRecorder(options, this._dispatcher, INTERNAL_TOKEN);
-    this._dispatcher.trackRecorder(recorder);
-    return recorder;
+    return new HotkeyRecorder(options, this._dispatcher, INTERNAL_TOKEN);
   }
 
   // ──────────────────────────────────────────────

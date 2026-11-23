@@ -5,7 +5,6 @@ import { INTERNAL_TOKEN } from "./internal-token";
 import type { SkipInfo } from "./skip-reason";
 import KeyStateTracker from "../KeyStateTracker";
 import type { KeyboardDispatchGuard } from "../types";
-import type HotkeyRecorder from "../HotkeyRecorder";
 
 const LOG_COMPONENT = "ui5.hotkeys.EventDispatcher";
 
@@ -115,7 +114,8 @@ export default class EventDispatcher {
   // Interceptor slot (e.g., HotkeyRecorder)
   private _interceptor: KeyEventInterceptor | null = null;
 
-  private readonly _trackedRecorders: Set<HotkeyRecorder> = new Set();
+  // Live recorders and the callback that tells each one this dispatcher is gone.
+  private readonly _recorderTeardowns: Map<object, () => void> = new Map();
 
   private _platform: Platform;
 
@@ -219,15 +219,15 @@ export default class EventDispatcher {
   // Recorder tracking
   // ──────────────────────────────────────────────
 
-  trackRecorder(recorder: HotkeyRecorder): void {
-    this._trackedRecorders.add(recorder);
+  trackRecorder(recorder: object, onDestroyed: () => void): void {
+    this._recorderTeardowns.set(recorder, onDestroyed);
   }
 
   /**
    * Remove a recorder from the tracking set. Called by recorder.destroy().
    */
-  untrackRecorder(recorder: HotkeyRecorder): void {
-    this._trackedRecorders.delete(recorder);
+  untrackRecorder(recorder: object): void {
+    this._recorderTeardowns.delete(recorder);
   }
 
   // ──────────────────────────────────────────────
@@ -254,10 +254,10 @@ export default class EventDispatcher {
       this._interceptor = null;
     }
 
-    for (const recorder of this._trackedRecorders) {
-      recorder._onDispatcherDestroyed();
+    for (const onDestroyed of this._recorderTeardowns.values()) {
+      onDestroyed();
     }
-    this._trackedRecorders.clear();
+    this._recorderTeardowns.clear();
 
     this._keyStateTracker.destroy();
   }

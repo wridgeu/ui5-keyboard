@@ -51,6 +51,9 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
     }
     this._options = options;
     this._dispatcher = dispatcher;
+    dispatcher.trackRecorder(this, () => {
+      this._dispatcher = null;
+    });
   }
 
   /**
@@ -111,7 +114,7 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
     if (this.isDestroyed) return;
     this.stop();
     this._dispatcher?.untrackRecorder(this);
-    this._onDispatcherDestroyed();
+    this._dispatcher = null;
   }
 
   // ──────────────────────────────────────────────
@@ -162,15 +165,6 @@ export default class HotkeyRecorder implements KeyEventInterceptor {
    * @since 0.1.0
    */
   onDetached(): void {}
-
-  /**
-   * Called by EventDispatcher.destroy() to mark this recorder as destroyed
-   * and clear its dispatcher reference.
-   * @internal
-   */
-  _onDispatcherDestroyed(): void {
-    this._dispatcher = null;
-  }
 
   /** Clear the interceptor before invoking the callback to prevent re-entrant dispatch races. */
   private _stopAndRecord(hotkey: string): void {

@@ -1,7 +1,6 @@
 import Log from "sap/base/Log";
 import type Router from "sap/ui/core/routing/Router";
 import type { Router$BeforeRouteMatchedEvent } from "sap/ui/core/routing/Router";
-import type HotkeyManager from "./HotkeyManager";
 import type {
   Hotkey,
   HotkeyCallback,
@@ -10,6 +9,13 @@ import type {
   HotkeyRegistrationHandle,
   ScopeHandle,
 } from "./types";
+
+/** The manager operations a group drives. `HotkeyManager` satisfies it. */
+interface RegistrationGroupManager {
+  register(hotkey: Hotkey, callback: HotkeyCallback, options?: HotkeyOptions): HotkeyRegistrationHandle;
+  getRegistrations(): ReadonlyArray<HotkeyRegistrationInfo>;
+  _replaceScope(previous: ScopeHandle | null, scopeId: string | null): ScopeHandle | null;
+}
 
 /**
  * Groups hotkey and sequence registrations for collective lifecycle management.
@@ -42,14 +48,14 @@ import type {
  * @since 0.1.0
  */
 export default class RegistrationGroup {
-  private _manager: HotkeyManager;
+  private _manager: RegistrationGroupManager;
   private _handles: Set<HotkeyRegistrationHandle> = new Set();
   private _destroyed = false;
   private _onDispose: (() => void) | null;
   private _routerCleanup: (() => void) | null = null;
   private _routeScope: ScopeHandle | null = null;
 
-  constructor(manager: HotkeyManager, onDispose?: () => void) {
+  constructor(manager: RegistrationGroupManager, onDispose?: () => void) {
     this._manager = manager;
     this._onDispose = onDispose ?? null;
   }

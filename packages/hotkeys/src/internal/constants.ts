@@ -1,14 +1,6 @@
 import type { CanonicalModifier } from "../types";
 
 /**
- * The global scope identifier used as the bottom of the scope stack.
- * Use this constant instead of hardcoding `"__global__"`.
- *
- * @since 0.1.0
- */
-export const GLOBAL_SCOPE = "__global__";
-
-/**
  * Set of the four modifier key names as reported by `KeyboardEvent.key`.
  * Used to filter out modifier-only presses in event guards.
  *

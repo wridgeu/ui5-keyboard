@@ -1,5 +1,4 @@
 export {
-  GLOBAL_SCOPE,
   MODIFIER_KEYS,
   MODIFIER_ORDER,
   MODIFIER_ALIASES,
@@ -9,3 +8,4 @@ export {
   KEY_DISPLAY_SYMBOLS,
   normalizeKeyName,
 } from "./internal/constants";
+export { GLOBAL_SCOPE } from "./library";

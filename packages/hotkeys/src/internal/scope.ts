@@ -1,4 +1,4 @@
-import { GLOBAL_SCOPE } from "./constants";
+import { GLOBAL_SCOPE } from "../library";
 
 /**
  * Resolve optional scope to a trimmed, non-empty scope ID.
