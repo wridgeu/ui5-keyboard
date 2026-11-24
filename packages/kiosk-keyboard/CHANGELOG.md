@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-kiosk-keyboard-v0.2.2...ui5-lib-kiosk-keyboard-v0.2.3) (2026-11-24)
+
+
+### Bug Fixes
+
+* address repo-wide review findings across hotkeys, kiosk, webc, and CI ([67b0efa](https://github.com/wridgeu/ui5-keyboard/commit/67b0efa9bd3bafe88912a402e483248f9168c647))
+* **kiosk:** pass shifted glyphs to composition middleware and list LayoutChangeReason in manifest ([34e805c](https://github.com/wridgeu/ui5-keyboard/commit/34e805cef5a5c183ca986ecec80063890434cbd4))
+
 ## [0.2.2](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-kiosk-keyboard-v0.2.1...ui5-lib-kiosk-keyboard-v0.2.2) (2026-11-23)
 
 

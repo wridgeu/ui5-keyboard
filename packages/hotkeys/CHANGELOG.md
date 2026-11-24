@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-hotkeys-v0.2.1...ui5-lib-hotkeys-v0.2.2) (2026-11-24)
+
+
+### Bug Fixes
+
+* address repo-wide review findings across hotkeys, kiosk, webc, and CI ([67b0efa](https://github.com/wridgeu/ui5-keyboard/commit/67b0efa9bd3bafe88912a402e483248f9168c647))
+* **hotkeys:** release route scope on destroyAll and fix alias/readonly/sequence info ([c3d830e](https://github.com/wridgeu/ui5-keyboard/commit/c3d830e3448d2a5ab6b2da32acddb77506a01b90))
+
 ## [0.2.1](https://github.com/wridgeu/ui5-keyboard/compare/ui5-lib-hotkeys-v0.2.0...ui5-lib-hotkeys-v0.2.1) (2026-11-23)
 
 
