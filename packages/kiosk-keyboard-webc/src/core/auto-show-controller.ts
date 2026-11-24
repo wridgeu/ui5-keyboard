@@ -167,9 +167,12 @@ export class AutoShowController {
       const active = document.activeElement;
 
       if (active && (this._host.shadowRoot?.contains(active) || this._host.contains(active))) return;
-      if (active instanceof HTMLElement && this._bridge.resolveInputFrom(active)) {
-        const ids = this._bridge.getControlsList();
-        if (ids.length === 0 || this._matchesControls(active, ids)) return;
+      if (active instanceof HTMLElement) {
+        const inputEl = this._bridge.resolveInputFrom(active);
+        if (inputEl && !this._isTargetOfOther(inputEl)) {
+          const ids = this._bridge.getControlsList();
+          if (ids.length === 0 || this._matchesControls(active, ids)) return;
+        }
       }
 
       if (this._host.open) this._bridge.close();

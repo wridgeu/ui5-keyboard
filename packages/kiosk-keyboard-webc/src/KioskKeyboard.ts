@@ -1057,7 +1057,6 @@ class KioskKeyboard extends UI5Element {
 
     this._targetElement = null;
     this._targetSource = "explicit";
-    this._targetResolver = null;
 
     this._autoShow.unregister();
 
@@ -1194,6 +1193,7 @@ class KioskKeyboard extends UI5Element {
 
   /** Executes the close side effects. Called from the `open` setter. */
   private _performClose(): void {
+    this._cancelPress();
     const activeElement = this._targetElement;
     this._inputModeSuppression.restore();
     KioskKeyboard._announcements.announce(getText("ARIA_KEYBOARD_CLOSED", "Virtual keyboard closed"));
@@ -1591,19 +1591,7 @@ class KioskKeyboard extends UI5Element {
     }
 
     if (action.kind === "shift") {
-      // Shift is handled separately: shiftKey reports the *resulting* state
-      // (what shift will become after toggle), not the pre-toggle state.
-      const nextShifted = this._shiftState.peekToggle();
-      const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: nextShifted });
-      if (!allowed) return;
-      this._shiftState.toggle();
-
-      // Apply the classes now; the template re-derives them on the rAF render
-      // (pinned by the "shift feedback latency" tests).
-      const isShifted = this._shiftState.isShifted;
-      const isCaps = this._shiftState.isCapsLock;
-      keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyShiftActive, isShifted);
-      keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyCapsLock, isCaps);
+      this._toggleShiftKey(keyEl, value);
       return;
     }
 
@@ -1621,7 +1609,7 @@ class KioskKeyboard extends UI5Element {
     const target = this._resolveTarget();
 
     const middleware = this._ensureMiddleware();
-    if (middleware && target && middleware.handleKey(value, target)) return;
+    if (middleware && target && middleware.handleKey(char ?? value, target)) return;
 
     if (action.kind === "backspace") {
       if (target) handleBackspace(target);
@@ -1657,6 +1645,22 @@ class KioskKeyboard extends UI5Element {
     }
 
     return assertNever(action);
+  }
+
+  private _toggleShiftKey(keyEl: HTMLElement, value: string): void {
+    // Shift is handled separately: shiftKey reports the *resulting* state
+    // (what shift will become after toggle), not the pre-toggle state.
+    const nextShifted = this._shiftState.peekToggle();
+    const allowed = this.fireDecoratorEvent("key-press", { key: value, shiftKey: nextShifted });
+    if (!allowed) return;
+    this._shiftState.toggle();
+
+    // Apply the classes now; the template re-derives them on the rAF render
+    // (pinned by the "shift feedback latency" tests).
+    const isShifted = this._shiftState.isShifted;
+    const isCaps = this._shiftState.isCapsLock;
+    keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyShiftActive, isShifted);
+    keyEl.classList.toggle(KIOSK_KEYBOARD_DOM.classes.keyCapsLock, isCaps);
   }
 
   /**

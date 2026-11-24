@@ -1,8 +1,17 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+import {
+  setCustomElementsScopingRules,
+  setCustomElementsScopingSuffix,
+} from "@ui5/webcomponents-base/dist/CustomElementsScopeUtils.js";
+import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
 import { registerI18nLoader } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import { setLanguage } from "@ui5/webcomponents-base/dist/config/Language.js";
 import { KEY_SHIFT } from "../../src/generated/i18n/i18n-defaults.js";
 import { getText, setI18nResolver, initI18n } from "../../src/core/i18n.js";
+
+vi.mock("@ui5/webcomponents-base/dist/Render.js", () => ({
+  reRenderAllUI5Elements: vi.fn().mockResolvedValue(undefined),
+}));
 
 // The framework's own loader registry is the seam. French ships no translation,
 // so the loader registered here is the only one for that locale and its payload
@@ -93,5 +102,17 @@ describe("i18n", () => {
     expect(getText("NONEXISTENT_KEY", "fallback")).toBe("override");
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("must be a function or null"));
+  });
+
+  it("re-renders the scoped custom-element tag when tag scoping is active", async () => {
+    const rerenderMock = vi.mocked(reRenderAllUI5Elements);
+    rerenderMock.mockClear();
+    setCustomElementsScopingSuffix("scoped");
+    try {
+      await initI18n();
+      expect(rerenderMock).toHaveBeenCalledWith({ tag: "kiosk-keyboard-scoped" });
+    } finally {
+      setCustomElementsScopingRules({ include: [], exclude: [] });
+    }
   });
 });

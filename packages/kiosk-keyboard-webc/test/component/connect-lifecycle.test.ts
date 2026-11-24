@@ -188,4 +188,24 @@ describe("connect lifecycle", () => {
     expect(kb.open).to.equal(false);
     expect(kb.hasAttribute("open")).to.equal(false);
   });
+
+  it("preserves a custom target resolver across detach and reattach", async () => {
+    const host = container();
+    const trigger = document.createElement("div");
+    trigger.id = "custom-resolver-host";
+    // Sibling (not descendant) of `trigger`, so only the custom resolver can map
+    // `trigger` to `input`; the built-in light/shadow DOM lookup returns null.
+    const input = document.createElement("input");
+    const kb = makeKeyboard();
+    kb.controls = "custom-resolver-host";
+    kb.setTargetResolver((el) => (el === trigger ? input : null));
+    host.append(trigger, input, kb);
+    await nextRender();
+
+    kb.remove();
+    host.append(kb);
+    await settle();
+
+    expect(kb.getActiveTargetElement(), "custom target resolver survived reparenting").to.equal(input);
+  });
 });
