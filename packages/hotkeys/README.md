@@ -438,14 +438,14 @@ onExit(): void {
 }
 ```
 
-| Property / Method            | Description                                                   |
-| ---------------------------- | ------------------------------------------------------------- |
-| `register()`                 | Delegates to `manager.register()`, tracks handle              |
-| `enableRouterIntegration(r)` | Attach router-based scope management to this group            |
-| `getRegistrations()`         | Get this group's active registrations (hotkeys and sequences) |
-| `destroyAll()`               | Unregister all tracked handles and detach router (idempotent) |
-| `size`                       | Number of currently active registrations                      |
-| `isDestroyed`                | Whether `destroyAll()` has been called                        |
+| Property / Method            | Description                                                                             |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| `register()`                 | Delegates to `manager.register()`, tracks handle                                        |
+| `enableRouterIntegration(r)` | Attach router-based scope management to this group                                      |
+| `getRegistrations()`         | Get this group's active registrations (hotkeys and sequences)                           |
+| `destroyAll()`               | Unregister all tracked handles, detach router, and release its route scope (idempotent) |
+| `size`                       | Number of currently active registrations                                                |
+| `isDestroyed`                | Whether `destroyAll()` has been called                                                  |
 
 Handles returned by the group are normal `HotkeyRegistrationHandle`. `setOptions()`, `unregister()`, and all properties work as usual. Individually unregistering a handle decrements the group's `size`.
 
@@ -552,7 +552,7 @@ onOpenConfirmDialog(): void {
 
 #### Router Integration (Group-Level)
 
-Router integration is configured on a `RegistrationGroup`, not on the manager. The group's `destroyAll()` automatically detaches the router listener, so cleanup is guaranteed.
+Router integration is configured on a `RegistrationGroup`, not on the manager. The group's `destroyAll()` automatically detaches the router listener and releases its route scope entry, so cleanup is guaranteed.
 
 ```ts
 // Component.init()
