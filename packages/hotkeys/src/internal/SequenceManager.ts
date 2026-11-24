@@ -2,7 +2,7 @@ import Log from "sap/base/Log";
 import { assertImmutableSetOptions } from "./immutable-options";
 import { getEventTarget, isInputElement, resolveIgnoreInputs } from "./dom";
 import { getCandidateKeys, matchesKeyboardEvent } from "./match";
-import { parseHotkey } from "./parse";
+import { formatParsed, parseHotkey } from "./parse";
 import { resolveScopeOrGlobal } from "./scope";
 import { resolveEnabled } from "./resolve-enabled";
 import { ConflictBehavior, GLOBAL_SCOPE } from "../library";
@@ -214,10 +214,11 @@ export default class SequenceManager {
    */
   private _toRegistrationInfo(reg: SequenceRegistration): HotkeyRegistrationInfo {
     const hotkey = reg.sequence.join(" ");
+    const normalizedHotkey = reg.parsedSteps.map(formatParsed).join(" ");
     return {
       id: reg.id,
       hotkey,
-      normalizedHotkey: hotkey,
+      normalizedHotkey,
       scope: reg.scope,
       description: reg.description,
       enabled: this._isRegistrationEnabled(reg),

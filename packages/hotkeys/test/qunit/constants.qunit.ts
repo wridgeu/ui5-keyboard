@@ -22,6 +22,11 @@ QUnit.test("Known aliases are resolved", (assert) => {
   assert.strictEqual(normalizeKeyName("Right"), "ArrowRight");
   assert.strictEqual(normalizeKeyName("PgUp"), "PageUp");
   assert.strictEqual(normalizeKeyName("PgDn"), "PageDown");
+  assert.strictEqual(normalizeKeyName("PGUP"), "PageUp");
+  assert.strictEqual(normalizeKeyName("pgdn"), "PageDown");
+  assert.strictEqual(normalizeKeyName("spacebar"), "Space");
+  assert.strictEqual(normalizeKeyName("plus"), "+");
+  assert.strictEqual(normalizeKeyName("minus"), "-");
 });
 
 QUnit.test("Function keys F1-F24 are uppercased, out-of-range ones pass through", (assert) => {

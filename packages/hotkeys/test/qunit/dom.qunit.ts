@@ -58,6 +58,11 @@ QUnit.test("Returns true for textarea", (assert) => {
   assert.ok(isInputElement(el));
 });
 
+QUnit.test("Returns false for readonly textarea", (assert) => {
+  const el = createElement("textarea", { readonly: "" });
+  assert.notOk(isInputElement(el), "readonly textarea is not editable");
+});
+
 QUnit.test("Returns true for select (native type-ahead must not be pre-empted)", (assert) => {
   // <select> has built-in single-key type-ahead; suppressing letter shortcuts here
   // keeps the browser's option matching working, matching Mousetrap / hotkeys-js.

@@ -138,6 +138,9 @@ export default class RegistrationGroup {
       this._routerCleanup = null;
     }
 
+    this._routeScope?.release();
+    this._routeScope = null;
+
     for (const h of this._handles) {
       h.unregister();
     }
@@ -155,6 +158,7 @@ export default class RegistrationGroup {
       this._routerCleanup = null;
     }
 
+    this._routeScope = null;
     this._handles.clear();
     this._destroyed = true;
     this._dispose();

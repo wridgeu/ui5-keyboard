@@ -121,6 +121,10 @@ export const KEY_DISPLAY_SYMBOLS: Readonly<Record<string, string>> = {
   Space: "\u2423",
 };
 
+const KEY_ALIASES_LOWER: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(KEY_ALIASES).map(([alias, canonical]) => [alias.toLowerCase(), canonical]),
+);
+
 /**
  * Normalize a key name by applying aliases and casing conventions.
  *
@@ -138,7 +142,7 @@ export function normalizeKeyName(key: string): string {
 
   // Case-insensitive fallback for keys spelled in another case (e.g., "ESCAPE",
   // "Del", "PGUP"). Only names KEY_ALIASES carries are reachable this way.
-  const lowerAlias = KEY_ALIASES[key.toLowerCase()];
+  const lowerAlias = KEY_ALIASES_LOWER[key.toLowerCase()];
   if (lowerAlias) {
     return lowerAlias;
   }
