@@ -118,12 +118,25 @@ QUnit.test("a middleware-consumed key spends the one-shot Shift latch", async (a
   // The consumption is asserted too: a key the middleware declined would reach
   // the same spend gate down the default branch, so the latch assertion alone
   // would stay green with the early return moved above that gate.
-  // The middleware is handed the key's base value, not its shifted glyph.
-  assert.deepEqual(calls.handled, ["ㄱ"], "the middleware consumed the key");
+  assert.deepEqual(calls.handled, ["ㄲ"], "the middleware received and consumed the shifted jamo");
   assert.strictEqual(input.getValue(), "", "the consumed key wrote nothing directly");
 
   await waitForRender();
   assert.notOk(isShiftActive(kb), "the consumed key still spent the one-shot Shift latch");
+
+  input.destroy();
+  kb.destroy();
+});
+
+QUnit.test("composes shifted Hangul tense consonants (Shift + ㄱ + ㅏ -> 까)", async (assert) => {
+  const { kb, input } = await setupHangul();
+
+  tapKey(kb, "{shift}");
+  await waitForRender();
+  tapKey(kb, "ㄱ");
+  tapKey(kb, "ㅏ");
+
+  assert.strictEqual(input.getValue(), "\uAE4C", "shifted ㄱ (ㄲ) + ㅏ composes 까, not 가");
 
   input.destroy();
   kb.destroy();

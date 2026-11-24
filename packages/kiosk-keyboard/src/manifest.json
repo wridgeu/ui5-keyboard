@@ -65,6 +65,7 @@
           "ui5.kiosk.KeyboardType",
           "ui5.kiosk.MobileKeyboard",
           "ui5.kiosk.FKeyMode",
+          "ui5.kiosk.LayoutChangeReason",
           "ui5.kiosk.LayoutRole",
           "ui5.kiosk.LayoutFacet",
           "ui5.kiosk.LayoutRows",

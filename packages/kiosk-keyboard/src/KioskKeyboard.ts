@@ -2508,7 +2508,9 @@ export default class KioskKeyboard extends Control {
     el: HTMLElement,
     shift: boolean,
   ): void {
-    if (this._tryCompositionMiddleware(keyValue)) return;
+    const effective =
+      action.kind === "char" && shift ? shiftedGlyph(action.text, el.dataset.shiftValue, this._isCapsLock()) : keyValue;
+    if (this._tryCompositionMiddleware(effective)) return;
 
     switch (action.kind) {
       case "backspace":
@@ -2552,9 +2554,6 @@ export default class KioskKeyboard extends Control {
         return;
 
       case "char": {
-        // Regular character - resolve its Shift/Caps form (incl. CapsLock ß -> ẞ).
-        const effective = shift ? shiftedGlyph(action.text, el.dataset.shiftValue, this._isCapsLock()) : action.text;
-
         if (this.fireKeyPress({ key: effective, shiftKey: shift })) {
           this._targetSession.insertText(effective);
         }
