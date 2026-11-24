@@ -12,6 +12,7 @@
 import { getI18nBundle } from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import type I18nBundle from "@ui5/webcomponents-base/dist/i18nBundle.js";
 import type { I18nText } from "@ui5/webcomponents-base/dist/i18nBundle.js";
+import { getEffectiveScopingSuffixForTag } from "@ui5/webcomponents-base/dist/CustomElementsScopeUtils.js";
 import { reRenderAllUI5Elements } from "@ui5/webcomponents-base/dist/Render.js";
 import getLocale from "@ui5/webcomponents-base/dist/locale/getLocale.js";
 
@@ -41,7 +42,8 @@ function _getLanguage(): string {
  */
 export async function initI18n(): Promise<void> {
   _bundle = await getI18nBundle(I18N_NAMESPACE);
-  await reRenderAllUI5Elements({ tag: "kiosk-keyboard" });
+  const suffix = getEffectiveScopingSuffixForTag("kiosk-keyboard");
+  await reRenderAllUI5Elements({ tag: suffix ? `kiosk-keyboard-${suffix}` : "kiosk-keyboard" });
 }
 
 /**

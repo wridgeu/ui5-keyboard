@@ -87,6 +87,41 @@ describe("AutoShowController teardown vs. pending deferred close", () => {
 
     expect(bridge.close).toHaveBeenCalledTimes(1);
   });
+
+  it("closes an unscoped keyboard when focus moves to an input claimed by a peer keyboard", async () => {
+    const peerInput = document.createElement("input");
+    peerInput.id = "peer-owned-input";
+    document.body.appendChild(peerInput);
+
+    const peerHost = makeHost();
+    // jsdom elements report empty getClientRects() by default; stub a non-empty rect
+    // so the peer counts as visible/participating in multi-keyboard claim checks.
+    vi.spyOn(peerHost, "getClientRects").mockReturnValue([new DOMRect(0, 0, 300, 100)] as unknown as DOMRectList);
+    const peerBridge: AutoShowBridge = {
+      ...makeBridge(),
+      getControlsList: () => ["peer-owned-input"],
+      resolveInputFrom: (el) => (el === peerInput ? peerInput : null),
+    };
+    const peerController = new AutoShowController(peerHost, peerBridge);
+    peerController.register();
+    peerController.sync();
+
+    bridge.resolveInputFrom = (el) => (el === peerInput ? peerInput : null);
+
+    try {
+      peerInput.focus();
+      expect(document.activeElement, "precondition: peer input holds focus").toBe(peerInput);
+      document.dispatchEvent(new FocusEvent("focusout"));
+      await nextFrame();
+
+      expect(bridge.close).toHaveBeenCalledTimes(1);
+    } finally {
+      peerController.teardown();
+      peerController.unregister();
+      peerHost.remove();
+      peerInput.remove();
+    }
+  });
 });
 
 describe("AutoShowController auto-type detection vs. inputmode suppression", () => {

@@ -160,7 +160,7 @@ This removes the need for manual `pushScope`/`popScope` calls in route-based app
 
 Applications that do not use routing (reuse components, embedded components, non-routed UIs) use `pushScope()` and release the returned handle, or register everything on the global scope.
 
-Router integration lives on `RegistrationGroup`, not on `HotkeyManager`. This ties the router listener to the group's lifecycle: `destroyAll()` automatically detaches it. Since `HotkeyManager.destroy()` finalizes all groups, router cleanup is guaranteed on either path. Calling `enableRouterIntegration()` again on the same group silently replaces the previous router listener.
+Router integration lives on `RegistrationGroup`, not on `HotkeyManager`. This ties the router listener and its route scope entry to the group's lifecycle: `destroyAll()` automatically detaches the listener and releases the group's route scope entry. Since `HotkeyManager.destroy()` finalizes all groups, router cleanup is guaranteed on either path. Calling `enableRouterIntegration()` again on the same group silently replaces the previous router listener.
 
 ## Hotkey Parsing
 
@@ -236,11 +236,11 @@ Both fallbacks are gated because a non-US layout maps a physical key to a differ
 `isInputElement(target)` determines whether an event target is an editable text field. It returns `true` for:
 
 - `<input>` elements with text-like types that are not `readonly`: text, password, email, number, search, tel, url, date, datetime-local, month, time, week
-- `<textarea>` elements
+- `<textarea>` elements that are not `readonly`
 - `<select>` elements
 - Any element with `contentEditable` set (checked via `element.isContentEditable`, which correctly handles inherited values)
 
-It returns `false` for button-like input types (button, submit, reset, checkbox, radio, etc.) and for `readonly` text inputs, since neither accepts typed text - a hotkey should still fire there.
+It returns `false` for button-like input types (button, submit, reset, checkbox, radio, etc.) and for `readonly` text inputs and textareas, since neither accepts typed text - a hotkey should still fire there.
 
 ### Smart Auto Mode
 

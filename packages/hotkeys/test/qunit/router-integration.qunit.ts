@@ -152,7 +152,7 @@ QUnit.test("Route with empty/undefined name removes the route scope", (assert) =
   assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Scope reset to global when route name is undefined");
 });
 
-QUnit.test("destroyAll detaches router integration", (assert) => {
+QUnit.test("destroyAll detaches router integration and releases the route scope", (assert) => {
   const manager = createHotkeyManager();
   const group = manager.createGroup();
   const router = createMockRouter();
@@ -162,8 +162,9 @@ QUnit.test("destroyAll detaches router integration", (assert) => {
   assert.strictEqual(manager.getActiveScope(), "main");
 
   group.destroyAll();
+  assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Route scope released when group is destroyed");
   router.fireRouteMatched("detail");
-  assert.strictEqual(manager.getActiveScope(), "main", "Scope unchanged after group destroyed");
+  assert.strictEqual(manager.getActiveScope(), GLOBAL_SCOPE, "Router listener detached after group destroyed");
 });
 
 QUnit.test("A dialog scope pushed before a route change stays active until it is popped", (assert) => {

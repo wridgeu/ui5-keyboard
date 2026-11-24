@@ -37,13 +37,13 @@ export function getEventTarget(event: Event): EventTarget | null {
  * Returns `true` for:
  * - `<input>` with an editable text type (text, password, email, number, etc.)
  *   that is not `readonly`
- * - `<textarea>`
+ * - `<textarea>` that is not `readonly`
  * - `<select>` (native single-key type-ahead)
  * - Any element with `contentEditable` active (including inherited)
  *
  * Returns `false` for:
  * - `<input type="button|submit|reset|checkbox|radio|hidden|file|image|range|color">`
- * - `<input readonly>` (text cannot be entered, so hotkeys should fire)
+ * - `<input readonly>` and `<textarea readonly>` (text cannot be entered, so hotkeys should fire)
  * - Non-editable elements
  * - `null` / non-Element targets
  */
@@ -58,7 +58,7 @@ export function isInputElement(target: EventTarget | null): boolean {
   }
 
   if (target instanceof HTMLTextAreaElement) {
-    return true;
+    return !target.readOnly;
   }
 
   // <select> has native single-key type-ahead; a letter shortcut must not

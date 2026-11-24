@@ -109,8 +109,7 @@ describe("kiosk-keyboard - keyboardType vs composition middleware", () => {
     // The consumption is asserted too: a key the middleware declined would
     // reach the same spend gate down the default branch, so the latch
     // assertion alone would stay green with the early return moved above it.
-    // The middleware is handed the key's base value, not its shifted glyph.
-    expect(calls.handled, "the middleware consumed the key").to.deep.equal(["ㄱ"]);
+    expect(calls.handled, "the middleware received and consumed the shifted jamo").to.deep.equal(["ㄲ"]);
     expect(input.value, "the consumed key wrote nothing directly").to.equal("");
 
     await nextRender();
@@ -118,5 +117,26 @@ describe("kiosk-keyboard - keyboardType vs composition middleware", () => {
       requireKey(kb, "{shift}").getAttribute("aria-pressed"),
       "the consumed key still spent the one-shot Shift latch",
     ).to.equal("false");
+  });
+
+  it("composes shifted Hangul tense consonants (Shift + ㄱ + ㅏ -> 까)", async () => {
+    const container = document.createElement("div");
+    const input = document.createElement("input");
+    input.id = "ktm-hangul-shift";
+    input.type = "text";
+    const kb = document.createElement("kiosk-keyboard") as KioskKeyboard;
+    kb.setAttribute("layout", "ko-hangul");
+    container.append(input, kb);
+
+    await fixture(container);
+    kb.setTargetElement(input);
+    await nextRender();
+
+    requireKey(kb, "{shift}").click();
+    await nextRender();
+    requireKey(kb, "ㄱ").click();
+    requireKey(kb, "ㅏ").click();
+
+    expect(input.value, "shifted ㄱ (ㄲ) + ㅏ composes 까, not 가").to.equal("\uAE4C");
   });
 });

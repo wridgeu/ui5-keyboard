@@ -603,6 +603,28 @@ describe("kiosk-keyboard - accent-variant popup", () => {
     expect(kb.open, "the keyboard stays open behind its own popup").to.be.true;
   });
 
+  it("dismisses an open variant popup when the docked keyboard closes", async () => {
+    const container = await fixture(html`
+      <div>
+        <input id="docked-close-variant-input" type="text" />
+        <kiosk-keyboard layout="qwerty" docked accent-variants controls="docked-close-variant-input"></kiosk-keyboard>
+      </div>
+    `);
+    const kb = container.querySelector<KioskKeyboard>("kiosk-keyboard")!;
+    await renderFinished();
+
+    kb.show();
+    await renderFinished();
+    rightClick(requireKey(kb, "a"));
+    await waitUntil(() => popoverEl(kb)?.open === true, "precondition: the variant popup opened");
+
+    kb.close();
+    await renderFinished();
+
+    expect(kb.open, "the keyboard closed").to.be.false;
+    expect(popupEl(kb), "closing the keyboard dismissed its variant popup").to.not.exist;
+  });
+
   it("opens on right-click (contextmenu)", async () => {
     const { kb } = await setupWithLayout(VARIANT_LAYOUT);
     const aKey = requireKey(kb, "a");

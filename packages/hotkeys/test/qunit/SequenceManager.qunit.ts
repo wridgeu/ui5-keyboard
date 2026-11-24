@@ -239,6 +239,17 @@ QUnit.test("getRegistrations filtered for sequences returns active registrations
   );
 });
 
+QUnit.test("getRegistrations normalizes each step in normalizedHotkey for sequences", (assert) => {
+  const manager = createHotkeyManager();
+
+  manager.register("ctrl+k ctrl+s", () => {});
+  manager.register("g e", () => {});
+
+  const seqs = manager.getRegistrations().filter((r) => r.sequence !== null);
+  assert.strictEqual(seqs[0]?.normalizedHotkey, "Control+K Control+S", "Modifier sequence steps are normalized");
+  assert.strictEqual(seqs[1]?.normalizedHotkey, "G E", "Letter sequence steps are normalized");
+});
+
 QUnit.test("onPending fires on mid-sequence progress", (assert) => {
   const manager = createHotkeyManager();
   const pendingCalls: { completedSteps: number; totalSteps: number; nextKey: string }[] = [];
@@ -696,7 +707,7 @@ QUnit.test("getRegistrations and getRegistrationsForScope report every field of 
   const expected = {
     id: handle.id,
     hotkey: "g i",
-    normalizedHotkey: "g i",
+    normalizedHotkey: "G I",
     scope: "main",
     description: "Go to Inbox",
     enabled: false,
