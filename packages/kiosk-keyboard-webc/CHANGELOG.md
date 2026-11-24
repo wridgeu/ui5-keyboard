@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/wridgeu/ui5-keyboard/compare/kiosk-keyboard-webc-v0.2.2...kiosk-keyboard-webc-v0.2.3) (2026-11-24)
+
+
+### Bug Fixes
+
+* address repo-wide review findings across hotkeys, kiosk, webc, and CI ([67b0efa](https://github.com/wridgeu/ui5-keyboard/commit/67b0efa9bd3bafe88912a402e483248f9168c647))
+* **webc:** fix shifted middleware input, close cleanup, peer auto-show, and scoped i18n ([a1a0a43](https://github.com/wridgeu/ui5-keyboard/commit/a1a0a43357cd77e1a6ac9d2f76843edaf4808b38))
+
 ## [0.2.2](https://github.com/wridgeu/ui5-keyboard/compare/kiosk-keyboard-webc-v0.2.1...kiosk-keyboard-webc-v0.2.2) (2026-11-23)
 
 
